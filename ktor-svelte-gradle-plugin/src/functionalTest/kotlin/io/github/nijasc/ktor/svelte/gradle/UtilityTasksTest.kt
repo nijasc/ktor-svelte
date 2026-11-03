@@ -152,6 +152,49 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteInit creates a project and installs dependencies`() {
+        val project = project()
+        project.frontend
+            .listFiles()
+            .orEmpty()
+            .forEach { it.delete() }
+
+        project.run("svelteInit")
+
+        assertTrue(project.frontend.resolve("package.json").isFile)
+        assertTrue(project.frontend.resolve("vite.config.ts").isFile)
+        assertTrue(project.frontend.resolve(".gitignore").isFile)
+        assertContains(project.frontend.resolve("package.json").readText(), "#lib/*")
+        assertEquals(listOf("install"), project.calls())
+    }
+
+    @Test
+    fun `svelteInit refuses a folder with files in it`() {
+        val project = project()
+        val output = project.runAndFail("svelteInit").output
+        assertContains(output, "will not overwrite")
+        assertEquals("{}", project.frontend.resolve("package.json").readText())
+    }
+
+    @Test
+    fun `svelteInit rejects an unknown package manager`() {
+        val project = project()
+        project.frontend
+            .listFiles()
+            .orEmpty()
+            .forEach { it.delete() }
+        assertContains(project.runAndFail("svelteInit", "--package-manager=deno").output, "Unknown package manager")
+    }
+
+    @Test
+    fun `svelteDoctor fails with what to fix`() {
+        val project = project()
+        val output = project.runAndFail("svelteDoctor").output
+        assertContains(output, "OK    Package manager bun is on PATH")
+        assertContains(output, "ERROR @sveltejs/kit is not a dependency")
+    }
+
+    @Test
     fun `svelteGenerateTs does not build the frontend first`() {
         val project = project()
         project.buildScript(applicationBuild)

@@ -52,3 +52,21 @@ jobs:
           latest=$(curl -s https://repo1.maven.org/maven2/io/ktor/ktor-server-core-jvm/maven-metadata.xml | grep -oP '(?<=<release>)[^<]+')
           sed -i "s/^ktor = .*/ktor = \"$latest\"/" gradle/libs.versions.toml
       - run: ./gradlew :ktor-svelte-server:test
+
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - uses: oven-sh/setup-bun@v2
+      - name: Create a project with svelteInit and build it
+        run: |
+          project="$(mktemp -d)"
+          repository="$PWD"
+          printf 'pluginManagement { includeBuild("%s"); repositories { gradlePluginPortal(); mavenCentral() } }\ndependencyResolutionManagement { repositories { mavenCentral() } }\nincludeBuild("%s")\n' "$repository" "$repository" > "$project/settings.gradle.kts"
+          printf 'plugins { kotlin("jvm") version "2.4.21"; id("io.github.nijasc.ktor-svelte") }\n' > "$project/build.gradle.kts"
+          ./gradlew -p "$project" svelteInit svelteDoctor svelteCheck jar

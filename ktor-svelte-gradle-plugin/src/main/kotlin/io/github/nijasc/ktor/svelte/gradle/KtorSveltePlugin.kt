@@ -4,6 +4,8 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
@@ -88,6 +90,17 @@ public class KtorSveltePlugin : Plugin<Project> {
             configureToolTask(task, extension)
             task.description = "Runs a package.json script: svelteRun --script=lint"
             task.dependsOn(install)
+        }
+        project.tasks.register("svelteInit", SvelteInitTask::class.java) { task ->
+            configureToolTask(task, extension)
+            task.description = "Creates a working SvelteKit project in the frontend directory."
+        }
+        project.tasks.register("svelteDoctor", SvelteDoctorTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Checks the frontend setup and says what to fix."
+            task.frontendDir.set(extension.frontendDir)
+            task.packageManager.set(extension.packageManager)
+            task.devPort.set(extension.dev.port)
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
         project.tasks.register("svelteGenerateRunConfigurations", SvelteRunConfigurationsTask::class.java) { task ->

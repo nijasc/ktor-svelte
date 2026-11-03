@@ -52,7 +52,13 @@ plugins {
 ```
 <!-- x-release-please-end -->
 
-Put a SvelteKit project in `frontend/` and use `adapter-static`. SvelteKit 3 has no `svelte.config.js`, so the configuration goes in `frontend/vite.config.ts`:
+Create the frontend. This writes a working SvelteKit 3 project to `frontend/` and installs it with the first package manager on your `PATH`:
+
+```bash
+./gradlew svelteInit
+```
+
+Already have a frontend? It needs `adapter-static`, and since SvelteKit 3 has no `svelte.config.js`, the configuration goes in `frontend/vite.config.ts`. Run `./gradlew svelteDoctor` to check the rest:
 
 ```ts
 import { sveltekit } from '@sveltejs/kit/vite';
@@ -309,6 +315,8 @@ The package manager must already be installed. The plugin does not download Node
 
 | Task | What it does |
 |---|---|
+| `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
+| `svelteDoctor` | Checks adapter, `#lib`, tsconfig, Kit version, tool and port, and says what to fix |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteCheck` | Runs your `check` script |
