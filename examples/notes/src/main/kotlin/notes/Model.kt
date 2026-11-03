@@ -2,8 +2,8 @@ package notes
 
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
-import ktorsvelte.LucideIcon
 import kotlinx.serialization.Serializable
+import ktorsvelte.LucideIcon
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -71,7 +71,14 @@ class NoteStore {
 
     init {
         create(NoteInput("Welcome", "This note came from Ktor through a generated TypeScript client.", listOf("intro"), LucideIcon.Hand))
-        create(NoteInput("Try hot reload", "Change a Svelte file while the Dev run configuration is running.", listOf("intro", "dev"), LucideIcon.Flame))
+        create(
+            NoteInput(
+                "Try hot reload",
+                "Change a Svelte file while the Dev run configuration is running.",
+                listOf("intro", "dev"),
+                LucideIcon.Flame,
+            ),
+        )
     }
 
     fun list(
@@ -94,7 +101,8 @@ class NoteStore {
     fun update(
         id: Int,
         input: NoteInput,
-    ): Note? = notes.computeIfPresent(id) { _, note -> note.copy(title = input.title, body = input.body, tags = input.tags, icon = input.icon) }
+    ): Note? =
+        notes.computeIfPresent(id) { _, note -> note.copy(title = input.title, body = input.body, tags = input.tags, icon = input.icon) }
 
     fun archive(id: Int): Note? = notes.computeIfPresent(id) { _, note -> note.copy(status = NoteStatus.ARCHIVED) }
 
@@ -104,6 +112,11 @@ class NoteStore {
         NoteStats(
             total = notes.size,
             archived = notes.values.count { it.status == NoteStatus.ARCHIVED },
-            tags = notes.values.flatMap { it.tags }.groupingBy { it }.eachCount().toSortedMap(),
+            tags =
+                notes.values
+                    .flatMap { it.tags }
+                    .groupingBy { it }
+                    .eachCount()
+                    .toSortedMap(),
         )
 }

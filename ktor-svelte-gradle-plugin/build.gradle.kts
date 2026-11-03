@@ -14,6 +14,7 @@ kotlin {
     compilerOptions {
         apiVersion = KotlinVersion.KOTLIN_2_1
         languageVersion = KotlinVersion.KOTLIN_2_1
+        freeCompilerArgs.add("-Xsuppress-version-warnings")
     }
 }
 
