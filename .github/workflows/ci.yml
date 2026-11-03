@@ -55,6 +55,29 @@ jobs:
       - run: ./gradlew -p examples/notes e2eTest svelteCheck
         shell: bash
 
+  installer:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Create a project and build it
+        shell: bash
+        run: |
+          repository="$PWD"
+          cd "$RUNNER_TEMP"
+          java "$repository/installer/Installer.java" "--local-build=$repository" --yes --name=demo --i18n --locales=en,de --no-git
+          cd demo
+          ./gradlew buildFatJar svelteCheck
+
   generated-client:
     runs-on: ubuntu-latest
     steps:

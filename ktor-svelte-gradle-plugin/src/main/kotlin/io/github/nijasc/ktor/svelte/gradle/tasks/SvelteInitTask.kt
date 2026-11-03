@@ -37,7 +37,7 @@ public abstract class SvelteInitTask : SvelteToolTask() {
     @TaskAction
     public fun init() {
         val target = frontendDir.get().asFile
-        if (target.list().orEmpty().isNotEmpty()) {
+        if (target.list().orEmpty().any { it != "messages" }) {
             throw GradleException("ktor-svelte will not overwrite $target because it is not empty.")
         }
         val tool = FrontendTool(chooseTool())

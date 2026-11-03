@@ -49,7 +49,37 @@ No CORS setup, no second server in production, no hand-written API types driftin
 - **Bring your package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
 - **Run configurations for IntelliJ.** One click starts Vite and Ktor together.
 
-## Quick start
+## Create a project
+
+One command asks a few questions and sets up a working project, always on the latest release. You need Java 17 or newer and one of Bun, pnpm, npm or Yarn.
+
+**macOS and Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/main/installer/install.sh | sh
+```
+
+**Windows:**
+
+```powershell
+powershell -c "irm https://raw.githubusercontent.com/nijasc/ktor-svelte/main/installer/install.ps1 | iex"
+```
+
+It asks for the project name, Kotlin package, package manager, a generated TypeScript client, DaisyUI, Tailwind, Lucide, i18n and git. Then start it:
+
+```bash
+./gradlew svelteDevAll
+```
+
+To skip the questions, add `--yes` and any options, such as `--name=shop --package=com.example.shop --i18n --locales=en,de --no-lucide`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/main/installer/install.sh | sh -s -- --yes --name=shop
+```
+
+Prefer to read scripts before running them? They are in [`installer/`](installer).
+
+## Add to an existing project
 
 Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `build.gradle.kts`:
 

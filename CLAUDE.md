@@ -24,6 +24,7 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 - `examples/notes/`: feature-rich app using `generateTs`, `transport` and real CRUD.
 - Examples are separate Gradle builds that consume the root build through `includeBuild`, and double as end-to-end test fixtures.
 - `.run/`: shared IntelliJ run configurations.
+- `installer/`: project creator. `Installer.java` holds all logic, and the two scripts only find the latest release and run it.
 - `ide/`: workspace build that IntelliJ links. It includes the root and both examples. It must stay outside the root build, because Gradle rejects the include cycle otherwise.
 
 ## Commands
