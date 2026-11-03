@@ -40,13 +40,11 @@ No CORS setup, no second server in production, no hand-written API types driftin
 
 ## Quick start
 
-`build.gradle.kts`:
+Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `build.gradle.kts`:
 
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.21"
-    application
     id("io.github.nijasc.ktor-svelte") version "0.1.0"
 }
 ```
