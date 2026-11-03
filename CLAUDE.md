@@ -4,32 +4,36 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 
 ## Working style
 
-- Use the `caveman` skill in `.claude/skills/caveman/` for all chat responses, in every session, unless the user says "stop caveman" or "normal mode".
+- Use the `caveman` plugin (enabled in `.claude/settings.json`) for all chat responses, in every session, unless the user says "stop caveman" or "normal mode".
 - Caveman applies to chat only. Code, commits, docs, issues and PRs stay in normal English.
+- Developer experience comes first: frontend and backend must integrate out of the box. Avoid bloat: no feature or dependency without a clear payoff.
 
 ## Hard rules
 
-- No code comments of any kind: no `//`, `/* */`, KDoc, `#` in YAML, TOML, properties or shell files, and no HTML comments in Svelte files. Explain behaviour through names, tests and the README. Generated files such as `gradlew` are exempt.
-- All commits use Conventional Commits: `type(scope): summary`. Types: `feat`, `fix`, `docs`, `test`, `build`, `ci`, `refactor`, `chore`. Scopes: `server`, `gradle-plugin`, `example`, `repo`.
-- Never commit directly to `main`.
-- Never publish artifacts or push without an explicit request from the user.
+- No code comments of any kind: no `//`, `/* */`, KDoc, `#` in YAML, TOML, properties or shell files, and no HTML comments in Svelte files. Explain behaviour through names, tests and the README. Generated files such as `gradlew`, and the `x-release-please` markers release-please needs in `README.md`, are exempt.
+- All commits use Conventional Commits: `type(scope): summary`. Types: `feat`, `fix`, `docs`, `test`, `build`, `ci`, `refactor`, `chore`. Scopes: `server`, `gradle-plugin`, `example`, `repo`. release-please derives versions and release notes from them, so `feat` and `fix` must describe what users see.
+- There is no changelog file. Never hand-edit `version.txt` or `.release-please-manifest.json`.
+- Keep `README.md` up to date in the same commit as any change it describes. README text uses plain ASCII: no em dashes, arrows, box drawing or emoji.
+- Never commit directly to `main`. Pushing feature branches is allowed. Never publish artifacts by hand.
 
 ## Layout
 
 - `ktor-svelte-server/`: Ktor runtime library. `internal/` holds everything not in the public API.
 - `ktor-svelte-gradle-plugin/`: Gradle plugin. Must stay configuration-cache compatible.
-- `examples/basic/`: separate Gradle build that consumes the root build through `includeBuild`. Also the end-to-end test fixture.
-- `.claude/skills/caveman/`: vendored from `JuliusBrussee/caveman` at commit `2e068f735253cce28256744804785f01887d9646`, Apache-2.0. Do not edit. To update, replace `SKILL.md` and `LICENSE` and change the commit here.
+- `examples/basic/`: smallest possible app.
+- `examples/notes/`: feature-rich app using `generateTs`, `transport` and real CRUD.
+- Examples are separate Gradle builds that consume the root build through `includeBuild`, and double as end-to-end test fixtures.
+- `.run/`: shared IntelliJ run configurations.
 
 ## Commands
 
 ```bash
-./gradlew build
-./gradlew :ktor-svelte-server:test
-./gradlew :ktor-svelte-gradle-plugin:functionalTest
-./gradlew apiCheck
-./gradlew ktlintCheck
+./gradlew check apiCheck
+./gradlew ktlintFormat
+./gradlew apiDump
 ./gradlew -p examples/basic e2eTest
+./gradlew -p examples/notes e2eTest
+./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=8.14.6 -PtestShadowVersion=9.2.2
 ```
 
 ## Design constraints
@@ -39,4 +43,5 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 - Missing paths under `/_app/` and paths with a file extension return 404, never the SPA fallback.
 - Trailing-slash mismatches redirect with 308, because prerendered pages use relative asset paths.
 - The runtime compiles against Kotlin API level 2.3. The Gradle plugin targets the Kotlin API level of the oldest supported Gradle.
-- The runtime has no `ktor-client` or `WebSockets` dependency. The dev proxy uses the JDK `HttpClient`.
+- The dev proxy uses the JDK `HttpClient`. The runtime has no `ktor-client` dependency.
+- TypeScript output from `generateTs` has no npm dependencies and is committed, so a frontend build never needs the JVM app to run first.
