@@ -5,7 +5,7 @@ repository="https://raw.githubusercontent.com/nijasc/ktor-svelte"
 metadata="https://repo1.maven.org/maven2/io/github/nijasc/ktor-svelte-server/maven-metadata.xml"
 
 fail() {
-    printf 'ktor-svelte installer: %s\n' "$1" >&2
+    printf 'ktor-svelte setup: %s\n' "$1" >&2
     exit 1
 }
 
@@ -20,13 +20,13 @@ version=$(curl -fsSL "$metadata" | sed -n 's/.*<release>\(.*\)<\/release>.*/\1/p
 
 directory=$(mktemp -d)
 trap 'rm -rf "$directory"' EXIT INT TERM
-curl -fsSL "$repository/v$version/installer/Installer.java" -o "$directory/Installer.java" ||
-    fail "Could not download the installer for version $version."
+curl -fsSL "$repository/v$version/scripts/Setup.java" -o "$directory/Setup.java" ||
+    fail "Could not download the setup for version $version."
 
 if [ -t 0 ]; then
-    java "$directory/Installer.java" "--version=$version" "$@"
+    java "$directory/Setup.java" "--version=$version" "$@"
 elif [ -r /dev/tty ] && (: </dev/tty) 2>/dev/null; then
-    java "$directory/Installer.java" "--version=$version" "$@" </dev/tty
+    java "$directory/Setup.java" "--version=$version" "$@" </dev/tty
 else
-    java "$directory/Installer.java" "--version=$version" "$@"
+    java "$directory/Setup.java" "--version=$version" "$@"
 fi
