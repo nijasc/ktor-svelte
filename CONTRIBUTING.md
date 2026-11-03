@@ -37,6 +37,10 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 
 The examples are separate Gradle builds that pull in the root build with `includeBuild`, so they use the plugin the way a real project does. They are also the end-to-end test fixtures.
 
+## Frontend libraries
+
+Package versions for `svelteSync` are in `libraries/LibrarySpec.kt`, and the DaisyUI theme list is in `SvelteLibraries.kt`. When you change a generator, run `./gradlew -p examples/notes svelteSync` and commit the result. CI fails if the notes app is out of sync.
+
 ## Tests
 
 | Layer | Command | What it proves |
