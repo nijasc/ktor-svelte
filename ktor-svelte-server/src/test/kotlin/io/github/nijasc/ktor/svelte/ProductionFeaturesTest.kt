@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.privateCacheControl
 import io.github.nijasc.ktor.svelte.internal.typescript.TypeScriptGenerator
 import io.ktor.client.request.basicAuth
 import io.ktor.client.request.get
@@ -94,6 +95,48 @@ class ProductionFeaturesTest {
             assertEquals("<h1>home</h1>", home.bodyAsText())
             val route = client.get("/anything/else") { basicAuth("me", "secret") }
             assertEquals("<h1>fallback</h1>", route.bodyAsText())
+        }
+
+    @Test
+    fun `protected pages are private and public paths stay shared`() =
+        protectedApp {
+            val page = client.get("/") { basicAuth("me", "secret") }
+            assertEquals("private, no-cache", page.headers[HttpHeaders.CacheControl])
+            val asset = client.get("/_app/immutable/app.js")
+            assertEquals("public, max-age=31536000, immutable", asset.headers[HttpHeaders.CacheControl])
+        }
+
+    @Test
+    fun `private cache control rewrites public and keeps stricter values`() {
+        assertEquals("private, max-age=31536000, immutable", privateCacheControl("public, max-age=31536000, immutable"))
+        assertEquals("private, no-cache", privateCacheControl("no-cache"))
+        assertEquals("no-store", privateCacheControl("no-store"))
+        assertEquals("private, max-age=1", privateCacheControl("private, max-age=1"))
+    }
+
+    @Test
+    fun `directory source hides dotfiles and symlinks`() =
+        testApplication {
+            val outside = Files.createTempFile("ktor-svelte-outside", ".txt")
+            outside.writeText("secret")
+            val build = fixtureBuild(files = frontendFiles + (".env" to "SECRET=1") + (".well-known/security.txt" to "contact"))
+            val linked =
+                try {
+                    Files.createSymbolicLink(build.resolve("linked.txt"), outside)
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+            application {
+                install(Svelte) {
+                    source = SvelteSource.Directory(build)
+                    spaFallback = null
+                    dev { mode = DevMode.NEVER }
+                }
+            }
+            assertEquals(HttpStatusCode.NotFound, client.get("/.env").status)
+            assertEquals("contact", client.get("/.well-known/security.txt").bodyAsText())
+            if (linked) assertEquals(HttpStatusCode.NotFound, client.get("/linked.txt").status)
         }
 
     @Test

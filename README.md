@@ -252,6 +252,8 @@ routing {
 }
 ```
 
+Pages served by a plain `svelte()` get `private` caching, so shared proxies do not keep them. Paths in the `public` list keep normal caching.
+
 In the browser, react to expired sessions in one place:
 
 ```ts
@@ -305,6 +307,8 @@ At build time, three tasks run before `processResources`:
 2. `svelteBuild` runs your build script.
 3. `svelteBundle` copies the output to `ktor-svelte/public/` in your resources, and writes `ktor-svelte/manifest.json` with a hash of every file.
 
+`svelteBundle` leaves out hidden files such as `.env` (but keeps `.well-known`), source maps and symlinks, and warns about any hidden files it skipped. `SvelteSource.Directory` also ignores hidden files and symlinks, but serves source maps.
+
 At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more specific routes, so yours win. GET and HEAD requests that reach the catch-all are resolved in this order:
 
 | Step | Request | Result |
@@ -346,6 +350,7 @@ install(Svelte) {
     dev {
         url = "http://localhost:5173"
         mode = DevMode.AUTO
+        allowRemote = false
     }
 
     transport {
@@ -368,6 +373,7 @@ install(Svelte) {
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
 | `dev.mode` | `AUTO` follows Ktor's development mode. `ALWAYS` and `NEVER` force it |
+| `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
 | `transport` | JSON, XML and compression. See [Transport](#transport) |
 
 A route of yours such as `get("/{slug}")` beats the frontend. That is intended, but it can hide pages.
@@ -388,6 +394,7 @@ svelte {
     buildScript = "build"
     buildEnv = emptySet()
     addRuntimeDependency = true
+    includeSourceMaps = false
     dev {
         port = 5173
         script = "dev"
@@ -403,6 +410,7 @@ svelte {
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
+| `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
 | `dev.script` | `package.json` script that starts Vite |
 
@@ -450,6 +458,8 @@ Prefer separate terminals, for example to attach a debugger to the app? Run thes
 ```
 
 In development mode the runtime proxies to Vite if it is reachable, otherwise serves built files if they exist, and otherwise returns a 503 explaining how to start Vite. API prefixes are never proxied.
+
+The proxy only answers requests from this machine, so your frontend source is not open to everyone on your network, even though Ktor listens on all interfaces. Requests from elsewhere get your built files, or a 403 if there are none. It never forwards cookies or `Authorization` headers. It also refuses to start if `dev.url` points at another machine. To test from your phone or use Vite in another container, set `dev { allowRemote = true }`, and only on a network you trust.
 
 The proxy forwards HTTP only. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
 

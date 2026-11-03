@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte.internal
 
 import java.io.InputStream
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.security.MessageDigest
 import kotlin.io.path.fileSize
@@ -14,6 +15,8 @@ import kotlin.io.path.relativeTo
 
 private const val MANIFEST_RESOURCE = "ktor-svelte/manifest.json"
 private const val PUBLIC_RESOURCE_ROOT = "ktor-svelte/public"
+
+internal fun isHiddenAsset(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
 
 internal interface AssetStore {
     fun manifest(): Manifest?
@@ -45,7 +48,7 @@ internal class DirectoryAssetStore(
 
     override fun open(path: String): InputStream? {
         val file = root.resolve(path).normalize()
-        return if (file.startsWith(root.normalize()) && file.isRegularFile()) file.inputStream() else null
+        return if (file.startsWith(root.normalize()) && file.isRegularFile(LinkOption.NOFOLLOW_LINKS)) file.inputStream() else null
     }
 
     private fun scan(): Manifest? {
@@ -53,9 +56,10 @@ internal class DirectoryAssetStore(
         val all =
             Files.walk(root).use { paths ->
                 paths
-                    .filter { it.isRegularFile() }
+                    .filter { it.isRegularFile(LinkOption.NOFOLLOW_LINKS) }
                     .map { it.relativeTo(root).invariantSeparatorsPathString }
                     .toList()
+                    .filterNot(::isHiddenAsset)
                     .toSet()
             }
         if (all.none { it.endsWith(".html") }) return null

@@ -9,6 +9,8 @@ import io.github.nijasc.ktor.svelte.internal.Manifest
 import io.github.nijasc.ktor.svelte.internal.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.Resolution
 import io.github.nijasc.ktor.svelte.internal.installTransport
+import io.github.nijasc.ktor.svelte.internal.isLocalRequest
+import io.github.nijasc.ktor.svelte.internal.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.ktor.http.ContentType
@@ -48,6 +50,8 @@ private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
+private const val REMOTE_REFUSED_MESSAGE =
+    "The ktor-svelte dev proxy only answers requests from this machine. Set dev { allowRemote = true } to change that."
 private const val MISSING_BUILD_MESSAGE =
     "ktor-svelte found no frontend build. Build the app with the ktor-svelte Gradle plugin, " +
         "and do not pass -Psvelte.skip=true or -Psvelte.dev=true."
@@ -58,9 +62,16 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val resolver = RequestResolver(pluginConfig.apiPrefixList, pluginConfig.spaFallback, pluginConfig.notFoundPage)
         val responder = AssetResponder(store, pluginConfig.cacheConfig)
         val devUrl = resolveDevServerUrl(pluginConfig.devConfig.url, System.getenv(DEV_SERVER_VARIABLE))
-        val devProxy = if (isDevProxyActive(pluginConfig.devConfig.mode, application)) DevProxy(devUrl) else null
+        val allowRemote = pluginConfig.devConfig.allowRemote
+        val devProxy =
+            if (isDevProxyActive(pluginConfig.devConfig.mode, application)) {
+                requireAllowedTarget(devUrl, allowRemote)
+                DevProxy(devUrl)
+            } else {
+                null
+            }
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
-        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl)
+        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
 
         installTransport(application, pluginConfig.transportConfig)
@@ -109,7 +120,7 @@ public fun Route.svelte(public: List<String> = emptyList()) {
         application.attributes.getOrNull(SvelteHandlerKey)
             ?: error("Install the Svelte plugin before calling svelte() in routing.")
     if (public.isEmpty()) {
-        catchAll(handler)
+        catchAll(handler, privateResponses = true)
         return
     }
     val paths = if (handler.proxiesToVite) public + VITE_DEV_PATHS else public
@@ -119,9 +130,12 @@ public fun Route.svelte(public: List<String> = emptyList()) {
     }
 }
 
-private fun Route.catchAll(handler: SvelteHandler) {
+private fun Route.catchAll(
+    handler: SvelteHandler,
+    privateResponses: Boolean = false,
+) {
     route("{svelte-path...}") {
-        handle { handler.handle(call) }
+        handle { handler.handle(call, privateResponses) }
     }
 }
 
@@ -147,19 +161,24 @@ private class SvelteHandler(
     private val responder: AssetResponder,
     private val devProxy: DevProxy?,
     private val devUrl: String,
+    private val allowRemote: Boolean,
 ) {
     val proxiesToVite: Boolean get() = devProxy != null
 
-    suspend fun handle(call: ApplicationCall) {
+    suspend fun handle(
+        call: ApplicationCall,
+        privateResponses: Boolean = false,
+    ) {
         val method = call.request.httpMethod
         val path = decodedPath(call)
         if ((method != HttpMethod.Get && method != HttpMethod.Head) || path == null || resolver.isApiPath(path)) return
-        if (devProxy?.forward(call) == true) return
+        val mayProxy = allowRemote || isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))
+        if (mayProxy && devProxy?.forward(call) == true) return
         val manifest = store.manifest()
-        if (manifest != null) {
-            respondFromManifest(call, path, manifest, resolver, responder)
-        } else {
-            respondMissingBuild(call, devProxy, devUrl)
+        when {
+            manifest != null -> respondFromManifest(call, path, manifest, resolver, responder, privateResponses)
+            devProxy != null && !mayProxy -> call.respondText(REMOTE_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
+            else -> respondMissingBuild(call, devProxy, devUrl)
         }
     }
 }
@@ -220,10 +239,11 @@ private suspend fun respondFromManifest(
     manifest: Manifest,
     resolver: RequestResolver,
     responder: AssetResponder,
+    privateResponses: Boolean,
 ) {
     when (val resolution = resolver.resolve(path, acceptsHtml(call), manifest)) {
         is Resolution.Serve -> {
-            responder.respond(call, resolution.path, manifest.files.getValue(resolution.path), resolution.notFound)
+            responder.respond(call, resolution.path, manifest.files.getValue(resolution.path), resolution.notFound, privateResponses)
         }
 
         is Resolution.Redirect -> {

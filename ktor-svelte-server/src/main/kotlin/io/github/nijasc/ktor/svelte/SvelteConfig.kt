@@ -76,6 +76,7 @@ public class SvelteCacheConfig {
 public class SvelteDevConfig {
     public var url: String = "http://localhost:5173"
     public var mode: DevMode = DevMode.AUTO
+    public var allowRemote: Boolean = false
 }
 
 @KtorDsl

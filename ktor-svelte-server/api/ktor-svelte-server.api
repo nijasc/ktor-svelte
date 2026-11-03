@@ -46,8 +46,10 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 
 public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public fun <init> ()V
+	public final fun getAllowRemote ()Z
 	public final fun getMode ()Lio/github/nijasc/ktor/svelte/DevMode;
 	public final fun getUrl ()Ljava/lang/String;
+	public final fun setAllowRemote (Z)V
 	public final fun setMode (Lio/github/nijasc/ktor/svelte/DevMode;)V
 	public final fun setUrl (Ljava/lang/String;)V
 }

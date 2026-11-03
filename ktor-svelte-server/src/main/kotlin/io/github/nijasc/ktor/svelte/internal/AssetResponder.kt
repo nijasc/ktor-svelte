@@ -21,6 +21,13 @@ import java.io.InputStream
 private const val IMMUTABLE_PREFIX = "_app/immutable/"
 private const val VERSION_FILE = "_app/version.json"
 
+internal fun privateCacheControl(value: String): String =
+    when {
+        "public" in value -> value.replace("public", "private")
+        "private" in value || "no-store" in value -> value
+        else -> "private, $value"
+    }
+
 internal class AssetResponder(
     private val store: AssetStore,
     private val cache: SvelteCacheConfig,
@@ -30,12 +37,14 @@ internal class AssetResponder(
         path: String,
         entry: ManifestEntry,
         notFound: Boolean,
+        privateResponse: Boolean = false,
     ) {
         val encoding = selectEncoding(call, entry)
         val eTag = if (encoding == null) "\"${entry.hash}\"" else "\"${entry.hash}-${encoding.manifestKey}\""
         val status = if (notFound) HttpStatusCode.NotFound else HttpStatusCode.OK
 
-        call.response.header(HttpHeaders.CacheControl, cacheControlFor(path))
+        val cacheControl = cacheControlFor(path)
+        call.response.header(HttpHeaders.CacheControl, if (privateResponse) privateCacheControl(cacheControl) else cacheControl)
         call.response.header(HttpHeaders.ETag, eTag)
         if (entry.encodings.isNotEmpty()) call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
 

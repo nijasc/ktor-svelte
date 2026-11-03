@@ -25,8 +25,10 @@ import java.time.Duration
 
 private val UNFORWARDED_REQUEST_HEADERS =
     setOf(
+        "authorization",
         "connection",
         "content-length",
+        "cookie",
         "expect",
         "host",
         "http2-settings",
@@ -52,6 +54,31 @@ private val UNFORWARDED_RESPONSE_HEADERS =
         "transfer-encoding",
         "upgrade",
     )
+
+private val IPV4_LOOPBACK = Regex("127(\\.\\d{1,3}){3}")
+
+internal fun isLoopbackHost(host: String): Boolean {
+    val name = host.lowercase().removeSurrounding("[", "]").removePrefix("::ffff:")
+    return name == "localhost" || name.endsWith(".localhost") || name == "::1" || name == "0:0:0:0:0:0:0:1" || IPV4_LOOPBACK.matches(name)
+}
+
+internal fun hostWithoutPort(hostHeader: String): String =
+    if (hostHeader.startsWith("[")) hostHeader.substringBefore("]") + "]" else hostHeader.substringBefore(':')
+
+internal fun isLocalRequest(
+    remoteAddress: String,
+    hostHeader: String?,
+): Boolean = isLoopbackHost(remoteAddress) && (hostHeader == null || isLoopbackHost(hostWithoutPort(hostHeader)))
+
+internal fun requireAllowedTarget(
+    url: String,
+    allowRemote: Boolean,
+) {
+    val host = URI.create(url).host.orEmpty()
+    check(allowRemote || isLoopbackHost(host)) {
+        "ktor-svelte will not proxy to $url because it is not on this machine. Set dev { allowRemote = true } if you trust it."
+    }
+}
 
 internal fun resolveDevServerUrl(
     configured: String,

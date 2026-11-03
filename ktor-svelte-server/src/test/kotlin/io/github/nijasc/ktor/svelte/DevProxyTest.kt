@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte
 
 import com.sun.net.httpserver.HttpServer
+import io.github.nijasc.ktor.svelte.internal.isLocalRequest
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
 import io.ktor.client.request.get
 import io.ktor.client.request.head
@@ -25,7 +26,9 @@ import java.net.SocketException
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DevProxyTest {
     private lateinit var vite: HttpServer
@@ -286,6 +289,85 @@ class DevProxyTest {
         } finally {
             server.stop(0)
         }
+    }
+
+    @Test
+    fun `credentials are not forwarded to vite`() =
+        testApplication {
+            val seen = java.util.concurrent.CopyOnWriteArrayList<String>()
+            vite.removeContext("/")
+            vite.createContext("/") { exchange ->
+                seen += exchange.requestHeaders.keys.map { it.lowercase() }
+                exchange.sendResponseHeaders(204, -1)
+                exchange.close()
+            }
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.ALWAYS
+                    }
+                }
+            }
+            client.get("/page") {
+                header(HttpHeaders.Cookie, "session=secret")
+                header(HttpHeaders.Authorization, "Bearer secret")
+                header("X-Client", "kept")
+            }
+            assertTrue("x-client" in seen)
+            assertFalse("cookie" in seen)
+            assertFalse("authorization" in seen)
+        }
+
+    @Test
+    fun `remote vite is refused at startup unless allowed`() {
+        val failure =
+            assertFailsWith<IllegalStateException> {
+                testApplication {
+                    application {
+                        install(Svelte) {
+                            dev {
+                                url = "http://vite.example.com:5173"
+                                mode = DevMode.ALWAYS
+                            }
+                        }
+                    }
+                    client.get("/")
+                }
+            }
+        assertContains(failure.message.orEmpty(), "allowRemote")
+    }
+
+    @Test
+    fun `remote vite works once allowed`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = "http://vite.example.invalid:5173"
+                        mode = DevMode.ALWAYS
+                        allowRemote = true
+                    }
+                }
+            }
+            assertEquals(HttpStatusCode.ServiceUnavailable, client.get("/").status)
+        }
+
+    @Test
+    fun `only loopback clients and hosts count as local`() {
+        listOf(
+            "127.0.0.1" to "localhost:8080",
+            "::1" to "[::1]:8080",
+            "0:0:0:0:0:0:0:1" to "127.0.0.1",
+            "localhost" to "app.localhost:1",
+        ).forEach { (remote, host) ->
+            assertTrue(isLocalRequest(remote, host), "$remote $host")
+        }
+        assertFalse(isLocalRequest("192.168.1.20", "localhost:8080"))
+        assertFalse(isLocalRequest("127.0.0.1", "evil.example.com"))
+        assertFalse(isLocalRequest("127.0.0.1", "127.evil.example.com"))
+        assertTrue(isLocalRequest("127.0.0.1", null))
+        assertFalse(isLocalRequest("10.0.0.1", null))
     }
 
     @Test

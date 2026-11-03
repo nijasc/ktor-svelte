@@ -45,4 +45,6 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 - Trailing-slash mismatches redirect with 308, because prerendered pages use relative asset paths.
 - The runtime compiles against Kotlin API level 2.3. The Gradle plugin targets the Kotlin API level of the oldest supported Gradle.
 - The dev proxy uses the JDK `HttpClient`. The runtime has no `ktor-client` dependency.
+- The dev proxy only serves loopback clients with a local `Host`, only targets loopback hosts, and never forwards credentials, unless `dev.allowRemote` is set.
+- GitHub Actions are pinned to commit SHAs, and jobs declare their own least-privilege permissions.
 - TypeScript output from `generateTs` has no npm dependencies and is committed, so a frontend build never needs the JVM app to run first.
