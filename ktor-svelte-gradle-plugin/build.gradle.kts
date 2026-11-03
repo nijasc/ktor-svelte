@@ -27,12 +27,45 @@ gradlePlugin {
     }
 }
 
-dependencies {
-    testImplementation(libs.kotlin.test.junit5)
-    testImplementation(platform(libs.junit.bom))
-    testRuntimeOnly(libs.junit.platform.launcher)
+@Suppress("UnstableApiUsage")
+testing {
+    suites {
+        named<JvmTestSuite>("test") {
+            useJUnitJupiter(libs.versions.junit)
+            dependencies {
+                implementation(gradleApi())
+                implementation(libs.kotlin.test.junit5)
+            }
+        }
+        register<JvmTestSuite>("functionalTest") {
+            useJUnitJupiter(libs.versions.junit)
+            dependencies {
+                implementation(project())
+                implementation(gradleTestKit())
+                implementation(libs.kotlin.test.junit5)
+            }
+            targets.configureEach {
+                testTask.configure {
+                    systemProperty("ktorSvelte.testGradleVersion", providers.gradleProperty("testGradleVersion").getOrElse(""))
+                    maxParallelForks = 2
+                }
+            }
+        }
+    }
 }
 
-tasks.test {
-    useJUnitPlatform()
+gradlePlugin {
+    testSourceSets(sourceSets["functionalTest"])
+}
+
+tasks.check {
+    dependsOn(testing.suites.named("functionalTest"))
+}
+
+tasks.processResources {
+    val pluginVersion = version.toString()
+    inputs.property("version", pluginVersion)
+    filesMatching("ktor-svelte-gradle-plugin.properties") {
+        expand("version" to pluginVersion)
+    }
 }
