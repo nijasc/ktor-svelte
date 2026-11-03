@@ -1,5 +1,15 @@
 # ktor-svelte
 
+[![Latest release](https://img.shields.io/github/v/release/nijasc/ktor-svelte?label=release&sort=semver)](https://github.com/nijasc/ktor-svelte/releases/latest)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.nijasc/ktor-svelte-server?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.nijasc/ktor-svelte-server)
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.nijasc.ktor-svelte?label=Gradle%20Plugin%20Portal)](https://plugins.gradle.org/plugin/io.github.nijasc.ktor-svelte)
+[![CI](https://img.shields.io/github/actions/workflow/status/nijasc/ktor-svelte/ci.yml?branch=main&label=CI)](https://github.com/nijasc/ktor-svelte/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/nijasc/ktor-svelte)](LICENSE)
+[![Ktor](https://img.shields.io/badge/Ktor-3.x-087CFA?logo=ktor&logoColor=white)](https://ktor.io)
+[![SvelteKit](https://img.shields.io/badge/SvelteKit-3.x-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev/docs/kit)
+
+**Latest release:** [Maven Central](https://central.sonatype.com/artifact/io.github.nijasc/ktor-svelte-server) | [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.nijasc.ktor-svelte) | [Release notes](https://github.com/nijasc/ktor-svelte/releases/latest)
+
 Ship your Ktor API and your SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that always matches your routes.
 
 ```kotlin
@@ -25,7 +35,7 @@ No CORS setup, no second server in production, no hand-written API types driftin
 > [!WARNING]
 > **This project was made heavily with AI, and nothing is guaranteed.** The author needed it for other projects and did not want to spend a lot of time on it. It has real tests, but read the code before you trust it with anything important.
 
-> **Status:** pre-release. Nothing is published yet, so the coordinates below will not resolve until the first release ships.
+> **Status:** early. Expect breaking changes while the version starts with `0.`.
 
 ## What you get
 
@@ -35,10 +45,41 @@ No CORS setup, no second server in production, no hand-written API types driftin
 - **Real hot reload.** One command runs everything. You open Ktor's port and get Vite's HMR, with the same origin as production. Change a route and your TypeScript follows.
 - **Transport in one place.** JSON, XML and compression are configured inside `install(Svelte)`.
 - **Sensible production defaults.** Immutable caching for hashed assets, ETags, precompressed files, SPA fallback and real 404s for stale chunks.
+- **Frontend libraries from Kotlin.** Turn on Tailwind, DaisyUI, Lucide and i18n in Gradle, with typed icons, themes and messages on both sides.
 - **Bring your package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
 - **Run configurations for IntelliJ.** One click starts Vite and Ktor together.
 
-## Quick start
+## Create a project
+
+One command asks a few questions and sets up a working project, always on the latest release. You need Java 17 or newer and one of Bun, pnpm, npm or Yarn.
+
+**macOS and Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/main/installer/install.sh | sh
+```
+
+**Windows:**
+
+```powershell
+powershell -c "irm https://raw.githubusercontent.com/nijasc/ktor-svelte/main/installer/install.ps1 | iex"
+```
+
+It asks for the project name, Kotlin package, package manager, a generated TypeScript client, DaisyUI, Tailwind, Lucide, i18n and git. Then start it:
+
+```bash
+./gradlew svelteDevAll
+```
+
+To skip the questions, add `--yes` and any options, such as `--name=shop --package=com.example.shop --i18n --locales=en,de --no-lucide`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/main/installer/install.sh | sh -s -- --yes --name=shop
+```
+
+Prefer to read scripts before running them? They are in [`installer/`](installer).
+
+## Add to an existing project
 
 Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `build.gradle.kts`:
 
@@ -96,6 +137,172 @@ Want an IDE setup? This writes run configurations to `.run/`:
 ```bash
 ./gradlew svelteGenerateRunConfigurations
 ```
+
+The Gradle plugin adds the runtime for you. If you only want the library, add it directly:
+
+<!-- x-release-please-start-version -->
+```kotlin
+implementation("io.github.nijasc:ktor-svelte-server:0.1.0")
+```
+<!-- x-release-please-end -->
+
+## Frontend libraries
+
+Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
+
+```kotlin
+import io.github.nijasc.ktor.svelte.gradle.DaisyTheme
+import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
+
+svelte {
+    libraries {
+        tailwind {
+            typography()
+            forms()
+        }
+        daisyUi {
+            themes(DaisyTheme.Light, DaisyTheme.Dark, DaisyTheme.Cupcake)
+            customTheme("brand") {
+                primary = "#6b57ff"
+                base100 = "#fdfcff"
+            }
+            defaultTheme(DaisyTheme.Light)
+            prefersDark(DaisyTheme.Dark)
+        }
+        lucide()
+        i18n {
+            locales("en", "de")
+            defaultLocale = "en"
+            strategy = LocaleStrategy.Cookie
+        }
+    }
+}
+```
+
+Then apply it:
+
+```bash
+./gradlew svelteSync
+```
+
+`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
+
+**ktor-svelte owns `vite.config.ts`** once any library is on. Put your own Vite settings in `vite.user.ts`, and they are merged in:
+
+```ts
+export default {
+    server: { port: 3000 }
+};
+```
+
+It also generates `src/hooks.server.ts`, and `src/hooks.ts` for URL prefixes. If you already have your own versions of these files, sync stops rather than overwriting them. It tells you to move your settings and delete the file. To combine your own `handle` with ours, use `sequence` from `@sveltejs/kit/hooks` with `ktorSvelteHandle` from `#lib/ktor-svelte/server-hooks.js`, after removing the generated hook file and any use of a library that needs it.
+
+If you already have `src/routes/+layout.svelte`, add this line once. Without a layout, one is created for you.
+
+```ts
+import '#lib/ktor-svelte/app.css';
+```
+
+Generated Kotlin lands in the `ktorsvelte` package. Change it with `generatedPackage = "com.example.ui"`.
+
+### Tailwind
+
+`tailwind()` installs Tailwind 4 and wires Vite and the CSS. `typography()` and `forms()` add the official plugins. Everything else is normal Tailwind CSS.
+
+### DaisyUI
+
+`daisyUi()` turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme.
+
+```svelte
+<script lang="ts">
+    import { setTheme, themes } from '#theme';
+</script>
+
+{#each themes as theme}
+    <button class="btn" onclick={() => setTheme(theme)}>{theme}</button>
+{/each}
+```
+
+```kotlin
+import ktorsvelte.AppTheme
+import ktorsvelte.theme
+
+get("/api/report") {
+    val isDark = call.theme == AppTheme.Dark
+}
+```
+
+`customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
+
+The saved theme is applied by a small inline script. If you set a strict `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
+
+### Lucide
+
+`lucide()` generates a `LucideIcon` enum from the installed version, so a misspelled icon is a compile error. Use it in your DTOs and it reaches the frontend as the same type:
+
+```kotlin
+import ktorsvelte.LucideIcon
+
+@Serializable
+data class Note(val title: String, val icon: LucideIcon)
+```
+
+```svelte
+<script lang="ts">
+    import Icon from '#icon';
+</script>
+
+<Icon name="ArrowRight" size={20} />
+<Icon name={note.icon} class="text-primary" />
+```
+
+Each icon loads on demand, so you only download the ones a page uses. An icon's enum name is its Lucide name in PascalCase, such as `arrow-right` to `ArrowRight`. Names starting with a digit get an `Icon` prefix. A misspelled icon name from a client gets a 400 from Ktor.
+
+### i18n
+
+Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. Files are flat, and `{name}` is a parameter:
+
+```json
+{
+  "note-created": "Created {title}",
+  "app-title": "Notes"
+}
+```
+
+Both sides get typed functions from the same files. A missing key or a mismatched parameter in any language fails the build, so translations can't drift.
+
+```svelte
+<script lang="ts">
+    import { getLocale, localizeHref, locales, m, setLocale } from '#i18n';
+</script>
+
+<h1>{m.appTitle()}</h1>
+<p>{m.noteCreated({ title: 'Milk' })}</p>
+<a href={localizeHref('/about')}>About</a>
+<button onclick={() => setLocale('de')}>Deutsch</button>
+```
+
+```kotlin
+import ktorsvelte.Messages
+import ktorsvelte.messages
+
+get("/api/hello") {
+    call.respondText(call.messages.noteCreated("Milk"))
+}
+
+val german = Messages.forLocale("de").appTitle()
+```
+
+Choose how the language is picked with `strategy`:
+
+| Strategy | URLs | Best for | Trade-off |
+|---|---|---|---|
+| `Cookie` (default) | `/about` | Apps behind a login | Prerendered pages hold the default language and switch on load, so others can flash briefly, and search engines mostly see one language |
+| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or pages won't be prerendered per language |
+
+On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy.
+
+Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
 
 ## Generated TypeScript
 
@@ -410,6 +617,7 @@ svelte {
 | `packageManager` | `AUTO`, `BUN`, `PNPM`, `NPM` or `YARN`. `AUTO` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
+| `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](#frontend-libraries) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
@@ -421,6 +629,9 @@ The package manager must already be installed. The plugin does not download Node
 
 | Task | What it does |
 |---|---|
+| `svelteSync` | Installs configured libraries and writes their generated files |
+| `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
+| `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
 | `svelteDoctor` | Checks adapter, `#api`, tsconfig, Kit version, tool and port, and says what to fix |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |

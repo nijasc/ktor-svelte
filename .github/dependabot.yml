@@ -8,6 +8,10 @@ updates:
     directory: /examples/basic/frontend
     schedule:
       interval: weekly
+  - package-ecosystem: bun
+    directory: /examples/notes/frontend
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -155,6 +155,19 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the icon enum becomes one named type`() {
+        val result =
+            TypeScriptGenerator(listOf("/api"), iconNames = listOf("House", "Plus")).generate(
+                """{"paths":{},"components":{"schemas":{"Note":{"type":"object","required":["icon"],
+                "properties":{"icon":{"type":"string","enum":["Plus","House"]},"mood":{"type":"string","enum":["Good"]}}}}}}""",
+            )
+        val types = result.getValue("types.ts")
+        assertContains(types, "import type { LucideIconName as LucideIcon } from '../ktor-svelte/icons.js';")
+        assertContains(types, "icon: LucideIcon;")
+        assertContains(types, "mood?: 'Good';")
+    }
+
+    @Test
     fun `output is deterministic`() {
         val paths = """{"/api/b":{"get":{}},"/api/a":{"get":{}}}"""
         assertEquals(generate(paths = paths), generate(paths = paths))

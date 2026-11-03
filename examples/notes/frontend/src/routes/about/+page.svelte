@@ -1,6 +1,11 @@
-<h1>About this example</h1>
-<ul>
-    <li>Routes live in Ktor. Types and services in <code>src/lib/api</code> are generated from them.</li>
-    <li>JSON, XML and compression are configured in <code>install(Svelte)</code>.</li>
-    <li>Landing pages are prerendered. The notes pages use the SPA fallback.</li>
-</ul>
+<script lang="ts">
+    import { m } from '#i18n';
+</script>
+
+<article class="prose">
+    <h1>{m.aboutTitle()}</h1>
+    <ul>
+        <li>{m.aboutRoutes()}</li>
+        <li>{m.aboutLibraries()}</li>
+    </ul>
+</article>

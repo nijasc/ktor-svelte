@@ -1,15 +1,27 @@
+import type { LucideIconName as LucideIcon } from '../ktor-svelte/icons.js';
+
+export type { LucideIcon };
+
+export interface Greeting {
+    message: string;
+    locale: string;
+    theme: string;
+}
+
 export interface Note {
     id: number;
     title: string;
     body: string;
     tags: string[];
     status: 'ACTIVE' | 'ARCHIVED';
+    icon: LucideIcon;
 }
 
 export interface NoteInput {
     title: string;
     body?: string;
     tags?: string[];
+    icon?: LucideIcon;
 }
 
 export interface NoteStats {

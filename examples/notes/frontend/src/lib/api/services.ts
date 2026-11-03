@@ -1,5 +1,9 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { Note, NoteInput, NoteStats, NotesExport, Problem, PublicConfig } from './types.js';
+import type { Greeting, Note, NoteInput, NoteStats, NotesExport, Problem, PublicConfig } from './types.js';
+
+export const greeting = {
+    list: (query?: { name?: string }, options?: RequestOptions) => request<Greeting>('GET', '/api/greeting', { ...options, query, operation: 'greeting.list' }),
+};
 
 export const notes = {
     list: (query?: { search?: string; tag?: string }, options?: RequestOptions) => request<Note[]>('GET', '/api/notes', { ...options, query, operation: 'notes.list' }),
@@ -40,4 +44,4 @@ export function loadPublicConfig(options?: RequestOptions): Promise<PublicConfig
     return publicConfig;
 }
 
-export const api = { notes, stats };
+export const api = { greeting, notes, stats };

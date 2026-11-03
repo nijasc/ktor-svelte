@@ -6,6 +6,9 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.log
 import io.ktor.server.routing.openapi.OpenApiDocSource
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolute
@@ -36,6 +39,12 @@ internal fun writeIfChanged(
 internal fun findFrontendRoot(directory: Path): Path? =
     generateSequence(directory.absolute().normalize()) { it.parent }.firstOrNull { it.resolve("package.json").exists() }
 
+internal fun readIconNames(apiDirectory: Path): List<String> {
+    val file = apiDirectory.resolveSibling("ktor-svelte/icons.json")
+    if (!file.exists()) return emptyList()
+    return Json.parseToJsonElement(file.readText()).jsonArray.map { it.jsonPrimitive.content }
+}
+
 internal fun installTypeScriptGeneration(
     application: Application,
     enabled: Boolean,
@@ -44,7 +53,6 @@ internal fun installTypeScriptGeneration(
     excludedPaths: List<String>,
     publicConfigSchema: String?,
 ) {
-    val generator = TypeScriptGenerator(apiPrefixes, excludedPaths, publicConfigSchema)
     val generateOnly = System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
     if (generateOnly && !enabled) {
         application.monitor.subscribe(ApplicationStarted) {
@@ -57,6 +65,7 @@ internal fun installTypeScriptGeneration(
 
     val frontendDir = System.getProperty(FRONTEND_DIR_PROPERTY) ?: "frontend"
     val output = Path(configuredOutput ?: "$frontendDir/src/lib/api")
+    val generator = TypeScriptGenerator(apiPrefixes, excludedPaths, publicConfigSchema, readIconNames(output))
 
     application.monitor.subscribe(ApplicationStarted) {
         val succeeded = generate(application, output, generator)

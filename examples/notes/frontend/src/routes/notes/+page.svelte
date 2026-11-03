@@ -1,5 +1,7 @@
 <script lang="ts">
     import { api, isValidationError, type Note, type NoteStats } from '#api';
+    import Icon from '#icon';
+    import { localizeHref, m } from '#i18n';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();
@@ -61,73 +63,36 @@
     }
 </script>
 
-<h1>Notes</h1>
-<p id="stats">{stats.total} notes, {stats.archived} archived</p>
+<h1 class="text-3xl font-bold">{m.notesTitle()}</h1>
+<p id="stats" class="mb-6 opacity-70">{m.notesStats({ total: stats.total, archived: stats.archived })}</p>
 
-<form onsubmit={create}>
-    <input placeholder="Title" aria-label="Title" bind:value={title} />
-    <textarea placeholder="Body" aria-label="Body" bind:value={body}></textarea>
-    <input placeholder="Tags, separated by commas" aria-label="Tags" bind:value={tags} />
-    <button type="submit">Add note</button>
-    {#if problem}<p class="problem" role="alert">{problem}</p>{/if}
+<form class="mb-6 grid gap-2" onsubmit={create}>
+    <input class="input w-full" placeholder={m.fieldTitle()} aria-label="Title" bind:value={title} />
+    <textarea class="textarea w-full" placeholder={m.fieldBody()} aria-label="Body" bind:value={body}></textarea>
+    <input class="input w-full" placeholder={m.fieldTags()} aria-label="Tags" bind:value={tags} />
+    <button class="btn btn-primary" type="submit"><Icon name="Plus" size={16} /> {m.notesAdd()}</button>
+    {#if problem}<p class="text-error" role="alert">{problem}</p>{/if}
 </form>
 
-<div class="filters">
-    <input placeholder="Search" aria-label="Search" bind:value={search} oninput={refresh} />
-    <button class:active={tag === undefined} onclick={() => filterByTag(undefined)}>All</button>
+<div class="mb-4 flex flex-wrap items-center gap-2">
+    <input class="input input-sm w-40" placeholder={m.notesSearch()} aria-label="Search" bind:value={search} oninput={refresh} />
+    <button class="btn btn-sm" class:btn-active={tag === undefined} onclick={() => filterByTag(undefined)}>{m.notesAll()}</button>
     {#each Object.entries(stats.tags) as [name, count]}
-        <button class:active={tag === name} onclick={() => filterByTag(name)}>{name} ({count})</button>
+        <button class="btn btn-sm" class:btn-active={tag === name} onclick={() => filterByTag(name)}>{name} ({count})</button>
     {/each}
 </div>
 
-<ul>
+<ul class="grid gap-2">
     {#each notes as note (note.id)}
-        <li class:archived={note.status === 'ARCHIVED'}>
-            <a href="/notes/{note.id}">{note.title}</a>
-            <p>{note.body}</p>
-            <button onclick={() => archive(note.id)} disabled={note.status === 'ARCHIVED'}>Archive</button>
-            <button onclick={() => remove(note.id)}>Delete</button>
+        <li class="card bg-base-200 p-4" class:opacity-60={note.status === 'ARCHIVED'}>
+            <a class="link flex items-center gap-2 font-semibold" href={localizeHref(`/notes/${note.id}`)}><Icon name={note.icon} size={18} /> {note.title}</a>
+            <p class="my-2">{note.body}</p>
+            <div class="flex gap-2">
+                <button class="btn btn-xs" onclick={() => archive(note.id)} disabled={note.status === 'ARCHIVED'}>{m.actionArchive()}</button>
+                <button class="btn btn-xs btn-error" onclick={() => remove(note.id)}>{m.actionDelete()}</button>
+            </div>
         </li>
     {:else}
-        <li>No notes match.</li>
+        <li>{m.notesEmpty()}</li>
     {/each}
 </ul>
-
-<style>
-    form {
-        display: grid;
-        gap: 0.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .filters {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .active {
-        background: #cbe7f8;
-    }
-
-    .problem {
-        color: #ab091e;
-        margin: 0;
-    }
-
-    ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    li {
-        background: #fff;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-    }
-
-    .archived {
-        opacity: 0.6;
-    }
-</style>

@@ -18,8 +18,15 @@ public abstract class SvelteExtension {
     @get:Nested
     public abstract val dev: SvelteDevSettings
 
+    @get:Nested
+    public abstract val libraries: SvelteLibraries
+
     public fun dev(action: Action<SvelteDevSettings>) {
         action.execute(dev)
+    }
+
+    public fun libraries(action: Action<SvelteLibraries>) {
+        action.execute(libraries)
     }
 }
 

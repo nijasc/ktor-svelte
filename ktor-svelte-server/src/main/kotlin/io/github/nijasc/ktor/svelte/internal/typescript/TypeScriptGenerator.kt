@@ -20,7 +20,9 @@ internal class TypeScriptGenerator(
     apiPrefixes: List<String>,
     private val excludedPaths: List<String> = emptyList(),
     private val publicConfigSchema: String? = null,
+    iconNames: List<String> = emptyList(),
 ) {
+    private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
 
     fun generate(openApiJson: String): Map<String, String> {
@@ -30,7 +32,7 @@ internal class TypeScriptGenerator(
         return mapOf(
             "client.ts" to CLIENT_SOURCE,
             "types.ts" to typesSource(schemas) + publicConfigDeclaration(),
-            "services.ts" to servicesSource(filtered.objectAt("paths").orEmpty(), schemas.keys),
+            "services.ts" to servicesSource(filtered.objectAt("paths").orEmpty(), schemas.keys + LUCIDE_TYPE),
             "index.ts" to INDEX_SOURCE,
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
@@ -56,10 +58,21 @@ internal class TypeScriptGenerator(
             (prefixes.isEmpty() || prefixes.any { prefix -> prefix == "/" || path == prefix || path.startsWith("$prefix/") })
 
     private fun typesSource(schemas: Map<String, JsonElement>): String {
-        if (schemas.isEmpty()) return "export {};\n"
-        return schemas.toSortedMap().entries.joinToString("\n") { (name, schema) ->
-            declaration(typeName(name), schema.jsonObject, mutableSetOf())
-        }
+        if (schemas.isEmpty() && iconNames.isEmpty()) return "export {};\n"
+        val references = mutableSetOf<String>()
+        val declarations =
+            schemas.toSortedMap().entries.joinToString("\n") { (name, schema) ->
+                declaration(typeName(name), schema.jsonObject, references)
+            }
+        val iconImport =
+            if (LUCIDE_TYPE in
+                references
+            ) {
+                "import type { LucideIconName as $LUCIDE_TYPE } from '../ktor-svelte/icons.js';\n\nexport type { $LUCIDE_TYPE };\n\n"
+            } else {
+                ""
+            }
+        return iconImport + declarations.ifEmpty { "export {};\n" }
     }
 
     private fun declaration(
@@ -98,7 +111,14 @@ internal class TypeScriptGenerator(
             references += name
             return name
         }
-        schema["enum"]?.let { values -> return values.jsonArray.joinToString(" | ", transform = ::literal).ifEmpty { "never" } }
+        schema["enum"]?.let { values ->
+            val names = values.jsonArray.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.toSet()
+            if (iconNames.isNotEmpty() && names == iconNames) {
+                references += LUCIDE_TYPE
+                return LUCIDE_TYPE
+            }
+            return values.jsonArray.joinToString(" | ", transform = ::literal).ifEmpty { "never" }
+        }
         schema["const"]?.let { value -> return literal(value) }
         schema.arrayAt("oneOf")?.let { options -> return union(options, references, indent) }
         schema.arrayAt("anyOf")?.let { options -> return union(options, references, indent) }
@@ -411,6 +431,8 @@ private fun JsonObject.arrayAt(key: String): JsonArray? = this[key] as? JsonArra
 private fun JsonObject.stringAt(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 
 private fun JsonObject.stringList(key: String): List<String> = arrayAt(key).orEmpty().map { it.jsonPrimitive.content }
+
+private const val LUCIDE_TYPE = "LucideIcon"
 
 private const val PUBLIC_CONFIG_SOURCE = """let publicConfig: Promise<PublicConfig> | undefined;
 

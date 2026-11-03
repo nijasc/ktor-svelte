@@ -12,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.fail
 
 class NotesAppTest {
@@ -105,6 +106,43 @@ class NotesAppTest {
         val created = send("POST", "/api/notes", """{"title":"Keep"}""")
         val id = Regex(""""id":\s*(\d+)""").find(created.body())!!.groupValues[1]
         assertEquals(422, send("PUT", "/api/notes/$id", """{"title":" "}""").statusCode())
+    }
+
+    @Test
+    fun `backend messages follow the locale cookie and browser language`() {
+        assertContains(send("GET", "/api/greeting?name=Nils", null, "Cookie" to "ktor_svelte_locale=de").body(), "Hallo Nils")
+        assertContains(send("GET", "/api/greeting?name=Nils", null, "Accept-Language" to "de-DE").body(), "Hallo Nils")
+        assertContains(send("GET", "/api/greeting?name=Nils").body(), "Hello Nils")
+    }
+
+    @Test
+    fun `backend reads the saved theme`() {
+        assertContains(send("GET", "/api/greeting", null, "Cookie" to "ktor_svelte_theme=ktor").body(), """"theme":"ktor"""")
+        assertContains(send("GET", "/api/greeting", null, "Cookie" to "ktor_svelte_theme=nope").body(), """"theme":"light"""")
+    }
+
+    @Test
+    fun `typed icons travel through the api`() {
+        assertContains(send("GET", "/api/notes/1").body(), """"icon":"Hand"""")
+        assertContains(send("POST", "/api/notes", """{"title":"Icon","icon":"Rocket"}""").body(), """"icon":"Rocket"""")
+        assertEquals(400, send("POST", "/api/notes", """{"title":"Icon","icon":"NotAnIcon"}""").statusCode())
+    }
+
+    @Test
+    fun `prerendered pages carry the default theme and language`() {
+        val page = send("GET", "/", null, html).body()
+        assertContains(page, """lang="en"""")
+        assertContains(page, """data-theme="light"""")
+        assertContains(page, "ktor_svelte_theme")
+    }
+
+    @Test
+    fun `daisy and tailwind css are in the jar`() {
+        val page = send("GET", "/", null, html).body()
+        val css = assertNotNull(Regex("""_app/immutable/assets/[^"]+\.css""").find(page)).value
+        val body = send("GET", "/$css").body()
+        assertContains(body, ".btn")
+        assertContains(body, "--color-primary")
     }
 
     @Test

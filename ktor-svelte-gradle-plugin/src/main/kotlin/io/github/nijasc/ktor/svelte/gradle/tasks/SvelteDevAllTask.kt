@@ -133,6 +133,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 "--continuous",
                 "--quiet",
                 "classes",
+                "svelteSync",
                 "-Psvelte.dev=true",
             )
         return start("kotlin", command, projectDirectory.get().asFile)
