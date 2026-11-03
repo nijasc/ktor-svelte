@@ -29,6 +29,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getBuildScript ()Lorg/gradle/api/provider/Property;
 	public abstract fun getDev ()Lio/github/nijasc/ktor/svelte/gradle/SvelteDevSettings;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getIncludeSourceMaps ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 }
@@ -48,6 +49,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteBundleTask
 	public final fun bundle ()V
 	public abstract fun getBuildOutput ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getBundleDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getIncludeSourceMaps ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOutputDirName ()Lorg/gradle/api/provider/Property;
 }
 

@@ -12,10 +12,15 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import java.io.File
+import java.nio.file.Files
 import java.security.MessageDigest
 
 private const val FORMAT_VERSION = 1
 private val ENCODINGS = listOf("br" to ".br", "gzip" to ".gz")
+
+internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
+
+internal fun isSourceMap(path: String): Boolean = path.removeSuffix(".br").removeSuffix(".gz").endsWith(".map")
 
 @CacheableTask
 public abstract class SvelteBundleTask : DefaultTask() {
@@ -26,18 +31,24 @@ public abstract class SvelteBundleTask : DefaultTask() {
     @get:Input
     public abstract val outputDirName: Property<String>
 
+    @get:Input
+    public abstract val includeSourceMaps: Property<Boolean>
+
     @get:OutputDirectory
     public abstract val bundleDirectory: DirectoryProperty
 
     @TaskAction
     public fun bundle() {
         val source = buildOutput.get().asFile
-        val files =
+        val found =
             source
                 .walkTopDown()
-                .filter { it.isFile }
+                .filter { it.isFile && !Files.isSymbolicLink(it.toPath()) }
                 .associateBy { it.relativeTo(source).invariantSeparatorsPath }
                 .toSortedMap()
+        val hidden = found.keys.filter(::isHiddenPath)
+        if (hidden.isNotEmpty()) logger.warn("ktor-svelte left hidden files out of the JAR: ${hidden.joinToString()}")
+        val files = found.filterKeys { !isHiddenPath(it) && (includeSourceMaps.get() || !isSourceMap(it)) }
 
         if (files.keys.none { it.endsWith(".html") }) {
             throw GradleException(

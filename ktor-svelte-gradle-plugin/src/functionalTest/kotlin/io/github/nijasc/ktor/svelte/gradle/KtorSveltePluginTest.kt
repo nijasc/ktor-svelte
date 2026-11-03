@@ -309,6 +309,53 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `hidden files and source maps stay out of the bundle`() {
+        val project = project()
+        project.run("jar")
+        val build = project.frontend.resolve("build")
+        build.resolve(".env").writeText("SECRET=1")
+        build.resolve(".git").mkdirs()
+        build.resolve(".git/config").writeText("secret")
+        build.resolve(".well-known").mkdirs()
+        build.resolve(".well-known/security.txt").writeText("contact")
+        build.resolve("_app/immutable/app.js.map").writeText("{}")
+        build.resolve("_app/immutable/app.js.map.gz").writeText("{}")
+
+        val output = project.run("svelteBundle", "-x", "svelteBuild").output
+
+        val bundle = dir.resolve("build/generated/ktor-svelte/resources/ktor-svelte")
+        assertFalse(bundle.resolve("public/.env").exists())
+        assertFalse(bundle.resolve("public/.git").exists())
+        assertFalse(bundle.resolve("public/_app/immutable/app.js.map").exists())
+        assertFalse(bundle.resolve("public/_app/immutable/app.js.map.gz").exists())
+        assertTrue(bundle.resolve("public/.well-known/security.txt").isFile)
+        val manifest = bundle.resolve("manifest.json").readText()
+        assertFalse(manifest.contains(".env"))
+        assertFalse(manifest.contains(".map"))
+        assertContains(output, "left hidden files out of the JAR: .env, .git/config")
+    }
+
+    @Test
+    fun `source maps can be included on purpose`() {
+        val project = project()
+        project.buildScript(
+            javaBuild +
+                """
+
+                svelte {
+                    includeSourceMaps = true
+                }
+                """.trimIndent(),
+        )
+        project.run("jar")
+        project.frontend.resolve("build/_app/immutable/app.js.map").writeText("{}")
+
+        project.run("svelteBundle", "-x", "svelteBuild")
+
+        assertTrue(dir.resolve("build/generated/ktor-svelte/resources/ktor-svelte/public/_app/immutable/app.js.map").isFile)
+    }
+
+    @Test
     fun `runtime dependency uses the plugin version and can be disabled`() {
         val printDependencies =
             """

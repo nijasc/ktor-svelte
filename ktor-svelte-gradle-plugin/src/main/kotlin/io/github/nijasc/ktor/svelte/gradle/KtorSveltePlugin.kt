@@ -177,6 +177,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.packageManager.convention(PackageManager.AUTO)
         extension.buildScript.convention("build")
         extension.addRuntimeDependency.convention(true)
+        extension.includeSourceMaps.convention(false)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
         return extension
@@ -275,6 +276,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.description = "Copies the frontend build into generated resources and writes the manifest."
             task.buildOutput.set(build.flatMap { it.outputDirectory })
             task.outputDirName.set(extension.outputDir)
+            task.includeSourceMaps.set(extension.includeSourceMaps)
             task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
             task.onlyIf("$SKIP_PROPERTY and $DEV_PROPERTY are not set") { !skipFrontend }
         }
