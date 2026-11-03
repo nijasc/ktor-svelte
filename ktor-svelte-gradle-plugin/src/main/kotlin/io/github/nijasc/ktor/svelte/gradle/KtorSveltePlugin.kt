@@ -2,18 +2,27 @@ package io.github.nijasc.ktor.svelte.gradle
 
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
+import org.gradle.process.CommandLineArgumentProvider
 import java.util.Properties
 
 private const val TASK_GROUP = "svelte"
@@ -32,6 +41,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         val build = registerBuild(project, extension, install, skipFrontend)
         val bundle = registerBundle(project, extension, build, skipFrontend)
         registerDev(project, extension, install)
+        registerUtilityTasks(project, extension, install)
         configureClean(project, extension)
 
         project.pluginManager.withPlugin("java") {
@@ -40,11 +50,79 @@ public class KtorSveltePlugin : Plugin<Project> {
             warnOnSkippedJar(project, skipFrontend)
         }
         project.pluginManager.withPlugin("application") {
-            if (devMode) {
-                project.tasks.named("run", JavaExec::class.java) { run ->
-                    run.systemProperty("io.ktor.development", "true")
-                }
+            project.tasks.named("run", JavaExec::class.java) { run ->
+                run.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
+                if (devMode) run.systemProperty("io.ktor.development", "true")
             }
+            registerGenerateTs(project, extension)
+        }
+    }
+
+    private fun registerUtilityTasks(
+        project: Project,
+        extension: SvelteExtension,
+        install: TaskProvider<SvelteInstallTask>,
+    ) {
+        project.tasks.register("svelteClean", Delete::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Deletes node_modules, .svelte-kit and the frontend build output."
+            task.delete(frontendOutput(extension))
+            task.delete(extension.frontendDir.map { it.dir(".svelte-kit") })
+            task.delete(extension.frontendDir.map { it.dir("node_modules") })
+        }
+        project.tasks.register("svelteUpdateDependencies", SvelteUpdateDependenciesTask::class.java) { task ->
+            configureToolTask(task, extension)
+            task.description = "Updates frontend dependencies and the lockfile."
+        }
+        project.tasks.register("svelteOutdated", SvelteOutdatedTask::class.java) { task ->
+            configureToolTask(task, extension)
+            task.description = "Lists outdated frontend dependencies."
+            task.dependsOn(install)
+        }
+        project.tasks.register("svelteCheck", SvelteCheckTask::class.java) { task ->
+            configureToolTask(task, extension)
+            task.description = "Runs the frontend's check script."
+            task.dependsOn(install)
+        }
+        project.tasks.register("svelteRun", SvelteRunScriptTask::class.java) { task ->
+            configureToolTask(task, extension)
+            task.description = "Runs a package.json script: svelteRun --script=lint"
+            task.dependsOn(install)
+        }
+        val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
+        project.tasks.register("svelteGenerateRunConfigurations", SvelteRunConfigurationsTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Writes IntelliJ run configurations to .run in the root project."
+            task.outputDirectory.set(
+                project.rootProject.layout.projectDirectory
+                    .dir(".run"),
+            )
+            task.hasApplicationPlugin.set(hasApplicationPlugin)
+            task.externalProjectPath.set("\$PROJECT_DIR\$")
+            task.taskPrefix.set(if (project == project.rootProject) "" else "${project.path}:")
+            task.namePrefix.set(if (project == project.rootProject) "" else "${project.name}: ")
+        }
+    }
+
+    private fun registerGenerateTs(
+        project: Project,
+        extension: SvelteExtension,
+    ) {
+        val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
+        val application = project.extensions.getByType(JavaApplication::class.java)
+        project.tasks.register("svelteGenerateTs", JavaExec::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Starts the app once to regenerate TypeScript from its routes. Needs generateTs = true."
+            task.mainClass.set(application.mainClass)
+            task.classpath =
+                project.files(
+                    main.map { it.output.classesDirs },
+                    project.layout.projectDirectory.dir("src/main/resources"),
+                    project.configurations.named("runtimeClasspath"),
+                )
+            task.systemProperty("io.ktor.development", "true")
+            task.systemProperty("ktor.svelte.generateTsOnly", "true")
+            task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
         }
     }
 
@@ -237,4 +315,11 @@ public class KtorSveltePlugin : Plugin<Project> {
             .use { stream -> properties.load(stream) }
         return properties.getProperty("version")
     }
+}
+
+private class FrontendDirArgument(
+    @get:Internal
+    val frontendDir: DirectoryProperty,
+) : CommandLineArgumentProvider {
+    override fun asArguments(): Iterable<String> = listOf("-Dktor.svelte.frontendDir=${frontendDir.get().asFile.absolutePath}")
 }

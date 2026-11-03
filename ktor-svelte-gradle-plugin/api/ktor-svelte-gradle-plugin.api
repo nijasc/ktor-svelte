@@ -51,6 +51,11 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteBundleTask
 	public abstract fun getOutputDirName ()Lorg/gradle/api/provider/Property;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteCheckTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+	public fun <init> ()V
+	public final fun check ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public final fun dev ()V
@@ -65,11 +70,37 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteInstallTas
 	public final fun install ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteOutdatedTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+	public fun <init> ()V
+	public final fun outdated ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRunConfigurationsTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public final fun generate ()V
+	public abstract fun getExternalProjectPath ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHasApplicationPlugin ()Lorg/gradle/api/provider/Property;
+	public abstract fun getNamePrefix ()Lorg/gradle/api/provider/Property;
+	public abstract fun getOutputDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getTaskPrefix ()Lorg/gradle/api/provider/Property;
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRunScriptTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+	public fun <init> ()V
+	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
+	public final fun runScript ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	protected abstract fun getExecOperations ()Lorg/gradle/process/ExecOperations;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDependenciesTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+	public fun <init> ()V
+	public final fun update ()V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/ToolVersionSource : org/gradle/api/provider/ValueSource {

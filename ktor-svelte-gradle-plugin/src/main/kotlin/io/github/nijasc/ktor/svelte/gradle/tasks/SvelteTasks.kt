@@ -44,11 +44,13 @@ public abstract class SvelteToolTask : DefaultTask() {
     internal fun runTool(
         tool: FrontendTool,
         arguments: List<String>,
+        ignoreExitValue: Boolean = false,
     ) {
         val executable = requireExecutable(tool)
         execOperations.exec { spec ->
             spec.workingDir = frontendDir.get().asFile
             spec.commandLine(listOf(executable.absolutePath) + arguments)
+            spec.isIgnoreExitValue = ignoreExitValue
         }
     }
 }
