@@ -183,8 +183,8 @@ internal class TypeScriptGenerator(
             }
         val typeImports = references.filter { name -> name in schemaNames.map(::typeName) }
         return buildString {
-            append("import { request, type RequestOptions } from './client';\n")
-            if (typeImports.isNotEmpty()) append("import type { ${typeImports.joinToString()} } from './types';\n")
+            append("import { request, type RequestOptions } from './client.js';\n")
+            if (typeImports.isNotEmpty()) append("import type { ${typeImports.joinToString()} } from './types.js';\n")
             append("\n")
             serviceBlocks.forEach { block -> append(block).append("\n") }
             append("export const api = { ${groups.keys.sorted().joinToString()} };\n")
@@ -353,9 +353,9 @@ private fun JsonObject.stringAt(key: String): String? = (this[key] as? JsonPrimi
 
 private fun JsonObject.stringList(key: String): List<String> = arrayAt(key).orEmpty().map { it.jsonPrimitive.content }
 
-private const val INDEX_SOURCE = """export * from './client';
-export * from './services';
-export type * from './types';
+private const val INDEX_SOURCE = """export * from './client.js';
+export * from './services.js';
+export type * from './types.js';
 """
 
 private const val CLIENT_SOURCE = """export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {

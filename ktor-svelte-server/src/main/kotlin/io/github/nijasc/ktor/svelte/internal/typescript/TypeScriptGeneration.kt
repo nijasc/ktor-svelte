@@ -13,7 +13,6 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
-import kotlin.system.exitProcess
 
 private const val GENERATE_ONLY_PROPERTY = "ktor.svelte.generateTsOnly"
 private const val FRONTEND_DIR_PROPERTY = "ktor.svelte.frontendDir"
@@ -47,7 +46,7 @@ internal fun installTypeScriptGeneration(
     if (generateOnly && !enabled) {
         application.monitor.subscribe(ApplicationStarted) {
             application.log.error("svelteGenerateTs needs install(Svelte) { generateTs = true }.")
-            exitProcess(1)
+            Runtime.getRuntime().halt(1)
         }
         return
     }
@@ -58,7 +57,7 @@ internal fun installTypeScriptGeneration(
 
     application.monitor.subscribe(ApplicationStarted) {
         val succeeded = generate(application, output, apiPrefixes)
-        if (generateOnly) exitProcess(if (succeeded) 0 else 1)
+        if (generateOnly) Runtime.getRuntime().halt(if (succeeded) 0 else 1)
     }
 }
 
@@ -76,8 +75,7 @@ private fun generate(
             OpenApiDocSource
                 .Routing()
                 .read(application, OpenApiDoc(info = OpenApiInfo(title = "API", version = "1.0")))
-                ?.content
-                ?: error("Ktor returned no OpenAPI document.")
+                .content
         val changed = writeIfChanged(output, TypeScriptGenerator(apiPrefixes).generate(openApiJson))
         if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
         true

@@ -67,7 +67,7 @@ class TypeScriptGeneratorTest {
             )
         assertContains(result.getValue("types.ts"), "export interface PageNote {")
         assertContains(result.getValue("services.ts"), "request<PageNote>")
-        assertContains(result.getValue("services.ts"), "import type { PageNote } from './types';")
+        assertContains(result.getValue("services.ts"), "import type { PageNote } from './types.js';")
     }
 
     @Test

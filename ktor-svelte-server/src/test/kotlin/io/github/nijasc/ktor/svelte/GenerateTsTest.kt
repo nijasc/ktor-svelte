@@ -121,7 +121,7 @@ class GenerateTsTest {
         assertFalse(services.contains("health"))
 
         assertNotNull(output.resolve("client.ts").readText())
-        assertContains(output.resolve("index.ts").readText(), "export * from './services';")
+        assertContains(output.resolve("index.ts").readText(), "export * from './services.js';")
         assertContains(output.resolve("openapi.json").readText(), "\"/api/todos\"")
     }
 
