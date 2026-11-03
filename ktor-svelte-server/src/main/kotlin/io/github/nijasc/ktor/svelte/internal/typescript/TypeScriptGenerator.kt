@@ -18,6 +18,8 @@ private val prettyJson = Json { prettyPrint = true }
 
 internal class TypeScriptGenerator(
     apiPrefixes: List<String>,
+    private val excludedPaths: List<String> = emptyList(),
+    private val publicConfigSchema: String? = null,
 ) {
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
 
@@ -27,7 +29,7 @@ internal class TypeScriptGenerator(
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
         return mapOf(
             "client.ts" to CLIENT_SOURCE,
-            "types.ts" to typesSource(schemas),
+            "types.ts" to typesSource(schemas) + publicConfigDeclaration(),
             "services.ts" to servicesSource(filtered.objectAt("paths").orEmpty(), schemas.keys),
             "index.ts" to INDEX_SOURCE,
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
@@ -44,8 +46,14 @@ internal class TypeScriptGenerator(
         return JsonObject(document + ("paths" to JsonObject(paths)))
     }
 
+    private fun publicConfigDeclaration(): String {
+        val schema = publicConfigSchema ?: return ""
+        return "\n" + declaration("PublicConfig", Json.parseToJsonElement(schema).jsonObject, mutableSetOf())
+    }
+
     private fun isApiPath(path: String): Boolean =
-        prefixes.isEmpty() || prefixes.any { prefix -> prefix == "/" || path == prefix || path.startsWith("$prefix/") }
+        excludedPaths.none { path == it || path.startsWith("$it/") } &&
+            (prefixes.isEmpty() || prefixes.any { prefix -> prefix == "/" || path == prefix || path.startsWith("$prefix/") })
 
     private fun typesSource(schemas: Map<String, JsonElement>): String {
         if (schemas.isEmpty()) return "export {};\n"
@@ -188,10 +196,12 @@ internal class TypeScriptGenerator(
         val typeImports = references.filter { name -> name in schemaNames.map(::typeName) }
         return buildString {
             append("import { ApiError, request, type RequestOptions } from './client.js';\n")
-            if (typeImports.isNotEmpty()) append("import type { ${typeImports.joinToString()} } from './types.js';\n")
+            val imports = if (publicConfigSchema != null) typeImports + "PublicConfig" else typeImports
+            if (imports.isNotEmpty()) append("import type { ${imports.joinToString()} } from './types.js';\n")
             append("\n")
             serviceBlocks.forEach { block -> append(block).append("\n") }
             append(errorsSource(errors))
+            if (publicConfigSchema != null) append(PUBLIC_CONFIG_SOURCE)
             append("export const api = { ${groups.keys.sorted().joinToString()} };\n")
         }
     }
@@ -402,6 +412,15 @@ private fun JsonObject.stringAt(key: String): String? = (this[key] as? JsonPrimi
 
 private fun JsonObject.stringList(key: String): List<String> = arrayAt(key).orEmpty().map { it.jsonPrimitive.content }
 
+private const val PUBLIC_CONFIG_SOURCE = """let publicConfig: Promise<PublicConfig> | undefined;
+
+export function loadPublicConfig(options?: RequestOptions): Promise<PublicConfig> {
+    publicConfig ??= request<PublicConfig>('GET', '/_ktor-svelte/config.json', { ...options });
+    return publicConfig;
+}
+
+"""
+
 private const val INDEX_SOURCE = """export * from './client.js';
 export * from './services.js';
 export type * from './types.js';
@@ -415,6 +434,7 @@ export interface ApiConfig {
     baseUrl: string;
     headers: Record<string, string>;
     fetch?: typeof fetch;
+    onUnauthorized?: (response: Response) => void;
 }
 
 export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
@@ -488,6 +508,7 @@ export async function request<T>(method: string, path: string, options: Internal
         if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
     }
     const response = await send(url, { ...init, method, headers: merged, body: payload });
+    if (response.status === 401) apiConfig.onUnauthorized?.(response);
     const parsed = await parseResponse(response);
     if (!response.ok) throw new ApiError(response.status, parsed, url, operation);
     return parsed as T;

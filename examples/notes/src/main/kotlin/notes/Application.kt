@@ -15,6 +15,9 @@ fun main() {
 fun Application.module() {
     install(Svelte) {
         generateTs = true
+        apiDocs = true
+        publicConfig(AppConfig(appName = System.getenv("APP_NAME") ?: "ktor-svelte notes", maxTitleLength = MAX_TITLE_LENGTH))
+        securityHeaders()
         transport {
             json()
             xml()

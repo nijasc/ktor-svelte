@@ -4,6 +4,14 @@ import kotlinx.serialization.Serializable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
+const val MAX_TITLE_LENGTH = 80
+
+@Serializable
+data class AppConfig(
+    val appName: String,
+    val maxTitleLength: Int,
+)
+
 @Serializable
 enum class NoteStatus { ACTIVE, ARCHIVED }
 

@@ -25,7 +25,7 @@ fun Route.noteRoutes(store: NoteStore) {
             val input = call.receive<NoteInput>()
             validate {
                 check("title", input.title.isNotBlank()) { "A note needs a title." }
-                check("title", input.title.length <= 80) { "Keep the title under 80 characters." }
+                check("title", input.title.length <= MAX_TITLE_LENGTH) { "Keep the title under $MAX_TITLE_LENGTH characters." }
             }
             call.respond(HttpStatusCode.Created, store.create(input))
         }

@@ -27,7 +27,10 @@ class NotesAppTest {
             val java = File(System.getProperty("java.home"), "bin/java").path
             server =
                 ProcessBuilder(java, "-jar", System.getProperty("example.jar"))
-                    .apply { environment()["PORT"] = port.toString() }
+                    .apply {
+                        environment()["PORT"] = port.toString()
+                        environment()["APP_NAME"] = "from e2e"
+                    }
                     .redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .start()
@@ -76,6 +79,25 @@ class NotesAppTest {
 
         assertEquals(204, send("DELETE", "/api/notes/$id").statusCode())
         assertEquals(404, send("GET", "/api/notes/$id").statusCode())
+    }
+
+    @Test
+    fun `public config is served and uses the environment`() {
+        val response = send("GET", "/_ktor-svelte/config.json")
+        assertEquals(200, response.statusCode())
+        assertContains(response.body(), """"appName":"from e2e"""")
+    }
+
+    @Test
+    fun `security headers are sent on pages and api calls`() {
+        listOf("/", "/api/stats", "/api/nothing").forEach { path ->
+            assertEquals("nosniff", send("GET", path).headers().firstValue("X-Content-Type-Options").orElse(""), path)
+        }
+    }
+
+    @Test
+    fun `api docs are not served in production`() {
+        assertEquals(404, send("GET", "/api/docs").statusCode())
     }
 
     @Test

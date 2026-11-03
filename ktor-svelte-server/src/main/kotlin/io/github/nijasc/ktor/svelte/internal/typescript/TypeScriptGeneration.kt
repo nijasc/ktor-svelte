@@ -41,7 +41,10 @@ internal fun installTypeScriptGeneration(
     enabled: Boolean,
     configuredOutput: String?,
     apiPrefixes: List<String>,
+    excludedPaths: List<String>,
+    publicConfigSchema: String?,
 ) {
+    val generator = TypeScriptGenerator(apiPrefixes, excludedPaths, publicConfigSchema)
     val generateOnly = System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
     if (generateOnly && !enabled) {
         application.monitor.subscribe(ApplicationStarted) {
@@ -56,7 +59,7 @@ internal fun installTypeScriptGeneration(
     val output = Path(configuredOutput ?: "$frontendDir/src/lib/api")
 
     application.monitor.subscribe(ApplicationStarted) {
-        val succeeded = generate(application, output, apiPrefixes)
+        val succeeded = generate(application, output, generator)
         if (generateOnly) Runtime.getRuntime().halt(if (succeeded) 0 else 1)
     }
 }
@@ -64,7 +67,7 @@ internal fun installTypeScriptGeneration(
 private fun generate(
     application: Application,
     output: Path,
-    apiPrefixes: List<String>,
+    generator: TypeScriptGenerator,
 ): Boolean {
     if (findFrontendRoot(output) == null) {
         application.log.warn("ktor-svelte did not generate TypeScript: no package.json found at or above ${output.absolute()}.")
@@ -76,7 +79,7 @@ private fun generate(
                 .Routing()
                 .read(application, OpenApiDoc(info = OpenApiInfo(title = "API", version = "1.0")))
                 .content
-        val changed = writeIfChanged(output, TypeScriptGenerator(apiPrefixes).generate(openApiJson))
+        val changed = writeIfChanged(output, generator.generate(openApiJson))
         if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
         true
     } catch (failure: Exception) {

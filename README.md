@@ -235,6 +235,68 @@ install(Svelte) {
 
 The client picks a format with its `Accept` header, and the first format you list is the default. Already installing these plugins yourself? You will get a clear error at startup, so remove one of the two. Files precompressed by your adapter are left alone. The generated TypeScript client always speaks JSON.
 
+## Auth
+
+To put the frontend behind Ktor's authentication, take over its routing. List what stays public. Those paths must include your login page and `/_app/*`, or the login page cannot load. Anyone can still download the JS bundles under `/_app`, so keep secrets on the server.
+
+```kotlin
+install(Svelte) {
+    routing = SvelteRouting.Manual
+}
+
+routing {
+    svelte(public = listOf("/login", "/_app/*"))
+    authenticate("session") {
+        svelte()
+    }
+}
+```
+
+In the browser, react to expired sessions in one place:
+
+```ts
+apiConfig.onUnauthorized = () => goto('/login');
+```
+
+In development mode, `svelte(public = ...)` also opens the paths Vite needs, so hot reload works on your login page.
+
+## Runtime config
+
+Pass values to the frontend at startup, so one JAR works in every environment. The type comes along with `generateTs`:
+
+```kotlin
+@Serializable
+data class AppConfig(val sentryDsn: String?)
+
+install(Svelte) {
+    publicConfig(AppConfig(sentryDsn = System.getenv("SENTRY_DSN")))
+}
+```
+
+```ts
+import { loadPublicConfig } from '#lib/api/index.js';
+
+const config = await loadPublicConfig();
+```
+
+It is served as JSON from `/_ktor-svelte/config.json` to anyone who asks, so **never put secrets in it**. In SvelteKit, call `loadPublicConfig` only in the browser, because prerendering has no server to ask.
+
+## Security headers
+
+```kotlin
+install(Svelte) {
+    securityHeaders()
+}
+```
+
+This sends `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin` on every response. Each is a property you can change, or set to `null` to leave out.
+
+`contentSecurityPolicy` is off by default, because SvelteKit's inline startup script would break under a strict policy. Use SvelteKit's own `csp` option in `hash` mode, or set this property yourself and test it. It is never sent in dev, because it would break Vite.
+
+## API docs
+
+`apiDocs = true` serves Swagger UI at `/api/docs` in development mode only, using the same OpenAPI document as `generateTs`. Change the path with `apiDocsPath`. The page loads its scripts from a public CDN, so it needs internet access.
+
 ## How it works
 
 At build time, three tasks run before `processResources`:
@@ -271,6 +333,9 @@ install(Svelte) {
     source = SvelteSource.Classpath
     generateTs = false
     generateTsOutput = null
+    apiDocs = false
+    apiDocsPath = "/api/docs"
+    routing = SvelteRouting.Automatic
 
     cache {
         immutable = "public, max-age=31536000, immutable"
@@ -296,6 +361,10 @@ install(Svelte) {
 | `source` | `SvelteSource.Classpath`, or `SvelteSource.Directory(path)` to serve a build from disk |
 | `generateTs` | Generates TypeScript from your routes in development mode |
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
+| `apiDocs` | Serves Swagger UI in development mode. See [API docs](#api-docs) |
+| `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](#auth) |
+| `securityHeaders { }` | See [Security headers](#security-headers) |
+| `publicConfig(value)` | See [Runtime config](#runtime-config) |
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
 | `dev.mode` | `AUTO` follows Ktor's development mode. `ALWAYS` and `NEVER` force it |
@@ -382,7 +451,7 @@ If Gradle is killed rather than stopped normally, Vite or the app can keep runni
 | Example | Shows |
 |---|---|
 | [`examples/basic`](examples/basic) | The smallest possible app: one API route, prerendered pages and an SPA route |
-| [`examples/notes`](examples/notes) | Full CRUD with `generateTs`, JSON, XML and compression, validation errors, dynamic routes and typed 404 pages |
+| [`examples/notes`](examples/notes) | Full CRUD with `generateTs`, JSON, XML and compression, validation errors, runtime config, security headers, Swagger, dynamic routes and typed 404 pages |
 
 Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localhost:8080`. Or from a terminal:
 

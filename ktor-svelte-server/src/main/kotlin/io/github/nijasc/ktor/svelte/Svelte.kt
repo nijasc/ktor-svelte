@@ -16,12 +16,15 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.decodeURLPart
+import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationPlugin
+import io.ktor.server.application.PluginBuilder
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
 import io.ktor.server.application.log
+import io.ktor.server.plugins.swagger.swaggerUI
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
@@ -29,13 +32,22 @@ import io.ktor.server.request.uri
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.application
+import io.ktor.server.routing.get
+import io.ktor.server.routing.openapi.OpenApiDocSource
+import io.ktor.server.routing.openapi.hide
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import io.ktor.util.AttributeKey
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
+private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
+private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
+private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
 private const val MISSING_BUILD_MESSAGE =
     "ktor-svelte found no frontend build. Build the app with the ktor-svelte Gradle plugin, " +
         "and do not pass -Psvelte.skip=true or -Psvelte.dev=true."
@@ -47,6 +59,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val responder = AssetResponder(store, pluginConfig.cacheConfig)
         val devUrl = resolveDevServerUrl(pluginConfig.devConfig.url, System.getenv(DEV_SERVER_VARIABLE))
         val devProxy = if (isDevProxyActive(pluginConfig.devConfig.mode, application)) DevProxy(devUrl) else null
+        val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
+        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl)
+        application.attributes.put(SvelteHandlerKey, handler)
 
         installTransport(application, pluginConfig.transportConfig)
         installTypeScriptGeneration(
@@ -54,7 +69,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.generateTs,
             pluginConfig.generateTsOutput,
             pluginConfig.apiPrefixList,
+            listOfNotNull(docsPath),
+            pluginConfig.publicConfigSchema,
         )
+        pluginConfig.securityHeadersConfig?.let { headers -> installSecurityHeaders(headers, devProxy != null) }
 
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
@@ -65,25 +83,86 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (cause is ValidationException) respondValidationFailure(call, cause)
         }
 
+        val automaticRouting = pluginConfig.routing == SvelteRouting.Automatic
+        val publicConfigJson = pluginConfig.publicConfigJson
         application.routing {
-            route("{svelte-path...}") {
-                handle {
-                    val method = call.request.httpMethod
-                    val path = decodedPath(call)
-                    if ((method == HttpMethod.Get || method == HttpMethod.Head) && path != null && !resolver.isApiPath(path)) {
-                        if (devProxy?.forward(call) != true) {
-                            val manifest = store.manifest()
-                            if (manifest != null) {
-                                respondFromManifest(call, path, manifest, resolver, responder)
-                            } else {
-                                respondMissingBuild(call, devProxy, devUrl)
-                            }
-                        }
-                    }
+            if (automaticRouting) {
+                catchAll(handler)
+            }
+            if (publicConfigJson != null) {
+                get(PUBLIC_CONFIG_PATH) {
+                    call.response.header(HttpHeaders.CacheControl, "no-cache")
+                    call.respondText(publicConfigJson, ContentType.Application.Json)
+                }.hide()
+            }
+            if (docsPath != null) {
+                swaggerUI(docsPath) {
+                    info = OpenApiInfo(title = "API", version = "dev")
+                    source = OpenApiDocSource.Routing(ContentType.Application.Json)
                 }
             }
         }
     }
+
+public fun Route.svelte(public: List<String> = emptyList()) {
+    val handler =
+        application.attributes.getOrNull(SvelteHandlerKey)
+            ?: error("Install the Svelte plugin before calling svelte() in routing.")
+    if (public.isEmpty()) {
+        catchAll(handler)
+        return
+    }
+    val paths = if (handler.proxiesToVite) public + VITE_DEV_PATHS else public
+    paths.forEach { path ->
+        val routePath = if (path.endsWith("/*")) path.removeSuffix("*") + "{svelte-path...}" else path
+        route(routePath) { handle { handler.handle(call) } }
+    }
+}
+
+private fun Route.catchAll(handler: SvelteHandler) {
+    route("{svelte-path...}") {
+        handle { handler.handle(call) }
+    }
+}
+
+private fun PluginBuilder<SvelteConfig>.installSecurityHeaders(
+    headers: SvelteSecurityHeaders,
+    devProxyActive: Boolean,
+) {
+    val values =
+        listOfNotNull(
+            headers.contentTypeOptions?.let { "X-Content-Type-Options" to it },
+            headers.frameOptions?.let { "X-Frame-Options" to it },
+            headers.referrerPolicy?.let { "Referrer-Policy" to it },
+            headers.contentSecurityPolicy?.takeUnless { devProxyActive }?.let { "Content-Security-Policy" to it },
+        )
+    onCall { call ->
+        values.forEach { (name, value) -> call.response.header(name, value) }
+    }
+}
+
+private class SvelteHandler(
+    private val store: AssetStore,
+    private val resolver: RequestResolver,
+    private val responder: AssetResponder,
+    private val devProxy: DevProxy?,
+    private val devUrl: String,
+) {
+    val proxiesToVite: Boolean get() = devProxy != null
+
+    suspend fun handle(call: ApplicationCall) {
+        val method = call.request.httpMethod
+        val path = decodedPath(call)
+        if ((method != HttpMethod.Get && method != HttpMethod.Head) || path == null || resolver.isApiPath(path)) return
+        if (devProxy?.forward(call) == true) return
+        val manifest = store.manifest()
+        if (manifest != null) {
+            respondFromManifest(call, path, manifest, resolver, responder)
+        } else {
+            respondMissingBuild(call, devProxy, devUrl)
+        }
+    }
+}
 
 private suspend fun respondValidationFailure(
     call: ApplicationCall,

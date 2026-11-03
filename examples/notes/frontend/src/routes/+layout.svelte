@@ -1,9 +1,18 @@
 <script lang="ts">
+    import { browser } from '$app/environment';
+    import { loadPublicConfig } from '#lib/api/index.js';
+
     let { children } = $props();
+
+    let appName = $state('ktor-svelte notes');
+
+    if (browser) {
+        loadPublicConfig().then((config) => (appName = config.appName));
+    }
 </script>
 
 <header>
-    <a class="brand" href="/">ktor-svelte notes</a>
+    <a class="brand" href="/">{appName}</a>
     <nav>
         <a href="/notes">Notes</a>
         <a href="/about">About</a>
