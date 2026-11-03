@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Notes: Dev" type="CompoundRunConfigurationType">
+    <toRun name="Notes: Vite" type="GradleRunConfiguration" />
+    <toRun name="Notes: Ktor" type="GradleRunConfiguration" />
+    <method v="2" />
+  </configuration>
+</component>
