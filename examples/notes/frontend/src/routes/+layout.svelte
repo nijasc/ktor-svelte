@@ -1,14 +1,14 @@
 <script lang="ts">
-    import { browser } from '$app/environment';
+    import { onMount } from 'svelte';
     import { loadPublicConfig } from '#lib/api/index.js';
 
     let { children } = $props();
 
     let appName = $state('ktor-svelte notes');
 
-    if (browser) {
-        loadPublicConfig().then((config) => (appName = config.appName));
-    }
+    onMount(async () => {
+        appName = (await loadPublicConfig()).appName;
+    });
 </script>
 
 <header>

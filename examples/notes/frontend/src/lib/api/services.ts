@@ -1,5 +1,5 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { Note, NoteInput, NoteStats, NotesExport, Problem } from './types.js';
+import type { Note, NoteInput, NoteStats, NotesExport, Problem, PublicConfig } from './types.js';
 
 export const notes = {
     list: (query?: { search?: string; tag?: string }, options?: RequestOptions) => request<Note[]>('GET', '/api/notes', { ...options, query, operation: 'notes.list' }),
@@ -31,6 +31,13 @@ const errorStatuses: Record<string, number[]> = {
 
 export function isApiError<K extends keyof ApiErrors>(error: unknown, operation: K): error is ApiError<ApiErrors[K]> {
     return error instanceof ApiError && error.operation === operation && (errorStatuses[operation] ?? []).includes(error.status);
+}
+
+let publicConfig: Promise<PublicConfig> | undefined;
+
+export function loadPublicConfig(options?: RequestOptions): Promise<PublicConfig> {
+    publicConfig ??= request<PublicConfig>('GET', '/_ktor-svelte/config.json', { ...options });
+    return publicConfig;
 }
 
 export const api = { notes, stats };

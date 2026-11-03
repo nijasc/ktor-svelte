@@ -6,6 +6,7 @@ export interface ApiConfig {
     baseUrl: string;
     headers: Record<string, string>;
     fetch?: typeof fetch;
+    onUnauthorized?: (response: Response) => void;
 }
 
 export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
@@ -79,6 +80,7 @@ export async function request<T>(method: string, path: string, options: Internal
         if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
     }
     const response = await send(url, { ...init, method, headers: merged, body: payload });
+    if (response.status === 401) apiConfig.onUnauthorized?.(response);
     const parsed = await parseResponse(response);
     if (!response.ok) throw new ApiError(response.status, parsed, url, operation);
     return parsed as T;

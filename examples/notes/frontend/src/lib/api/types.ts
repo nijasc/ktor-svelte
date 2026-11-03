@@ -25,3 +25,8 @@ export interface NotesExport {
 export interface Problem {
     message: string;
 }
+
+export interface PublicConfig {
+    appName: string;
+    maxTitleLength: number;
+}
