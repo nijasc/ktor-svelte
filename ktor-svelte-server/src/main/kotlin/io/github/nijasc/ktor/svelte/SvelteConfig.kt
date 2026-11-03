@@ -9,10 +9,13 @@ public class SvelteConfig {
 
     internal val cacheConfig: SvelteCacheConfig = SvelteCacheConfig()
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
+    internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
 
     public var spaFallback: String? = "200.html"
     public var notFoundPage: String? = "404.html"
     public var source: SvelteSource = SvelteSource.Classpath
+    public var generateTs: Boolean = false
+    public var generateTsOutput: String? = null
 
     public fun apiPrefixes(vararg prefixes: String) {
         apiPrefixList = prefixes.toList()
@@ -24,6 +27,10 @@ public class SvelteConfig {
 
     public fun dev(configure: SvelteDevConfig.() -> Unit) {
         devConfig.configure()
+    }
+
+    public fun transport(configure: SvelteTransportConfig.() -> Unit) {
+        transportConfig.configure()
     }
 }
 

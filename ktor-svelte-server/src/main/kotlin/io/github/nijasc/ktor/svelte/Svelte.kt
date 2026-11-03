@@ -8,7 +8,9 @@ import io.github.nijasc.ktor.svelte.internal.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.Manifest
 import io.github.nijasc.ktor.svelte.internal.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.Resolution
+import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -40,6 +42,14 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val responder = AssetResponder(store, pluginConfig.cacheConfig)
         val devUrl = resolveDevServerUrl(pluginConfig.devConfig.url, System.getenv(DEV_SERVER_VARIABLE))
         val devProxy = if (isDevProxyActive(pluginConfig.devConfig.mode, application)) DevProxy(devUrl) else null
+
+        installTransport(application, pluginConfig.transportConfig)
+        installTypeScriptGeneration(
+            application,
+            pluginConfig.generateTs,
+            pluginConfig.generateTsOutput,
+            pluginConfig.apiPrefixList,
+        )
 
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }

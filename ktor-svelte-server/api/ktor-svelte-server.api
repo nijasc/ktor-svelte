@@ -22,12 +22,17 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun apiPrefixes ([Ljava/lang/String;)V
 	public final fun cache (Lkotlin/jvm/functions/Function1;)V
 	public final fun dev (Lkotlin/jvm/functions/Function1;)V
+	public final fun getGenerateTs ()Z
+	public final fun getGenerateTsOutput ()Ljava/lang/String;
 	public final fun getNotFoundPage ()Ljava/lang/String;
 	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
 	public final fun getSpaFallback ()Ljava/lang/String;
+	public final fun setGenerateTs (Z)V
+	public final fun setGenerateTsOutput (Ljava/lang/String;)V
 	public final fun setNotFoundPage (Ljava/lang/String;)V
 	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
 	public final fun setSpaFallback (Ljava/lang/String;)V
+	public final fun transport (Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
@@ -61,5 +66,15 @@ public final class io/github/nijasc/ktor/svelte/SvelteSource$Directory : io/gith
 	public final fun getPath ()Ljava/nio/file/Path;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteTransportConfig {
+	public fun <init> ()V
+	public final fun compression (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun compression$default (Lio/github/nijasc/ktor/svelte/SvelteTransportConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final fun json (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun json$default (Lio/github/nijasc/ktor/svelte/SvelteTransportConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final fun negotiation (Lkotlin/jvm/functions/Function1;)V
+	public final fun xml ()V
 }
 

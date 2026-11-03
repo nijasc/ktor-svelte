@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.maven.publish)
 }
@@ -18,10 +19,15 @@ kotlin {
 
 dependencies {
     api(libs.ktor.server.core)
-    implementation(libs.serialization.json)
+    api(libs.ktor.server.compression)
+    api(libs.ktor.server.content.negotiation)
+    api(libs.ktor.server.routing.openapi)
+    api(libs.ktor.serialization.json)
+    api(libs.serialization.json)
+    compileOnly(libs.ktor.serialization.xml)
 
     testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.ktor.server.compression)
+    testImplementation(libs.ktor.serialization.xml)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(platform(libs.junit.bom))
     testRuntimeOnly(libs.junit.platform.launcher)
