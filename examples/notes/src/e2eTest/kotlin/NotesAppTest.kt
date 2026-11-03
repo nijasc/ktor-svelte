@@ -87,8 +87,8 @@ class NotesAppTest {
     @Test
     fun `validation errors come back as json`() {
         val response = send("POST", "/api/notes", """{"title":" "}""")
-        assertEquals(400, response.statusCode())
-        assertContains(response.body(), "A note needs a title.")
+        assertEquals(422, response.statusCode())
+        assertContains(response.body(), """"title":["A note needs a title."]""")
     }
 
     @Test

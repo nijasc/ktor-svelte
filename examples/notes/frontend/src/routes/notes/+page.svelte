@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ApiError, api, type Note, type NoteStats, type Problem } from '#lib/api/index.js';
+    import { api, isValidationError, type Note, type NoteStats } from '#lib/api/index.js';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();
@@ -45,8 +45,8 @@
             title = body = tags = '';
             await refresh();
         } catch (error) {
-            if (!(error instanceof ApiError)) throw error;
-            problem = (error.body as Problem).message;
+            if (!isValidationError(error)) throw error;
+            problem = error.body.fields.title?.join(' ') ?? error.body.message;
         }
     }
 

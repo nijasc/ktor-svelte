@@ -1,5 +1,6 @@
 package notes
 
+import io.github.nijasc.ktor.svelte.validate
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
@@ -22,11 +23,11 @@ fun Route.noteRoutes(store: NoteStore) {
 
         post {
             val input = call.receive<NoteInput>()
-            if (input.title.isBlank()) {
-                call.respond(HttpStatusCode.BadRequest, Problem("A note needs a title."))
-            } else {
-                call.respond(HttpStatusCode.Created, store.create(input))
+            validate {
+                check("title", input.title.isNotBlank()) { "A note needs a title." }
+                check("title", input.title.length <= 80) { "Keep the title under 80 characters." }
             }
+            call.respond(HttpStatusCode.Created, store.create(input))
         }
 
         get("/export") {

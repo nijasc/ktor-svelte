@@ -78,3 +78,17 @@ public final class io/github/nijasc/ktor/svelte/SvelteTransportConfig {
 	public final fun xml ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/ValidationException : java/lang/RuntimeException {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getFields ()Ljava/util/Map;
+}
+
+public final class io/github/nijasc/ktor/svelte/ValidationKt {
+	public static final fun validate (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/Validator {
+	public fun <init> ()V
+	public final fun check (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+}
+

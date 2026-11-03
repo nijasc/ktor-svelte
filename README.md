@@ -155,19 +155,26 @@ get("/api/todos") { call.respond(todos) }.describe {
 ### Calling the API
 
 ```ts
-import { ApiError, api, apiConfig, type Note } from '#lib/api/index.js';
+import { api, apiConfig } from '#lib/api/index.js';
 
 const notes = await api.notes.list({ search: 'milk' });
 const note = await api.notes.get(1);
 await api.notes.update(1, { title: 'Oat milk' });
 
+apiConfig.headers['Authorization'] = 'Bearer token';
+```
+
+Errors are typed too. Ktor's compiler plugin finds error responses such as `call.respond(HttpStatusCode.NotFound, Problem(...))`, and `isApiError` narrows the body:
+
+```ts
+import { api, isApiError, isValidationError } from '#lib/api/index.js';
+
 try {
     await api.notes.create({ title: '' });
 } catch (error) {
-    if (error instanceof ApiError) console.log(error.status, error.body);
+    if (isValidationError(error)) showErrors(error.body.fields);
+    if (isApiError(error, 'notes.get')) console.log(error.body.message);
 }
-
-apiConfig.headers['Authorization'] = 'Bearer token';
 ```
 
 Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
@@ -183,6 +190,27 @@ To refresh the files without your dev server, for example in CI, run the task be
 ```bash
 ./gradlew svelteGenerateTs
 ```
+
+## Validation
+
+Check input with `validate`. When a rule fails, the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands. No extra plugins are needed.
+
+```kotlin
+post("/api/notes") {
+    val input = call.receive<NoteInput>()
+    validate {
+        check("title", input.title.isNotBlank()) { "A note needs a title." }
+        check("title", input.title.length <= 80) { "Keep the title under 80 characters." }
+    }
+    call.respond(HttpStatusCode.Created, store.create(input))
+}
+```
+
+```json
+{ "message": "Validation failed", "fields": { "title": ["A note needs a title."] } }
+```
+
+If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
 
 ## Transport
 

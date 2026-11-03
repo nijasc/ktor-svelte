@@ -11,6 +11,7 @@ import io.github.nijasc.ktor.svelte.internal.Resolution
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -19,6 +20,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationPlugin
 import io.ktor.server.application.createApplicationPlugin
+import io.ktor.server.application.hooks.CallFailed
 import io.ktor.server.application.log
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
@@ -29,6 +31,9 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val MISSING_BUILD_MESSAGE =
@@ -56,6 +61,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (System.getProperty("ktor.svelte.generateTsOnly") != "true") application.log.warn(MISSING_BUILD_MESSAGE)
         }
 
+        on(CallFailed) { call, cause ->
+            if (cause is ValidationException) respondValidationFailure(call, cause)
+        }
+
         application.routing {
             route("{svelte-path...}") {
                 handle {
@@ -75,6 +84,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
         }
     }
+
+private suspend fun respondValidationFailure(
+    call: ApplicationCall,
+    failure: ValidationException,
+) {
+    val fields = JsonObject(failure.fields.mapValues { (_, messages) -> JsonArray(messages.map(::JsonPrimitive)) })
+    val body = JsonObject(mapOf("message" to JsonPrimitive("Validation failed"), "fields" to fields))
+    call.respondText(body.toString(), ContentType.Application.Json, HttpStatusCode.UnprocessableEntity)
+}
 
 private fun isDevProxyActive(
     mode: DevMode,

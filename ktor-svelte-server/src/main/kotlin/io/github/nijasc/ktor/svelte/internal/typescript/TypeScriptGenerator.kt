@@ -163,6 +163,7 @@ internal class TypeScriptGenerator(
     ): String {
         val references = sortedSetOf<String>()
         val groups = linkedMapOf<String, MutableList<Endpoint>>()
+        val errors = mutableListOf<ErrorEntry>()
         paths.forEach { (path, item) ->
             val pathItem = item.jsonObject
             HTTP_METHODS.forEach { method ->
@@ -177,18 +178,33 @@ internal class TypeScriptGenerator(
                 val members =
                     endpoints.joinToString("\n") { endpoint ->
                         references += endpoint.references
-                        "    ${propertyKey(uniqueName(endpoint.name, endpoint.parameters, taken))}: ${endpoint.source},"
+                        val name = uniqueName(endpoint.name, endpoint.parameters, taken)
+                        val operation = "$group.$name"
+                        endpoint.errorType?.let { errors += ErrorEntry(operation, it, endpoint.errorStatuses) }
+                        "    ${propertyKey(name)}: ${endpoint.source(operation)},"
                     }
                 "export const $group = {\n$members\n};\n"
             }
         val typeImports = references.filter { name -> name in schemaNames.map(::typeName) }
         return buildString {
-            append("import { request, type RequestOptions } from './client.js';\n")
+            append("import { ApiError, request, type RequestOptions } from './client.js';\n")
             if (typeImports.isNotEmpty()) append("import type { ${typeImports.joinToString()} } from './types.js';\n")
             append("\n")
             serviceBlocks.forEach { block -> append(block).append("\n") }
+            append(errorsSource(errors))
             append("export const api = { ${groups.keys.sorted().joinToString()} };\n")
         }
+    }
+
+    private fun errorsSource(errors: List<ErrorEntry>): String {
+        val types = errors.joinToString("") { "    '${it.operation}': ${it.type};\n" }
+        val statuses = errors.joinToString("") { "    '${it.operation}': [${it.statuses.joinToString()}],\n" }
+        return "export interface ApiErrors {\n$types}\n\n" +
+            "const errorStatuses: Record<string, number[]> = {\n$statuses};\n\n" +
+            "export function isApiError<K extends keyof ApiErrors>(error: unknown, operation: K): error is ApiError<ApiErrors[K]> {\n" +
+            "    return error instanceof ApiError && error.operation === operation && " +
+            "(errorStatuses[operation] ?? []).includes(error.status);\n" +
+            "}\n\n"
     }
 
     private fun uniqueName(
@@ -249,14 +265,39 @@ internal class TypeScriptGenerator(
                 if (requestBody != null) add("body")
             }
         val returnType = responseType(operation, references)
-        val call = "request<$returnType>('${method.uppercase()}', $urlSource, { ${extras.joinToString()} })"
+        val declaredErrors = errorResponses(operation, references)
         return Endpoint(
             name = operation.stringAt("operationId")?.let(::camelCase) ?: conventionalName(path, method),
             parameters = pathParameters,
-            source = "(${signature.joinToString()}) => $call",
+            source = { key ->
+                val arguments = (extras + "operation: '$key'").joinToString()
+                "(${signature.joinToString()}) => request<$returnType>('${method.uppercase()}', $urlSource, { $arguments })"
+            },
             references = references,
+            errorType =
+                declaredErrors.values
+                    .distinct()
+                    .joinToString(" | ")
+                    .ifEmpty { null },
+            errorStatuses = declaredErrors.keys.toList(),
         )
     }
+
+    private fun errorResponses(
+        operation: JsonObject,
+        references: MutableSet<String>,
+    ): Map<Int, String> =
+        operation
+            .objectAt("responses")
+            .orEmpty()
+            .entries
+            .mapNotNull { (status, response) ->
+                val code = status.toIntOrNull()?.takeIf { it >= 400 } ?: return@mapNotNull null
+                val content = response.jsonObject.objectAt("content") ?: return@mapNotNull null
+                val schema = preferredSchema(content) ?: return@mapNotNull null
+                code to tsType(schema, references)
+            }.toMap()
+            .toSortedMap()
 
     private fun responseType(
         operation: JsonObject,
@@ -316,8 +357,16 @@ internal class TypeScriptGenerator(
     private class Endpoint(
         val name: String,
         val parameters: List<String>,
-        val source: String,
+        val source: (String) -> String,
         val references: Set<String>,
+        val errorType: String?,
+        val errorStatuses: List<Int>,
+    )
+
+    private class ErrorEntry(
+        val operation: String,
+        val type: String,
+        val statuses: List<Int>,
     )
 }
 
@@ -370,20 +419,37 @@ export interface ApiConfig {
 
 export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
 
-export class ApiError extends Error {
+export class ApiError<E = unknown> extends Error {
     constructor(
         readonly status: number,
-        readonly body: unknown,
-        readonly url: string
+        readonly body: E,
+        readonly url: string,
+        readonly operation?: string
     ) {
         super(`Request to ${'$'}{url} failed with status ${'$'}{status}`);
         this.name = 'ApiError';
     }
 }
 
+export interface ValidationProblem {
+    message: string;
+    fields: Record<string, string[]>;
+}
+
+export function isValidationError(error: unknown): error is ApiError<ValidationProblem> {
+    return (
+        error instanceof ApiError &&
+        error.status === 422 &&
+        typeof error.body === 'object' &&
+        error.body !== null &&
+        'fields' in error.body
+    );
+}
+
 interface InternalOptions extends RequestOptions {
     query?: Record<string, unknown>;
     body?: unknown;
+    operation?: string;
 }
 
 function queryString(query: Record<string, unknown> | undefined): string {
@@ -410,7 +476,7 @@ async function parseResponse(response: Response): Promise<unknown> {
 }
 
 export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
-    const { query, body, fetch: customFetch, headers, ...init } = options;
+    const { query, body, operation, fetch: customFetch, headers, ...init } = options;
     const send = customFetch ?? apiConfig.fetch ?? fetch;
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
@@ -423,7 +489,7 @@ export async function request<T>(method: string, path: string, options: Internal
     }
     const response = await send(url, { ...init, method, headers: merged, body: payload });
     const parsed = await parseResponse(response);
-    if (!response.ok) throw new ApiError(response.status, parsed, url);
+    if (!response.ok) throw new ApiError(response.status, parsed, url, operation);
     return parsed as T;
 }
 """

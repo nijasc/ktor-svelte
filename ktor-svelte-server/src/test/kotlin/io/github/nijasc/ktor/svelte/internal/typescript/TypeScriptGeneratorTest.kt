@@ -134,6 +134,27 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `declared error responses become a typed map`() {
+        val paths =
+            """{"/api/notes":{"post":{"responses":{"201":{"description":"ok"},
+            "400":{"description":"bad","content":{"application/json":{"schema":{"${'$'}ref":"#/components/schemas/Problem"}}}},
+            "404":{"description":"gone","content":{"application/json":{"schema":{"${'$'}ref":"#/components/schemas/Missing"}}}}}}}}"""
+        val source =
+            generate(paths = paths, schemas = """{"Problem":{"type":"object"},"Missing":{"type":"object"}}""").getValue("services.ts")
+        assertContains(source, "'notes.create': Problem | Missing;")
+        assertContains(source, "'notes.create': [400, 404],")
+        assertContains(source, "operation: 'notes.create'")
+        assertContains(source, "import type { Missing, Problem } from './types.js';")
+        assertContains(source, "export function isApiError<K extends keyof ApiErrors>")
+    }
+
+    @Test
+    fun `routes without declared errors stay out of the map`() {
+        val source = services("""{"/api/notes":{"get":{"responses":{"200":{"description":"ok"}}}}}""")
+        assertContains(source, "export interface ApiErrors {\n}")
+    }
+
+    @Test
     fun `output is deterministic`() {
         val paths = """{"/api/b":{"get":{}},"/api/a":{"get":{}}}"""
         assertEquals(generate(paths = paths), generate(paths = paths))

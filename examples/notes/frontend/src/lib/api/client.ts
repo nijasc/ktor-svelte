@@ -10,20 +10,37 @@ export interface ApiConfig {
 
 export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
 
-export class ApiError extends Error {
+export class ApiError<E = unknown> extends Error {
     constructor(
         readonly status: number,
-        readonly body: unknown,
-        readonly url: string
+        readonly body: E,
+        readonly url: string,
+        readonly operation?: string
     ) {
         super(`Request to ${url} failed with status ${status}`);
         this.name = 'ApiError';
     }
 }
 
+export interface ValidationProblem {
+    message: string;
+    fields: Record<string, string[]>;
+}
+
+export function isValidationError(error: unknown): error is ApiError<ValidationProblem> {
+    return (
+        error instanceof ApiError &&
+        error.status === 422 &&
+        typeof error.body === 'object' &&
+        error.body !== null &&
+        'fields' in error.body
+    );
+}
+
 interface InternalOptions extends RequestOptions {
     query?: Record<string, unknown>;
     body?: unknown;
+    operation?: string;
 }
 
 function queryString(query: Record<string, unknown> | undefined): string {
@@ -50,7 +67,7 @@ async function parseResponse(response: Response): Promise<unknown> {
 }
 
 export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
-    const { query, body, fetch: customFetch, headers, ...init } = options;
+    const { query, body, operation, fetch: customFetch, headers, ...init } = options;
     const send = customFetch ?? apiConfig.fetch ?? fetch;
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
@@ -63,6 +80,6 @@ export async function request<T>(method: string, path: string, options: Internal
     }
     const response = await send(url, { ...init, method, headers: merged, body: payload });
     const parsed = await parseResponse(response);
-    if (!response.ok) throw new ApiError(response.status, parsed, url);
+    if (!response.ok) throw new ApiError(response.status, parsed, url, operation);
     return parsed as T;
 }
