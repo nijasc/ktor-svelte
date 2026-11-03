@@ -1,34 +1,67 @@
 # ktor-svelte
 
-Serve your SvelteKit build from Ktor on the same port as your API. One app, one JAR.
+Ship your Ktor API and your SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that always matches your routes.
 
-> **Status:** pre-release. Nothing is published yet, so the coordinates below are not resolvable until `0.1.0` ships.
+```kotlin
+install(Svelte) {
+    generateTs = true
+    transport {
+        json()
+        compression()
+    }
+}
+```
+
+Write a route in Kotlin, save, and call it from Svelte with full types:
+
+```ts
+import { api } from '#lib/api/index.js';
+
+const note = await api.notes.create({ title: 'Buy milk' });
+```
+
+No CORS setup, no second server in production, no hand-written API types drifting away from the backend.
+
+> [!WARNING]
+> **This project was made heavily with AI, and nothing is guaranteed.** The author needed it for other projects and did not want to spend a lot of time on it. It has real tests, but read the code before you trust it with anything important.
+
+> **Status:** pre-release. Nothing is published yet, so the coordinates below will not resolve until the first release ships.
+
+## What you get
+
+- **One port, one JAR.** Your built frontend goes inside the JAR, next to your API. Works with `jar`, Shadow and Ktor's `buildFatJar`.
+- **Your routes win.** Anything you define in Ktor beats the frontend, whatever order you register it in.
+- **Generated TypeScript.** Types and services come from your Ktor routes through OpenAPI, with no npm dependencies.
+- **Real hot reload.** In dev you open Ktor's port and get Vite's HMR, with the same origin as production.
+- **Transport in one place.** JSON, XML and compression are configured inside `install(Svelte)`.
+- **Sensible production defaults.** Immutable caching for hashed assets, ETags, precompressed files, SPA fallback and real 404s for stale chunks.
+- **Bring your package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
+- **Run configurations for IntelliJ.** One click starts Vite and Ktor together.
 
 ## Quick start
 
 `build.gradle.kts`:
 
+<!-- x-release-please-start-version -->
 ```kotlin
 plugins {
     kotlin("jvm") version "2.4.21"
     application
     id("io.github.nijasc.ktor-svelte") version "0.1.0"
 }
-
-repositories {
-    mavenCentral()
-}
 ```
+<!-- x-release-please-end -->
 
-Put a SvelteKit project in `frontend/` and use `adapter-static`. SvelteKit 3 has no `svelte.config.js`, so the configuration goes in `frontend/vite.config.js`:
+Put a SvelteKit project in `frontend/` and use `adapter-static`. SvelteKit 3 has no `svelte.config.js`, so the configuration goes in `frontend/vite.config.ts`:
 
-```js
+```ts
 import { sveltekit } from '@sveltejs/kit/vite';
 import adapter from '@sveltejs/adapter-static';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    plugins: [sveltekit({ adapter: adapter({ fallback: '200.html' }) })]
+    plugins: [sveltekit({ adapter: adapter({ fallback: '200.html' }) })],
+    server: { hmr: { clientPort: 5173 } }
 });
 ```
 
@@ -46,30 +79,137 @@ fun Application.module() {
 }
 ```
 
-Then build and run:
+Run it. The frontend is built first and served from the same port as your API:
 
 ```bash
-./gradlew jar
+./gradlew run
 ```
 
-`./gradlew run` builds the frontend too, and everything is served from one port.
+For one runnable JAR, add [Shadow](https://gradleup.com/shadow/) or Ktor's Gradle plugin and run `shadowJar` or `buildFatJar`. The frontend comes along automatically.
+
+Want an IDE setup? This writes run configurations to `.run/`:
+
+```bash
+./gradlew svelteGenerateRunConfigurations
+```
+
+## Generated TypeScript
+
+Set `generateTs = true`. Each time the app starts in development mode, it reads your routing tree, builds an OpenAPI document and writes this to `frontend/src/lib/api`:
+
+| File | Contents |
+|---|---|
+| `types.ts` | An interface or union for every schema |
+| `services.ts` | One object per resource, such as `api.notes.list()` |
+| `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
+| `index.ts` | Re-exports all of the above |
+| `openapi.json` | The OpenAPI document itself |
+
+Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
+
+SvelteKit 3 needs a `#lib` import in `frontend/package.json`:
+
+```json
+{
+  "imports": {
+    "#lib": "./src/lib/index.js",
+    "#lib/*": "./src/lib/*"
+  }
+}
+```
+
+### Getting exact types
+
+Ktor's compiler plugin reads `call.receive<T>()`, `call.respond()` and `call.queryParameters` for you, so plain routes get full types. Add the Ktor Gradle plugin:
+
+```kotlin
+plugins {
+    id("io.ktor.plugin") version "3.6.1"
+}
+
+ktor {
+    openApi {
+        enabled = true
+        codeInferenceEnabled = true
+        onlyCommented = false
+    }
+}
+```
+
+Without it, describe routes by hand. A route with no description still gets a service, but it returns `unknown`:
+
+```kotlin
+get("/api/todos") { call.respond(todos) }.describe {
+    responses {
+        HttpStatusCode.OK { schema = jsonSchema<List<Todo>>() }
+    }
+}
+```
+
+### Calling the API
+
+```ts
+import { ApiError, api, apiConfig, type Note } from '#lib/api/index.js';
+
+const notes = await api.notes.list({ search: 'milk' });
+const note = await api.notes.get(1);
+await api.notes.update(1, { title: 'Oat milk' });
+
+try {
+    await api.notes.create({ title: '' });
+} catch (error) {
+    if (error instanceof ApiError) console.log(error.status, error.body);
+}
+
+apiConfig.headers['Authorization'] = 'Bearer token';
+```
+
+Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
+
+```ts
+export const load: PageLoad = async ({ fetch }) => ({
+    notes: await api.notes.list(undefined, { fetch })
+});
+```
+
+To refresh the files without your dev server, for example in CI, run the task below and check for a diff. It starts your app once, so the app's port must be free.
+
+```bash
+./gradlew svelteGenerateTs
+```
+
+## Transport
+
+Choose how your API talks inside `install(Svelte)`. Without a `transport` block, nothing is installed and you stay in control.
+
+```kotlin
+install(Svelte) {
+    transport {
+        json { prettyPrint = true }
+        xml()
+        compression()
+    }
+}
+```
+
+| Function | Effect |
+|---|---|
+| `json()` | Adds JSON to Ktor's `ContentNegotiation`. Takes a `kotlinx.serialization` `Json` builder |
+| `xml()` | Adds XML. Needs `implementation("io.ktor:ktor-serialization-kotlinx-xml")` in your build |
+| `negotiation { }` | Registers any other format, such as CBOR, on `ContentNegotiation` directly |
+| `compression { }` | Installs Ktor's `Compression`. Takes its normal configuration, and defaults to gzip and deflate |
+
+The client picks a format with its `Accept` header, and the first format you list is the default. Already installing these plugins yourself? You will get a clear error at startup, so remove one of the two. Files precompressed by your adapter are left alone. The generated TypeScript client always speaks JSON.
 
 ## How it works
 
-```
-                 ┌──────────────── build time ────────────────┐
- frontend/ ───►  svelteInstall ─► svelteBuild ─► svelteBundle ─► processResources ─► JAR
-                 └────────────────────────────────────────────┘
-                                                     writes ktor-svelte/public/**
-                                                     and ktor-svelte/manifest.json
+At build time, three tasks run before `processResources`:
 
- request ───► Ktor routing
-                ├─ your routes win, because they are more specific
-                └─ catch-all route from install(Svelte)
-                     └─ resolved against the manifest
-```
+1. `svelteInstall` installs dependencies from your lockfile.
+2. `svelteBuild` runs your build script.
+3. `svelteBundle` copies the output to `ktor-svelte/public/` in your resources, and writes `ktor-svelte/manifest.json` with a hash of every file.
 
-GET and HEAD requests that no route of yours matched are resolved in this order:
+At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more specific routes, so yours win. GET and HEAD requests that reach the catch-all are resolved in this order:
 
 | Step | Request | Result |
 |---|---|---|
@@ -84,6 +224,54 @@ GET and HEAD requests that no route of yours matched are resolved in this order:
 Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Step 5 lets SvelteKit recover from stale chunks after a deploy by doing a full page reload.
 
 ## Configuration
+
+### Ktor
+
+The values shown are the defaults.
+
+```kotlin
+install(Svelte) {
+    apiPrefixes("/api")
+    spaFallback = "200.html"
+    notFoundPage = "404.html"
+    source = SvelteSource.Classpath
+    generateTs = false
+    generateTsOutput = null
+
+    cache {
+        immutable = "public, max-age=31536000, immutable"
+        html = "no-cache"
+        other = "no-cache"
+    }
+
+    dev {
+        url = "http://localhost:5173"
+        mode = DevMode.AUTO
+    }
+
+    transport {
+    }
+}
+```
+
+| Setting | Purpose |
+|---|---|
+| `apiPrefixes` | Paths the frontend never answers, and the routes included in `generateTs`. `/api` matches `/api` and `/api/x`, not `/apiary` |
+| `spaFallback` | Page for client-side routes. Must match the adapter's `fallback` option. `null` disables it |
+| `notFoundPage` | Page served with status 404. `null` disables it |
+| `source` | `SvelteSource.Classpath`, or `SvelteSource.Directory(path)` to serve a build from disk |
+| `generateTs` | Generates TypeScript from your routes in development mode |
+| `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
+| `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
+| `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
+| `dev.mode` | `AUTO` follows Ktor's development mode. `ALWAYS` and `NEVER` force it |
+| `transport` | JSON, XML and compression. See [Transport](#transport) |
+
+A route of yours such as `get("/{slug}")` beats the frontend. That is intended, but it can hide pages.
+
+ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`.
+
+If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
 
 ### Gradle
 
@@ -108,7 +296,7 @@ svelte {
 |---|---|
 | `frontendDir` | Directory of the SvelteKit project |
 | `outputDir` | Adapter output, relative to `frontendDir`. Must match the adapter's `pages` option |
-| `packageManager` | `AUTO`, `BUN`, `PNPM`, `NPM` or `YARN`. `AUTO` picks from the lockfile |
+| `packageManager` | `AUTO`, `BUN`, `PNPM`, `NPM` or `YARN`. `AUTO` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
@@ -117,67 +305,27 @@ svelte {
 
 The package manager must already be installed. The plugin does not download Node or Bun.
 
-| Lockfile | Tool |
-|---|---|
-| `bun.lock` | Bun |
-| `pnpm-lock.yaml` | pnpm |
-| `package-lock.json` | npm |
-| `yarn.lock` | Yarn |
+### Gradle tasks
 
-Gradle properties:
+| Task | What it does |
+|---|---|
+| `svelteDev` | Starts Vite |
+| `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
+| `svelteCheck` | Runs your `check` script |
+| `svelteRun --script=lint` | Runs any `package.json` script |
+| `svelteOutdated` | Lists outdated frontend dependencies |
+| `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
+| `svelteClean` | Deletes `node_modules`, `.svelte-kit` and the build output |
+| `svelteGenerateRunConfigurations` | Writes IntelliJ run configurations to `.run/`, keeping any that exist |
 
 | Property | Effect |
 |---|---|
-| `-Psvelte.skip=true` | Skips the frontend tasks, and warns if a JAR is being built |
+| `-Psvelte.skip=true` | Skips the frontend build, and warns if a JAR is being built |
 | `-Psvelte.dev=true` | Same as skip, and also sets `-Dio.ktor.development=true` on `run` |
-
-### Ktor
-
-The values shown are the defaults.
-
-```kotlin
-install(Svelte) {
-    apiPrefixes("/api")
-    spaFallback = "200.html"
-    notFoundPage = "404.html"
-    source = SvelteSource.Classpath
-
-    cache {
-        immutable = "public, max-age=31536000, immutable"
-        html = "no-cache"
-        other = "no-cache"
-    }
-
-    dev {
-        url = "http://localhost:5173"
-        mode = DevMode.AUTO
-    }
-}
-```
-
-| Setting | Purpose |
-|---|---|
-| `apiPrefixes` | Paths the frontend never answers. `/api` matches `/api` and `/api/x`, not `/apiary`. Existing routes already win, so this only keeps unknown API paths from returning HTML |
-| `spaFallback` | Page for client-side routes. Must match the adapter's `fallback` option. `null` disables it |
-| `notFoundPage` | Page served with status 404. `null` disables it |
-| `source` | `SvelteSource.Classpath`, or `SvelteSource.Directory(path)` to serve a build from disk |
-| `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
-| `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
-| `dev.mode` | `AUTO` follows Ktor's development mode. `ALWAYS` and `NEVER` force it |
-
-A route of yours such as `get("/{slug}")` beats the frontend. That is intended, but it can hide pages.
-
-### Caching and compression
-
-ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. The runtime never compresses anything itself.
-
-### Missing frontend build
-
-In production the app fails at startup with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
 
 ## Dev workflow
 
-Run these in two terminals, then open Ktor's port, not Vite's:
+In IntelliJ, run the `Dev` configuration. It starts both of these, which you can also run in two terminals. Then open Ktor's port, not Vite's:
 
 ```bash
 ./gradlew svelteDev
@@ -189,20 +337,26 @@ Run these in two terminals, then open Ktor's port, not Vite's:
 
 In development mode the runtime proxies to Vite if it is reachable, otherwise serves built files if they exist, and otherwise returns a 503 explaining how to start Vite. API prefixes are never proxied.
 
-The proxy forwards HTTP only. Vite's client tries a WebSocket through Ktor, fails, and falls back to connecting directly to Vite. HMR works, but the browser logs one connection error. To remove it, connect straight to Vite:
-
-```js
-export default defineConfig({
-    plugins: [sveltekit({ adapter: adapter({ fallback: '200.html' }) })],
-    server: { hmr: { clientPort: 5173 } }
-});
-```
-
-The browser must be able to reach Vite's port directly, so a remote machine or container needs that port exposed.
-
-In IntelliJ, run `main` with the VM option `-Dio.ktor.development=true`, and add `-Psvelte.dev=true` to the Gradle settings if the IDE builds through Gradle.
+The proxy forwards HTTP only. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
 
 If Gradle is killed rather than stopped normally, Vite or the app can keep running and hold its port. Run `./gradlew --stop`, or stop the process listening on that port.
+
+## Examples
+
+| Example | Shows |
+|---|---|
+| [`examples/basic`](examples/basic) | The smallest possible app: one API route, prerendered pages and an SPA route |
+| [`examples/notes`](examples/notes) | Full CRUD with `generateTs`, JSON, XML and compression, validation errors, dynamic routes and typed 404 pages |
+
+Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localhost:8080`. Or from a terminal:
+
+```bash
+./gradlew -p examples/notes svelteDev
+```
+
+```bash
+./gradlew -p examples/notes run -Psvelte.dev=true
+```
 
 ## Limits
 
@@ -210,23 +364,24 @@ If Gradle is killed rather than stopped normally, Vite or the app can keep runni
 - The app is mounted at the root. `paths.base` is not supported yet.
 - No range requests, so large media does not belong in the SvelteKit build.
 - Security headers such as CSP are left to the app.
+- `generateTs` builds on Ktor's OpenAPI support, which Ktor still marks as experimental.
 
 ## Compatibility
 
-| Tool | Supported |
-|---|---|
-| Ktor | 3.6 and newer 3.x |
-| Kotlin | 2.3 and newer |
-| JVM | 17 and newer |
-| Gradle | Latest 8.x and 9.x |
-| SvelteKit | 3.x |
-| Package managers | Bun, pnpm, npm, Yarn |
+| Tool | Supported | Tested with |
+|---|---|---|
+| Ktor | 3.6 and newer 3.x | 3.6.1 |
+| Kotlin | 2.3 and newer | 2.4.21 |
+| JVM | 17 and newer | 17, 21 |
+| Gradle | Latest 8.x and 9.x | 8.14.6, 9.8.2 |
+| SvelteKit | 3.x | 3.1.1 |
+| Package managers | Bun, pnpm, npm, Yarn | Bun end to end. The others use fake tools in tests, plus npm in CI |
 
 On Gradle 8.x, use Shadow 9.2 or older if you use Shadow. Newer versions need a newer Gradle.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Releases are automated with release-please, and release notes live on the [releases page](https://github.com/nijasc/ktor-svelte/releases).
 
 ## License
 

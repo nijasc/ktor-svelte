@@ -1,54 +1,110 @@
 # Contributing
 
-## Setup
+Thanks for helping out. This project cares about two things more than anything else: great developer experience, and staying small. A feature that needs a paragraph of setup, or a dependency that most users will never touch, is probably not a good fit.
 
-You need JDK 21 and [Bun](https://bun.sh). Gradle downloads a JDK 17 toolchain for compiling.
+Fair warning: much of this code was written with AI, and the maintainer has limited time. Small, focused pull requests get merged fastest.
 
-## Checks
+## Getting set up
 
-Run these before opening a pull request:
+You need:
+
+- JDK 21. Gradle downloads a JDK 17 toolchain for compiling.
+- [Bun](https://bun.sh), for the examples. Node, pnpm and Yarn are optional.
+- IntelliJ IDEA, if you want the shared run configurations in `.run/`.
+
+```bash
+git clone https://github.com/nijasc/ktor-svelte.git
+```
 
 ```bash
 ./gradlew check apiCheck
 ```
 
+If that passes, you are ready. In IntelliJ, run `Notes: Dev` and open `http://localhost:8080` to see everything working together.
+
+## How the project is laid out
+
+| Path | What lives there |
+|---|---|
+| `ktor-svelte-server/` | The Ktor plugin. `Svelte.kt` is the entry point and `internal/` is everything users cannot see |
+| `ktor-svelte-server/.../internal/typescript/` | OpenAPI to TypeScript. `TypeScriptGenerator` takes OpenAPI JSON and returns files, so it is easy to test |
+| `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/` |
+| `examples/basic/` | The smallest possible app |
+| `examples/notes/` | The feature-rich app. New features should show up here |
+| `.run/` | Shared IntelliJ run configurations |
+
+The examples are separate Gradle builds that pull in the root build with `includeBuild`, so they use the plugin the way a real project does. They are also the end-to-end test fixtures.
+
+## Tests
+
+| Layer | Command | What it proves |
+|---|---|---|
+| Runtime | `./gradlew :ktor-svelte-server:test` | Request resolution, caching, dev proxy, transport, TypeScript output |
+| Plugin | `./gradlew :ktor-svelte-gradle-plugin:functionalTest` | Task graph, up-to-date checks, configuration cache, packaging, with fake tools on `PATH` |
+| Plugin on Gradle 8 | `./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=8.14.6 -PtestShadowVersion=9.2.2` | The same, on the oldest supported Gradle |
+| End to end | `./gradlew -p examples/basic e2eTest` and `./gradlew -p examples/notes e2eTest` | A real SvelteKit build in a real JAR, over real HTTP |
+| Frontend types | `./gradlew -p examples/notes svelteCheck` | Generated TypeScript compiles in a real SvelteKit project |
+
+Every behaviour change needs a test. Bug fixes should start with a failing one.
+
+If you change the notes API or the generator, refresh the generated client and commit it. CI fails when it is out of date:
+
 ```bash
-./gradlew -p examples/basic e2eTest
+./gradlew -p examples/notes svelteGenerateTs
 ```
 
-To test the plugin against Gradle 8.x:
+### Testing dev mode by hand
+
+HMR is not covered by automated tests. Check it before changing the dev proxy:
+
+1. Run `Notes: Dev` in IntelliJ.
+2. Open `http://localhost:8080/notes` and check that your notes appear.
+3. Edit `examples/notes/frontend/src/routes/notes/+page.svelte`, and check that the page updates without a reload.
+4. Change a route in `examples/notes/src/main/kotlin/notes/Routes.kt`, restart `Notes: Ktor`, and check that `frontend/src/lib/api` updates.
+5. Remove `server.hmr` from `vite.config.ts`, restart both, and repeat step 3. The console should show one WebSocket error and then Vite's direct connection fallback.
+6. After stopping both, check that nothing is still listening on ports 5173 and 8080.
+
+## Rules
+
+**No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the README. Generated files and the `x-release-please` markers in the README are the only exceptions.
+
+**Keep the README up to date, in the same commit.** It uses plain ASCII: no em dashes, arrows, box drawing or emoji.
+
+**Format Kotlin before you commit:**
 
 ```bash
-./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=8.14.6 -PtestShadowVersion=9.2.2
+./gradlew ktlintFormat
 ```
 
-If you change the public API on purpose, update the baseline and commit the result:
+**Public API changes are deliberate.** Update the baseline and commit the result, so reviewers can see exactly what changed:
 
 ```bash
 ./gradlew apiDump
 ```
 
-## Conventions
+## Commits and releases
 
-- No code comments of any kind. Explain behaviour through names, tests and the README.
-- Commits follow [Conventional Commits](https://www.conventionalcommits.org): `type(scope): summary`. Scopes are `server`, `gradle-plugin`, `example` and `repo`.
-- Format Kotlin with `./gradlew ktlintFormat`.
+Commits must follow [Conventional Commits](https://www.conventionalcommits.org), because they decide the next version and write the release notes:
 
-## Testing dev mode by hand
+```
+type(scope): summary
+```
 
-HMR is not covered by automated tests. Check it before changing the dev proxy:
+| Type | Use for | Effect on the version |
+|---|---|---|
+| `feat` | Something new for users | Minor |
+| `fix` | A bug users can hit | Patch |
+| `feat!` or `BREAKING CHANGE:` | Anything that breaks users | Major, or minor before 1.0 |
+| `docs`, `test`, `build`, `ci`, `refactor`, `chore` | Everything else | None |
 
-1. Run `./gradlew -p examples/basic svelteDev`.
-2. Run `./gradlew -p examples/basic run -Psvelte.dev=true`.
-3. Open `http://localhost:8080/app` and check that the API greeting appears.
-4. Edit `examples/basic/frontend/src/routes/app/+page.svelte`, and check that the page updates without a reload.
-5. Remove `server.hmr` from `examples/basic/frontend/vite.config.js`, restart both, and repeat step 4. The console should show one WebSocket error and then Vite's direct connection fallback.
-6. After stopping both, check that nothing is still listening on ports 5173 and 8080.
+Scopes are `server`, `gradle-plugin`, `example` and `repo`. Write `feat` and `fix` summaries for users, since they appear in the release notes as they are.
 
-## Releasing
+There is no changelog file and you never bump a version by hand. [release-please](https://github.com/googleapis/release-please) keeps a release pull request open on `main`. Merging it creates the tag and GitHub release, then publishes both artifacts.
 
-Pushing a `v*` tag runs `.github/workflows/release.yml`, which publishes both artifacts and creates a GitHub release from `CHANGELOG.md`. It needs these repository secrets:
+The release workflow needs these repository secrets:
 
 - `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`
 - `SIGNING_KEY`, `SIGNING_KEY_PASSWORD`
 - `GRADLE_PUBLISH_KEY`, `GRADLE_PUBLISH_SECRET`
+
+It also needs "Allow GitHub Actions to create and approve pull requests" turned on in the repository settings.
