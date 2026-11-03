@@ -62,6 +62,11 @@ internal class TestProject(
         return runner
     }
 
+    private fun forwardedTrustStoreProperties(): String =
+        listOf("javax.net.ssl.trustStore", "javax.net.ssl.trustStoreType")
+            .mapNotNull { name -> System.getProperty(name)?.let { value -> "systemProp.$name=$value" } }
+            .joinToString(separator = "\n", postfix = "\n")
+
     private fun writeFakeTool(name: String) {
         if (isWindows) {
             binDir.resolve("$name.cmd").writeText(

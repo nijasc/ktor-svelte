@@ -47,6 +47,12 @@ testing {
             targets.configureEach {
                 testTask.configure {
                     systemProperty("ktorSvelte.testGradleVersion", providers.gradleProperty("testGradleVersion").getOrElse(""))
+                    listOf("javax.net.ssl.trustStore", "javax.net.ssl.trustStoreType").forEach { name ->
+                        providers.systemProperty(name).orNull?.let { value -> systemProperty(name, value) }
+                    }
+                    systemProperty("ktorSvelte.kotlinVersion", libs.versions.kotlin.get())
+                    systemProperty("ktorSvelte.shadowVersion", libs.versions.shadow.get())
+                    systemProperty("ktorSvelte.ktorVersion", libs.versions.ktor.get())
                     maxParallelForks = 2
                 }
             }
