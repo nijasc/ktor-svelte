@@ -1,0 +1,14 @@
+.gradle/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+*.log
+.idea/
+*.iml
+out/
+.DS_Store
+node_modules/
+.svelte-kit/
+.env
+.env.*
