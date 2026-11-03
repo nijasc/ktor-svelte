@@ -426,6 +426,8 @@ public class Installer {
     }
 
     private static final class InstallerException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
         InstallerException(String message) {
             super(message);
         }
