@@ -9,6 +9,11 @@ ktlint = "14.2.0"
 mavenPublish = "0.37.0"
 pluginPublish = "2.2.1"
 shadow = "9.6.1"
+exposed = "1.6.0"
+hikari = "7.1.0"
+postgresql = "42.7.14"
+flyway = "13.12.0"
+ideaExt = "1.4.1"
 
 [libraries]
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
@@ -26,6 +31,11 @@ kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", versi
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -36,3 +46,4 @@ ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "pluginPublish" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+idea-ext = { id = "org.jetbrains.gradle.plugin.idea-ext", version.ref = "ideaExt" }

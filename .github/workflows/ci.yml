@@ -55,7 +55,7 @@ jobs:
       - run: ./gradlew -p examples/notes e2eTest svelteCheck
         shell: bash
 
-  installer:
+  setup:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -69,14 +69,33 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
-      - name: Create a project and build it
+      - name: Create a project with the default options and build it
         shell: bash
         run: |
           repository="$PWD"
           cd "$RUNNER_TEMP"
-          java "$repository/installer/Installer.java" "--local-build=$repository" --yes --name=demo --i18n --locales=en,de --no-git
+          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=demo --i18n --locales=en,de --no-git
           cd demo
-          ./gradlew buildFatJar svelteCheck
+          ./gradlew check buildFatJar svelteCheck
+          ./gradlew svelteRun --script=lint
+      - name: Create a project with every option and build it
+        shell: bash
+        run: |
+          repository="$PWD"
+          cd "$RUNNER_TEMP"
+          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=full --i18n --locales=en,de --locale-strategy=UrlPrefix --auth --database --conventions --no-git
+          cd full
+          ./gradlew check buildFatJar svelteCheck
+          ./gradlew svelteRun --script=lint
+      - name: Create a project with no options and build it
+        shell: bash
+        run: |
+          repository="$PWD"
+          cd "$RUNNER_TEMP"
+          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=small --no-generate-ts --no-daisy --no-tailwind --no-lucide --no-idea-ext --no-docker --no-github-actions --no-git
+          cd small
+          ./gradlew check buildFatJar svelteCheck
+          ./gradlew svelteRun --script=lint
 
   generated-client:
     runs-on: ubuntu-latest
