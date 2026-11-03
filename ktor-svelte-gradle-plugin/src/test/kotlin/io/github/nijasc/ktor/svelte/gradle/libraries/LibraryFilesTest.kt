@@ -136,6 +136,24 @@ class LibraryFilesTest {
     }
 
     @Test
+    fun `kotlin messages stay within ktlint layout`() {
+        val longText = "x".repeat(140)
+        val wide =
+            MessageCatalog(
+                linkedMapOf("en" to mapOf("stats" to "{total} of {archived}", "intro" to longText)),
+            )
+        val source = kotlinFiles(spec(i18n = cookieI18n), emptyList(), wide, true).getValue("Messages.kt")
+        assertContains(
+            source,
+            "    public fun stats(\n        total: String,\n        archived: String,\n    ): String =\n" +
+                "        table\n            .getValue(\"stats\")\n" +
+                "            .replace(\"{total}\", total)\n            .replace(\"{archived}\", archived)",
+        )
+        assertContains(source, "                        \"intro\" to\n                            \"$longText\",")
+        assertTrue(source.lines().all { it.length <= 140 || it.trim() == "\"$longText\"," })
+    }
+
+    @Test
     fun `call extensions need the runtime dependency`() {
         val daisySpec = spec(TailwindSpec(false, false), daisy, i18n = cookieI18n)
         val extensions = kotlinFiles(daisySpec, emptyList(), catalog, true).getValue("CallExtensions.kt")

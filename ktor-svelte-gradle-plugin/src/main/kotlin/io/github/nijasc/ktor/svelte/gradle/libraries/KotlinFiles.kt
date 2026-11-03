@@ -1,5 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
+private const val MAX_GENERATED_LINE_LENGTH = 140
+
 private fun kotlinString(value: String): String =
     buildString {
         append('"')
@@ -76,18 +78,15 @@ private fun messagesClass(
 ): String {
     val functions =
         catalog.keys.joinToString("\n\n") { key ->
-            val placeholders = catalog.placeholders(key)
-            val parameters = placeholders.joinToString(", ") { "$it: String" }
-            val replacements = placeholders.joinToString("") { ".replace(${kotlinString("{$it}")}, $it)" }
-            "    public fun ${propertyName(key)}($parameters): String = table.getValue(${kotlinString(key)})$replacements"
+            messageFunction(key, catalog.placeholders(key))
         }
     val tables =
         catalog.locales.entries.joinToString(",\n") { (locale, messages) ->
             val entries =
-                messages.toSortedMap().entries.joinToString(
-                    ",\n",
-                ) { (key, text) -> "                ${kotlinString(key)} to ${kotlinString(text)}" }
-            "            ${kotlinString(locale)} to\n                mapOf(\n$entries,\n                )"
+                messages.toSortedMap().entries.joinToString(",\n") { (key, text) ->
+                    messageEntry(key, text)
+                }
+            "                ${kotlinString(locale)} to\n                    mapOf(\n$entries,\n                    )"
         }
     val i18n = spec.i18n!!
     return fileHeader(spec.generatedPackage) +
@@ -103,11 +102,40 @@ private fun messagesClass(
         "            return Messages(resolved, tables.getValue(resolved))\n        }\n    }\n}\n"
 }
 
+private fun messageFunction(
+    key: String,
+    placeholders: List<String>,
+): String {
+    val name = propertyName(key)
+    val lookup = "getValue(${kotlinString(key)})"
+    val replacements = placeholders.map { ".replace(${kotlinString("{$it}")}, $it)" }
+    if (placeholders.size < 2) {
+        val parameters = placeholders.joinToString { "$it: String" }
+        return "    public fun $name($parameters): String = table.$lookup${replacements.joinToString("")}"
+    }
+    val parameters = placeholders.joinToString("") { "        $it: String,\n" }
+    val chain = replacements.joinToString("") { "\n            $it" }
+    return "    public fun $name(\n$parameters    ): String =\n        table\n            .$lookup$chain"
+}
+
+private fun messageEntry(
+    key: String,
+    text: String,
+): String {
+    val indent = "                        "
+    val line = "$indent${kotlinString(key)} to ${kotlinString(text)},"
+    return if (line.length <= MAX_GENERATED_LINE_LENGTH) {
+        line.removeSuffix(",")
+    } else {
+        "$indent${kotlinString(key)} to\n$indent    ${kotlinString(text)}"
+    }
+}
+
 private fun callExtensions(spec: LibrarySpec): String =
     buildString {
         append(fileHeader(spec.generatedPackage))
-        if (spec.daisy != null) append("import io.github.nijasc.ktor.svelte.svelteTheme\n")
         if (spec.i18n != null) append("import io.github.nijasc.ktor.svelte.svelteLocale\n")
+        if (spec.daisy != null) append("import io.github.nijasc.ktor.svelte.svelteTheme\n")
         append("import io.ktor.server.application.ApplicationCall\n\n")
         if (spec.i18n != null) append("public val ApplicationCall.messages: Messages get() = Messages.forLocale(svelteLocale)\n")
         if (spec.daisy != null) {
