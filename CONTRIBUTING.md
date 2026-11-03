@@ -20,7 +20,9 @@ git clone https://github.com/nijasc/ktor-svelte.git
 ./gradlew check apiCheck
 ```
 
-If that passes, you are ready. In IntelliJ, run `Notes: Dev` and open `http://localhost:8080` to see everything working together.
+If that passes, you are ready.
+
+In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts` and choose "Link Gradle Project". That build includes the root and both examples, so they all appear as one project. Link only `ide`, and not the root or an example as well, because the examples include the root and you would get duplicate modules. Use JDK 21 as the Gradle JVM. Then run `Notes: Dev` and open `http://localhost:8080` to see everything working together.
 
 ## How the project is laid out
 
