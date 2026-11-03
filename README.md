@@ -35,6 +35,8 @@ export default defineConfig({
 Install the Ktor plugin:
 
 ```kotlin
+import io.github.nijasc.ktor.svelte.Svelte
+
 fun Application.module() {
     install(Svelte)
 
@@ -85,7 +87,7 @@ Step 4 exists because prerendered pages load assets with relative paths, so serv
 
 ### Gradle
 
-The values shown are the defaults.
+The values shown are the defaults. `PackageManager` needs `import io.github.nijasc.ktor.svelte.gradle.PackageManager` at the top of the build script.
 
 ```kotlin
 svelte {
@@ -200,6 +202,8 @@ The browser must be able to reach Vite's port directly, so a remote machine or c
 
 In IntelliJ, run `main` with the VM option `-Dio.ktor.development=true`, and add `-Psvelte.dev=true` to the Gradle settings if the IDE builds through Gradle.
 
+If Gradle is killed rather than stopped normally, Vite or the app can keep running and hold its port. Run `./gradlew --stop`, or stop the process listening on that port.
+
 ## Limits
 
 - `adapter-static` only. There is no Node process in production, so `+page.server.ts`, `+server.ts` and form actions are not supported. Ktor is the backend.
@@ -217,6 +221,8 @@ In IntelliJ, run `main` with the VM option `-Dio.ktor.development=true`, and add
 | Gradle | Latest 8.x and 9.x |
 | SvelteKit | 3.x |
 | Package managers | Bun, pnpm, npm, Yarn |
+
+On Gradle 8.x, use Shadow 9.2 or older if you use Shadow. Newer versions need a newer Gradle.
 
 ## Contributing
 
