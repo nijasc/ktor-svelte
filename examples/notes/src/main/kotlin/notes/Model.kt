@@ -1,5 +1,7 @@
 package notes
 
+import io.github.nijasc.ktor.svelte.Validated
+import io.github.nijasc.ktor.svelte.Validator
 import kotlinx.serialization.Serializable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -29,7 +31,12 @@ data class NoteInput(
     val title: String,
     val body: String = "",
     val tags: List<String> = emptyList(),
-)
+) : Validated {
+    override fun Validator.rules() {
+        check("title", title.isNotBlank()) { "A note needs a title." }
+        check("title", title.length <= MAX_TITLE_LENGTH) { "Keep the title under $MAX_TITLE_LENGTH characters." }
+    }
+}
 
 @Serializable
 data class NoteStats(

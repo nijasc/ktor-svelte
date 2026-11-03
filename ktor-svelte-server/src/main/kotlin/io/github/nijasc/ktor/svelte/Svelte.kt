@@ -27,6 +27,7 @@ import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
 import io.ktor.server.application.log
 import io.ktor.server.plugins.swagger.swaggerUI
+import io.ktor.server.request.ApplicationReceivePipeline
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
@@ -88,6 +89,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
             if (devProxy == null) application.log.warn(MISSING_BUILD_MESSAGE)
+        }
+
+        application.receivePipeline.intercept(ApplicationReceivePipeline.After) { received ->
+            if (received is Validated) received.requireValid()
         }
 
         on(CallFailed) { call, cause ->

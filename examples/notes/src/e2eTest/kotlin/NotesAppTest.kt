@@ -101,6 +101,13 @@ class NotesAppTest {
     }
 
     @Test
+    fun `updates are validated by the same rules`() {
+        val created = send("POST", "/api/notes", """{"title":"Keep"}""")
+        val id = Regex(""""id":\s*(\d+)""").find(created.body())!!.groupValues[1]
+        assertEquals(422, send("PUT", "/api/notes/$id", """{"title":" "}""").statusCode())
+    }
+
+    @Test
     fun `search filters notes`() {
         assertContains(send("GET", "/api/notes?search=welcome").body(), "Welcome")
         assertFalse(send("GET", "/api/notes?search=nothing-matches").body().contains("Welcome"))
