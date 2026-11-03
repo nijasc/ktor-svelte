@@ -1,81 +1,39 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { loadPublicConfig } from '#api';
+    import Icon from '#icon';
+    import '#lib/ktor-svelte/app.css';
+    import { getLocale, localizeHref, locales, m, setLocale, type Locale } from '#i18n';
+    import { getTheme, setTheme, themes, type ThemeName } from '#theme';
 
     let { children } = $props();
 
-    let appName = $state('ktor-svelte notes');
+    let appName = $state(m.appTitle());
+    let theme = $state<ThemeName>('light');
+    let locale = $state<Locale>('en');
 
     onMount(async () => {
-        appName = (await loadPublicConfig()).appName;
+        theme = getTheme();
+        locale = getLocale();
+        const configured = (await loadPublicConfig()).appName;
+        if (configured) appName = configured;
     });
 </script>
 
-<header>
-    <a class="brand" href="/">{appName}</a>
-    <nav>
-        <a href="/notes">Notes</a>
-        <a href="/about">About</a>
+<header class="navbar bg-base-100 border-b border-base-300 gap-4 px-6">
+    <a class="btn btn-ghost text-lg" href={localizeHref('/')}><Icon name="NotebookPen" size={20} /> {appName}</a>
+    <nav class="flex flex-1 gap-1">
+        <a class="btn btn-ghost btn-sm" href={localizeHref('/notes')}><Icon name="StickyNote" size={16} /> {m.navNotes()}</a>
+        <a class="btn btn-ghost btn-sm" href={localizeHref('/about')}><Icon name="Info" size={16} /> {m.navAbout()}</a>
     </nav>
+    <select id="theme" class="select select-sm w-32" aria-label="Theme" bind:value={theme} onchange={() => setTheme(theme)}>
+        {#each themes as option}<option value={option}>{option}</option>{/each}
+    </select>
+    <select id="locale" class="select select-sm w-20" aria-label="Language" bind:value={locale} onchange={() => setLocale(locale)}>
+        {#each locales as option}<option value={option}>{option}</option>{/each}
+    </select>
 </header>
 
-<main>
+<main class="mx-auto my-8 max-w-3xl px-4">
     {@render children()}
 </main>
-
-<style>
-    :global(body) {
-        margin: 0;
-        font-family: system-ui, sans-serif;
-        color: #1f2933;
-        background: #f5f7fa;
-    }
-
-    :global(a) {
-        color: #0b69a3;
-    }
-
-    :global(button) {
-        font: inherit;
-        padding: 0.4rem 0.8rem;
-        border: 1px solid #9aa5b1;
-        border-radius: 6px;
-        background: #fff;
-        cursor: pointer;
-    }
-
-    :global(input),
-    :global(textarea) {
-        font: inherit;
-        padding: 0.4rem 0.6rem;
-        border: 1px solid #9aa5b1;
-        border-radius: 6px;
-        box-sizing: border-box;
-        width: 100%;
-    }
-
-    header {
-        display: flex;
-        gap: 2rem;
-        align-items: center;
-        padding: 1rem 2rem;
-        background: #fff;
-        border-bottom: 1px solid #e4e7eb;
-    }
-
-    .brand {
-        font-weight: 700;
-        text-decoration: none;
-    }
-
-    nav {
-        display: flex;
-        gap: 1rem;
-    }
-
-    main {
-        max-width: 48rem;
-        margin: 2rem auto;
-        padding: 0 1rem;
-    }
-</style>

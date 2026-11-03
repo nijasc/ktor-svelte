@@ -2,6 +2,7 @@ package notes
 
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
+import ktorsvelte.LucideIcon
 import kotlinx.serialization.Serializable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -24,6 +25,7 @@ data class Note(
     val body: String,
     val tags: List<String>,
     val status: NoteStatus,
+    val icon: LucideIcon,
 )
 
 @Serializable
@@ -31,6 +33,7 @@ data class NoteInput(
     val title: String,
     val body: String = "",
     val tags: List<String> = emptyList(),
+    val icon: LucideIcon = LucideIcon.StickyNote,
 ) : Validated {
     override fun Validator.rules() {
         check("title", title.isNotBlank()) { "A note needs a title." }
@@ -51,6 +54,13 @@ data class NotesExport(
 )
 
 @Serializable
+data class Greeting(
+    val message: String,
+    val locale: String,
+    val theme: String,
+)
+
+@Serializable
 data class Problem(
     val message: String,
 )
@@ -60,8 +70,8 @@ class NoteStore {
     private val notes = ConcurrentHashMap<Int, Note>()
 
     init {
-        create(NoteInput("Welcome", "This note came from Ktor through a generated TypeScript client.", listOf("intro")))
-        create(NoteInput("Try hot reload", "Change a Svelte file while the Dev run configuration is running.", listOf("intro", "dev")))
+        create(NoteInput("Welcome", "This note came from Ktor through a generated TypeScript client.", listOf("intro"), LucideIcon.Hand))
+        create(NoteInput("Try hot reload", "Change a Svelte file while the Dev run configuration is running.", listOf("intro", "dev"), LucideIcon.Flame))
     }
 
     fun list(
@@ -76,7 +86,7 @@ class NoteStore {
     fun find(id: Int): Note? = notes[id]
 
     fun create(input: NoteInput): Note {
-        val note = Note(ids.incrementAndGet(), input.title, input.body, input.tags, NoteStatus.ACTIVE)
+        val note = Note(ids.incrementAndGet(), input.title, input.body, input.tags, NoteStatus.ACTIVE, input.icon)
         notes[note.id] = note
         return note
     }
@@ -84,7 +94,7 @@ class NoteStore {
     fun update(
         id: Int,
         input: NoteInput,
-    ): Note? = notes.computeIfPresent(id) { _, note -> note.copy(title = input.title, body = input.body, tags = input.tags) }
+    ): Note? = notes.computeIfPresent(id) { _, note -> note.copy(title = input.title, body = input.body, tags = input.tags, icon = input.icon) }
 
     fun archive(id: Int): Note? = notes.computeIfPresent(id) { _, note -> note.copy(status = NoteStatus.ARCHIVED) }
 

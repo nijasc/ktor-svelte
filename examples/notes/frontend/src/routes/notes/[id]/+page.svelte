@@ -1,6 +1,8 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { api } from '#api';
+    import Icon from '#icon';
+    import { localizeHref, m } from '#i18n';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();
@@ -16,30 +18,25 @@
 
     async function save(event: SubmitEvent) {
         event.preventDefault();
-        await api.notes.update(data.note.id, { title, body, tags: data.note.tags });
+        await api.notes.update(data.note.id, { title, body, tags: data.note.tags, icon: data.note.icon });
         saved = true;
     }
 
     async function remove() {
         await api.notes.delete(data.note.id);
-        await goto('/notes');
+        await goto(localizeHref('/notes'));
     }
 </script>
 
-<a href="/notes">Back</a>
-<h1>{title}</h1>
+<a class="btn btn-ghost btn-sm" href={localizeHref('/notes')}><Icon name="ArrowLeft" size={16} /> {m.actionBack()}</a>
+<h1 class="my-4 flex items-center gap-2 text-3xl font-bold"><Icon name={data.note.icon} /> {title}</h1>
 
-<form onsubmit={save}>
-    <input aria-label="Title" bind:value={title} />
-    <textarea aria-label="Body" rows="6" bind:value={body}></textarea>
-    <button type="submit">Save</button>
-    <button type="button" onclick={remove}>Delete</button>
-    {#if saved}<p role="status">Saved.</p>{/if}
+<form class="grid gap-2" onsubmit={save}>
+    <input class="input w-full" aria-label="Title" bind:value={title} />
+    <textarea class="textarea w-full" aria-label="Body" rows="6" bind:value={body}></textarea>
+    <div class="flex gap-2">
+        <button class="btn btn-primary" type="submit">{m.actionSave()}</button>
+        <button class="btn btn-error" type="button" onclick={remove}>{m.actionDelete()}</button>
+    </div>
+    {#if saved}<p class="text-success" role="status">{m.saved()}</p>{/if}
 </form>
-
-<style>
-    form {
-        display: grid;
-        gap: 0.5rem;
-    }
-</style>

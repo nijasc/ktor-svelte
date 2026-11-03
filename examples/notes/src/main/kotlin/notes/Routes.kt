@@ -10,6 +10,8 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
+import ktorsvelte.messages
+import ktorsvelte.theme
 
 fun Route.noteRoutes(store: NoteStore) {
     route("/api/notes") {
@@ -50,6 +52,12 @@ fun Route.noteRoutes(store: NoteStore) {
                 if (note == null) call.respondMissing() else call.respond(note)
             }
         }
+    }
+
+    get("/api/greeting") {
+        val name = call.queryParameters["name"] ?: "Ktor"
+        val greeting = Greeting(call.messages.serverGreeting(name), call.messages.locale, call.theme.cssName)
+        call.respond(greeting)
     }
 
     get("/api/stats") {

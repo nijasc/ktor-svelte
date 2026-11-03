@@ -1,5 +1,8 @@
-<h1>One app, one JAR, one port</h1>
-<p>
-    This page is prerendered. <a href="/notes">Your notes</a> are a client-side app that talks to Ktor through a
-    TypeScript client generated from the Ktor routes.
-</p>
+<script lang="ts">
+    import { m } from '#i18n';
+</script>
+
+<article class="prose">
+    <h1>{m.homeTitle()}</h1>
+    <p>{m.homeIntro()}</p>
+</article>
