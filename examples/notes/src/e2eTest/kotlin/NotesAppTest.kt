@@ -31,8 +31,7 @@ class NotesAppTest {
                     .apply {
                         environment()["PORT"] = port.toString()
                         environment()["APP_NAME"] = "from e2e"
-                    }
-                    .redirectErrorStream(true)
+                    }.redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .start()
             repeat(100) {
