@@ -66,6 +66,14 @@ class PackageManagerTest {
     }
 
     @Test
+    fun `messy path entries still find tools`() {
+        val launcher = dir.resolve("bun.exe").apply { writeText("") }
+        launcher.setExecutable(true)
+        assertEquals(launcher, locateExecutable("bun", " ${dir.path};; ", isWindows = true))
+        assertEquals(launcher, locateExecutable("bun", "\"${dir.path}\"", isWindows = true))
+    }
+
+    @Test
     fun `missing executable returns null`() {
         assertNull(locateExecutable("nothing-here", dir.path, isWindows = false))
     }

@@ -65,7 +65,8 @@ internal fun locateExecutable(
     val separator = if (isWindows) ';' else ':'
     return searchPath
         .split(separator)
-        .filter { it.isNotBlank() }
+        .map { it.trim().replace("\"", "") }
+        .filter { it.isNotEmpty() }
         .asSequence()
         .flatMap { directory -> candidates.asSequence().map { File(directory, it) } }
         .firstOrNull { it.isFile && it.canExecute() }

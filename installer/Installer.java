@@ -407,9 +407,11 @@ public class Installer {
         if (path == null) path = System.getenv("PATH");
         if (path == null) return false;
         List<String> names = WINDOWS ? List.of(command + ".exe", command + ".cmd", command + ".bat") : List.of(command);
-        for (String directory : path.split(java.io.File.pathSeparator)) {
+        for (String entry : path.split(java.io.File.pathSeparator)) {
+            String directory = entry.trim().replace("\"", "");
+            if (directory.isEmpty()) continue;
             for (String name : names) {
-                if (!directory.isBlank() && Files.isRegularFile(Path.of(directory, name))) return true;
+                if (new java.io.File(directory, name).isFile()) return true;
             }
         }
         return false;
