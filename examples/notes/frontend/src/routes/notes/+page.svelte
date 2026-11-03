@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { api, isValidationError, type Note, type NoteStats } from '#lib/api/index.js';
+    import { api, isValidationError, type Note, type NoteStats } from '#api';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { api } from '#lib/api/index.js';
+    import { api } from '#api';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();

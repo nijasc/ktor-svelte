@@ -87,10 +87,13 @@ internal class SetupDoctor(
     }
 
     private fun subpathImports(manifest: String): Finding =
-        if ("\"#lib/*\"" in manifest) {
-            Finding(Severity.OK, "#lib import is configured")
+        if ("\"#api\"" in manifest) {
+            Finding(Severity.OK, "#api import is configured")
         } else {
-            Finding(Severity.WARN, "package.json has no \"#lib/*\" import. Generated TypeScript is imported through #lib.")
+            Finding(
+                Severity.WARN,
+                "package.json has no \"#api\" import. Add \"#api\": \"./src/lib/api/index.ts\" to import the generated client.",
+            )
         }
 
     private fun tsconfig(): Finding {

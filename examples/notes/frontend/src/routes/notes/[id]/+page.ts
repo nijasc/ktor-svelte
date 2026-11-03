@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { api, isApiError } from '#lib/api/index.js';
+import { api, isApiError } from '#api';
 import type { PageLoad } from './$types';
 
 export const prerender = false;
