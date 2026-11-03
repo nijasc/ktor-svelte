@@ -73,8 +73,8 @@ GET and HEAD requests that no route of yours matched are resolved in this order:
 |---|---|---|
 | 1 | Path under an API prefix | Not handled, so Ktor returns its normal 404 |
 | 2 | Exact file in the manifest | Serve the file |
-| 3 | `/about`, when `about.html` or `about/index.html` exists | Serve the page |
-| 4 | `/about/`, when only `about.html` exists, or the reverse | 308 redirect to the form that exists, keeping the query string |
+| 3 | `/about` when `about.html` exists, or `/about/` when `about/index.html` exists | Serve the page |
+| 4 | `/about/` when only `about.html` exists, or `/about` when only `about/index.html` exists | 308 redirect to the form that exists, keeping the query string |
 | 5 | Missing path under `/_app/`, or any path with a file extension | 404, never the fallback |
 | 6 | Other path, with a fallback page and a request that accepts HTML | Serve the fallback with status 200 |
 | 7 | Anything else | `404.html` with status 404 if it exists, otherwise a plain 404 |

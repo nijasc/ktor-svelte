@@ -1,0 +1,65 @@
+public final class io/github/nijasc/ktor/svelte/DevMode : java/lang/Enum {
+	public static final field ALWAYS Lio/github/nijasc/ktor/svelte/DevMode;
+	public static final field AUTO Lio/github/nijasc/ktor/svelte/DevMode;
+	public static final field NEVER Lio/github/nijasc/ktor/svelte/DevMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/DevMode;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/DevMode;
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
+	public fun <init> ()V
+	public final fun getHtml ()Ljava/lang/String;
+	public final fun getImmutable ()Ljava/lang/String;
+	public final fun getOther ()Ljava/lang/String;
+	public final fun setHtml (Ljava/lang/String;)V
+	public final fun setImmutable (Ljava/lang/String;)V
+	public final fun setOther (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteConfig {
+	public fun <init> ()V
+	public final fun apiPrefixes ([Ljava/lang/String;)V
+	public final fun cache (Lkotlin/jvm/functions/Function1;)V
+	public final fun dev (Lkotlin/jvm/functions/Function1;)V
+	public final fun getNotFoundPage ()Ljava/lang/String;
+	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
+	public final fun getSpaFallback ()Ljava/lang/String;
+	public final fun setNotFoundPage (Ljava/lang/String;)V
+	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
+	public final fun setSpaFallback (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
+	public fun <init> ()V
+	public final fun getMode ()Lio/github/nijasc/ktor/svelte/DevMode;
+	public final fun getUrl ()Ljava/lang/String;
+	public final fun setMode (Lio/github/nijasc/ktor/svelte/DevMode;)V
+	public final fun setUrl (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteKt {
+	public static final fun getSvelte ()Lio/ktor/server/application/ApplicationPlugin;
+}
+
+public abstract interface class io/github/nijasc/ktor/svelte/SvelteSource {
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteSource$Classpath : io/github/nijasc/ktor/svelte/SvelteSource {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/SvelteSource$Classpath;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteSource$Directory : io/github/nijasc/ktor/svelte/SvelteSource {
+	public fun <init> (Ljava/nio/file/Path;)V
+	public final fun component1 ()Ljava/nio/file/Path;
+	public final fun copy (Ljava/nio/file/Path;)Lio/github/nijasc/ktor/svelte/SvelteSource$Directory;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/SvelteSource$Directory;Ljava/nio/file/Path;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/SvelteSource$Directory;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ljava/nio/file/Path;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
