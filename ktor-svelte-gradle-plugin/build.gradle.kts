@@ -4,6 +4,7 @@ plugins {
     `java-gradle-plugin`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.plugin.publish)
 }
 
 kotlin {
@@ -17,12 +18,15 @@ kotlin {
 }
 
 gradlePlugin {
+    website = "https://github.com/nijasc/ktor-svelte"
+    vcsUrl = "https://github.com/nijasc/ktor-svelte.git"
     plugins {
         create("ktorSvelte") {
             id = "io.github.nijasc.ktor-svelte"
             implementationClass = "io.github.nijasc.ktor.svelte.gradle.KtorSveltePlugin"
             displayName = "ktor-svelte"
             description = "Builds a SvelteKit frontend and packages it into a Ktor application's JAR."
+            tags = listOf("ktor", "svelte", "sveltekit", "frontend")
         }
     }
 }
@@ -51,7 +55,8 @@ testing {
                         providers.systemProperty(name).orNull?.let { value -> systemProperty(name, value) }
                     }
                     systemProperty("ktorSvelte.kotlinVersion", libs.versions.kotlin.get())
-                    systemProperty("ktorSvelte.shadowVersion", libs.versions.shadow.get())
+                    val shadowVersion = providers.gradleProperty("testShadowVersion").getOrElse(libs.versions.shadow.get())
+                    systemProperty("ktorSvelte.shadowVersion", shadowVersion)
                     systemProperty("ktorSvelte.ktorVersion", libs.versions.ktor.get())
                     maxParallelForks = 2
                 }

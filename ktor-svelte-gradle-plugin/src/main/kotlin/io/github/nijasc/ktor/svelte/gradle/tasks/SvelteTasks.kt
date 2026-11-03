@@ -24,9 +24,11 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.process.ExecOperations
+import org.gradle.work.DisableCachingByDefault
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
+@DisableCachingByDefault(because = "Base type for tasks that run the frontend tool")
 public abstract class SvelteToolTask : DefaultTask() {
     @get:Internal
     public abstract val frontendDir: DirectoryProperty
@@ -51,6 +53,7 @@ public abstract class SvelteToolTask : DefaultTask() {
     }
 }
 
+@DisableCachingByDefault(because = "Writes node_modules, which is not worth caching")
 public abstract class SvelteInstallTask : SvelteToolTask() {
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
