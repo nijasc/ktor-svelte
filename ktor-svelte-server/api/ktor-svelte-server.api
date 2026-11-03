@@ -7,6 +7,11 @@ public final class io/github/nijasc/ktor/svelte/DevMode : java/lang/Enum {
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/DevMode;
 }
 
+public final class io/github/nijasc/ktor/svelte/LibrariesKt {
+	public static final fun getSvelteLocale (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
+	public static final fun getSvelteTheme (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
+}
+
 public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
 	public fun <init> ()V
 	public final fun getHtml ()Ljava/lang/String;

@@ -1,18 +1,25 @@
 package io.github.nijasc.ktor.svelte.gradle
 
+import io.github.nijasc.ktor.svelte.gradle.libraries.DaisySpec
+import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
+import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
+import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevAllTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateSourcesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -20,6 +27,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
@@ -43,15 +51,18 @@ public class KtorSveltePlugin : Plugin<Project> {
         val devMode = booleanProperty(project, DEV_PROPERTY)
         val skipFrontend = devMode || booleanProperty(project, SKIP_PROPERTY)
 
+        val librarySpec = librarySpecProvider(project, extension)
         val install = registerInstall(project, extension, skipFrontend)
         val build = registerBuild(project, extension, install, skipFrontend)
         val bundle = registerBundle(project, extension, build, skipFrontend)
         registerDev(project, extension, install)
         registerUtilityTasks(project, extension, install)
+        registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
         configureClean(project, extension)
 
         project.pluginManager.withPlugin("java") {
             wireResources(project, bundle)
+            wireGeneratedSources(project, extension, librarySpec)
             addRuntimeDependency(project, extension)
             warnOnSkippedJar(project, skipFrontend)
         }
@@ -61,6 +72,122 @@ public class KtorSveltePlugin : Plugin<Project> {
                 if (devMode) run.systemProperty("io.ktor.development", "true")
             }
             registerGenerateTs(project, extension)
+        }
+    }
+
+    private fun librarySpecProvider(
+        project: Project,
+        extension: SvelteExtension,
+    ): Provider<LibrarySpec> =
+        project.provider {
+            val libraries = extension.libraries
+            LibrarySpec(
+                tailwind =
+                    TailwindSpec(
+                        libraries.tailwindSettings.typographyPlugin.getOrElse(false),
+                        libraries.tailwindSettings.formsPlugin.getOrElse(false),
+                    ).takeIf { libraries.tailwindSettings.enabled.getOrElse(false) },
+                daisy =
+                    libraries.daisySettings.takeIf { it.enabled.getOrElse(false) }?.let { daisy ->
+                        val themes =
+                            daisy.themeNames.get().ifEmpty {
+                                if (daisy.customThemes.get().isEmpty()) {
+                                    listOf(
+                                        "light",
+                                        "dark",
+                                    )
+                                } else {
+                                    emptyList()
+                                }
+                            }
+                        val all = themes + daisy.customThemes.get().map { it.name }
+                        DaisySpec(
+                            themes = themes,
+                            defaultTheme = daisy.defaultThemeName.getOrElse(all.first()),
+                            prefersDark = daisy.prefersDarkName.orNull ?: "dark".takeIf { it in all },
+                            customThemes = daisy.customThemes.get(),
+                        )
+                    },
+                lucide = libraries.lucideEnabled.getOrElse(false),
+                i18n =
+                    libraries.i18nSettings.takeIf { it.enabled.getOrElse(false) }?.let { i18n ->
+                        I18nSpec(
+                            locales = i18n.localeNames.get(),
+                            defaultLocale =
+                                i18n.defaultLocale.orNull ?: i18n.localeNames
+                                    .get()
+                                    .firstOrNull()
+                                    .orEmpty(),
+                            strategy = i18n.strategy.getOrElse(LocaleStrategy.Cookie),
+                        )
+                    },
+                devPort = extension.dev.port.get(),
+                generatedPackage = libraries.generatedPackage.getOrElse("ktorsvelte"),
+            )
+        }
+
+    private fun registerLibraryTasks(
+        project: Project,
+        extension: SvelteExtension,
+        install: TaskProvider<SvelteInstallTask>,
+        build: TaskProvider<SvelteBuildTask>,
+        librarySpec: Provider<LibrarySpec>,
+        skipFrontend: Boolean,
+    ) {
+        val messages =
+            extension.libraries.i18nSettings.messagesDir
+                .convention(extension.frontendDir.dir("messages"))
+        val hasLibraries = librarySpec.map { !it.isEmpty }
+        val sync =
+            project.tasks.register("svelteSync", SvelteSyncTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.description = "Installs configured frontend libraries and writes their generated files."
+                task.spec.set(librarySpec)
+                task.messagesDirectory.set(messages)
+                task.onlyIf("libraries are configured") { hasLibraries.get() }
+            }
+        val verify =
+            project.tasks.register("svelteVerifySync", SvelteVerifySyncTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.description = "Fails if frontend libraries do not match the Gradle configuration."
+                task.spec.set(librarySpec)
+                task.messagesDirectory.set(messages)
+                task.mustRunAfter(sync)
+                task.onlyIf("libraries are configured") { hasLibraries.get() && !skipFrontend }
+            }
+        install.configure { it.mustRunAfter(sync) }
+        build.configure { it.dependsOn(verify) }
+        project.tasks.named("svelteInit").configure { it.finalizedBy(sync) }
+        sync.configure { it.mustRunAfter("svelteInit") }
+        project.tasks.named("svelteDev").configure { it.dependsOn(sync) }
+        project.tasks.matching { it.name == "svelteDevAll" }.configureEach { it.dependsOn(sync) }
+    }
+
+    private fun wireGeneratedSources(
+        project: Project,
+        extension: SvelteExtension,
+        librarySpec: Provider<LibrarySpec>,
+    ) {
+        val generate =
+            project.tasks.register("svelteGenerateSources", SvelteGenerateSourcesTask::class.java) { task ->
+                task.group = TASK_GROUP
+                task.description = "Generates Kotlin for configured frontend libraries."
+                task.spec.set(librarySpec)
+                task.hasRuntimeDependency.set(extension.addRuntimeDependency)
+                task.iconsFile.from(extension.frontendDir.file("src/lib/ktor-svelte/icons.json"))
+                task.messagesDirectory.set(extension.libraries.i18nSettings.messagesDir)
+                task.messageFiles.from(
+                    extension.libraries.i18nSettings.messagesDir
+                        .map { it.asFileTree },
+                )
+                task.kotlinDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/kotlin"))
+                task.resourcesDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/config"))
+                task.onlyIf("libraries are configured") { !librarySpec.get().isEmpty }
+            }
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        sourceSets.named("main") { main ->
+            main.java.srcDir(generate.flatMap { it.kotlinDirectory })
+            main.resources.srcDir(generate.flatMap { it.resourcesDirectory })
         }
     }
 

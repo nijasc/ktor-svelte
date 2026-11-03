@@ -177,6 +177,10 @@ private class SvelteHandler(
         val method = call.request.httpMethod
         val path = decodedPath(call)
         if ((method != HttpMethod.Get && method != HttpMethod.Head) || path == null || resolver.isApiPath(path)) return
+        if (needsLocalePrefix(path, call.application.libraryConfig)) {
+            redirectToLocale(call)
+            return
+        }
         val mayProxy = allowRemote || isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))
         if (mayProxy && devProxy?.forward(call) == true) return
         val manifest = store.manifest()

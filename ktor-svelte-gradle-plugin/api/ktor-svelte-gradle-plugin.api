@@ -1,7 +1,127 @@
+public final class io/github/nijasc/ktor/svelte/gradle/DaisyCustomTheme : java/io/Serializable {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Lio/github/nijasc/ktor/svelte/gradle/DaisyCustomTheme;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/DaisyCustomTheme;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/DaisyCustomTheme;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getColorScheme ()Ljava/lang/String;
+	public final fun getColors ()Ljava/util/Map;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/DaisyCustomThemeBuilder {
+	public fun <init> ()V
+	public final fun getAccent ()Ljava/lang/String;
+	public final fun getBase100 ()Ljava/lang/String;
+	public final fun getBase200 ()Ljava/lang/String;
+	public final fun getBase300 ()Ljava/lang/String;
+	public final fun getBaseContent ()Ljava/lang/String;
+	public final fun getError ()Ljava/lang/String;
+	public final fun getInfo ()Ljava/lang/String;
+	public final fun getNeutral ()Ljava/lang/String;
+	public final fun getPrimary ()Ljava/lang/String;
+	public final fun getSecondary ()Ljava/lang/String;
+	public final fun getSuccess ()Ljava/lang/String;
+	public final fun getWarning ()Ljava/lang/String;
+	public final fun setAccent (Ljava/lang/String;)V
+	public final fun setBase100 (Ljava/lang/String;)V
+	public final fun setBase200 (Ljava/lang/String;)V
+	public final fun setBase300 (Ljava/lang/String;)V
+	public final fun setBaseContent (Ljava/lang/String;)V
+	public final fun setError (Ljava/lang/String;)V
+	public final fun setInfo (Ljava/lang/String;)V
+	public final fun setNeutral (Ljava/lang/String;)V
+	public final fun setPrimary (Ljava/lang/String;)V
+	public final fun setSecondary (Ljava/lang/String;)V
+	public final fun setSuccess (Ljava/lang/String;)V
+	public final fun setWarning (Ljava/lang/String;)V
+	public final fun variable (Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/DaisySettings {
+	public fun <init> ()V
+	public final fun customTheme (Ljava/lang/String;Ljava/lang/String;Lorg/gradle/api/Action;)V
+	public static synthetic fun customTheme$default (Lio/github/nijasc/ktor/svelte/gradle/DaisySettings;Ljava/lang/String;Ljava/lang/String;Lorg/gradle/api/Action;ILjava/lang/Object;)V
+	public final fun defaultTheme (Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;)V
+	public final fun defaultTheme (Ljava/lang/String;)V
+	public abstract fun getCustomThemes ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getDefaultThemeName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPrefersDarkName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getThemeNames ()Lorg/gradle/api/provider/ListProperty;
+	public final fun prefersDark (Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;)V
+	public final fun prefersDark (Ljava/lang/String;)V
+	public final fun themes ([Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/DaisyTheme : java/lang/Enum {
+	public static final field Abyss Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Acid Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Aqua Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Autumn Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Black Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Bumblebee Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Business Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Caramellatte Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Cmyk Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Coffee Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Corporate Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Cupcake Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Cyberpunk Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Dark Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Dim Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Dracula Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Emerald Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Fantasy Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Forest Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Garden Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Halloween Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Lemonade Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Light Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Lofi Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Luxury Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Night Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Nord Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Pastel Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Retro Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Silk Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Sunset Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Synthwave Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Valentine Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Winter Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field Wireframe Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public final fun getCssName ()Ljava/lang/String;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/I18nSettings {
+	public fun <init> ()V
+	public abstract fun getDefaultLocale ()Lorg/gradle/api/provider/Property;
+	public abstract fun getEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getLocaleNames ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getMessagesDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getStrategy ()Lorg/gradle/api/provider/Property;
+	public final fun locales ([Ljava/lang/String;)V
+}
+
 public final class io/github/nijasc/ktor/svelte/gradle/KtorSveltePlugin : org/gradle/api/Plugin {
 	public fun <init> ()V
 	public synthetic fun apply (Ljava/lang/Object;)V
 	public fun apply (Lorg/gradle/api/Project;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/LocaleStrategy : java/lang/Enum {
+	public static final field Cookie Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;
+	public static final field UrlPrefix Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/PackageManager : java/lang/Enum {
@@ -30,8 +150,137 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getDev ()Lio/github/nijasc/ktor/svelte/gradle/SvelteDevSettings;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getIncludeSourceMaps ()Lorg/gradle/api/provider/Property;
+	public abstract fun getLibraries ()Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;
 	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
+	public final fun libraries (Lorg/gradle/api/Action;)V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
+	public fun <init> ()V
+	public final fun daisyUi (Lorg/gradle/api/Action;)V
+	public static synthetic fun daisyUi$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
+	public abstract fun getDaisySettings ()Lio/github/nijasc/ktor/svelte/gradle/DaisySettings;
+	public abstract fun getGeneratedPackage ()Lorg/gradle/api/provider/Property;
+	public abstract fun getI18nSettings ()Lio/github/nijasc/ktor/svelte/gradle/I18nSettings;
+	public abstract fun getLucideEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getOverrides ()Lorg/gradle/api/provider/MapProperty;
+	public abstract fun getTailwindSettings ()Lio/github/nijasc/ktor/svelte/gradle/TailwindSettings;
+	public final fun i18n (Lorg/gradle/api/Action;)V
+	public final fun lucide ()V
+	public final fun tailwind (Lorg/gradle/api/Action;)V
+	public static synthetic fun tailwind$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/TailwindSettings {
+	public fun <init> ()V
+	public final fun forms ()V
+	public abstract fun getEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFormsPlugin ()Lorg/gradle/api/provider/Property;
+	public abstract fun getTypographyPlugin ()Lorg/gradle/api/provider/Property;
+	public final fun typography ()V
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec : java/io/Serializable {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAllThemes ()Ljava/util/List;
+	public final fun getCustomThemes ()Ljava/util/List;
+	public final fun getDefaultTheme ()Ljava/lang/String;
+	public final fun getPrefersDark ()Ljava/lang/String;
+	public final fun getThemes ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/FrontendFilesKt {
+	public static final field ROOT_LAYOUT Ljava/lang/String;
+	public static final fun frontendFiles (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;Z)Ljava/util/Map;
+	public static final fun iconConstant (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun iconSources (Ljava/util/List;)Ljava/util/Map;
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec : java/io/Serializable {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;
+	public final fun copy (Ljava/util/List;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;)Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;Ljava/util/List;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDefaultLocale ()Ljava/lang/String;
+	public final fun getLocales ()Ljava/util/List;
+	public final fun getStrategy ()Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/KotlinFilesKt {
+	public static final fun kotlinFiles (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;Ljava/util/List;Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;Z)Ljava/util/Map;
+	public static final fun runtimeProperties (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;)Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : java/io/Serializable {
+	public fun <init> (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;)V
+	public final fun component1 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
+	public final fun component2 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
+	public final fun component3 ()Z
+	public final fun component4 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
+	public final fun component5 ()I
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;)Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDaisy ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
+	public final fun getDevPort ()I
+	public final fun getGeneratedPackage ()Ljava/lang/String;
+	public final fun getI18n ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
+	public final fun getLucide ()Z
+	public final fun getRequiredPackages ()Ljava/util/Set;
+	public final fun getTailwind ()Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
+	public final fun getUsesCss ()Z
+	public final fun getUsesHooks ()Z
+	public fun hashCode ()I
+	public final fun isEmpty ()Z
+	public fun toString ()Ljava/lang/String;
+	public final fun validate ()V
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;)Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;Ljava/util/Map;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getKeys ()Ljava/util/List;
+	public final fun getLocales ()Ljava/util/Map;
+	public fun hashCode ()I
+	public final fun placeholders (Ljava/lang/String;)Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/MessagesKt {
+	public static final fun propertyName (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun readMessages (Ljava/io/File;Ljava/util/List;)Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;
+}
+
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec : java/io/Serializable {
+	public fun <init> (ZZ)V
+	public final fun component1 ()Z
+	public final fun component2 ()Z
+	public final fun copy (ZZ)Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;ZZILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getForms ()Z
+	public final fun getTypography ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteBuildTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
@@ -86,6 +335,18 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDoctorTask
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteGenerateSourcesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public final fun generate ()V
+	public abstract fun getHasRuntimeDependency ()Lorg/gradle/api/provider/Property;
+	public abstract fun getIconsFile ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	public abstract fun getKotlinDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getMessageFiles ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	public abstract fun getMessagesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getResourcesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getSpec ()Lorg/gradle/api/provider/Property;
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteInitTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public abstract fun getPackageManagerOption ()Lorg/gradle/api/provider/Property;
@@ -97,6 +358,12 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteInstallTas
 	public abstract fun getDependencyFiles ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public abstract fun getStampFile ()Lorg/gradle/api/file/RegularFileProperty;
 	public final fun install ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteLibraryTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+	public fun <init> ()V
+	public abstract fun getMessagesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getSpec ()Lorg/gradle/api/provider/Property;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteOutdatedTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
@@ -120,6 +387,11 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRunScriptT
 	public final fun runScript ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteSyncTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteLibraryTask {
+	public fun <init> ()V
+	public final fun sync ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	protected abstract fun getExecOperations ()Lorg/gradle/process/ExecOperations;
@@ -130,6 +402,11 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask :
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDependenciesTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public final fun update ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifySyncTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteLibraryTask {
+	public fun <init> ()V
+	public final fun verify ()V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/ToolVersionSource : org/gradle/api/provider/ValueSource {
