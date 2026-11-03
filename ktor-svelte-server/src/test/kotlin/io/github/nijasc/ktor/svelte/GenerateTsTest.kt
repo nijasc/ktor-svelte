@@ -1,0 +1,163 @@
+package io.github.nijasc.ktor.svelte
+
+import io.github.nijasc.ktor.svelte.internal.typescript.findFrontendRoot
+import io.github.nijasc.ktor.svelte.internal.typescript.writeIfChanged
+import io.ktor.http.HttpStatusCode
+import io.ktor.openapi.jsonSchema
+import io.ktor.server.application.install
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+import io.ktor.server.routing.openapi.describe
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
+import io.ktor.server.testing.testApplication
+import io.ktor.utils.io.ExperimentalKtorApi
+import kotlinx.serialization.Serializable
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.getLastModifiedTime
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+
+@Serializable
+data class Todo(
+    val id: Int,
+    val title: String,
+    val note: String? = null,
+    val tags: List<String> = emptyList(),
+)
+
+@Serializable
+data class NewTodo(
+    val title: String,
+)
+
+@OptIn(ExperimentalKtorApi::class)
+class GenerateTsTest {
+    private fun frontend(): Path {
+        val root = Files.createTempDirectory("ktor-svelte-frontend")
+        root.resolve("package.json").writeText("{}")
+        root.resolve("src/lib").createDirectories()
+        return root
+    }
+
+    private fun generatedApi(
+        output: Path,
+        developmentMode: Boolean = true,
+        generate: Boolean = true,
+    ) = testApplication {
+        serverConfig { this.developmentMode = developmentMode }
+        val build = fixtureBuild()
+        application {
+            install(Svelte) {
+                source = SvelteSource.Directory(build)
+                dev { mode = DevMode.NEVER }
+                generateTs = generate
+                generateTsOutput = output.toString()
+                transport { json() }
+            }
+            routing {
+                get("/api/todos") { call.respond(emptyList<Todo>()) }.describe {
+                    parameters { query("search") { required = false } }
+                    responses {
+                        HttpStatusCode.OK { schema = jsonSchema<List<Todo>>() }
+                    }
+                }
+                get("/api/todos/{id}") { call.respond(Todo(1, "x")) }.describe {
+                    responses {
+                        HttpStatusCode.OK { schema = jsonSchema<Todo>() }
+                    }
+                }
+                post("/api/todos") { call.respond(call.receive<NewTodo>()) }.describe {
+                    requestBody { schema = jsonSchema<NewTodo>() }
+                    responses {
+                        HttpStatusCode.Created { schema = jsonSchema<Todo>() }
+                    }
+                }
+                delete("/api/todos/{id}") { call.respond(HttpStatusCode.NoContent) }.describe {
+                    responses {
+                        HttpStatusCode.NoContent { description = "Deleted" }
+                    }
+                }
+                get("/health") { call.respond("ok") }
+            }
+        }
+        startApplication()
+    }
+
+    @Test
+    fun `generates types and services from described routes`() {
+        val root = frontend()
+        val output = root.resolve("src/lib/api")
+
+        generatedApi(output)
+
+        val types = output.resolve("types.ts").readText()
+        assertContains(types, "export interface Todo {")
+        assertContains(types, "id: number;")
+        assertContains(types, "title: string;")
+        assertContains(types, "tags?: string[];")
+        assertContains(types, "export interface NewTodo {")
+
+        val services = output.resolve("services.ts").readText()
+        assertContains(services, "export const todos = {")
+        assertContains(services, "list: (query?: { search?: string }, options?: RequestOptions) => request<Todo[]>('GET', '/api/todos'")
+        assertContains(
+            services,
+            "get: (id: string | number, options?: RequestOptions) => request<Todo>('GET', `/api/todos/\${encodeURIComponent(id)}`",
+        )
+        assertContains(services, "create: (body: NewTodo, options?: RequestOptions) => request<Todo>('POST', '/api/todos'")
+        assertContains(services, "delete: (id: string | number, options?: RequestOptions) => request<void>('DELETE'")
+        assertContains(services, "export const api = { todos };")
+        assertFalse(services.contains("health"))
+
+        assertNotNull(output.resolve("client.ts").readText())
+        assertContains(output.resolve("index.ts").readText(), "export * from './services.js';")
+        assertContains(output.resolve("openapi.json").readText(), "\"/api/todos\"")
+    }
+
+    @Test
+    fun `nothing is generated by default`() {
+        val output = frontend().resolve("src/lib/api")
+        generatedApi(output, generate = false)
+        assertFalse(output.exists())
+    }
+
+    @Test
+    fun `nothing is generated in production`() {
+        val output = frontend().resolve("src/lib/api")
+        generatedApi(output, developmentMode = false)
+        assertFalse(output.exists())
+    }
+
+    @Test
+    fun `missing frontend does not create files or fail startup`() {
+        val output = Files.createTempDirectory("ktor-svelte-no-frontend").resolve("src/lib/api")
+        generatedApi(output)
+        assertFalse(output.exists())
+    }
+
+    @Test
+    fun `unchanged files are not rewritten so vite does not reload`() {
+        val directory = Files.createTempDirectory("ktor-svelte-write")
+        assertEquals(listOf("a.ts", "b.ts"), writeIfChanged(directory, mapOf("a.ts" to "1", "b.ts" to "2")))
+        val before = directory.resolve("a.ts").getLastModifiedTime()
+        assertEquals(listOf("b.ts"), writeIfChanged(directory, mapOf("a.ts" to "1", "b.ts" to "3")))
+        assertEquals(before, directory.resolve("a.ts").getLastModifiedTime())
+    }
+
+    @Test
+    fun `frontend root is found from a nested output path`() {
+        val root = frontend()
+        assertEquals(root.toRealPath(), findFrontendRoot(root.resolve("src/lib/api"))?.toRealPath())
+    }
+}

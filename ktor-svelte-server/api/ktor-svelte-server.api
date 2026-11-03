@@ -1,0 +1,127 @@
+public final class io/github/nijasc/ktor/svelte/DevMode : java/lang/Enum {
+	public static final field ALWAYS Lio/github/nijasc/ktor/svelte/DevMode;
+	public static final field AUTO Lio/github/nijasc/ktor/svelte/DevMode;
+	public static final field NEVER Lio/github/nijasc/ktor/svelte/DevMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/DevMode;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/DevMode;
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
+	public fun <init> ()V
+	public final fun getHtml ()Ljava/lang/String;
+	public final fun getImmutable ()Ljava/lang/String;
+	public final fun getOther ()Ljava/lang/String;
+	public final fun setHtml (Ljava/lang/String;)V
+	public final fun setImmutable (Ljava/lang/String;)V
+	public final fun setOther (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteConfig {
+	public fun <init> ()V
+	public final fun apiPrefixes ([Ljava/lang/String;)V
+	public final fun cache (Lkotlin/jvm/functions/Function1;)V
+	public final fun dev (Lkotlin/jvm/functions/Function1;)V
+	public final fun getApiDocs ()Z
+	public final fun getApiDocsPath ()Ljava/lang/String;
+	public final fun getGenerateTs ()Z
+	public final fun getGenerateTsOutput ()Ljava/lang/String;
+	public final fun getNotFoundPage ()Ljava/lang/String;
+	public final fun getRouting ()Lio/github/nijasc/ktor/svelte/SvelteRouting;
+	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
+	public final fun getSpaFallback ()Ljava/lang/String;
+	public final fun securityHeaders (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun securityHeaders$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final fun setApiDocs (Z)V
+	public final fun setApiDocsPath (Ljava/lang/String;)V
+	public final fun setGenerateTs (Z)V
+	public final fun setGenerateTsOutput (Ljava/lang/String;)V
+	public final fun setNotFoundPage (Ljava/lang/String;)V
+	public final fun setPublicConfig (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;)V
+	public final fun setRouting (Lio/github/nijasc/ktor/svelte/SvelteRouting;)V
+	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
+	public final fun setSpaFallback (Ljava/lang/String;)V
+	public final fun transport (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
+	public fun <init> ()V
+	public final fun getAllowRemote ()Z
+	public final fun getMode ()Lio/github/nijasc/ktor/svelte/DevMode;
+	public final fun getUrl ()Ljava/lang/String;
+	public final fun setAllowRemote (Z)V
+	public final fun setMode (Lio/github/nijasc/ktor/svelte/DevMode;)V
+	public final fun setUrl (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteKt {
+	public static final fun getSvelte ()Lio/ktor/server/application/ApplicationPlugin;
+	public static final fun svelte (Lio/ktor/server/routing/Route;Ljava/util/List;)V
+	public static synthetic fun svelte$default (Lio/ktor/server/routing/Route;Ljava/util/List;ILjava/lang/Object;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteRouting : java/lang/Enum {
+	public static final field Automatic Lio/github/nijasc/ktor/svelte/SvelteRouting;
+	public static final field Manual Lio/github/nijasc/ktor/svelte/SvelteRouting;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/SvelteRouting;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/SvelteRouting;
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteSecurityHeaders {
+	public fun <init> ()V
+	public final fun getContentSecurityPolicy ()Ljava/lang/String;
+	public final fun getContentTypeOptions ()Ljava/lang/String;
+	public final fun getFrameOptions ()Ljava/lang/String;
+	public final fun getReferrerPolicy ()Ljava/lang/String;
+	public final fun setContentSecurityPolicy (Ljava/lang/String;)V
+	public final fun setContentTypeOptions (Ljava/lang/String;)V
+	public final fun setFrameOptions (Ljava/lang/String;)V
+	public final fun setReferrerPolicy (Ljava/lang/String;)V
+}
+
+public abstract interface class io/github/nijasc/ktor/svelte/SvelteSource {
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteSource$Classpath : io/github/nijasc/ktor/svelte/SvelteSource {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/SvelteSource$Classpath;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteSource$Directory : io/github/nijasc/ktor/svelte/SvelteSource {
+	public fun <init> (Ljava/nio/file/Path;)V
+	public final fun component1 ()Ljava/nio/file/Path;
+	public final fun copy (Ljava/nio/file/Path;)Lio/github/nijasc/ktor/svelte/SvelteSource$Directory;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/SvelteSource$Directory;Ljava/nio/file/Path;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/SvelteSource$Directory;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ljava/nio/file/Path;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteTransportConfig {
+	public fun <init> ()V
+	public final fun compression (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun compression$default (Lio/github/nijasc/ktor/svelte/SvelteTransportConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final fun json (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun json$default (Lio/github/nijasc/ktor/svelte/SvelteTransportConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final fun negotiation (Lkotlin/jvm/functions/Function1;)V
+	public final fun xml ()V
+}
+
+public final class io/github/nijasc/ktor/svelte/ValidationException : java/lang/RuntimeException {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getFields ()Ljava/util/Map;
+}
+
+public final class io/github/nijasc/ktor/svelte/ValidationKt {
+	public static final fun validate (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/Validator {
+	public fun <init> ()V
+	public final fun check (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+}
+

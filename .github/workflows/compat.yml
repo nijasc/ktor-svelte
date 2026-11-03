@@ -1,0 +1,72 @@
+name: Compatibility
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  latest-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Update the example to the newest SvelteKit
+        working-directory: examples/basic/frontend
+        run: bun update --latest @sveltejs/kit @sveltejs/adapter-static @sveltejs/vite-plugin-svelte svelte vite
+      - run: ./gradlew -p examples/basic e2eTest
+
+  latest-gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Find the newest Gradle
+        id: gradle
+        run: echo "version=$(curl -s https://services.gradle.org/versions/current | jq -r .version)" >> "$GITHUB_OUTPUT"
+      - run: ./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=${{ steps.gradle.outputs.version }}
+
+  latest-ktor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Update Ktor in the version catalog
+        run: |
+          latest=$(curl -s https://repo1.maven.org/maven2/io/ktor/ktor-server-core-jvm/maven-metadata.xml | grep -oP '(?<=<release>)[^<]+')
+          sed -i "s/^ktor = .*/ktor = \"$latest\"/" gradle/libs.versions.toml
+      - run: ./gradlew :ktor-svelte-server:test
+
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Create a project with svelteInit and build it
+        run: |
+          project="$(mktemp -d)"
+          repository="$PWD"
+          printf 'pluginManagement { includeBuild("%s"); repositories { gradlePluginPortal(); mavenCentral() } }\ndependencyResolutionManagement { repositories { mavenCentral() } }\nincludeBuild("%s")\n' "$repository" "$repository" > "$project/settings.gradle.kts"
+          printf 'plugins { kotlin("jvm") version "2.4.21"; id("io.github.nijasc.ktor-svelte") }\n' > "$project/build.gradle.kts"
+          ./gradlew -p "$project" svelteInit svelteDoctor svelteCheck jar
