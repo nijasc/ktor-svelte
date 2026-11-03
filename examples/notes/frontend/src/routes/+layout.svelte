@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { loadPublicConfig } from '#lib/api/index.js';
+    import { loadPublicConfig } from '#api';
 
     let { children } = $props();
 

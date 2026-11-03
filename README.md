@@ -15,7 +15,7 @@ install(Svelte) {
 Write a route in Kotlin, save, and call it from Svelte with full types:
 
 ```ts
-import { api } from '#lib/api/index.js';
+import { api } from '#api';
 
 const note = await api.notes.create({ title: 'Buy milk' });
 ```
@@ -113,13 +113,12 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 
 Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
 
-SvelteKit 3 needs a `#lib` import in `frontend/package.json`:
+`svelteInit` also sets up the short `#api` import. For a frontend you already have, add it to `frontend/package.json`:
 
 ```json
 {
   "imports": {
-    "#lib": "./src/lib/index.js",
-    "#lib/*": "./src/lib/*"
+    "#api": "./src/lib/api/index.ts"
   }
 }
 ```
@@ -155,7 +154,7 @@ get("/api/todos") { call.respond(todos) }.describe {
 ### Calling the API
 
 ```ts
-import { api, apiConfig } from '#lib/api/index.js';
+import { api, apiConfig } from '#api';
 
 const notes = await api.notes.list({ search: 'milk' });
 const note = await api.notes.get(1);
@@ -167,7 +166,7 @@ apiConfig.headers['Authorization'] = 'Bearer token';
 Errors are typed too. Ktor's compiler plugin finds error responses such as `call.respond(HttpStatusCode.NotFound, Problem(...))`, and `isApiError` narrows the body:
 
 ```ts
-import { api, isApiError, isValidationError } from '#lib/api/index.js';
+import { api, isApiError, isValidationError } from '#api';
 
 try {
     await api.notes.create({ title: '' });
@@ -193,15 +192,19 @@ To refresh the files without your dev server, for example in CI, run the task be
 
 ## Validation
 
-Check input with `validate`. When a rule fails, the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands. No extra plugins are needed.
+Put the rules on the class itself by implementing `Validated`. They then run on every `call.receive` of that class, in every route. When a rule fails, the route never runs, and the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands.
 
 ```kotlin
+@Serializable
+data class NoteInput(val title: String, val body: String = "") : Validated {
+    override fun Validator.rules() {
+        check("title", title.isNotBlank()) { "A note needs a title." }
+        check("title", title.length <= 80) { "Keep the title under 80 characters." }
+    }
+}
+
 post("/api/notes") {
     val input = call.receive<NoteInput>()
-    validate {
-        check("title", input.title.isNotBlank()) { "A note needs a title." }
-        check("title", input.title.length <= 80) { "Keep the title under 80 characters." }
-    }
     call.respond(HttpStatusCode.Created, store.create(input))
 }
 ```
@@ -210,7 +213,7 @@ post("/api/notes") {
 { "message": "Validation failed", "fields": { "title": ["A note needs a title."] } }
 ```
 
-If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
+For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
 
 ## Transport
 
@@ -276,7 +279,7 @@ install(Svelte) {
 ```
 
 ```ts
-import { loadPublicConfig } from '#lib/api/index.js';
+import { loadPublicConfig } from '#api';
 
 const config = await loadPublicConfig();
 ```
@@ -421,7 +424,7 @@ The package manager must already be installed. The plugin does not download Node
 | Task | What it does |
 |---|---|
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
-| `svelteDoctor` | Checks adapter, `#lib`, tsconfig, Kit version, tool and port, and says what to fix |
+| `svelteDoctor` | Checks adapter, `#api`, tsconfig, Kit version, tool and port, and says what to fix |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |

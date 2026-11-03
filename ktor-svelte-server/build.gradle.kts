@@ -56,6 +56,7 @@ mavenPublishing {
         developers {
             developer {
                 id = "nijasc"
+                name = "nijasc"
                 url = "https://github.com/nijasc"
             }
         }

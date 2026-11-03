@@ -12,7 +12,7 @@ class SetupDoctorTest {
     lateinit var dir: File
 
     private val goodManifest =
-        """{"imports":{"#lib/*":"./src/lib/*"},"devDependencies":{"@sveltejs/kit":"^3.1.1","@sveltejs/adapter-static":"^4.0.1"}}"""
+        """{"imports":{"#api":"./src/lib/api/index.ts"},"devDependencies":{"@sveltejs/kit":"^3.1.1","@sveltejs/adapter-static":"^4.0.1"}}"""
 
     private fun healthyProject() {
         dir.resolve("package.json").writeText(goodManifest)
@@ -93,7 +93,7 @@ class SetupDoctorTest {
     @Test
     fun `busy port and missing imports are warnings`() {
         healthyProject()
-        dir.resolve("package.json").writeText(goodManifest.replace("#lib/*", "#other"))
+        dir.resolve("package.json").writeText(goodManifest.replace("#api", "#other"))
         assertEquals(2, examine(portFree = false).messagesAt(Severity.WARN).size)
     }
 }

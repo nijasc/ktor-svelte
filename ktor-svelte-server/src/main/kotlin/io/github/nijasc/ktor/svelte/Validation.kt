@@ -21,6 +21,15 @@ public class Validator {
     internal fun failures(): Map<String, List<String>> = errors
 }
 
+public interface Validated {
+    public fun Validator.rules()
+}
+
+internal fun Validated.requireValid() {
+    val validated = this
+    validate { with(validated) { rules() } }
+}
+
 public fun validate(rules: Validator.() -> Unit) {
     val failures = Validator().apply(rules).failures()
     if (failures.isNotEmpty()) throw ValidationException(failures)

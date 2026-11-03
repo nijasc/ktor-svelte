@@ -1,5 +1,9 @@
-<script>
-    const greeting = fetch('/api/hello').then((response) => response.json());
+<script lang="ts">
+    interface Greeting {
+        message: string;
+    }
+
+    const greeting: Promise<Greeting> = fetch('/api/hello').then((response) => response.json());
 </script>
 
 <h1>Client-side app</h1>

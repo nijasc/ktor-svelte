@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#lib": "./src/lib/index.js",
+    "#api": "./src/lib/api/index.ts",
+    "#lib": "./src/lib/index.ts",
     "#lib/*": "./src/lib/*"
   },
   "scripts": {

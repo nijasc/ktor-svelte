@@ -1,4 +1,4 @@
-import { api } from '#lib/api/index.js';
+import { api } from '#api';
 import type { PageLoad } from './$types';
 
 export const prerender = false;
