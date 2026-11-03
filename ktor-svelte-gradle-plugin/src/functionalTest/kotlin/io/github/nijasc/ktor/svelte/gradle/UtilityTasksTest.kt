@@ -123,7 +123,7 @@ class UtilityTasksTest {
             DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
         }
         assertContains(dir.resolve(".run/Ktor.run.xml").readText(), "-Psvelte.dev=true")
-        assertContains(dir.resolve(".run/Dev.run.xml").readText(), "toRun name=\"Vite\"")
+        assertContains(dir.resolve(".run/Dev.run.xml").readText(), "svelteDevAll")
     }
 
     @Test
@@ -192,6 +192,20 @@ class UtilityTasksTest {
         val output = project.runAndFail("svelteDoctor").output
         assertContains(output, "OK    Package manager bun is on PATH")
         assertContains(output, "ERROR @sveltejs/kit is not a dependency")
+    }
+
+    @Test
+    fun `svelteDevAll stops everything when Vite stops`() {
+        val project = project()
+        project.buildScript(applicationBuild)
+        val source = dir.resolve("src/main/java/Main.java")
+        source.parentFile.mkdirs()
+        source.writeText("public class Main { public static void main(String[] args) throws Exception { Thread.sleep(600000); } }")
+
+        val output = project.run("svelteDevAll").output
+
+        assertContains(output, "Vite stopped, so everything else is stopping too.")
+        assertTrue(project.calls().contains("run dev --port 5173 --strictPort"))
     }
 
     @Test

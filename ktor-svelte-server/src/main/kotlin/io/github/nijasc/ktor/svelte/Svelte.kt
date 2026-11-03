@@ -76,7 +76,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
-            if (System.getProperty("ktor.svelte.generateTsOnly") != "true") application.log.warn(MISSING_BUILD_MESSAGE)
+            if (devProxy == null) application.log.warn(MISSING_BUILD_MESSAGE)
         }
 
         on(CallFailed) { call, cause ->

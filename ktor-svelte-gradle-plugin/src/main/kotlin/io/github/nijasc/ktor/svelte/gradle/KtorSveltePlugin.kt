@@ -3,6 +3,7 @@ package io.github.nijasc.ktor.svelte.gradle
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevAllTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
@@ -18,13 +19,16 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.plugins.JavaApplication
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.CommandLineArgumentProvider
+import java.io.File
 import java.util.Properties
 
 private const val TASK_GROUP = "svelte"
@@ -137,6 +141,33 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.systemProperty("ktor.svelte.generateTsOnly", "true")
             task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
         }
+        val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
+        val toolchain = project.extensions.getByType(JavaPluginExtension::class.java).toolchain
+        val install = project.tasks.named("svelteInstall", SvelteInstallTask::class.java)
+        val gradleHome = project.gradle.gradleHomeDir
+        project.tasks.register("svelteDevAll", SvelteDevAllTask::class.java) { task ->
+            configureToolTask(task, extension)
+            task.description = "Runs Vite, the Kotlin compiler and the app together, and restarts the app when Kotlin changes."
+            task.dependsOn(install, main.map { it.output.classesDirs })
+            task.script.set(extension.dev.script)
+            task.port.set(extension.dev.port)
+            task.mainClass.set(application.mainClass)
+            task.appClasspath.from(
+                main.map { it.output.classesDirs },
+                project.layout.projectDirectory.dir("src/main/resources"),
+                project.configurations.named("runtimeClasspath"),
+            )
+            task.classesDirectories.from(main.map { it.output.classesDirs })
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.gradleExecutable.set(gradleExecutablePath(gradleHome))
+            task.javaLauncher.set(toolchains.launcherFor(toolchain))
+        }
+    }
+
+    private fun gradleExecutablePath(gradleHome: File?): String {
+        val isWindows = System.getProperty("os.name").orEmpty().startsWith("Windows")
+        val name = if (isWindows) "gradle.bat" else "gradle"
+        return gradleHome?.resolve("bin/$name")?.path ?: name
     }
 
     private fun createExtension(project: Project): SvelteExtension {

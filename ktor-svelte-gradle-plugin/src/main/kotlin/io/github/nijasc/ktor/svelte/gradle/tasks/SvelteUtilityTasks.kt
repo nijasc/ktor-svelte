@@ -89,7 +89,7 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
                 if (hasApplicationPlugin.get()) {
                     add(gradleConfiguration("${prefix}Ktor", "${tasks}run", "-Psvelte.dev=true"))
                     add(gradleConfiguration("${prefix}Generate TypeScript", "${tasks}svelteGenerateTs"))
-                    add(compoundConfiguration("${prefix}Dev", listOf("${prefix}Vite", "${prefix}Ktor")))
+                    add(gradleConfiguration("${prefix}Dev", "${tasks}svelteDevAll"))
                 }
             }.mapNotNull { (name, xml) ->
                 val file = directory.resolve(name.replace(Regex("[^A-Za-z0-9 _-]"), "_") + ".run.xml")

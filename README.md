@@ -32,7 +32,7 @@ No CORS setup, no second server in production, no hand-written API types driftin
 - **One port, one JAR.** Your built frontend goes inside the JAR, next to your API. Works with `jar`, Shadow and Ktor's `buildFatJar`.
 - **Your routes win.** Anything you define in Ktor beats the frontend, whatever order you register it in.
 - **Generated TypeScript.** Types and services come from your Ktor routes through OpenAPI, with no npm dependencies.
-- **Real hot reload.** In dev you open Ktor's port and get Vite's HMR, with the same origin as production.
+- **Real hot reload.** One command runs everything. You open Ktor's port and get Vite's HMR, with the same origin as production. Change a route and your TypeScript follows.
 - **Transport in one place.** JSON, XML and compression are configured inside `install(Svelte)`.
 - **Sensible production defaults.** Immutable caching for hashed assets, ETags, precompressed files, SPA fallback and real 404s for stale chunks.
 - **Bring your package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
@@ -414,6 +414,7 @@ The package manager must already be installed. The plugin does not download Node
 |---|---|
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
 | `svelteDoctor` | Checks adapter, `#lib`, tsconfig, Kit version, tool and port, and says what to fix |
+| `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteCheck` | Runs your `check` script |
@@ -430,7 +431,15 @@ The package manager must already be installed. The plugin does not download Node
 
 ## Dev workflow
 
-In IntelliJ, run the `Dev` configuration. It starts both of these, which you can also run in two terminals. Then open Ktor's port, not Vite's:
+One command runs everything. Then open Ktor's port, not Vite's:
+
+```bash
+./gradlew svelteDevAll
+```
+
+It starts Vite, keeps Kotlin compiling and runs your app. Save a Svelte file and the page hot reloads. Save a Kotlin file and the app restarts, and with `generateTs` on your TypeScript updates a moment later, so type errors show up in the editor right away. A restart loses anything your app keeps in memory. Stopping the task stops all three. In IntelliJ, this is the `Dev` run configuration, and each line of output is labelled `[vite]`, `[kotlin]` or `[app]`.
+
+Prefer separate terminals, for example to attach a debugger to the app? Run these instead:
 
 ```bash
 ./gradlew svelteDev
@@ -444,7 +453,7 @@ In development mode the runtime proxies to Vite if it is reachable, otherwise se
 
 The proxy forwards HTTP only. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
 
-If Gradle is killed rather than stopped normally, Vite or the app can keep running and hold its port. Run `./gradlew --stop`, or stop the process listening on that port.
+With two terminals, if a Gradle process is killed rather than stopped normally, Vite or the app can keep running and hold its port. Run `./gradlew --stop`, or stop the process listening on that port. `svelteDevAll` stops its children even when its terminal is closed.
 
 ## Examples
 
@@ -456,11 +465,7 @@ If Gradle is killed rather than stopped normally, Vite or the app can keep runni
 Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localhost:8080`. Or from a terminal:
 
 ```bash
-./gradlew -p examples/notes svelteDev
-```
-
-```bash
-./gradlew -p examples/notes run -Psvelte.dev=true
+./gradlew -p examples/notes svelteDevAll
 ```
 
 ## Limits

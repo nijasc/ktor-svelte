@@ -60,9 +60,9 @@ HMR is not covered by automated tests. Check it before changing the dev proxy:
 1. Run `Notes: Dev` in IntelliJ.
 2. Open `http://localhost:8080/notes` and check that your notes appear.
 3. Edit `examples/notes/frontend/src/routes/notes/+page.svelte`, and check that the page updates without a reload.
-4. Change a route in `examples/notes/src/main/kotlin/notes/Routes.kt`, restart `Notes: Ktor`, and check that `frontend/src/lib/api` updates.
-5. Remove `server.hmr` from `vite.config.ts`, restart both, and repeat step 3. The console should show one WebSocket error and then Vite's direct connection fallback.
-6. After stopping both, check that nothing is still listening on ports 5173 and 8080.
+4. Change a route in `examples/notes/src/main/kotlin/notes/Routes.kt` and save. The app restarts and `frontend/src/lib/api` updates.
+5. Remove `server.hmr` from `vite.config.ts`, restart, and repeat step 3. The console should show one WebSocket error and then Vite's direct connection fallback.
+6. Stop the task, and check that nothing is still listening on ports 5173 and 8080. Also try closing the terminal instead of stopping it.
 
 ## Rules
 
