@@ -83,12 +83,17 @@ public final class io/github/nijasc/ktor/svelte/SvelteRouting : java/lang/Enum {
 
 public final class io/github/nijasc/ktor/svelte/SvelteSecurityHeaders {
 	public fun <init> ()V
+	public final fun allowCspSources (Ljava/lang/String;[Ljava/lang/String;)V
+	public final fun getAutomaticContentSecurityPolicy ()Z
 	public final fun getContentSecurityPolicy ()Ljava/lang/String;
 	public final fun getContentTypeOptions ()Ljava/lang/String;
+	public final fun getEnabled ()Z
 	public final fun getFrameOptions ()Ljava/lang/String;
 	public final fun getReferrerPolicy ()Ljava/lang/String;
+	public final fun setAutomaticContentSecurityPolicy (Z)V
 	public final fun setContentSecurityPolicy (Ljava/lang/String;)V
 	public final fun setContentTypeOptions (Ljava/lang/String;)V
+	public final fun setEnabled (Z)V
 	public final fun setFrameOptions (Ljava/lang/String;)V
 	public final fun setReferrerPolicy (Ljava/lang/String;)V
 }

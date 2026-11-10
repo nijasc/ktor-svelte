@@ -252,7 +252,7 @@ get("/api/report") {
 
 `customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
 
-The saved theme is applied by a small inline script. If you set a strict `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
+The saved theme is applied by a small inline script. The automatic [Content-Security-Policy](#security-headers) allows it by its hash. If you set your own `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
 
 ### Lucide
 
@@ -582,15 +582,54 @@ install(Svelte) {
 
 ## Security headers
 
+Security headers are on by default. Every response gets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin`. Each is a property you can change, or set to `null` to leave out:
+
 ```kotlin
 install(Svelte) {
-    securityHeaders()
+    securityHeaders {
+        referrerPolicy = "no-referrer"
+    }
 }
 ```
 
-This sends `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin` on every response. Each is a property you can change, or set to `null` to leave out.
+Every HTML page from your build also gets a strict `Content-Security-Policy`:
 
-`contentSecurityPolicy` is off by default, because SvelteKit's inline startup script would break under a strict policy. Use SvelteKit's own `csp` option in `hash` mode, or set this property yourself and test it. It is never sent in dev, because it would break Vite.
+```
+default-src 'self'; script-src 'self' 'sha256-...'; style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none';
+base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+`script-src` lists the SHA-256 hash of each inline `<script>` in that page, which covers SvelteKit's startup script and the theme and locale script ktor-svelte adds, and nothing else. The hashes are computed once per page, the first time it is served, and cached. Other inline scripts and scripts from other origins are blocked. The other directives exist for these reasons:
+
+- `style-src 'unsafe-inline'`: Svelte transitions and many components set inline styles, and SvelteKit can inline small CSS files.
+- `img-src` and `font-src` allow `data:` because Tailwind, DaisyUI and Vite inline small images, icons and fonts as data URLs. `blob:` covers images made in the browser, such as upload previews.
+- `frame-ancestors` follows `frameOptions`: `'none'` for `DENY`, `'self'` for `SAMEORIGIN`, and left out when `frameOptions` is `null`.
+
+API responses, JavaScript, CSS and other files get no CSP, since it only matters for documents.
+
+To load something from another origin, such as an analytics script, add sources to a directive. A directive that is not in the policy yet is added with exactly the sources you list:
+
+```kotlin
+securityHeaders {
+    allowCspSources("script-src", "https://plausible.io")
+    allowCspSources("connect-src", "https://plausible.io")
+    allowCspSources("img-src", "https://avatars.example.com")
+}
+```
+
+To use your own policy instead, set `contentSecurityPolicy`. It is then sent unchanged on every response, and `allowCspSources` is ignored. Inline scripts in your pages break unless your policy allows them, for example with SvelteKit's own `csp` option in `hash` mode.
+
+To opt out:
+
+```kotlin
+securityHeaders { automaticContentSecurityPolicy = false }
+securityHeaders { enabled = false }
+```
+
+The first turns off only the automatic CSP. The second turns off all security headers.
+
+No CSP is sent while the dev proxy is active, because Vite injects its own scripts. The other headers are still sent.
 
 ## API request guards
 
@@ -678,6 +717,15 @@ install(Svelte) {
     allowedOrigins()
     maxApiBodySize = 1048576
 
+    securityHeaders {
+        enabled = true
+        contentTypeOptions = "nosniff"
+        frameOptions = "DENY"
+        referrerPolicy = "strict-origin-when-cross-origin"
+        contentSecurityPolicy = null
+        automaticContentSecurityPolicy = true
+    }
+
     cache {
         immutable = "public, max-age=31536000, immutable"
         html = "no-cache"
@@ -709,7 +757,9 @@ install(Svelte) {
 | `originCheck` | Refuses cross-site POST, PUT, PATCH and DELETE requests to API paths. See [API request guards](#api-request-guards) |
 | `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |
 | `maxApiBodySize` | Largest request body on API paths, in bytes. `null` disables it |
-| `securityHeaders { }` | See [Security headers](#security-headers) |
+| `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](#security-headers) |
+| `securityHeaders.contentSecurityPolicy` | Your own policy, sent unchanged on every response. `null` uses the automatic policy |
+| `securityHeaders.automaticContentSecurityPolicy` | Sends a strict CSP built from the inline scripts of each HTML page. Extend it with `allowCspSources(directive, sources)` |
 | `publicConfig(value)` | See [Runtime config](#runtime-config) |
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
@@ -833,7 +883,6 @@ Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localh
 - `adapter-static` only. There is no Node process in production, so `+page.server.ts`, `+server.ts` and form actions are not supported. Ktor is the backend.
 - The app is mounted at the root. `paths.base` is not supported yet.
 - No range requests, so large media does not belong in the SvelteKit build.
-- Security headers such as CSP are left to the app.
 - `generateTs` builds on Ktor's OpenAPI support, which Ktor still marks as experimental.
 
 ## Compatibility

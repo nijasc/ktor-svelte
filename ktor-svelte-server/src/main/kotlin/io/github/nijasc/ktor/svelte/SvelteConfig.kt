@@ -21,8 +21,7 @@ public class SvelteConfig {
     internal val cacheConfig: SvelteCacheConfig = SvelteCacheConfig()
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
-    internal var securityHeadersConfig: SvelteSecurityHeaders? = null
-        private set
+    internal val securityHeadersConfig: SvelteSecurityHeaders = SvelteSecurityHeaders()
     internal var publicConfigJson: String? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -65,7 +64,7 @@ public class SvelteConfig {
     }
 
     public fun securityHeaders(configure: SvelteSecurityHeaders.() -> Unit = {}) {
-        securityHeadersConfig = SvelteSecurityHeaders().apply(configure)
+        securityHeadersConfig.configure()
     }
 
     public inline fun <reified T : Any> publicConfig(value: T) {
@@ -98,11 +97,29 @@ public class SvelteDevConfig {
 
 @KtorDsl
 public class SvelteSecurityHeaders {
+    internal val extraCspSources: MutableMap<String, MutableList<String>> = linkedMapOf()
+
+    public var enabled: Boolean = true
     public var contentTypeOptions: String? = "nosniff"
     public var frameOptions: String? = "DENY"
     public var referrerPolicy: String? = "strict-origin-when-cross-origin"
     public var contentSecurityPolicy: String? = null
+    public var automaticContentSecurityPolicy: Boolean = true
+
+    public fun allowCspSources(
+        directive: String,
+        vararg sources: String,
+    ) {
+        require(CSP_DIRECTIVE.matches(directive)) { "'$directive' is not a Content-Security-Policy directive name." }
+        sources.forEach { source ->
+            require(CSP_SOURCE.matches(source)) { "'$source' is not a single Content-Security-Policy source." }
+        }
+        extraCspSources.getOrPut(directive) { mutableListOf() }.addAll(sources)
+    }
 }
+
+private val CSP_DIRECTIVE = Regex("[a-z][a-z-]*")
+private val CSP_SOURCE = Regex("""[^\s;,]+""")
 
 public enum class SvelteRouting {
     Automatic,

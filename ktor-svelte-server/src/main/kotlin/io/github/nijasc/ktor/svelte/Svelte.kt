@@ -2,6 +2,8 @@ package io.github.nijasc.ktor.svelte
 
 import io.github.nijasc.ktor.svelte.internal.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.AssetStore
+import io.github.nijasc.ktor.svelte.internal.BuildContentSecurityPolicy
+import io.github.nijasc.ktor.svelte.internal.CONTENT_SECURITY_POLICY
 import io.github.nijasc.ktor.svelte.internal.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.DevProxy
 import io.github.nijasc.ktor.svelte.internal.DirectoryAssetStore
@@ -76,7 +78,6 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val store = createStore(pluginConfig.source, application)
         val resolver =
             RequestResolver(pluginConfig.apiPrefixList, pluginConfig.spaFallback, pluginConfig.notFoundPage, pluginConfig.paramRouteList)
-        val responder = AssetResponder(store, pluginConfig.cacheConfig)
         val devUrl = resolveDevServerUrl(pluginConfig.devConfig.url, System.getenv(DEV_SERVER_VARIABLE))
         val allowRemote = pluginConfig.devConfig.allowRemote
         val devProxy =
@@ -86,6 +87,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             } else {
                 null
             }
+        val securityHeaders = pluginConfig.securityHeadersConfig
+        val responder =
+            AssetResponder(store, pluginConfig.cacheConfig, buildContentSecurityPolicy(store, securityHeaders, devProxy != null))
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
@@ -99,7 +103,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             listOfNotNull(docsPath),
             pluginConfig.publicConfigSchema,
         )
-        pluginConfig.securityHeadersConfig?.let { headers -> installSecurityHeaders(headers, devProxy != null) }
+        if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
 
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
@@ -192,7 +196,7 @@ private fun PluginBuilder<SvelteConfig>.installSecurityHeaders(
             headers.contentTypeOptions?.let { "X-Content-Type-Options" to it },
             headers.frameOptions?.let { "X-Frame-Options" to it },
             headers.referrerPolicy?.let { "Referrer-Policy" to it },
-            headers.contentSecurityPolicy?.takeUnless { devProxyActive }?.let { "Content-Security-Policy" to it },
+            headers.contentSecurityPolicy?.takeUnless { devProxyActive }?.let { CONTENT_SECURITY_POLICY to it },
         )
     onCall { call ->
         values.forEach { (name, value) -> call.response.header(name, value) }
@@ -207,6 +211,16 @@ private fun PluginBuilder<SvelteConfig>.installBodyLimit(
     application.install(RequestBodyLimit) {
         bodyLimit { call -> if (resolver.isApiPath(requestPathForGuards(call))) limit else Long.MAX_VALUE }
     }
+}
+
+private fun buildContentSecurityPolicy(
+    store: AssetStore,
+    headers: SvelteSecurityHeaders,
+    devProxyActive: Boolean,
+): BuildContentSecurityPolicy? {
+    val automatic = headers.enabled && headers.automaticContentSecurityPolicy && headers.contentSecurityPolicy == null
+    if (!automatic || devProxyActive) return null
+    return BuildContentSecurityPolicy(store, headers.frameOptions, headers.extraCspSources)
 }
 
 private class SvelteHandler(
