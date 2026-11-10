@@ -624,6 +624,7 @@ svelte {
     dev {
         port = 5173
         script = "dev"
+        debugPort = 5005
     }
 }
 ```
@@ -640,6 +641,7 @@ svelte {
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
 | `dev.script` | `package.json` script that starts Vite |
+| `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |
 
 The package manager must already be installed. The plugin does not download Node or Bun.
 
@@ -677,7 +679,9 @@ One command runs everything. Then open Ktor's port, not Vite's:
 
 It starts Vite, keeps Kotlin compiling and runs your app. Save a Svelte file and the page hot reloads. Save a Kotlin file and the app restarts, and with `generateTs` on your TypeScript updates a moment later, so type errors show up in the editor right away. A restart loses anything your app keeps in memory. Stopping the task stops all three. In IntelliJ, this is the `Dev` run configuration, and each line of output is labelled `[vite]`, `[kotlin]` or `[app]`.
 
-Prefer separate terminals, for example to attach a debugger to the app? Run these instead:
+To debug your Kotlin code, start `Dev` as usual and then start the `Debug app` run configuration in debug mode. IntelliJ debugs Gradle tasks only when they run a JVM through Gradle, and `svelteDevAll` starts the app itself, so the app instead listens for a debugger on `127.0.0.1:5005` (see `dev.debugPort`). `Debug app` has auto restart on, so it reconnects after each restart. Outside IntelliJ, attach any JDWP debugger to that port. Two apps running `svelteDevAll` at once need different debug ports.
+
+Prefer separate terminals? Run these instead:
 
 ```bash
 ./gradlew svelteDev

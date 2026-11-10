@@ -42,6 +42,19 @@ class SvelteDevAllTest {
     }
 
     @Test
+    fun `the app listens for a debugger on loopback only`() {
+        assertEquals(
+            listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"),
+            debugArguments(5005),
+        )
+    }
+
+    @Test
+    fun `a debug port of zero turns debugging off`() {
+        assertEquals(emptyList(), debugArguments(0))
+    }
+
+    @Test
     fun `stopping a process tree stops children too`() {
         val java = File(System.getProperty("java.home"), "bin/java").path
         val parent = ProcessBuilder(java, "--version").start()

@@ -242,6 +242,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                     .dir(".run"),
             )
             task.hasApplicationPlugin.set(hasApplicationPlugin)
+            task.debugPort.set(extension.dev.debugPort)
             task.externalProjectPath.set("\$PROJECT_DIR\$")
             task.taskPrefix.set(if (project == project.rootProject) "" else "${project.path}:")
             task.namePrefix.set(if (project == project.rootProject) "" else "${project.name}: ")
@@ -278,6 +279,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.dependsOn(install, main.map { it.output.classesDirs })
             task.script.set(extension.dev.script)
             task.port.set(extension.dev.port)
+            task.debugPort.set(extension.dev.debugPort)
             task.mainClass.set(application.mainClass)
             task.appClasspath.from(
                 main.map { it.output.classesDirs },
@@ -307,6 +309,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.includeSourceMaps.convention(false)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
+        extension.dev.debugPort.convention(5005)
         return extension
     }
 
