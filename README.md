@@ -328,7 +328,7 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 
 | File | Contents |
 |---|---|
-| `types.ts` | An interface or union for every schema, and a `const` object for every enum |
+| `types.ts` | An interface or union for every schema, an `empty()` factory for every object, and a `const` object for every enum |
 | `services.ts` | One object per resource, such as `api.notes.list()` |
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
@@ -345,6 +345,16 @@ const archived = notes.filter((note) => note.status === NoteStatus.ARCHIVED);
 ```
 
 Enums that appear in several classes with the same values share one generated name. The name comes from the property, such as `status` becoming `Status`. When two different enums would get the same name, the owning class is added in front, such as `NoteStatus`.
+
+Every object type also gets an `empty()` factory, handy as the initial state of a form:
+
+```ts
+import { NoteInput } from '#api';
+
+let draft = $state(NoteInput.empty());
+```
+
+Every property is filled in, optional ones included: strings become `''`, numbers `0`, booleans `false`, lists `[]`, maps `{}`, nullable properties `null`, enums their first value, and nested objects their own `empty()`. Each call returns a fresh object.
 
 `svelteInit` also sets up the short `#api` import. For a frontend you already have, add it to `frontend/package.json`:
 
