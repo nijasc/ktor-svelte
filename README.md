@@ -399,6 +399,12 @@ try {
 }
 ```
 
+Routes that declare a `text/event-stream` response, for example through `describe`, become async generators. Each event's `data` is parsed as JSON when possible, and the stream ends when the connection closes or you stop iterating:
+
+```ts
+for await (const tick of api.ticks.watch()) console.log(tick);
+```
+
 Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
 
 ```ts
