@@ -495,7 +495,7 @@ To refresh the files without your dev server, for example in CI, run the task be
 
 ## Validation
 
-Put simple bounds on the properties with Ktor's `JsonSchema` annotations, and any other rule on the class itself by implementing `Validated`. Both run on every `call.receive` of that class, in every route, nested classes and lists included. When something fails, the route never runs, and the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands.
+Put simple bounds on the properties with Ktor's `JsonSchema` annotations, and any other rule on the class itself by implementing `Validated`. Both run on every `call.receive` of that class, in every route, for nested classes, lists, map values and sealed subtypes too. Receiving a `List` or `Map` of such classes checks every item. When something fails, the route never runs, and the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands.
 
 ```kotlin
 import io.ktor.openapi.JsonSchema
@@ -527,7 +527,7 @@ post("/api/notes") {
 | `@JsonSchema.Minimum(x)`, `@JsonSchema.Maximum(x)` | A number, `exclusive = true` for a strict bound | `Must be at least 1.` |
 | `@JsonSchema.Pattern(regex)` | A string contains a match | `Must match ^[a-z]+$.` |
 
-Errors use the JSON name, with paths such as `lines[1].sku` for nested values. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
+Errors use the JSON name, with paths such as `lines[1].sku` for nested values, `prices[eur].amount` for map values and `[0].sku` for the items of a received list. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
 
 With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](#generated-typescript).
 
