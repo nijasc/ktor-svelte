@@ -36,6 +36,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
 	public final fun getSpaFallback ()Ljava/lang/String;
 	public final fun getStatusEndpoint ()Z
+	public final fun paramRoutes ([Ljava/lang/String;)V
 	public final fun securityHeaders (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun securityHeaders$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun setApiDocs (Z)V

@@ -33,8 +33,73 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
-    fun `enums become literal unions`() {
-        assertContains(types("""{"S":{"type":"string","enum":["A","it's"]}}"""), "export type S = 'A' | 'it\\'s';")
+    fun `enums become const objects with a matching type`() {
+        val source = types("""{"S":{"type":"string","enum":["A","it's"]}}""")
+        assertContains(source, "export const S = {\n    A: 'A',\n    'it\\'s': 'it\\'s',\n} as const;")
+        assertContains(source, "export type S = (typeof S)[keyof typeof S];")
+    }
+
+    @Test
+    fun `single value enums stay literals`() {
+        val source = types("""{"A":{"type":"object","properties":{"kind":{"type":"string","enum":["Only"]}}}}""")
+        assertContains(source, "kind?: 'Only';")
+        assertFalse(source.contains("export const"))
+    }
+
+    @Test
+    fun `inline enums with the same values share one const`() {
+        val schemas =
+            """{"Note":{"type":"object","required":["status"],"properties":{"status":{"type":"string","enum":["ACTIVE","ARCHIVED"]}}},
+            "Summary":{"type":"object","properties":{"status":{"type":"string","enum":["ARCHIVED","ACTIVE"]},
+            "history":{"type":"array","items":{"type":"string","enum":["ACTIVE","ARCHIVED"]}}}}}"""
+        val source = types(schemas)
+        assertContains(source, "export const Status = {\n    ACTIVE: 'ACTIVE',\n    ARCHIVED: 'ARCHIVED',\n} as const;")
+        assertContains(source, "    status: Status;")
+        assertContains(source, "    status?: Status;")
+        assertContains(source, "    history?: Status[];")
+        assertEquals(1, Regex("export const Status ").findAll(source).count())
+    }
+
+    @Test
+    fun `different enums on the same property name get the owner as prefix`() {
+        val schemas =
+            """{"Note":{"type":"object","properties":{"status":{"type":"string","enum":["ACTIVE","ARCHIVED"]}}},
+            "Job":{"type":"object","properties":{"status":{"type":"string","enum":["QUEUED","DONE"]}}}}"""
+        val source = types(schemas)
+        assertContains(source, "export const NoteStatus = {")
+        assertContains(source, "export const JobStatus = {")
+        assertContains(source, "    status?: NoteStatus;")
+        assertContains(source, "    status?: JobStatus;")
+    }
+
+    @Test
+    fun `an inline enum reuses a named enum with the same values`() {
+        val schemas =
+            """{"Mood":{"type":"string","enum":["GOOD","BAD"]},
+            "Note":{"type":"object","properties":{"mood":{"type":"string","enum":["BAD","GOOD"]}}}}"""
+        val source = types(schemas)
+        assertContains(source, "    mood?: Mood;")
+        assertEquals(1, Regex("export const ").findAll(source).count())
+    }
+
+    @Test
+    fun `nullable enums keep null`() {
+        val schemas = """{"Note":{"type":"object","properties":{"mood":{"type":["string","null"],"enum":["GOOD","BAD",null]}}}}"""
+        assertContains(types(schemas), "    mood?: Mood | null;")
+    }
+
+    @Test
+    fun `enum query parameters and enum consts are imported by services`() {
+        val result =
+            generate(
+                paths =
+                    """{"/api/notes":{"get":{"parameters":[{"name":"status","in":"query","schema":{"type":"string",
+                    "enum":["ACTIVE","ARCHIVED"]}}]}}}""",
+            )
+        assertContains(result.getValue("services.ts"), "query?: { status?: Status }")
+        assertContains(result.getValue("services.ts"), "import type { Status } from './types.js';")
+        assertContains(result.getValue("types.ts"), "export const Status = {")
+        assertContains(result.getValue("index.ts"), "export * from './types.js';")
     }
 
     @Test
@@ -152,6 +217,25 @@ class TypeScriptGeneratorTest {
     fun `routes without declared errors stay out of the map`() {
         val source = services("""{"/api/notes":{"get":{"responses":{"200":{"description":"ok"}}}}}""")
         assertContains(source, "export interface ApiErrors {\n}")
+    }
+
+    @Test
+    fun `event stream responses become async generators`() {
+        val paths =
+            """{"/api/ticks":{"get":{"responses":{"200":{"description":"ok","content":{"text/event-stream":
+            {"schema":{"${'$'}ref":"#/components/schemas/Tick"}}}}}}},
+            "/api/notes":{"get":{"responses":{"200":{"description":"ok"}}}}}"""
+        val result = generate(paths = paths, schemas = """{"Tick":{"type":"object"}}""")
+        val services = result.getValue("services.ts")
+        assertContains(services, "import { ApiError, request, stream, type RequestOptions } from './client.js';")
+        assertContains(services, "stream<Tick>('GET', '/api/ticks'")
+        assertContains(services, "request<void>('GET', '/api/notes'")
+        assertContains(result.getValue("client.ts"), "export async function* stream<T>")
+    }
+
+    @Test
+    fun `the client import skips stream without event streams`() {
+        assertContains(services("""{"/api/notes":{"get":{}}}"""), "import { ApiError, request, type RequestOptions } from './client.js';")
     }
 
     @Test

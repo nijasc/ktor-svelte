@@ -4,10 +4,14 @@ import com.sun.net.httpserver.HttpServer
 import io.github.nijasc.ktor.svelte.internal.isLocalRequest
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.upstreamUri
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.head
 import io.ktor.client.request.header
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -40,7 +44,14 @@ class DevProxyTest {
     fun startFakeVite() {
         vite = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)
         vite.createContext("/") { exchange ->
-            requests += "${exchange.requestMethod} ${exchange.requestURI}"
+            val extras =
+                if (exchange.requestMethod in setOf("GET", "HEAD")) {
+                    ""
+                } else {
+                    val sent = exchange.requestBody.readBytes().decodeToString()
+                    " $sent cookie=${exchange.requestHeaders.getFirst("Cookie")} auth=${exchange.requestHeaders.getFirst("Authorization")}"
+                }
+            requests += "${exchange.requestMethod} ${exchange.requestURI}$extras"
             val path = exchange.requestURI.path
             if (path == "/moved") {
                 exchange.responseHeaders.add("Location", "/elsewhere")
@@ -156,7 +167,7 @@ class DevProxyTest {
         }
 
     @Test
-    fun `non get methods are not proxied`() =
+    fun `post put patch and delete are forwarded with body and without credentials`() =
         testApplication {
             application {
                 install(Svelte) {
@@ -166,7 +177,49 @@ class DevProxyTest {
                     }
                 }
             }
-            assertEquals(HttpStatusCode.NotFound, client.post("/page").status)
+            val response =
+                client.post("/__data?x=1") {
+                    header(HttpHeaders.Cookie, "session=secret")
+                    header(HttpHeaders.Authorization, "Bearer secret")
+                    setBody("name=a b")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("vite:/__data?x=1", response.bodyAsText())
+            assertEquals(listOf("POST /__data?x=1 name=a b cookie=null auth=null"), requests.toList())
+            requests.clear()
+            client.put("/a") { setBody("1") }
+            client.patch("/b") { setBody("2") }
+            client.delete("/c")
+            assertEquals(listOf("PUT /a 1", "PATCH /b 2", "DELETE /c "), requests.map { it.substringBefore(" cookie") })
+        }
+
+    @Test
+    fun `non get requests to api paths are never proxied`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.ALWAYS
+                    }
+                }
+            }
+            assertEquals(HttpStatusCode.NotFound, client.post("/api/notes") { setBody("x") }.status)
+            assertEquals(emptyList(), requests.toList())
+        }
+
+    @Test
+    fun `non get requests are not proxied when vite is off or the client is remote`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.ALWAYS
+                    }
+                }
+            }
+            assertEquals(HttpStatusCode.NotFound, client.post("/page") { header(HttpHeaders.Host, "app.example.com") }.status)
             assertEquals(emptyList(), requests.toList())
         }
 

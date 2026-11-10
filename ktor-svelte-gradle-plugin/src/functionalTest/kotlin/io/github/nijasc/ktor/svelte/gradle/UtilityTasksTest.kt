@@ -62,6 +62,24 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `deepClean runs clean and removes frontend caches but keeps sources`() {
+        val project = project()
+        project.run("jar")
+        listOf(".svelte-kit", ".vite", ".turbo", ".cache").forEach { project.frontend.resolve(it).mkdirs() }
+        project.frontend.resolve(".eslintcache").writeText("{}")
+        val buildOutput = dir.resolve("build/marker").apply { parentFile.mkdirs() }
+        buildOutput.writeText("x")
+
+        project.run("deepClean")
+
+        listOf("node_modules", ".svelte-kit", ".vite", ".turbo", ".cache", ".eslintcache", "build").forEach {
+            assertFalse(project.frontend.resolve(it).exists(), it)
+        }
+        assertFalse(buildOutput.exists())
+        assertTrue(project.frontend.resolve("package.json").exists())
+    }
+
+    @Test
     fun `svelteUpdateDependencies uses the command of each tool`() {
         val bun = project()
         bun.run("svelteUpdateDependencies")

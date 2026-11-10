@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import groovy.json.JsonSlurper
 import io.github.nijasc.ktor.svelte.gradle.LOCKFILES
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
 import io.github.nijasc.ktor.svelte.gradle.locateExecutable
@@ -13,9 +14,11 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import java.io.File
+import java.io.IOException
 import java.net.BindException
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.util.concurrent.TimeUnit
 
 internal enum class Severity { OK, WARN, ERROR }
 
@@ -28,8 +31,11 @@ internal class SetupDoctor(
     private val frontend: File,
     private val packageManager: PackageManager,
     private val devPort: Int,
+    private val outputDir: String = "build",
+    private val bundleDirectory: File? = null,
     private val findExecutable: (String) -> File? = { locateExecutable(it) },
     private val isPortFree: (Int) -> Boolean = ::portIsFree,
+    private val nodeVersion: () -> String? = ::installedNodeVersion,
 ) {
     fun examine(): List<Finding> {
         if (!frontend.isDirectory) return listOf(Finding(Severity.ERROR, "No frontend at $frontend. Run svelteInit to create one."))
@@ -38,8 +44,11 @@ internal class SetupDoctor(
         val manifest = packageJson.readText()
         return listOf(
             tool(),
+            node(),
             kitVersion(manifest),
             adapter(manifest),
+            buildOutput(),
+            bundledManifest(),
             legacyConfig(),
             subpathImports(manifest),
             tsconfig(),
@@ -58,6 +67,82 @@ internal class SetupDoctor(
             Finding(Severity.OK, "Package manager $name is on PATH")
         } else {
             Finding(Severity.ERROR, "$name is not on PATH. Install it, or set svelte.packageManager.")
+        }
+    }
+
+    private fun node(): Finding {
+        val version =
+            nodeVersion() ?: run {
+                val usesBun = runCatching { resolveFrontendTool(frontend, packageManager).executableName }.getOrNull() == "bun"
+                return if (usesBun) {
+                    Finding(Severity.OK, "Node is not installed, and bun runs Vite itself")
+                } else {
+                    Finding(Severity.WARN, "Node is not on PATH. Vite needs Node 20.19 or newer.")
+                }
+            }
+        val parts = version.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }
+        val major = parts.getOrElse(0) { 0 }
+        val minor = parts.getOrElse(1) { 0 }
+        val supported = (major == 20 && minor >= 19) || (major == 22 && minor >= 12) || major > 22
+        return if (supported) {
+            Finding(Severity.OK, "Node ${version.removePrefix("v")}")
+        } else {
+            Finding(Severity.WARN, "Node ${version.removePrefix("v")} is too old for Vite. Use Node 20.19, 22.12 or newer.")
+        }
+    }
+
+    private fun buildOutput(): Finding {
+        val config =
+            listOf("vite.config.ts", "vite.config.js", "vite.config.mts", "vite.config.mjs")
+                .map { frontend.resolve(it) }
+                .firstOrNull { it.isFile }
+                ?: return Finding(Severity.WARN, "No vite.config file in $frontend. SvelteKit needs one.")
+        val text = config.readText()
+        val declared = Regex("pages\\s*:\\s*([\"'`])([^\"'`]+)\\1").find(text)?.groupValues?.get(2)
+        val hasPagesOption = Regex("pages\\s*:").containsMatchIn(text)
+        val written = declared?.normalizedOutputPath() ?: if (hasPagesOption) null else "build"
+        val expected = outputDir.normalizedOutputPath()
+        return when {
+            written == null -> Finding(Severity.OK, "adapter-static pages option is computed, so it was not compared with svelte.outputDir")
+            written == expected -> Finding(Severity.OK, "adapter-static writes to $expected, matching svelte.outputDir")
+            else ->
+                Finding(
+                    Severity.ERROR,
+                    "adapter-static writes to '$written' but svelte.outputDir is '$expected'. " +
+                        "Set pages: '$expected' in the adapter options, or svelte { outputDir = \"$written\" }.",
+                )
+        }
+    }
+
+    private fun bundledManifest(): Finding {
+        val root = bundleDirectory?.resolve("ktor-svelte") ?: return Finding(Severity.OK, "Bundled frontend was not checked")
+        val manifest = root.resolve("manifest.json")
+        if (!manifest.isFile) return Finding(Severity.OK, "Frontend is not bundled yet. svelteBundle runs as part of the build.")
+        val files =
+            try {
+                ((JsonSlurper().parse(manifest) as Map<*, *>)["files"] as Map<*, *>)
+                    .entries
+                    .associate { (path, entry) -> path.toString() to ((entry as Map<*, *>)["size"] as Number).toLong() }
+            } catch (_: Exception) {
+                return Finding(Severity.ERROR, "$manifest is not a valid ktor-svelte manifest. Run svelteBundle to write it again.")
+            }
+        val public = root.resolve("public")
+        val problems =
+            files.mapNotNull { (path, size) ->
+                val file = public.resolve(path)
+                when {
+                    !file.isFile -> "$path is listed but missing"
+                    file.length() != size -> "$path does not match its listed size"
+                    else -> null
+                }
+            }
+        val more = if (problems.size > 1) ", and ${problems.size - 1} more" else ""
+        return when {
+            problems.isNotEmpty() ->
+                Finding(Severity.ERROR, "The bundled manifest is out of date (${problems.first()}$more). Run svelteBundle again.")
+            files.keys.none { it.endsWith(".html") } ->
+                Finding(Severity.ERROR, "The bundled manifest lists no HTML files. Check adapter-static.")
+            else -> Finding(Severity.OK, "Bundled manifest lists ${files.size} files")
         }
     }
 
@@ -134,6 +219,26 @@ internal class SetupDoctor(
         }
 }
 
+private fun String.normalizedOutputPath(): String = trim().removePrefix("./").trimEnd('/', '\\').replace('\\', '/')
+
+private fun installedNodeVersion(): String? {
+    val node = locateExecutable("node") ?: return null
+    return try {
+        val process = ProcessBuilder(node.path, "--version").redirectErrorStream(true).start()
+        if (!process.waitFor(5, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            return null
+        }
+        process.inputStream
+            .bufferedReader()
+            .readText()
+            .trim()
+            .ifEmpty { null }
+    } catch (_: IOException) {
+        null
+    }
+}
+
 private fun portIsFree(port: Int): Boolean =
     try {
         ServerSocket(port, 1, InetAddress.getLoopbackAddress()).close()
@@ -153,9 +258,22 @@ public abstract class SvelteDoctorTask : DefaultTask() {
     @get:Input
     public abstract val devPort: Property<Int>
 
+    @get:Input
+    public abstract val outputDir: Property<String>
+
+    @get:Internal
+    public abstract val bundleDirectory: DirectoryProperty
+
     @TaskAction
     public fun examine() {
-        val findings = SetupDoctor(frontendDir.get().asFile, packageManager.get(), devPort.get()).examine()
+        val findings =
+            SetupDoctor(
+                frontendDir.get().asFile,
+                packageManager.get(),
+                devPort.get(),
+                outputDir.get(),
+                bundleDirectory.orNull?.asFile,
+            ).examine()
         findings.forEach { finding -> logger.lifecycle("${finding.severity.name.padEnd(5)} ${finding.message}") }
         val errors = findings.count { it.severity == Severity.ERROR }
         if (errors > 0) throw GradleException("svelteDoctor found $errors problem(s) to fix.")

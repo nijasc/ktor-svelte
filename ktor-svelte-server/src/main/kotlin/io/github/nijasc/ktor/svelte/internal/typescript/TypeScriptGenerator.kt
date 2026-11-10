@@ -24,15 +24,21 @@ internal class TypeScriptGenerator(
 ) {
     private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
+    private var enumTypes: Map<Set<String>, EnumType> = emptyMap()
 
     fun generate(openApiJson: String): Map<String, String> {
         val document = Json.parseToJsonElement(openApiJson).jsonObject
         val filtered = withApiPathsOnly(document)
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
+        enumTypes = nameEnums(filtered, schemas)
         return mapOf(
             "client.ts" to CLIENT_SOURCE,
             "types.ts" to typesSource(schemas) + publicConfigDeclaration(),
-            "services.ts" to servicesSource(filtered.objectAt("paths").orEmpty(), schemas.keys + LUCIDE_TYPE),
+            "services.ts" to
+                servicesSource(
+                    filtered.objectAt("paths").orEmpty(),
+                    schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name },
+                ),
             "index.ts" to INDEX_SOURCE,
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
@@ -58,12 +64,13 @@ internal class TypeScriptGenerator(
             (prefixes.isEmpty() || prefixes.any { prefix -> prefix == "/" || path == prefix || path.startsWith("$prefix/") })
 
     private fun typesSource(schemas: Map<String, JsonElement>): String {
-        if (schemas.isEmpty() && iconNames.isEmpty()) return "export {};\n"
+        if (schemas.isEmpty() && iconNames.isEmpty() && enumTypes.isEmpty()) return "export {};\n"
         val references = mutableSetOf<String>()
-        val declarations =
-            schemas.toSortedMap().entries.joinToString("\n") { (name, schema) ->
-                declaration(typeName(name), schema.jsonObject, references)
-            }
+        val schemaDeclarations =
+            schemas.map { (name, schema) -> name to declaration(typeName(name), schema.jsonObject, references) }
+        val enumDeclarations =
+            enumTypes.values.filter { it.inline }.map { it.name to enumDeclaration(it.name, it.values) }
+        val declarations = (schemaDeclarations + enumDeclarations).sortedBy { it.first }.joinToString("\n") { it.second }
         val iconImport =
             if (LUCIDE_TYPE in
                 references
@@ -80,12 +87,117 @@ internal class TypeScriptGenerator(
         schema: JsonObject,
         references: MutableSet<String>,
     ): String {
+        val enumValues = enumValues(schema)
+        if (enumValues != null && schema["enum"]?.jsonArray?.none { it is JsonNull } == true) return enumDeclaration(name, enumValues)
         val properties = schema.objectAt("properties")
         if (properties != null && schema["allOf"] == null) {
             return "export interface $name ${objectBody(schema, references, indent = "")}\n"
         }
         return "export type $name = ${tsType(schema, references)};\n"
     }
+
+    private fun enumDeclaration(
+        name: String,
+        values: List<String>,
+    ): String {
+        val members = values.joinToString("") { "    ${propertyKey(it)}: ${literal(JsonPrimitive(it))},\n" }
+        return "export const $name = {\n$members} as const;\n\nexport type $name = (typeof $name)[keyof typeof $name];\n"
+    }
+
+    private fun nameEnums(
+        document: JsonObject,
+        schemas: Map<String, JsonElement>,
+    ): Map<Set<String>, EnumType> {
+        val named = linkedMapOf<Set<String>, EnumType>()
+        schemas.toSortedMap().forEach { (name, schema) ->
+            enumValues(schema.jsonObject)?.let { values ->
+                named.putIfAbsent(values.toSet(), EnumType(typeName(name), values, inline = false))
+            }
+        }
+        val usages = linkedMapOf<Set<String>, MutableList<EnumUsage>>()
+        val values = mutableMapOf<Set<String>, List<String>>()
+
+        fun walk(
+            element: JsonElement,
+            owner: String,
+            property: String,
+            topLevel: Boolean,
+        ) {
+            when (element) {
+                is JsonArray -> element.forEach { walk(it, owner, property, false) }
+
+                is JsonObject -> {
+                    enumValues(element)?.takeUnless { topLevel }?.let { enumValues ->
+                        usages.getOrPut(enumValues.toSet()) { mutableListOf() } += EnumUsage(owner, property)
+                        values.putIfAbsent(enumValues.toSet(), enumValues)
+                    }
+                    val parameterName = if (element.stringAt("in") != null) element.stringAt("name") else null
+                    element.forEach { (key, child) ->
+                        when {
+                            key == "properties" && child is JsonObject ->
+                                child.forEach { (name, schema) ->
+                                    walk(schema, owner, name, false)
+                                }
+                            key == "schema" && parameterName != null -> walk(child, owner, parameterName, false)
+                            key != "enum" -> walk(child, owner, property, false)
+                        }
+                    }
+                }
+
+                else -> {}
+            }
+        }
+        schemas.forEach { (name, schema) -> walk(schema, typeName(name), typeName(name), topLevel = true) }
+        document.objectAt("paths")?.let { walk(it, "", "", false) }
+
+        val inline =
+            usages.keys.filter { it !in named && it != iconNames }.sortedBy { key ->
+                values
+                    .getValue(
+                        key,
+                    ).sorted()
+                    .joinToString("\u0000")
+            }
+        val firstUsages = inline.associateWith { key -> usages.getValue(key).minWith(compareBy({ it.owner }, { it.property })) }
+        val claims = firstUsages.values.groupingBy { typeName(it.property) }.eachCount()
+        val taken = (schemas.keys.map(::typeName) + LUCIDE_TYPE + "PublicConfig").toMutableSet()
+        val result = LinkedHashMap<Set<String>, EnumType>(named)
+        inline.forEach { key ->
+            val usage = firstUsages.getValue(key)
+            val base = typeName(usage.property)
+            val preferred =
+                if (claims.getValue(base) > 1 ||
+                    base in taken
+                ) {
+                    usage.owner.let { if (it.isEmpty()) base else it + base }
+                } else {
+                    base
+                }
+            val name = if (preferred !in taken) preferred else generateSequence(2) { it + 1 }.map { "$preferred$it" }.first { it !in taken }
+            taken += name
+            result[key] = EnumType(name, values.getValue(key), inline = true)
+        }
+        return result
+    }
+
+    private fun enumValues(schema: JsonObject): List<String>? {
+        val array = schema.arrayAt("enum") ?: return null
+        val strings = array.filter { it !is JsonNull }
+        if (strings.any { it !is JsonPrimitive || !it.isString }) return null
+        val names = strings.map { it.jsonPrimitive.content }.distinct()
+        return names.takeIf { it.size > 1 }
+    }
+
+    private class EnumType(
+        val name: String,
+        val values: List<String>,
+        val inline: Boolean,
+    )
+
+    private class EnumUsage(
+        val owner: String,
+        val property: String,
+    )
 
     private fun objectBody(
         schema: JsonObject,
@@ -116,6 +228,12 @@ internal class TypeScriptGenerator(
             if (iconNames.isNotEmpty() && names == iconNames) {
                 references += LUCIDE_TYPE
                 return LUCIDE_TYPE
+            }
+            enumValues(schema)?.let { enumValues ->
+                enumTypes[enumValues.toSet()]?.let { type ->
+                    references += type.name
+                    return if (values.jsonArray.any { it is JsonNull }) "${type.name} | null" else type.name
+                }
             }
             return values.jsonArray.joinToString(" | ", transform = ::literal).ifEmpty { "never" }
         }
@@ -214,8 +332,9 @@ internal class TypeScriptGenerator(
                 "export const $group = {\n$members\n};\n"
             }
         val typeImports = references.filter { name -> name in schemaNames.map(::typeName) }
+        val clientImports = if (groups.values.flatten().any { it.streaming }) "ApiError, request, stream" else "ApiError, request"
         return buildString {
-            append("import { ApiError, request, type RequestOptions } from './client.js';\n")
+            append("import { $clientImports, type RequestOptions } from './client.js';\n")
             val imports = if (publicConfigSchema != null) typeImports + "PublicConfig" else typeImports
             if (imports.isNotEmpty()) append("import type { ${imports.joinToString()} } from './types.js';\n")
             append("\n")
@@ -295,15 +414,18 @@ internal class TypeScriptGenerator(
                 if (requestBody != null) add("body")
             }
         val returnType = responseType(operation, references)
+        val streaming = isEventStream(operation)
         val declaredErrors = errorResponses(operation, references)
         return Endpoint(
             name = operation.stringAt("operationId")?.let(::camelCase) ?: conventionalName(path, method),
             parameters = pathParameters,
             source = { key ->
                 val arguments = (extras + "operation: '$key'").joinToString()
-                "(${signature.joinToString()}) => request<$returnType>('${method.uppercase()}', $urlSource, { $arguments })"
+                val call = if (streaming) "stream" else "request"
+                "(${signature.joinToString()}) => $call<$returnType>('${method.uppercase()}', $urlSource, { $arguments })"
             },
             references = references,
+            streaming = streaming,
             errorType =
                 declaredErrors.values
                     .distinct()
@@ -342,12 +464,21 @@ internal class TypeScriptGenerator(
                 ?.jsonObject
                 ?: return "unknown"
         val content = success.objectAt("content") ?: return "void"
+        content.objectAt(EVENT_STREAM)?.let { return it.objectAt("schema")?.let { schema -> tsType(schema, references) } ?: "string" }
         val json = content.keys.firstOrNull { it.contains("json") }
         if (json != null) {
             return content.objectAt(json)?.objectAt("schema")?.let { tsType(it, references) } ?: "unknown"
         }
         return "string"
     }
+
+    private fun isEventStream(operation: JsonObject): Boolean =
+        operation
+            .objectAt("responses")
+            .orEmpty()
+            .filterKeys { it.startsWith("2") }
+            .values
+            .any { (it as? JsonObject)?.objectAt("content")?.containsKey(EVENT_STREAM) == true }
 
     private fun preferredSchema(content: JsonObject): JsonObject? {
         val key = content.keys.firstOrNull { it.contains("json") } ?: content.keys.firstOrNull()
@@ -389,6 +520,7 @@ internal class TypeScriptGenerator(
         val parameters: List<String>,
         val source: (String) -> String,
         val references: Set<String>,
+        val streaming: Boolean,
         val errorType: String?,
         val errorStatuses: List<Int>,
     )
@@ -433,6 +565,7 @@ private fun JsonObject.stringAt(key: String): String? = (this[key] as? JsonPrimi
 private fun JsonObject.stringList(key: String): List<String> = arrayAt(key).orEmpty().map { it.jsonPrimitive.content }
 
 private const val LUCIDE_TYPE = "LucideIcon"
+private const val EVENT_STREAM = "text/event-stream"
 
 private const val PUBLIC_CONFIG_SOURCE = """let publicConfig: Promise<PublicConfig> | undefined;
 
@@ -445,7 +578,7 @@ export function loadPublicConfig(options?: RequestOptions): Promise<PublicConfig
 
 private const val INDEX_SOURCE = """export * from './client.js';
 export * from './services.js';
-export type * from './types.js';
+export * from './types.js';
 """
 
 private const val CLIENT_SOURCE = """export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
@@ -517,22 +650,65 @@ async function parseResponse(response: Response): Promise<unknown> {
     return text === '' ? undefined : text;
 }
 
-export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+function prepare(method: string, path: string, options: InternalOptions, accept: string) {
     const { query, body, operation, fetch: customFetch, headers, ...init } = options;
     const send = customFetch ?? apiConfig.fetch ?? fetch;
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
-    merged.set('Accept', 'application/json');
+    merged.set('Accept', accept);
     new Headers(headers).forEach((value, key) => merged.set(key, value));
     let payload: BodyInit | undefined;
     if (body !== undefined) {
         payload = isRawBody(body) ? body : JSON.stringify(body);
         if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
     }
-    const response = await send(url, { ...init, method, headers: merged, body: payload });
+    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload }) };
+}
+
+async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
-    const parsed = await parseResponse(response);
-    if (!response.ok) throw new ApiError(response.status, parsed, url, operation);
-    return parsed as T;
+    if (!response.ok) throw new ApiError(response.status, await parseResponse(response), url, operation);
+    return response;
+}
+
+export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+    const { url, operation, send } = prepare(method, path, options, 'application/json');
+    const response = await checked(await send(), url, operation);
+    return (await parseResponse(response)) as T;
+}
+
+function eventData<T>(data: string): T {
+    try {
+        return JSON.parse(data) as T;
+    } catch {
+        return data as T;
+    }
+}
+
+export async function* stream<T>(method: string, path: string, options: InternalOptions = {}): AsyncGenerator<T, void, undefined> {
+    const { url, operation, send } = prepare(method, path, options, 'text/event-stream');
+    const response = await checked(await send(), url, operation);
+    if (!response.body) return;
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = '';
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += value;
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop() ?? '';
+            for (const frame of frames) {
+                const data = frame
+                    .split(/\r?\n/)
+                    .filter((line) => line.startsWith('data:'))
+                    .map((line) => line.slice(5).replace(/^ /, ''))
+                    .join('\n');
+                if (data !== '') yield eventData<T>(data);
+            }
+        }
+    } finally {
+        reader.cancel().catch(() => undefined);
+    }
 }
 """

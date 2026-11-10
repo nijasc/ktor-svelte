@@ -104,7 +104,7 @@ Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `b
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    id("io.github.nijasc.ktor-svelte") version "0.3.0"
+    id("io.github.nijasc.ktor-svelte") version "0.3.1"
 }
 ```
 <!-- x-release-please-end -->
@@ -160,7 +160,7 @@ The Gradle plugin adds the runtime for you. If you only want the library, add it
 
 <!-- x-release-please-start-version -->
 ```kotlin
-implementation("io.github.nijasc:ktor-svelte-server:0.3.0")
+implementation("io.github.nijasc:ktor-svelte-server:0.3.1")
 ```
 <!-- x-release-please-end -->
 
@@ -328,13 +328,23 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 
 | File | Contents |
 |---|---|
-| `types.ts` | An interface or union for every schema |
+| `types.ts` | An interface or union for every schema, and a `const` object for every enum |
 | `services.ts` | One object per resource, such as `api.notes.list()` |
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
 | `openapi.json` | The OpenAPI document itself |
 
 Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
+
+Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
+
+```ts
+import { NoteStatus } from '#api';
+
+const archived = notes.filter((note) => note.status === NoteStatus.ARCHIVED);
+```
+
+Enums that appear in several classes with the same values share one generated name. The name comes from the property, such as `status` becoming `Status`. When two different enums would get the same name, the owning class is added in front, such as `NoteStatus`.
 
 `svelteInit` also sets up the short `#api` import. For a frontend you already have, add it to `frontend/package.json`:
 
@@ -397,6 +407,12 @@ try {
     if (isValidationError(error)) showErrors(error.body.fields);
     if (isApiError(error, 'notes.get')) console.log(error.body.message);
 }
+```
+
+Routes that declare a `text/event-stream` response, for example through `describe`, become async generators. Each event's `data` is parsed as JSON when possible, and the stream ends when the connection closes or you stop iterating:
+
+```ts
+for await (const tick of api.ticks.watch()) console.log(tick);
 ```
 
 Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
@@ -554,7 +570,7 @@ At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more 
 | 3 | `/about` when `about.html` exists, or `/about/` when `about/index.html` exists | Serve the page |
 | 4 | `/about/` when only `about.html` exists, or `/about` when only `about/index.html` exists | 308 redirect to the form that exists, keeping the query string |
 | 5 | Missing path under `/_app/`, or any path with a file extension | 404, never the fallback |
-| 6 | Other path, with a fallback page and a request that accepts HTML | Serve the fallback with status 200 |
+| 6 | Other path, with a fallback page and a request that accepts HTML, or a path matching `paramRoutes` | Serve the fallback with status 200 |
 | 7 | Anything else | `404.html` with status 404 if it exists, otherwise a plain 404 |
 
 Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Step 5 lets SvelteKit recover from stale chunks after a deploy by doing a full page reload.
@@ -568,6 +584,7 @@ The values shown are the defaults.
 ```kotlin
 install(Svelte) {
     apiPrefixes("/api")
+    paramRoutes()
     spaFallback = "200.html"
     notFoundPage = "404.html"
     source = SvelteSource.Classpath
@@ -597,6 +614,7 @@ install(Svelte) {
 | Setting | Purpose |
 |---|---|
 | `apiPrefixes` | Paths the frontend never answers, and the routes included in `generateTs`. `/api` matches `/api` and `/api/x`, not `/apiary` |
+| `paramRoutes` | SvelteKit route patterns such as `/items/[id]`, `/docs/[...rest]` and `/blog/[[page]]`. Matching paths get the fallback even when the request does not accept HTML, for example link previews or tests. Paths with a file extension still return 404 |
 | `spaFallback` | Page for client-side routes. Must match the adapter's `fallback` option. `null` disables it |
 | `notFoundPage` | Page served with status 404. `null` disables it |
 | `source` | `SvelteSource.Classpath`, or `SvelteSource.Directory(path)` to serve a build from disk |
@@ -661,7 +679,7 @@ The package manager must already be installed. The plugin does not download Node
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
-| `svelteDoctor` | Checks adapter, `#api`, tsconfig, Kit version, tool and port, and says what to fix |
+| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, and says what to fix |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
@@ -670,6 +688,7 @@ The package manager must already be installed. The plugin does not download Node
 | `svelteOutdated` | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
 | `svelteClean` | Deletes `node_modules`, `.svelte-kit` and the build output |
+| `deepClean` | Runs `clean`, then also deletes `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept |
 | `svelteGenerateRunConfigurations` | Writes IntelliJ run configurations to `.run/`, keeping any that exist |
 
 | Property | Effect |
@@ -701,7 +720,7 @@ In development mode the runtime proxies to Vite if it is reachable, otherwise se
 
 The proxy only answers requests from this machine, so your frontend source is not open to everyone on your network, even though Ktor listens on all interfaces. Requests from elsewhere get your built files, or a 403 if there are none. It never forwards cookies or `Authorization` headers. It also refuses to start if `dev.url` points at another machine. To test from your phone or use Vite in another container, set `dev { allowRemote = true }`, and only on a network you trust.
 
-The proxy forwards HTTP only. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
+The proxy forwards HTTP only. POST, PUT, PATCH and DELETE requests are forwarded too, with their body, so Vite endpoints and SvelteKit form actions work in dev. Paths under your API prefixes are never proxied, whatever the method. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
 
 With two terminals, if a Gradle process is killed rather than stopped normally, Vite or the app can keep running and hold its port. Run `./gradlew --stop`, or stop the process listening on that port. `svelteDevAll` stops its children even when its terminal is closed.
 
@@ -735,6 +754,7 @@ Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localh
 | JVM | 17 and newer | 17, 21 |
 | Gradle | Latest 8.x and 9.x | 8.14.6, 9.8.2 |
 | SvelteKit | 3.x | 3.1.1 |
+| Svelte | 5.57.3 and newer | 5.57.3 |
 | Package managers | Bun, pnpm, npm, Yarn | Bun end to end. The others use fake tools in tests, plus npm in CI |
 
 On Gradle 8.x, use Shadow 9.2 or older if you use Shadow. Newer versions need a newer Gradle.

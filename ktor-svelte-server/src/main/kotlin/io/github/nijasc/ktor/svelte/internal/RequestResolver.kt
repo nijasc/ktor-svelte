@@ -17,8 +17,10 @@ internal class RequestResolver(
     apiPrefixes: List<String>,
     private val spaFallback: String?,
     private val notFoundPage: String?,
+    paramRoutes: List<String> = emptyList(),
 ) {
     private val normalizedPrefixes = apiPrefixes.map { "/" + it.trim('/') }
+    private val paramRoutePatterns = paramRoutes.map { route -> route.trim('/').split('/').filter { it.isNotEmpty() } }
 
     fun isApiPath(path: String): Boolean =
         normalizedPrefixes.any { prefix ->
@@ -43,7 +45,7 @@ internal class RequestResolver(
 
         if (isAssetPath(relative)) return Resolution.Unhandled
 
-        if (acceptsHtml && spaFallback != null && spaFallback in files) {
+        if (spaFallback != null && spaFallback in files && (acceptsHtml || matchesParamRoute(relative))) {
             return Resolution.Serve(spaFallback)
         }
         if (notFoundPage != null && notFoundPage in files) {
@@ -74,6 +76,27 @@ internal class RequestResolver(
                 folderPage in files -> Resolution.Redirect("/$name/")
                 else -> null
             }
+        }
+    }
+
+    private fun matchesParamRoute(relative: String): Boolean {
+        val segments = relative.trim('/').split('/').filter { it.isNotEmpty() }
+        return paramRoutePatterns.any { matches(it, segments) }
+    }
+
+    private fun matches(
+        pattern: List<String>,
+        segments: List<String>,
+    ): Boolean {
+        if (pattern.isEmpty()) return segments.isEmpty()
+        val head = pattern.first()
+        val rest = pattern.drop(1)
+        return when {
+            head.startsWith("[...") && head.endsWith("]") -> (0..segments.size).any { matches(rest, segments.drop(it)) }
+            head.startsWith("[[") && head.endsWith("]]") ->
+                matches(rest, segments) || (segments.isNotEmpty() && matches(rest, segments.drop(1)))
+            head.startsWith("[") && head.endsWith("]") -> segments.isNotEmpty() && matches(rest, segments.drop(1))
+            else -> segments.firstOrNull() == head && matches(rest, segments.drop(1))
         }
     }
 
