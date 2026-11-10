@@ -13,7 +13,16 @@
     let title = $state('');
     let body = $state('');
     let tags = $state('');
-    let problem = $state('');
+    let errors = $state<Record<string, string[]>>({});
+
+    const draft = $derived<NoteInput>({
+        title,
+        body,
+        tags: tags
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean)
+    });
 
     $effect(() => {
         notes = data.notes;
@@ -34,21 +43,15 @@
 
     async function create(event: SubmitEvent) {
         event.preventDefault();
-        problem = '';
+        errors = NoteInput.validate(draft);
+        if (Object.keys(errors).length > 0) return;
         try {
-            await api.notes.create({
-                title,
-                body,
-                tags: tags
-                    .split(',')
-                    .map((value) => value.trim())
-                    .filter(Boolean)
-            });
+            await api.notes.create(draft);
             title = body = tags = '';
             await refresh();
         } catch (error) {
             if (!isValidationError(error)) throw error;
-            problem = error.body.fields.title?.join(' ') ?? error.body.message;
+            errors = error.body.fields;
         }
     }
 
@@ -67,11 +70,11 @@
 <p id="stats" class="mb-6 opacity-70">{m.notesStats({ total: stats.total, archived: stats.archived })}</p>
 
 <form class="mb-6 grid gap-2" onsubmit={create}>
-    <input class="input w-full" placeholder={m.fieldTitle()} aria-label="Title" bind:value={title} {...NoteInput.bounds.title} />
+    <input class="input w-full" placeholder={m.fieldTitle()} aria-label="Title" bind:value={title} oninput={() => (errors = NoteInput.validate(draft))} {...NoteInput.bounds.title} />
     <textarea class="textarea w-full" placeholder={m.fieldBody()} aria-label="Body" bind:value={body}></textarea>
     <input class="input w-full" placeholder={m.fieldTags()} aria-label="Tags" bind:value={tags} />
     <button class="btn btn-primary" type="submit"><Icon name="Plus" size={16} /> {m.notesAdd()}</button>
-    {#if problem}<p class="text-error" role="alert">{problem}</p>{/if}
+    {#if errors.title}<p class="text-error" role="alert">{errors.title.join(' ')}</p>{/if}
 </form>
 
 <div class="mb-4 flex flex-wrap items-center gap-2">

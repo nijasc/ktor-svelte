@@ -191,6 +191,13 @@ class NotesAppTest {
     }
 
     @Test
+    fun `schema bounds and rules report together`() {
+        val response = send("POST", "/api/notes", """{"title":""}""")
+        assertEquals(422, response.statusCode())
+        assertContains(response.body(), """"title":["Must be at least 1 character.","A note needs a title."]""")
+    }
+
+    @Test
     fun `api answers json or xml based on accept`() {
         val json = send("GET", "/api/notes/export", null, "Accept" to "application/json")
         assertContains(json.headers().firstValue("Content-Type").orElse(""), "json")

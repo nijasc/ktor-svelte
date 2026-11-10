@@ -2421,7 +2421,8 @@
                 "properties": {
                     "title": {
                         "type": "string",
-                        "maxLength": 80
+                        "maxLength": 80,
+                        "minLength": 1
                     },
                     "body": {
                         "type": "string"
