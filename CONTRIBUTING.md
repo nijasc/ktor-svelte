@@ -29,8 +29,13 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 | Path | What lives there |
 |---|---|
 | `ktor-svelte-server/` | The Ktor plugin. `Svelte.kt` is the entry point and `internal/` is everything users cannot see |
+| `ktor-svelte-server/.../internal/` | `SvelteHandler` answers frontend requests, `LibraryConfig` reads the library settings the Gradle plugin bundles |
+| `ktor-svelte-server/.../internal/assets/` | Manifest, asset stores, path resolution and the responder that sets caching headers |
+| `ktor-svelte-server/.../internal/security/` | Origin check, body limit responses and the per-page Content-Security-Policy |
+| `ktor-svelte-server/.../internal/validation/` | `SchemaConstraints`, which checks received values against `JsonSchema` annotations and `Validated` rules |
+| `ktor-svelte-server/.../internal/dev/` | The Vite dev proxy and the status endpoint |
 | `ktor-svelte-server/.../internal/typescript/` | OpenAPI to TypeScript. `TypeScriptGenerator` takes OpenAPI JSON and returns files, so it is easy to test |
-| `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/` |
+| `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/`, and `libraries/` generates the files for configured frontend libraries |
 | `examples/basic/` | The smallest possible app |
 | `examples/notes/` | The feature-rich app. New features should show up here |
 | `.run/` | Shared IntelliJ run configurations |
