@@ -232,6 +232,8 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.frontendDir.set(extension.frontendDir)
             task.packageManager.set(extension.packageManager)
             task.devPort.set(extension.dev.port)
+            task.outputDir.set(extension.outputDir)
+            task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
         project.tasks.register("svelteGenerateRunConfigurations", SvelteRunConfigurationsTask::class.java) { task ->

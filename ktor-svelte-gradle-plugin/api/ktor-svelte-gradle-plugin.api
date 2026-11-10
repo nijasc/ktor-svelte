@@ -330,8 +330,10 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevTask : 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDoctorTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public final fun examine ()V
+	public abstract fun getBundleDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getDevPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 }
 
