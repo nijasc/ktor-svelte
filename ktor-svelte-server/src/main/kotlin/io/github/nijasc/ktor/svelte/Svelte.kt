@@ -12,6 +12,7 @@ import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.isLocalRequest
 import io.github.nijasc.ktor.svelte.internal.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.statusJson
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -49,6 +50,8 @@ import kotlinx.serialization.json.JsonPrimitive
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
+private const val STATUS_PATH = "/_ktor-svelte/status"
+private const val STATUS_REFUSED_MESSAGE = "The ktor-svelte status endpoint only answers requests from this machine."
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
 private const val REMOTE_REFUSED_MESSAGE =
@@ -109,6 +112,16 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 get(PUBLIC_CONFIG_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")
                     call.respondText(publicConfigJson, ContentType.Application.Json)
+                }.hide()
+            }
+            if (pluginConfig.statusEndpoint) {
+                get(STATUS_PATH) {
+                    if (!isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))) {
+                        call.respondText(STATUS_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
+                        return@get
+                    }
+                    call.response.header(HttpHeaders.CacheControl, "no-store")
+                    call.respondText(statusJson(store.manifest(), devProxy, devUrl), ContentType.Application.Json)
                 }.hide()
             }
             if (docsPath != null) {

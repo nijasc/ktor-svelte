@@ -154,6 +154,22 @@ internal class DevProxy(
         return false
     }
 
+    suspend fun isReachable(): Boolean =
+        targets.any { target ->
+            val request =
+                HttpRequest
+                    .newBuilder(URI.create("$target/"))
+                    .timeout(Duration.ofSeconds(1))
+                    .method(HttpMethod.Head.value, HttpRequest.BodyPublishers.noBody())
+                    .build()
+            try {
+                client.sendAsync(request, HttpResponse.BodyHandlers.discarding()).await()
+                true
+            } catch (_: IOException) {
+                false
+            }
+        }
+
     private suspend fun send(
         call: ApplicationCall,
         target: String,
