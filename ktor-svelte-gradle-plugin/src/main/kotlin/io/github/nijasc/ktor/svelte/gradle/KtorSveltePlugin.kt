@@ -75,7 +75,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         project.pluginManager.withPlugin("application") {
             project.tasks.named("run", JavaExec::class.java) { run ->
                 run.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
-                if (devMode) run.systemProperty("io.ktor.development", "true")
+                if (devMode) run.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
             }
             registerGenerateTs(project, extension)
         }
@@ -276,7 +276,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             project.tasks.register("svelteGenerateTs", JavaExec::class.java) { task ->
                 configureGenerateTsExec(project, extension, task)
                 task.description = "Starts the app once to regenerate TypeScript from its routes. Needs generateTs = true."
-                task.systemProperty("ktor.svelte.generateTsOnly", "true")
+                task.systemProperty(GENERATE_TS_ONLY_SYSTEM_PROPERTY, "true")
             }
         val verifyTs =
             project.tasks.register("svelteVerifyTs", SvelteVerifyTsTask::class.java) { task ->
@@ -330,7 +330,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 project.layout.projectDirectory.dir("src/main/resources"),
                 project.configurations.named("runtimeClasspath"),
             )
-        task.systemProperty("io.ktor.development", "true")
+        task.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
         task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
     }
 
@@ -346,8 +346,7 @@ public class KtorSveltePlugin : Plugin<Project> {
     }
 
     private fun gradleExecutablePath(gradleHome: File?): String {
-        val isWindows = System.getProperty("os.name").orEmpty().startsWith("Windows")
-        val name = if (isWindows) "gradle.bat" else "gradle"
+        val name = if (isWindowsHost()) "gradle.bat" else "gradle"
         return gradleHome?.resolve("bin/$name")?.path ?: name
     }
 
@@ -549,7 +548,7 @@ private class FrontendDirArgument(
     @get:Internal
     val frontendDir: DirectoryProperty,
 ) : CommandLineArgumentProvider {
-    override fun asArguments(): Iterable<String> = listOf("-Dktor.svelte.frontendDir=${frontendDir.get().asFile.absolutePath}")
+    override fun asArguments(): Iterable<String> = listOf("-D$FRONTEND_DIR_SYSTEM_PROPERTY=${frontendDir.get().asFile.absolutePath}")
 }
 
 internal abstract class FrontendLock : BuildService<BuildServiceParameters.None>

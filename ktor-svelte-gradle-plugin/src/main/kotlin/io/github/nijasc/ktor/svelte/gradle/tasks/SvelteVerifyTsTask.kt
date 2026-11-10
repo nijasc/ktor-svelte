@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import io.github.nijasc.ktor.svelte.gradle.VERIFY_TS_REPORT_SYSTEM_PROPERTY
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -9,8 +10,6 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.process.CommandLineArgumentProvider
 import java.io.File
-
-internal const val VERIFY_REPORT_PROPERTY = "ktor.svelte.generateTsVerify"
 
 internal fun staleTypeScriptProblem(
     report: File,
@@ -59,5 +58,5 @@ private class VerifyReportArgument(
     @get:Internal
     val reportFile: RegularFileProperty,
 ) : CommandLineArgumentProvider {
-    override fun asArguments(): Iterable<String> = listOf("-D$VERIFY_REPORT_PROPERTY=${reportFile.get().asFile.absolutePath}")
+    override fun asArguments(): Iterable<String> = listOf("-D$VERIFY_TS_REPORT_SYSTEM_PROPERTY=${reportFile.get().asFile.absolutePath}")
 }

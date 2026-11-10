@@ -59,7 +59,7 @@ internal fun resolveFrontendTool(
 internal fun locateExecutable(
     name: String,
     searchPath: String = System.getenv("PATH").orEmpty(),
-    isWindows: Boolean = System.getProperty("os.name").orEmpty().startsWith("Windows"),
+    isWindows: Boolean = isWindowsHost(),
 ): File? {
     val candidates = if (isWindows) listOf("$name.exe", "$name.cmd", "$name.bat") else listOf(name)
     val separator = if (isWindows) ';' else ':'
