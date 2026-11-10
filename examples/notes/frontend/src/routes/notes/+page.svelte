@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { api, isValidationError, type Note, type NoteStats } from '#api';
+    import { api, isValidationError, Status, type Note, type NoteStats } from '#api';
     import Icon from '#icon';
     import { localizeHref, m } from '#i18n';
     import type { PageProps } from './$types';
@@ -84,11 +84,11 @@
 
 <ul class="grid gap-2">
     {#each notes as note (note.id)}
-        <li class="card bg-base-200 p-4" class:opacity-60={note.status === 'ARCHIVED'}>
+        <li class="card bg-base-200 p-4" class:opacity-60={note.status === Status.ARCHIVED}>
             <a class="link flex items-center gap-2 font-semibold" href={localizeHref(`/notes/${note.id}`)}><Icon name={note.icon} size={18} /> {note.title}</a>
             <p class="my-2">{note.body}</p>
             <div class="flex gap-2">
-                <button class="btn btn-xs" onclick={() => archive(note.id)} disabled={note.status === 'ARCHIVED'}>{m.actionArchive()}</button>
+                <button class="btn btn-xs" onclick={() => archive(note.id)} disabled={note.status === Status.ARCHIVED}>{m.actionArchive()}</button>
                 <button class="btn btn-xs btn-error" onclick={() => remove(note.id)}>{m.actionDelete()}</button>
             </div>
         </li>
