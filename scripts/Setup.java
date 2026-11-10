@@ -918,6 +918,7 @@ public class Setup {
         import io.github.nijasc.ktor.svelte.Validated
         import io.github.nijasc.ktor.svelte.Validator
         import io.ktor.http.HttpStatusCode
+        import io.ktor.openapi.JsonSchema
         import io.ktor.server.application.Application
         import io.ktor.server.application.install
         import io.ktor.server.application.log
@@ -967,16 +968,14 @@ public class Setup {
 
         @Serializable
         data class Credentials(
+            @JsonSchema.MaxLength(MAX_USERNAME_LENGTH)
             val username: String,
+            @JsonSchema.MinLength(MIN_PASSWORD_LENGTH)
+            @JsonSchema.MaxLength(MAX_PASSWORD_LENGTH)
             val password: String,
         ) : Validated {
             override fun Validator.rules() {
-                check("username", username.isNotBlank() && username.length <= MAX_USERNAME_LENGTH) {
-                    "Use a username of up to $MAX_USERNAME_LENGTH characters."
-                }
-                check("password", password.length in MIN_PASSWORD_LENGTH..MAX_PASSWORD_LENGTH) {
-                    "Use a password of $MIN_PASSWORD_LENGTH to $MAX_PASSWORD_LENGTH characters."
-                }
+                check(::username, username.isNotBlank()) { "Pick a username." }
             }
         }
 

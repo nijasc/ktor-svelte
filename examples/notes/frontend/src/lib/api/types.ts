@@ -50,6 +50,9 @@ export const NoteInput = {
         tags: [],
         icon: 'AArrowDown',
     }),
+    bounds: {
+        title: { maxlength: 80 },
+    },
 };
 
 export interface NoteStats {
@@ -95,12 +98,10 @@ export type Status = (typeof Status)[keyof typeof Status];
 
 export interface PublicConfig {
     appName: string;
-    maxTitleLength: number;
 }
 
 export const PublicConfig = {
     empty: (): PublicConfig => ({
         appName: '',
-        maxTitleLength: 0,
     }),
 };

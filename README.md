@@ -356,6 +356,14 @@ let draft = $state(NoteInput.empty());
 
 Every property is filled in, optional ones included: strings become `''`, numbers `0`, booleans `false`, lists `[]`, maps `{}`, nullable properties `null`, enums their first value, and nested objects their own `empty()`. Each call returns a fresh object.
 
+Properties with [validation annotations](#validation) also appear under `bounds`, named like the HTML attributes, so you can spread them onto an input:
+
+```svelte
+<input bind:value={draft.title} {...NoteInput.bounds.title} />
+```
+
+Strings get `minlength`, `maxlength` and `pattern`, numbers get `min` and `max`. A strict bound on an integer moves by one, and on a decimal it is left out, because HTML has no strict bounds. The browser matches `pattern` against the whole value, while the server only looks for a match inside it, so write patterns with `^` and `$` to get the same result in both.
+
 `svelteInit` also sets up the short `#api` import. For a frontend you already have, add it to `frontend/package.json`:
 
 ```json
@@ -441,14 +449,19 @@ To refresh the files without your dev server, for example in CI, run the task be
 
 ## Validation
 
-Put the rules on the class itself by implementing `Validated`. They then run on every `call.receive` of that class, in every route. When a rule fails, the route never runs, and the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands.
+Put simple bounds on the properties with Ktor's `JsonSchema` annotations, and any other rule on the class itself by implementing `Validated`. Both run on every `call.receive` of that class, in every route, nested classes and lists included. When something fails, the route never runs, and the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands.
 
 ```kotlin
+import io.ktor.openapi.JsonSchema
+
 @Serializable
-data class NoteInput(val title: String, val body: String = "") : Validated {
+data class NoteInput(
+    @JsonSchema.MaxLength(80)
+    val title: String,
+    val body: String = "",
+) : Validated {
     override fun Validator.rules() {
-        check("title", title.isNotBlank()) { "A note needs a title." }
-        check("title", title.length <= 80) { "Keep the title under 80 characters." }
+        check(::title, title.isNotBlank()) { "A note needs a title." }
     }
 }
 
@@ -461,6 +474,16 @@ post("/api/notes") {
 ```json
 { "message": "Validation failed", "fields": { "title": ["A note needs a title."] } }
 ```
+
+| Annotation | Checks | Message |
+|---|---|---|
+| `@JsonSchema.MinLength(n)`, `@JsonSchema.MaxLength(n)` | Length of a string | `Must be at most 80 characters.` |
+| `@JsonSchema.Minimum(x)`, `@JsonSchema.Maximum(x)` | A number, `exclusive = true` for a strict bound | `Must be at least 1.` |
+| `@JsonSchema.Pattern(regex)` | A string contains a match | `Must match ^[a-z]+$.` |
+
+Errors use the JSON name, with paths such as `lines[1].sku` for nested values. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
+
+With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server. See [Generated TypeScript](#generated-typescript).
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
 

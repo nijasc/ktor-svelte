@@ -94,10 +94,57 @@ internal class TypeScriptGenerator(
             return "export interface $name ${objectBody(schema, references, indent = "")}\n\n" +
                 "export const $name = {\n" +
                 "    empty: (): $name => (${emptyObject(schema, schemas, "    ", emptySet())}),\n" +
+                boundsSource(schema) +
                 "};\n"
         }
         return "export type $name = ${tsType(schema, references)};\n"
     }
+
+    private fun boundsSource(schema: JsonObject): String {
+        val lines =
+            schema.objectAt("properties").orEmpty().mapNotNull { (name, value) ->
+                val attributes = inputAttributes(value.jsonObject)
+                if (attributes.isEmpty()) {
+                    null
+                } else {
+                    "        ${propertyKey(name)}: { ${attributes.joinToString { (key, attribute) -> "$key: $attribute" }} },"
+                }
+            }
+        if (lines.isEmpty()) return ""
+        return "    bounds: {\n${lines.joinToString("\n")}\n    },\n"
+    }
+
+    private fun inputAttributes(schema: JsonObject): List<Pair<String, String>> {
+        val integer = schema.typeNames().contains("integer")
+
+        fun number(key: String): Double? = (schema[key] as? JsonPrimitive)?.takeUnless { it.isString }?.contentOrNull?.toDoubleOrNull()
+
+        fun bound(
+            key: String,
+            exclusiveKey: String,
+            step: Int,
+        ): String? {
+            number(key)?.let { return formatNumber(it) }
+            val exclusive = number(exclusiveKey) ?: return null
+            return if (integer) formatNumber(exclusive + step) else null
+        }
+        return listOfNotNull(
+            number("minLength")?.let { "minlength" to formatNumber(it) },
+            number("maxLength")?.let { "maxlength" to formatNumber(it) },
+            bound("minimum", "exclusiveMinimum", 1)?.let { "min" to it },
+            bound("maximum", "exclusiveMaximum", -1)?.let { "max" to it },
+            schema.stringAt("pattern")?.let { "pattern" to literal(JsonPrimitive(it)) },
+        )
+    }
+
+    private fun JsonObject.typeNames(): List<String> =
+        when (val type = this["type"]) {
+            is JsonArray -> type.map { it.jsonPrimitive.content }
+            is JsonPrimitive -> listOf(type.content)
+            else -> emptyList()
+        }
+
+    private fun formatNumber(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
 
     private fun enumDeclaration(
         name: String,

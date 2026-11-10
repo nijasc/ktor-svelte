@@ -317,4 +317,29 @@ class TypeScriptGeneratorTest {
     fun `index exports type values so empty factories are importable`() {
         assertContains(generate().getValue("index.ts"), "export * from './types.js';")
     }
+
+    @Test
+    fun `schema bounds become input attributes`() {
+        val source =
+            types(
+                """{"A":{"type":"object","properties":{
+                "name":{"type":"string","minLength":2,"maxLength":80,"pattern":"^[a-z]+$"},
+                "age":{"type":"integer","minimum":0,"exclusiveMaximum":130},
+                "price":{"type":"number","exclusiveMinimum":0,"maximum":9.5},
+                "free":{"type":"string"}}}}""",
+            )
+        assertContains(
+            source,
+            "    bounds: {\n" +
+                "        name: { minlength: 2, maxlength: 80, pattern: '^[a-z]+$' },\n" +
+                "        age: { min: 0, max: 129 },\n" +
+                "        price: { max: 9.5 },\n" +
+                "    },\n};",
+        )
+    }
+
+    @Test
+    fun `objects without bounds get no bounds entry`() {
+        assertFalse(types("""{"A":{"type":"object","properties":{"x":{"type":"string"}}}}""").contains("bounds"))
+    }
 }
