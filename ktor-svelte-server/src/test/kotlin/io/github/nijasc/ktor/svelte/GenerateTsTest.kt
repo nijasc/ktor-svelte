@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte
 
 import io.github.nijasc.ktor.svelte.internal.typescript.findFrontendRoot
+import io.github.nijasc.ktor.svelte.internal.typescript.staleFiles
 import io.github.nijasc.ktor.svelte.internal.typescript.writeIfChanged
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
@@ -153,6 +154,18 @@ class GenerateTsTest {
         val before = directory.resolve("a.ts").getLastModifiedTime()
         assertEquals(listOf("b.ts"), writeIfChanged(directory, mapOf("a.ts" to "1", "b.ts" to "3")))
         assertEquals(before, directory.resolve("a.ts").getLastModifiedTime())
+    }
+
+    @Test
+    fun `stale files are missing or different, ignoring line endings`() {
+        val directory = Files.createTempDirectory("ktor-svelte-verify")
+        directory.resolve("same.ts").writeText("a\r\nb\r\n")
+        directory.resolve("changed.ts").writeText("old\n")
+        val expected = mapOf("same.ts" to "a\nb\n", "changed.ts" to "new\n", "missing.ts" to "x\n")
+
+        assertEquals(listOf("changed.ts", "missing.ts"), staleFiles(directory, expected).map { it.fileName.toString() })
+        assertEquals("old\n", directory.resolve("changed.ts").readText())
+        assertFalse(directory.resolve("missing.ts").exists())
     }
 
     @Test
