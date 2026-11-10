@@ -342,4 +342,37 @@ class TypeScriptGeneratorTest {
     fun `objects without bounds get no bounds entry`() {
         assertFalse(types("""{"A":{"type":"object","properties":{"x":{"type":"string"}}}}""").contains("bounds"))
     }
+
+    @Test
+    fun `date formats become branded types with helpers`() {
+        val source =
+            types(
+                """{"A":{"type":"object","required":["day"],"properties":{
+                "day":{"type":"string","format":"date"},"at":{"type":"string","format":"time"},
+                "created":{"type":"string","format":"date-time"},"due":{"type":["string","null"],"format":"date"}}}}""",
+            )
+        assertContains(source, "export type IsoDate = string & { readonly [iso]: 'date' };")
+        assertContains(source, "export const IsoDateTime = {")
+        assertContains(source, "    day: IsoDate;")
+        assertContains(source, "    at?: IsoTime;")
+        assertContains(source, "    created?: IsoDateTime;")
+        assertContains(source, "    due?: IsoDate | null;")
+        assertContains(source, "        day: '' as IsoDate,")
+        assertContains(source, "        due: null,")
+    }
+
+    @Test
+    fun `date helpers are left out when no date is used`() {
+        assertFalse(types("""{"A":{"type":"object","properties":{"x":{"type":"string"}}}}""").contains("IsoDate"))
+    }
+
+    @Test
+    fun `services import date types used by parameters`() {
+        val source =
+            services(
+                """{"/api/days":{"get":{"parameters":[{"name":"from","in":"query","schema":{"type":"string","format":"date"}}]}}}""",
+            )
+        assertContains(source, "import type { IsoDate } from './types.js';")
+        assertContains(source, "from?: IsoDate")
+    }
 }

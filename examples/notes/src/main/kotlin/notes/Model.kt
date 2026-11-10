@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 import ktorsvelte.LucideIcon
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 const val MAX_TITLE_LENGTH = 80
 
@@ -26,6 +28,7 @@ data class Note(
     val tags: List<String>,
     val status: NoteStatus,
     val icon: LucideIcon,
+    val createdAt: Instant,
 )
 
 @Serializable
@@ -93,7 +96,7 @@ class NoteStore {
     fun find(id: Int): Note? = notes[id]
 
     fun create(input: NoteInput): Note {
-        val note = Note(ids.incrementAndGet(), input.title, input.body, input.tags, NoteStatus.ACTIVE, input.icon)
+        val note = Note(ids.incrementAndGet(), input.title, input.body, input.tags, NoteStatus.ACTIVE, input.icon, Clock.System.now())
         notes[note.id] = note
         return note
     }
