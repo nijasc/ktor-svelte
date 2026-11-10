@@ -21,7 +21,7 @@ private fun kotlinString(value: String): String =
 
 private fun fileHeader(generatedPackage: String): String = "// $GENERATED_MARKER\npackage $generatedPackage\n\n"
 
-public fun kotlinFiles(
+internal fun kotlinFiles(
     spec: LibrarySpec,
     iconConstants: List<String>,
     messages: MessageCatalog?,
@@ -36,7 +36,7 @@ public fun kotlinFiles(
         }
     }
 
-public fun runtimeProperties(spec: LibrarySpec): String =
+internal fun runtimeProperties(spec: LibrarySpec): String =
     buildString {
         spec.i18n?.let { i18n ->
             append("i18n.locales=${i18n.locales.joinToString(",")}\n")

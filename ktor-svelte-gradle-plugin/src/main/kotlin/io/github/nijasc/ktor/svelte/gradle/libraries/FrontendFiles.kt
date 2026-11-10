@@ -9,7 +9,7 @@ private fun json(value: Any?): String = JsonOutput.toJson(value)
 
 private fun typeUnion(values: List<String>): String = values.joinToString(" | ") { json(it).replace('"', '\'') }
 
-public fun frontendFiles(
+internal fun frontendFiles(
     spec: LibrarySpec,
     messages: MessageCatalog?,
     hasUserViteConfig: Boolean,
@@ -27,7 +27,7 @@ public fun frontendFiles(
         if (spec.i18n?.strategy == LocaleStrategy.UrlPrefix) put("src/hooks.ts", universalHooks(spec.i18n))
     }
 
-public fun iconSources(iconFiles: List<String>): Map<String, String> {
+internal fun iconSources(iconFiles: List<String>): Map<String, String> {
     val entries = iconFiles.sorted().map { iconConstant(it) to it }
     val loaders =
         entries.joinToString("\n") { (constant, file) ->
@@ -43,7 +43,7 @@ public fun iconSources(iconFiles: List<String>): Map<String, String> {
     )
 }
 
-public fun iconConstant(file: String): String {
+internal fun iconConstant(file: String): String {
     val pascal =
         file
             .split('-')
@@ -291,7 +291,7 @@ private const val ICON_COMPONENT = """<script lang="ts">
 {/await}
 """
 
-public const val ROOT_LAYOUT: String = """<script lang="ts">
+internal const val ROOT_LAYOUT: String = """<script lang="ts">
     import '#lib/ktor-svelte/app.css';
 
     let { children } = ${'$'}props();
