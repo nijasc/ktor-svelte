@@ -661,7 +661,7 @@ The package manager must already be installed. The plugin does not download Node
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
-| `svelteDoctor` | Checks adapter, `#api`, tsconfig, Kit version, tool and port, and says what to fix |
+| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, and says what to fix |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
