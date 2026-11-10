@@ -525,6 +525,16 @@ const config = await loadPublicConfig();
 
 It is served as JSON from `/_ktor-svelte/config.json` to anyone who asks, so **never put secrets in it**. In SvelteKit, call `loadPublicConfig` only in the browser, because prerendering has no server to ask.
 
+## Status endpoint
+
+```kotlin
+install(Svelte) {
+    statusEndpoint = true
+}
+```
+
+`GET /_ktor-svelte/status` returns JSON with the bundled build (`present`, `formatVersion`, `files`, `fingerprint`) and the dev proxy (`proxy`, and when active `url` and `reachable`). It is off by default, never cached, hidden from the OpenAPI document, and answers only requests from this machine with a local `Host`. Everything else gets 403.
+
 ## Security headers
 
 ```kotlin

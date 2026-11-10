@@ -33,6 +33,7 @@ public class SvelteConfig {
     public var apiDocs: Boolean = false
     public var apiDocsPath: String = "/api/docs"
     public var routing: SvelteRouting = SvelteRouting.Automatic
+    public var statusEndpoint: Boolean = false
 
     public fun apiPrefixes(vararg prefixes: String) {
         apiPrefixList = prefixes.toList()
