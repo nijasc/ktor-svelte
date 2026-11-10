@@ -19,6 +19,7 @@ import kotlin.io.path.writeText
 
 private const val GENERATE_ONLY_PROPERTY = "ktor.svelte.generateTsOnly"
 private const val FRONTEND_DIR_PROPERTY = "ktor.svelte.frontendDir"
+private const val VERIFY_REPORT_PROPERTY = "ktor.svelte.generateTsVerify"
 
 internal fun writeIfChanged(
     directory: Path,
@@ -35,6 +36,17 @@ internal fun writeIfChanged(
         }
     }
 }
+
+internal fun staleFiles(
+    directory: Path,
+    files: Map<String, String>,
+): List<Path> =
+    files.mapNotNull { (name, content) ->
+        val file = directory.resolve(name)
+        file.takeUnless { it.exists() && it.readText().normalizeLineEndings() == content.normalizeLineEndings() }
+    }
+
+private fun String.normalizeLineEndings(): String = replace("\r\n", "\n")
 
 internal fun findFrontendRoot(directory: Path): Path? =
     generateSequence(directory.absolute().normalize()) { it.parent }.firstOrNull { it.resolve("package.json").exists() }
@@ -53,9 +65,14 @@ internal fun installTypeScriptGeneration(
     excludedPaths: List<String>,
     publicConfigSchema: String?,
 ) {
-    val generateOnly = System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
+    val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
+    val generateOnly = verifyReport != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
     if (generateOnly && !enabled) {
         application.monitor.subscribe(ApplicationStarted) {
+            if (verifyReport != null) {
+                application.log.info("ktor-svelte has nothing to verify: generateTs is off.")
+                Runtime.getRuntime().halt(0)
+            }
             application.log.error("svelteGenerateTs needs install(Svelte) { generateTs = true }.")
             Runtime.getRuntime().halt(1)
         }
@@ -68,7 +85,7 @@ internal fun installTypeScriptGeneration(
     val generator = TypeScriptGenerator(apiPrefixes, excludedPaths, publicConfigSchema, readIconNames(output))
 
     application.monitor.subscribe(ApplicationStarted) {
-        val succeeded = generate(application, output, generator)
+        val succeeded = generate(application, output, generator, verifyReport)
         if (generateOnly) Runtime.getRuntime().halt(if (succeeded) 0 else 1)
     }
 }
@@ -77,6 +94,7 @@ private fun generate(
     application: Application,
     output: Path,
     generator: TypeScriptGenerator,
+    verifyReport: Path?,
 ): Boolean {
     if (findFrontendRoot(output) == null) {
         application.log.warn("ktor-svelte did not generate TypeScript: no package.json found at or above ${output.absolute()}.")
@@ -88,8 +106,15 @@ private fun generate(
                 .Routing()
                 .read(application, OpenApiDoc(info = OpenApiInfo(title = "API", version = "1.0")))
                 .content
-        val changed = writeIfChanged(output, generator.generate(openApiJson))
-        if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
+        val files = generator.generate(openApiJson)
+        if (verifyReport != null) {
+            val stale = staleFiles(output, files).map { it.absolute().normalize().toString() }
+            verifyReport.parent?.createDirectories()
+            verifyReport.writeText(stale.joinToString("") { "$it\n" })
+        } else {
+            val changed = writeIfChanged(output, files)
+            if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
+        }
         true
     } catch (failure: Exception) {
         application.log.error("ktor-svelte could not generate TypeScript", failure)

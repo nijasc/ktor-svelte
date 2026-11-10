@@ -20,6 +20,7 @@ import java.io.InputStream
 
 private const val IMMUTABLE_PREFIX = "_app/immutable/"
 private const val VERSION_FILE = "_app/version.json"
+internal const val CONTENT_SECURITY_POLICY = "Content-Security-Policy"
 
 internal fun privateCacheControl(value: String): String =
     when {
@@ -31,6 +32,7 @@ internal fun privateCacheControl(value: String): String =
 internal class AssetResponder(
     private val store: AssetStore,
     private val cache: SvelteCacheConfig,
+    private val contentSecurityPolicy: BuildContentSecurityPolicy? = null,
 ) {
     suspend fun respond(
         call: ApplicationCall,
@@ -47,6 +49,10 @@ internal class AssetResponder(
         call.response.header(HttpHeaders.CacheControl, if (privateResponse) privateCacheControl(cacheControl) else cacheControl)
         call.response.header(HttpHeaders.ETag, eTag)
         if (entry.encodings.isNotEmpty()) call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
+        val contentType = ContentType.defaultForFilePath(path).withCharsetIfNeeded(Charsets.UTF_8)
+        if (contentSecurityPolicy != null && contentType.match(ContentType.Text.Html)) {
+            call.response.header(CONTENT_SECURITY_POLICY, contentSecurityPolicy.forPage(path, entry))
+        }
 
         if (!notFound && matchesIfNoneMatch(call.request.header(HttpHeaders.IfNoneMatch), eTag)) {
             call.respond(HttpStatusCode.NotModified)
@@ -54,7 +60,6 @@ internal class AssetResponder(
         }
 
         if (encoding != null) call.response.header(HttpHeaders.ContentEncoding, encoding.manifestKey)
-        val contentType = ContentType.defaultForFilePath(path).withCharsetIfNeeded(Charsets.UTF_8)
         val length = encoding?.let { entry.encodings.getValue(it) } ?: entry.size
 
         if (call.request.httpMethod == HttpMethod.Head) {

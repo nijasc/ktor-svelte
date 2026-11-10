@@ -2,17 +2,23 @@ package io.github.nijasc.ktor.svelte
 
 import io.github.nijasc.ktor.svelte.internal.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.AssetStore
+import io.github.nijasc.ktor.svelte.internal.BuildContentSecurityPolicy
+import io.github.nijasc.ktor.svelte.internal.CONTENT_SECURITY_POLICY
 import io.github.nijasc.ktor.svelte.internal.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.DevProxy
 import io.github.nijasc.ktor.svelte.internal.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.Manifest
+import io.github.nijasc.ktor.svelte.internal.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.Resolution
 import io.github.nijasc.ktor.svelte.internal.SchemaConstraints
+import io.github.nijasc.ktor.svelte.internal.findPayloadTooLarge
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.isLocalRequest
+import io.github.nijasc.ktor.svelte.internal.requestPathForGuards
 import io.github.nijasc.ktor.svelte.internal.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.statusJson
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.ktor.http.ContentType
@@ -27,7 +33,10 @@ import io.ktor.server.application.ApplicationPlugin
 import io.ktor.server.application.PluginBuilder
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
+import io.ktor.server.application.install
 import io.ktor.server.application.log
+import io.ktor.server.application.pluginOrNull
+import io.ktor.server.plugins.bodylimit.RequestBodyLimit
 import io.ktor.server.plugins.swagger.swaggerUI
 import io.ktor.server.request.ApplicationReceivePipeline
 import io.ktor.server.request.header
@@ -58,6 +67,8 @@ private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
 private const val REMOTE_REFUSED_MESSAGE =
     "The ktor-svelte dev proxy only answers requests from this machine. Set dev { allowRemote = true } to change that."
+private const val BODY_LIMIT_CONFLICT_MESSAGE =
+    "RequestBodyLimit is already installed. Set maxApiBodySize = null in install(Svelte) to keep your own limits."
 private const val MISSING_BUILD_MESSAGE =
     "ktor-svelte found no frontend build. Build the app with the ktor-svelte Gradle plugin, " +
         "and do not pass -Psvelte.skip=true or -Psvelte.dev=true."
@@ -67,7 +78,6 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val store = createStore(pluginConfig.source, application)
         val resolver =
             RequestResolver(pluginConfig.apiPrefixList, pluginConfig.spaFallback, pluginConfig.notFoundPage, pluginConfig.paramRouteList)
-        val responder = AssetResponder(store, pluginConfig.cacheConfig)
         val devUrl = resolveDevServerUrl(pluginConfig.devConfig.url, System.getenv(DEV_SERVER_VARIABLE))
         val allowRemote = pluginConfig.devConfig.allowRemote
         val devProxy =
@@ -77,6 +87,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             } else {
                 null
             }
+        val securityHeaders = pluginConfig.securityHeadersConfig
+        val responder =
+            AssetResponder(store, pluginConfig.cacheConfig, buildContentSecurityPolicy(store, securityHeaders, devProxy != null))
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
@@ -90,7 +103,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             listOfNotNull(docsPath),
             pluginConfig.publicConfigSchema,
         )
-        pluginConfig.securityHeadersConfig?.let { headers -> installSecurityHeaders(headers, devProxy != null) }
+        if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
 
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
@@ -102,8 +115,21 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             constraints.requireValid(received)
         }
 
+        val maxApiBodySize = pluginConfig.maxApiBodySize
+        if (maxApiBodySize != null) installBodyLimit(resolver, maxApiBodySize)
+        if (pluginConfig.originCheck) {
+            val originCheck = OriginCheck(pluginConfig.allowedOriginList)
+            onCall { call ->
+                if (resolver.isApiPath(requestPathForGuards(call))) originCheck.refuseIfCrossOrigin(call)
+            }
+        }
+
         on(CallFailed) { call, cause ->
-            if (cause is ValidationException) respondValidationFailure(call, cause)
+            if (cause is ValidationException) {
+                respondValidationFailure(call, cause)
+                return@on
+            }
+            if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) respondBodyTooLarge(call, maxApiBodySize)
         }
 
         val automaticRouting = pluginConfig.routing == SvelteRouting.Automatic
@@ -170,11 +196,31 @@ private fun PluginBuilder<SvelteConfig>.installSecurityHeaders(
             headers.contentTypeOptions?.let { "X-Content-Type-Options" to it },
             headers.frameOptions?.let { "X-Frame-Options" to it },
             headers.referrerPolicy?.let { "Referrer-Policy" to it },
-            headers.contentSecurityPolicy?.takeUnless { devProxyActive }?.let { "Content-Security-Policy" to it },
+            headers.contentSecurityPolicy?.takeUnless { devProxyActive }?.let { CONTENT_SECURITY_POLICY to it },
         )
     onCall { call ->
         values.forEach { (name, value) -> call.response.header(name, value) }
     }
+}
+
+private fun PluginBuilder<SvelteConfig>.installBodyLimit(
+    resolver: RequestResolver,
+    limit: Long,
+) {
+    check(application.pluginOrNull(RequestBodyLimit) == null) { BODY_LIMIT_CONFLICT_MESSAGE }
+    application.install(RequestBodyLimit) {
+        bodyLimit { call -> if (resolver.isApiPath(requestPathForGuards(call))) limit else Long.MAX_VALUE }
+    }
+}
+
+private fun buildContentSecurityPolicy(
+    store: AssetStore,
+    headers: SvelteSecurityHeaders,
+    devProxyActive: Boolean,
+): BuildContentSecurityPolicy? {
+    val automatic = headers.enabled && headers.automaticContentSecurityPolicy && headers.contentSecurityPolicy == null
+    if (!automatic || devProxyActive) return null
+    return BuildContentSecurityPolicy(store, headers.frameOptions, headers.extraCspSources)
 }
 
 private class SvelteHandler(

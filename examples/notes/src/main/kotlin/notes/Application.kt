@@ -17,7 +17,6 @@ fun Application.module() {
         generateTs = true
         apiDocs = true
         publicConfig(AppConfig(appName = System.getenv("APP_NAME") ?: "ktor-svelte notes"))
-        securityHeaders()
         transport {
             json()
             xml()

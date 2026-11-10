@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
+import io.github.nijasc.ktor.svelte.internal.ConstraintMessages
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -26,6 +27,7 @@ internal class TypeScriptGenerator(
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
     private var enumTypes: Map<Set<String>, EnumType> = emptyMap()
     private var usesDates = false
+    private val validationHelpers = sortedSetOf<ValidationHelper>()
 
     fun generate(openApiJson: String): Map<String, String> {
         val document = Json.parseToJsonElement(openApiJson).jsonObject
@@ -34,9 +36,11 @@ internal class TypeScriptGenerator(
         enumTypes = nameEnums(filtered, schemas)
         usesDates = hasDateFormat(filtered) || publicConfigSchema?.let { hasDateFormat(Json.parseToJsonElement(it)) } == true
         val dateTypes = if (usesDates) DATE_FORMATS.values else emptyList()
+        validationHelpers.clear()
+        val types = typesSource(schemas) + publicConfigDeclaration(schemas)
         return mapOf(
             "client.ts" to CLIENT_SOURCE,
-            "types.ts" to typesSource(schemas) + publicConfigDeclaration(schemas),
+            "types.ts" to types + validationHelpers.joinToString("") { "\n" + it.source },
             "services.ts" to
                 servicesSource(
                     filtered.objectAt("paths").orEmpty(),
@@ -99,15 +103,17 @@ internal class TypeScriptGenerator(
                 "export const $name = {\n" +
                 "    empty: (): $name => (${emptyObject(schema, schemas, "    ", emptySet())}),\n" +
                 boundsSource(schema) +
+                validateSource(name, schema, schemas) +
                 "};\n"
         }
         return "export type $name = ${tsType(schema, references)};\n"
     }
 
     private fun boundsSource(schema: JsonObject): String {
+        val required = schema.stringList("required")
         val lines =
             schema.objectAt("properties").orEmpty().mapNotNull { (name, value) ->
-                val attributes = inputAttributes(value.jsonObject)
+                val attributes = inputAttributes(value.jsonObject, name in required)
                 if (attributes.isEmpty()) {
                     null
                 } else {
@@ -118,28 +124,170 @@ internal class TypeScriptGenerator(
         return "    bounds: {\n${lines.joinToString("\n")}\n    },\n"
     }
 
-    private fun inputAttributes(schema: JsonObject): List<Pair<String, String>> {
+    private fun inputAttributes(
+        schema: JsonObject,
+        required: Boolean,
+    ): List<Pair<String, String>> {
         val integer = schema.typeNames().contains("integer")
-
-        fun number(key: String): Double? = (schema[key] as? JsonPrimitive)?.takeUnless { it.isString }?.contentOrNull?.toDoubleOrNull()
 
         fun bound(
             key: String,
             exclusiveKey: String,
             step: Int,
         ): String? {
-            number(key)?.let { return formatNumber(it) }
-            val exclusive = number(exclusiveKey) ?: return null
+            schema.numberAt(key)?.let { return formatNumber(it) }
+            val exclusive = schema.numberAt(exclusiveKey) ?: return null
             return if (integer) formatNumber(exclusive + step) else null
         }
         return listOfNotNull(
-            number("minLength")?.let { "minlength" to formatNumber(it) },
-            number("maxLength")?.let { "maxlength" to formatNumber(it) },
+            ("required" to "true").takeIf { isRequiredInput(schema, required) },
+            schema.numberAt("minLength")?.let { "minlength" to formatNumber(it) },
+            schema.numberAt("maxLength")?.let { "maxlength" to formatNumber(it) },
             bound("minimum", "exclusiveMinimum", 1)?.let { "min" to it },
             bound("maximum", "exclusiveMaximum", -1)?.let { "max" to it },
             schema.stringAt("pattern")?.let { "pattern" to literal(JsonPrimitive(it)) },
         )
     }
+
+    private fun isRequiredInput(
+        schema: JsonObject,
+        required: Boolean,
+    ): Boolean {
+        if (isNullable(schema) || schema["enum"] != null) return false
+        return if ("string" in schema.typeNames()) {
+            (schema.numberAt("minLength") ?: 0.0) >= 1
+        } else {
+            required && isNumber(schema)
+        }
+    }
+
+    private fun isNumber(schema: JsonObject): Boolean = schema.typeNames().any { it == "integer" || it == "number" }
+
+    private fun validateSource(
+        name: String,
+        schema: JsonObject,
+        schemas: Map<String, JsonElement>,
+    ): String {
+        if (!hasValidator(schema, schemas, emptySet())) return ""
+        val required = schema.stringList("required")
+        val checks =
+            schema.objectAt("properties").orEmpty().flatMap { (property, value) ->
+                val propertySchema = value.jsonObject
+                val access = "value" + if (IDENTIFIER.matches(property)) ".$property" else "[${literal(JsonPrimitive(property))}]"
+                constraintChecks(property, access, propertySchema, property in required) +
+                    nestedChecks(propertySchema, access, templateText(property), "        ", 0, schemas)
+            }
+        return "    validate: (value: $name): Record<string, string[]> => {\n" +
+            "        const errors: Record<string, string[]> = {};\n" +
+            checks.joinToString("") { "$it\n" } +
+            "        return errors;\n" +
+            "    },\n"
+    }
+
+    private fun hasValidator(
+        schema: JsonObject,
+        schemas: Map<String, JsonElement>,
+        visiting: Set<String>,
+    ): Boolean =
+        hasEmptyFactory(schema) &&
+            schema.objectAt("properties").orEmpty().values.any { value ->
+                val property = value.jsonObject
+                CONSTRAINT_KEYWORDS.any { property.numberAt(it) != null || (it == "pattern" && property.stringAt(it) != null) } ||
+                    referencedSchema(property)?.let { raw ->
+                        raw !in visiting && (schemas[raw] as? JsonObject)?.let { hasValidator(it, schemas, visiting + raw) } == true
+                    } == true
+            }
+
+    private fun referencedSchema(schema: JsonObject): String? {
+        schema.stringAt("\$ref")?.let { return it.substringAfterLast('/') }
+        nonNullOption(schema)?.let { return referencedSchema(it) }
+        if ("array" in schema.typeNames()) return schema.objectAt("items")?.let(::referencedSchema)
+        return null
+    }
+
+    private fun nonNullOption(schema: JsonObject): JsonObject? =
+        (schema.arrayAt("oneOf") ?: schema.arrayAt("anyOf"))
+            ?.mapNotNull { it as? JsonObject }
+            ?.filterNot { it.typeNames() == listOf("null") }
+            ?.singleOrNull()
+
+    private fun constraintChecks(
+        property: String,
+        access: String,
+        schema: JsonObject,
+        required: Boolean,
+    ): List<String> {
+        val field = literal(JsonPrimitive(property))
+
+        fun fail(message: String) = "addError(errors, $field, ${literal(JsonPrimitive(message))});"
+        val minLength = schema.numberAt("minLength")?.toInt()
+        val maxLength = schema.numberAt("maxLength")?.toInt()
+        val pattern = (schema["pattern"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val lower = schema.numberAt("minimum")?.let { it to false } ?: schema.numberAt("exclusiveMinimum")?.let { it to true }
+        val upper = schema.numberAt("maximum")?.let { it to false } ?: schema.numberAt("exclusiveMaximum")?.let { it to true }
+        val lines = mutableListOf<String>()
+        if (isRequiredInput(schema, required) && isNumber(schema)) {
+            lines += "        if (typeof $access !== 'number' || Number.isNaN($access)) ${fail(REQUIRED_MESSAGE)}"
+        }
+        if (minLength != null || maxLength != null || pattern != null) {
+            lines += "        if (typeof $access === 'string') {"
+            if (minLength != null || maxLength != null) lines += "            const length = [...$access].length;"
+            minLength?.let { lines += "            if (length < $it) ${fail(ConstraintMessages.minLength(it))}" }
+            maxLength?.let { lines += "            if (length > $it) ${fail(ConstraintMessages.maxLength(it))}" }
+            pattern?.let {
+                validationHelpers += ValidationHelper.MATCHES
+                lines += "            if (!matches(${literal(JsonPrimitive(it))}, $access)) ${fail(ConstraintMessages.pattern(it))}"
+            }
+            lines += "        }"
+        }
+        if (lower != null || upper != null) {
+            lines += "        if (typeof $access === 'number') {"
+            lower?.let { (bound, exclusive) ->
+                val operator = if (exclusive) "<=" else "<"
+                lines += "            if ($access $operator ${formatNumber(bound)}) ${fail(ConstraintMessages.minimum(bound, exclusive))}"
+            }
+            upper?.let { (bound, exclusive) ->
+                val operator = if (exclusive) ">=" else ">"
+                lines += "            if ($access $operator ${formatNumber(bound)}) ${fail(ConstraintMessages.maximum(bound, exclusive))}"
+            }
+            lines += "        }"
+        }
+        if (lines.isNotEmpty()) validationHelpers += ValidationHelper.ADD_ERROR
+        return lines
+    }
+
+    private fun nestedChecks(
+        schema: JsonObject,
+        access: String,
+        path: String,
+        indent: String,
+        depth: Int,
+        schemas: Map<String, JsonElement>,
+    ): List<String> {
+        schema.stringAt("\$ref")?.let { reference ->
+            val raw = reference.substringAfterLast('/')
+            val target = schemas[raw] as? JsonObject ?: return emptyList()
+            if (!hasValidator(target, schemas, emptySet())) return emptyList()
+            validationHelpers += listOf(ValidationHelper.ADD_ERROR, ValidationHelper.ADD_NESTED)
+            return listOf("${indent}if ($access != null) addNested(errors, `$path.`, ${typeName(raw)}.validate($access));")
+        }
+        nonNullOption(schema)?.let { return nestedChecks(it, access, path, indent, depth, schemas) }
+        if ("array" !in schema.typeNames()) return emptyList()
+        val items = schema.objectAt("items") ?: return emptyList()
+        val suffix = if (depth == 0) "" else "${depth + 1}"
+        val item = "item$suffix"
+        val index = "index$suffix"
+        val inner = nestedChecks(items, item, "$path[\${$index}]", "$indent        ", depth + 1, schemas)
+        if (inner.isEmpty()) return emptyList()
+        return listOf("${indent}if (Array.isArray($access)) {", "$indent    $access.forEach(($item, $index) => {") +
+            inner +
+            listOf("$indent    });", "$indent}")
+    }
+
+    private fun templateText(value: String): String = value.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$")
+
+    private fun JsonObject.numberAt(key: String): Double? =
+        (this[key] as? JsonPrimitive)?.takeUnless { it.isString }?.contentOrNull?.toDoubleOrNull()
 
     private fun JsonObject.typeNames(): List<String> =
         when (val type = this["type"]) {
@@ -734,6 +882,38 @@ export const IsoDateTime = {
 """
 
 private const val LUCIDE_TYPE = "LucideIcon"
+private const val REQUIRED_MESSAGE = "Required."
+private val CONSTRAINT_KEYWORDS = listOf("minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "pattern")
+
+private enum class ValidationHelper(
+    val source: String,
+) {
+    ADD_ERROR(
+        """function addError(errors: Record<string, string[]>, field: string, message: string): void {
+    (errors[field] ??= []).push(message);
+}
+""",
+    ),
+    ADD_NESTED(
+        """function addNested(errors: Record<string, string[]>, prefix: string, nested: Record<string, string[]>): void {
+    for (const [field, messages] of Object.entries(nested)) {
+        for (const message of messages) addError(errors, prefix + field, message);
+    }
+}
+""",
+    ),
+    MATCHES(
+        """function matches(pattern: string, text: string): boolean {
+    try {
+        return new RegExp(pattern, 'u').test(text);
+    } catch {
+        return true;
+    }
+}
+""",
+    ),
+}
+
 private const val EVENT_STREAM = "text/event-stream"
 
 private const val PUBLIC_CONFIG_SOURCE = """let publicConfig: Promise<PublicConfig> | undefined;

@@ -252,7 +252,7 @@ get("/api/report") {
 
 `customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
 
-The saved theme is applied by a small inline script. If you set a strict `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
+The saved theme is applied by a small inline script. The automatic [Content-Security-Policy](#security-headers) allows it by its hash. If you set your own `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
 
 ### Lucide
 
@@ -328,13 +328,15 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 
 | File | Contents |
 |---|---|
-| `types.ts` | An interface or union for every schema, an `empty()` factory for every object, a `const` object for every enum, and date types |
+| `types.ts` | An interface or union for every schema, an `empty()` factory for every object, `bounds` and `validate()` where the schema has constraints, a `const` object for every enum, and date types |
 | `services.ts` | One object per resource, such as `api.notes.list()` |
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
 | `openapi.json` | The OpenAPI document itself |
 
 Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
+
+With the `application` plugin, `check` runs `svelteVerifyTs`. It starts your app once, generates the TypeScript in memory and fails if the committed files differ, so a changed DTO or route can't drift away from the frontend unnoticed. Line endings are ignored. It passes when `generateTs` is off. To fix a failure, run `svelteGenerateTs`, or start the app in development mode, and commit the result. To leave it out of `check`, set `svelte.verifyTs=false` in `gradle.properties` or pass `-Psvelte.verifyTs=false`.
 
 Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
 
@@ -363,6 +365,38 @@ Properties with [validation annotations](#validation) also appear under `bounds`
 ```
 
 Strings get `minlength`, `maxlength` and `pattern`, numbers get `min` and `max`. A strict bound on an integer moves by one, and on a decimal it is left out, because HTML has no strict bounds. The browser matches `pattern` against the whole value, while the server only looks for a match inside it, so write patterns with `^` and `$` to get the same result in both.
+
+`required: true` is added only where the server would reject an empty field too, so the browser is never stricter than the server: strings with a minimum length of at least 1, and numbers that are required and not nullable, because an empty number input gives `null`. Nullable properties, booleans, lists, objects and enums never get it. A property with only `required` still gets a `bounds` entry.
+
+Every object type that the server checks against annotations, directly or through a nested object or list, also gets `validate()`. It runs the same checks in the browser and returns errors in the same shape as `fields` of a 422, with the same messages and paths such as `lines[1].sku`, plus `Required.` for an empty required number. An empty object means valid. Types without annotations get no `validate()`, just as the server skips them. One error display then covers both instant feedback and the server answer:
+
+```svelte
+<script lang="ts">
+    import { api, isValidationError, NoteInput } from '#api';
+
+    let draft = $state(NoteInput.empty());
+    let errors = $state<Record<string, string[]>>({});
+
+    async function save(event: SubmitEvent) {
+        event.preventDefault();
+        errors = NoteInput.validate(draft);
+        if (Object.keys(errors).length > 0) return;
+        try {
+            await api.notes.create(draft);
+        } catch (error) {
+            if (!isValidationError(error)) throw error;
+            errors = error.body.fields;
+        }
+    }
+</script>
+
+<form onsubmit={save}>
+    <input bind:value={draft.title} oninput={() => (errors = NoteInput.validate(draft))} {...NoteInput.bounds.title} />
+    {#if errors.title}<p role="alert">{errors.title.join(' ')}</p>{/if}
+</form>
+```
+
+Rules in `Validated.rules()` and in `validate { }` inside a route only run on the server, so their errors arrive with the 422.
 
 Dates arrive as strings, but not as plain `string`. A `LocalDate` becomes `IsoDate`, a `LocalTime` becomes `IsoTime`, and an `Instant` or `LocalDateTime` becomes `IsoDateTime`, so a date can't be mixed up with ordinary text. Helpers convert them safely:
 
@@ -495,7 +529,7 @@ post("/api/notes") {
 
 Errors use the JSON name, with paths such as `lines[1].sku` for nested values. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
 
-With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server. See [Generated TypeScript](#generated-typescript).
+With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](#generated-typescript).
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
 
@@ -582,15 +616,90 @@ install(Svelte) {
 
 ## Security headers
 
+Security headers are on by default. Every response gets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin`. Each is a property you can change, or set to `null` to leave out:
+
 ```kotlin
 install(Svelte) {
-    securityHeaders()
+    securityHeaders {
+        referrerPolicy = "no-referrer"
+    }
 }
 ```
 
-This sends `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin` on every response. Each is a property you can change, or set to `null` to leave out.
+Every HTML page from your build also gets a strict `Content-Security-Policy`:
 
-`contentSecurityPolicy` is off by default, because SvelteKit's inline startup script would break under a strict policy. Use SvelteKit's own `csp` option in `hash` mode, or set this property yourself and test it. It is never sent in dev, because it would break Vite.
+```
+default-src 'self'; script-src 'self' 'sha256-...'; style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none';
+base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+`script-src` lists the SHA-256 hash of each inline `<script>` in that page, which covers SvelteKit's startup script and the theme and locale script ktor-svelte adds, and nothing else. The hashes are computed once per page, the first time it is served, and cached. Other inline scripts and scripts from other origins are blocked. The other directives exist for these reasons:
+
+- `style-src 'unsafe-inline'`: Svelte transitions and many components set inline styles, and SvelteKit can inline small CSS files.
+- `img-src` and `font-src` allow `data:` because Tailwind, DaisyUI and Vite inline small images, icons and fonts as data URLs. `blob:` covers images made in the browser, such as upload previews.
+- `frame-ancestors` follows `frameOptions`: `'none'` for `DENY`, `'self'` for `SAMEORIGIN`, and left out when `frameOptions` is `null`.
+
+API responses, JavaScript, CSS and other files get no CSP, since it only matters for documents.
+
+To load something from another origin, such as an analytics script, add sources to a directive. A directive that is not in the policy yet is added with exactly the sources you list:
+
+```kotlin
+securityHeaders {
+    allowCspSources("script-src", "https://plausible.io")
+    allowCspSources("connect-src", "https://plausible.io")
+    allowCspSources("img-src", "https://avatars.example.com")
+}
+```
+
+To use your own policy instead, set `contentSecurityPolicy`. It is then sent unchanged on every response, and `allowCspSources` is ignored. Inline scripts in your pages break unless your policy allows them, for example with SvelteKit's own `csp` option in `hash` mode.
+
+To opt out:
+
+```kotlin
+securityHeaders { automaticContentSecurityPolicy = false }
+securityHeaders { enabled = false }
+```
+
+The first turns off only the automatic CSP. The second turns off all security headers.
+
+No CSP is sent while the dev proxy is active, because Vite injects its own scripts. The other headers are still sent.
+
+## API request guards
+
+Two checks protect every path under your API prefixes. Both are on by default.
+
+**Origin check.** POST, PUT, PATCH and DELETE requests from a browser on another site are refused with 403, so a cookie session cannot be used for cross-site request forgery. A request is refused when:
+
+- its `Origin` header names a different host than the request, or is `null`, or
+- it has no `Origin` but sends `Sec-Fetch-Site: cross-site`.
+
+Only the host is compared, ignoring case, scheme and port, so a TLS-terminating proxy or the Vite dev port does not cause false rejections. The request host comes from Ktor's `origin`, so it follows `XForwardedHeaders` or `ForwardedHeaders` when you install them. Requests with neither header, such as curl, server-to-server calls and tests, are allowed, because browsers always send one of them. GET and HEAD are never checked.
+
+To accept writes from another frontend, such as a separate admin app, list its exact origin:
+
+```kotlin
+install(Svelte) {
+    allowedOrigins("https://admin.example.com")
+}
+```
+
+**Body size limit.** Request bodies on API paths are limited to 1 MiB. Larger bodies get 413, whether they send `Content-Length` or are chunked. It uses Ktor's `RequestBodyLimit` plugin, so do not install that plugin yourself unless you set `maxApiBodySize = null`.
+
+Refused requests get a JSON body such as `{"message":"Request body is larger than the limit of 1048576 bytes."}`.
+
+To raise the limit, or turn the origin check off:
+
+```kotlin
+install(Svelte) {
+    originCheck = false
+    maxApiBodySize = 10L * 1024 * 1024
+}
+```
+
+Set `maxApiBodySize = null` to remove the limit.
+
+Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
 
 ## API docs
 
@@ -638,6 +747,18 @@ install(Svelte) {
     apiDocs = false
     apiDocsPath = "/api/docs"
     routing = SvelteRouting.Automatic
+    originCheck = true
+    allowedOrigins()
+    maxApiBodySize = 1048576
+
+    securityHeaders {
+        enabled = true
+        contentTypeOptions = "nosniff"
+        frameOptions = "DENY"
+        referrerPolicy = "strict-origin-when-cross-origin"
+        contentSecurityPolicy = null
+        automaticContentSecurityPolicy = true
+    }
 
     cache {
         immutable = "public, max-age=31536000, immutable"
@@ -667,7 +788,12 @@ install(Svelte) {
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
 | `apiDocs` | Serves Swagger UI in development mode. See [API docs](#api-docs) |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](#auth) |
-| `securityHeaders { }` | See [Security headers](#security-headers) |
+| `originCheck` | Refuses cross-site POST, PUT, PATCH and DELETE requests to API paths. See [API request guards](#api-request-guards) |
+| `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |
+| `maxApiBodySize` | Largest request body on API paths, in bytes. `null` disables it |
+| `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](#security-headers) |
+| `securityHeaders.contentSecurityPolicy` | Your own policy, sent unchanged on every response. `null` uses the automatic policy |
+| `securityHeaders.automaticContentSecurityPolicy` | Sends a strict CSP built from the inline scripts of each HTML page. Extend it with `allowCspSources(directive, sources)` |
 | `publicConfig(value)` | See [Runtime config](#runtime-config) |
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
@@ -730,6 +856,7 @@ The package manager must already be installed. The plugin does not download Node
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
+| `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
 | `svelteCheck` | Runs your `check` script |
 | `svelteRun --script=lint` | Runs any `package.json` script |
 | `svelteOutdated` | Lists outdated frontend dependencies |
@@ -742,6 +869,7 @@ The package manager must already be installed. The plugin does not download Node
 |---|---|
 | `-Psvelte.skip=true` | Skips the frontend build, and warns if a JAR is being built |
 | `-Psvelte.dev=true` | Same as skip, and also sets `-Dio.ktor.development=true` on `run` |
+| `-Psvelte.verifyTs=false` | Leaves `svelteVerifyTs` out of `check` |
 
 ## Dev workflow
 
@@ -791,7 +919,6 @@ Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localh
 - `adapter-static` only. There is no Node process in production, so `+page.server.ts`, `+server.ts` and form actions are not supported. Ktor is the backend.
 - The app is mounted at the root. `paths.base` is not supported yet.
 - No range requests, so large media does not belong in the SvelteKit build.
-- Security headers such as CSP are left to the app.
 - `generateTs` builds on Ktor's OpenAPI support, which Ktor still marks as experimental.
 
 ## Compatibility

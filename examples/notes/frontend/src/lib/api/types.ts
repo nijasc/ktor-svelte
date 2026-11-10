@@ -68,6 +68,9 @@ export const Note = {
         icon: 'AArrowDown',
         createdAt: '' as IsoDateTime,
     }),
+    bounds: {
+        id: { required: true },
+    },
 };
 
 export interface NoteInput {
@@ -85,7 +88,16 @@ export const NoteInput = {
         icon: 'AArrowDown',
     }),
     bounds: {
-        title: { maxlength: 80 },
+        title: { required: true, minlength: 1, maxlength: 80 },
+    },
+    validate: (value: NoteInput): Record<string, string[]> => {
+        const errors: Record<string, string[]> = {};
+        if (typeof value.title === 'string') {
+            const length = [...value.title].length;
+            if (length < 1) addError(errors, 'title', 'Must be at least 1 character.');
+            if (length > 80) addError(errors, 'title', 'Must be at most 80 characters.');
+        }
+        return errors;
     },
 };
 
@@ -101,6 +113,10 @@ export const NoteStats = {
         archived: 0,
         tags: {},
     }),
+    bounds: {
+        total: { required: true },
+        archived: { required: true },
+    },
 };
 
 export interface NotesExport {
@@ -139,3 +155,7 @@ export const PublicConfig = {
         appName: '',
     }),
 };
+
+function addError(errors: Record<string, string[]>, field: string, message: string): void {
+    (errors[field] ??= []).push(message);
+}

@@ -7,6 +7,8 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.security.MessageDigest
+import java.util.Base64
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -97,6 +99,24 @@ class NotesAppTest {
     }
 
     @Test
+    fun `pages carry a content security policy that allows their inline scripts`() {
+        listOf("/", "/about", "/notes").forEach { path ->
+            val response = send("GET", path, null, html)
+            val policy = response.headers().firstValue("Content-Security-Policy").orElse("")
+            assertContains(policy, "script-src 'self' 'sha256-", message = path)
+            assertContains(policy, "object-src 'none'", message = path)
+            val inlineScripts =
+                Regex("""<script>(.*?)</script>""", RegexOption.DOT_MATCHES_ALL).findAll(response.body()).map { it.groupValues[1] }.toList()
+            assertEquals(2, inlineScripts.size, path)
+            inlineScripts.forEach { script ->
+                val digest = MessageDigest.getInstance("SHA-256").digest(script.toByteArray())
+                assertContains(policy, "'sha256-${Base64.getEncoder().encodeToString(digest)}'", message = path)
+            }
+        }
+        assertFalse(send("GET", "/api/stats").headers().firstValue("Content-Security-Policy").isPresent)
+    }
+
+    @Test
     fun `api docs are not served in production`() {
         assertEquals(404, send("GET", "/api/docs").statusCode())
     }
@@ -168,6 +188,13 @@ class NotesAppTest {
         val response = send("POST", "/api/notes", """{"title":"${"x".repeat(81)}"}""")
         assertEquals(422, response.statusCode())
         assertContains(response.body(), """"title":["Must be at most 80 characters."]""")
+    }
+
+    @Test
+    fun `schema bounds and rules report together`() {
+        val response = send("POST", "/api/notes", """{"title":""}""")
+        assertEquals(422, response.statusCode())
+        assertContains(response.body(), """"title":["Must be at least 1 character.","A note needs a title."]""")
     }
 
     @Test

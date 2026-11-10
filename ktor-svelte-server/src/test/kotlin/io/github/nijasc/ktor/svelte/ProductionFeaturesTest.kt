@@ -27,7 +27,6 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @Serializable
@@ -166,65 +165,6 @@ class ProductionFeaturesTest {
             }
         assertContains(failure.message.orEmpty(), "Install the Svelte plugin")
     }
-
-    @Test
-    fun `security headers are sent on pages api calls and misses`() =
-        testApplication {
-            val build = fixtureBuild(files = frontendFiles)
-            application {
-                install(Svelte) {
-                    source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
-                    securityHeaders()
-                }
-                routing { get("/api/x") { call.respondText("x") } }
-            }
-            listOf("/", "/api/x", "/api/missing").forEach { path ->
-                val response = client.get(path)
-                assertEquals("nosniff", response.headers["X-Content-Type-Options"], path)
-                assertEquals("DENY", response.headers["X-Frame-Options"], path)
-                assertEquals("strict-origin-when-cross-origin", response.headers["Referrer-Policy"], path)
-                assertNull(response.headers["Content-Security-Policy"], path)
-            }
-        }
-
-    @Test
-    fun `security headers can be changed or left out`() =
-        testApplication {
-            val build = fixtureBuild(files = frontendFiles)
-            application {
-                install(Svelte) {
-                    source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
-                    securityHeaders {
-                        frameOptions = null
-                        contentSecurityPolicy = "default-src 'self'"
-                    }
-                }
-            }
-            val response = client.get("/")
-            assertNull(response.headers["X-Frame-Options"])
-            assertEquals("default-src 'self'", response.headers["Content-Security-Policy"])
-        }
-
-    @Test
-    fun `content security policy is skipped while proxying to vite`() =
-        testApplication {
-            val build = fixtureBuild(files = frontendFiles)
-            application {
-                install(Svelte) {
-                    source = SvelteSource.Directory(build)
-                    dev {
-                        url = "http://127.0.0.1:1"
-                        mode = DevMode.ALWAYS
-                    }
-                    securityHeaders { contentSecurityPolicy = "default-src 'self'" }
-                }
-            }
-            val response = client.get("/")
-            assertNull(response.headers["Content-Security-Policy"])
-            assertEquals("nosniff", response.headers["X-Content-Type-Options"])
-        }
 
     @Test
     fun `public config is served as json without caching`() =
