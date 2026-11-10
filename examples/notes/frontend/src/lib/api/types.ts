@@ -13,7 +13,7 @@ export interface Note {
     title: string;
     body: string;
     tags: string[];
-    status: 'ACTIVE' | 'ARCHIVED';
+    status: Status;
     icon: LucideIcon;
 }
 
@@ -37,6 +37,13 @@ export interface NotesExport {
 export interface Problem {
     message: string;
 }
+
+export const Status = {
+    ACTIVE: 'ACTIVE',
+    ARCHIVED: 'ARCHIVED',
+} as const;
+
+export type Status = (typeof Status)[keyof typeof Status];
 
 export interface PublicConfig {
     appName: string;
