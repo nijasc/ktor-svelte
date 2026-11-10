@@ -55,6 +55,16 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `paths are escaped in generated urls`() {
+        val source =
+            services(
+                """{"/api/it's":{"get":{}},"/api/a`b${'$'}c/{id}":{"get":{}}}""",
+            )
+        assertContains(source, "request<unknown>('GET', '/api/it\\'s',")
+        assertContains(source, "request<unknown>('GET', `/api/a\\`b\\\$c/\${encodeURIComponent(id)}`,")
+    }
+
+    @Test
     fun `single value enums stay literals`() {
         val source = types("""{"A":{"type":"object","properties":{"kind":{"type":"string","enum":["Only"]}}}}""")
         assertContains(source, "kind?: 'Only';")

@@ -674,12 +674,7 @@ internal class TypeScriptGenerator(
         }
         signature += "options?: RequestOptions"
 
-        val urlSource =
-            if (pathParameters.isEmpty()) {
-                "'$path'"
-            } else {
-                "`" + PATH_PARAMETER.replace(path) { match -> "\${encodeURIComponent(${identifier(match.groupValues[1])})}" } + "`"
-            }
+        val urlSource = if (pathParameters.isEmpty()) quoted(path) else urlTemplate(path)
         val extras =
             buildList {
                 add("...options")
@@ -707,6 +702,19 @@ internal class TypeScriptGenerator(
             errorStatuses = declaredErrors.keys.toList(),
         )
     }
+
+    private fun urlTemplate(path: String): String =
+        buildString {
+            append('`')
+            var end = 0
+            PATH_PARAMETER.findAll(path).forEach { match ->
+                append(templateText(path.substring(end, match.range.first)))
+                append("\${encodeURIComponent(${identifier(match.groupValues[1])})}")
+                end = match.range.last + 1
+            }
+            append(templateText(path.substring(end)))
+            append('`')
+        }
 
     private fun errorResponses(
         operation: JsonObject,
