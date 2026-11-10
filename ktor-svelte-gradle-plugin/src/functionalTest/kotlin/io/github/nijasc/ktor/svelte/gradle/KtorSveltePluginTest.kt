@@ -282,6 +282,25 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `clean refuses an output directory that is the frontend itself`() {
+        val project = project()
+        project.buildScript(
+            javaBuild +
+                """
+
+                svelte {
+                    outputDir = "."
+                }
+                """.trimIndent(),
+        )
+
+        val result = project.runAndFail("svelteClean")
+
+        assertContains(result.output, "must be a path inside svelte.frontendDir")
+        assertTrue(project.frontend.resolve("package.json").isFile)
+    }
+
+    @Test
     fun `clean removes generated output and keeps node_modules`() {
         val project = project()
         project.run("jar")

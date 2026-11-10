@@ -11,6 +11,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.decodeURLPart
+import io.ktor.http.encodeURLPath
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
@@ -100,7 +101,8 @@ private suspend fun respondFromManifest(
 
         is Resolution.Redirect -> {
             val query = call.request.uri.substringAfter('?', "")
-            val location = if (query.isEmpty()) resolution.location else "${resolution.location}?$query"
+            val path = resolution.location.encodeURLPath()
+            val location = if (query.isEmpty()) path else "$path?$query"
             call.response.header(HttpHeaders.Location, location)
             call.respond(HttpStatusCode.PermanentRedirect)
         }

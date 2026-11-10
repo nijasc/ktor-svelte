@@ -490,7 +490,7 @@ public class KtorSveltePlugin : Plugin<Project> {
 
     private fun frontendOutput(extension: SvelteExtension) =
         extension.frontendDir.zip(extension.outputDir) { dir, output ->
-            if (output.isBlank() || output.startsWith("/") || output.split('/', '\\').contains("..")) {
+            if (!isFolderInsideFrontend(output)) {
                 throw GradleException("svelte.outputDir must be a path inside svelte.frontendDir, but was '$output'.")
             }
             dir.dir(output)
@@ -542,6 +542,21 @@ public class KtorSveltePlugin : Plugin<Project> {
             .use { stream -> properties.load(stream) }
         return properties.getProperty("version")
     }
+}
+
+private val DRIVE_PREFIX = Regex("^[A-Za-z]:")
+
+internal fun isFolderInsideFrontend(output: String): Boolean {
+    if (output.isBlank() ||
+        output.startsWith("/") ||
+        output.startsWith("\\") ||
+        DRIVE_PREFIX.containsMatchIn(output) ||
+        File(output).isAbsolute
+    ) {
+        return false
+    }
+    val segments = output.split('/', '\\').filter { it.isNotEmpty() && it != "." }
+    return segments.isNotEmpty() && ".." !in segments
 }
 
 private class FrontendDirArgument(

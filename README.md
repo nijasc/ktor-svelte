@@ -495,7 +495,7 @@ To refresh the files without your dev server, for example in CI, run the task be
 
 ## Validation
 
-Put simple bounds on the properties with Ktor's `JsonSchema` annotations, and any other rule on the class itself by implementing `Validated`. Both run on every `call.receive` of that class, in every route, nested classes and lists included. When something fails, the route never runs, and the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands.
+Put simple bounds on the properties with Ktor's `JsonSchema` annotations, and any other rule on the class itself by implementing `Validated`. Both run on every `call.receive` of that class, in every route, for nested classes, lists, map values and sealed subtypes too. Receiving a `List` or `Map` of such classes checks every item. When something fails, the route never runs, and the client gets a 422 with an error list per field, in one standard shape that `isValidationError` understands.
 
 ```kotlin
 import io.ktor.openapi.JsonSchema
@@ -527,7 +527,7 @@ post("/api/notes") {
 | `@JsonSchema.Minimum(x)`, `@JsonSchema.Maximum(x)` | A number, `exclusive = true` for a strict bound | `Must be at least 1.` |
 | `@JsonSchema.Pattern(regex)` | A string contains a match | `Must match ^[a-z]+$.` |
 
-Errors use the JSON name, with paths such as `lines[1].sku` for nested values. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
+Errors use the JSON name, with paths such as `lines[1].sku` for nested values, `prices[eur].amount` for map values and `[0].sku` for the items of a received list. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
 
 With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](#generated-typescript).
 
@@ -669,12 +669,12 @@ No CSP is sent while the dev proxy is active, because Vite injects its own scrip
 
 Two checks protect every path under your API prefixes. Both are on by default.
 
-**Origin check.** POST, PUT, PATCH and DELETE requests from a browser on another site are refused with 403, so a cookie session cannot be used for cross-site request forgery. A request is refused when:
+**Origin check.** POST, PUT, PATCH, DELETE and every other method except GET, HEAD, OPTIONS and TRACE from a browser on another site are refused with 403, so a cookie session cannot be used for cross-site request forgery. A request is refused when:
 
 - its `Origin` header names a different host than the request, or is `null`, or
 - it has no `Origin` but sends `Sec-Fetch-Site: cross-site`.
 
-Only the host is compared, ignoring case, scheme and port, so a TLS-terminating proxy or the Vite dev port does not cause false rejections. The request host comes from Ktor's `origin`, so it follows `XForwardedHeaders` or `ForwardedHeaders` when you install them. Requests with neither header, such as curl, server-to-server calls and tests, are allowed, because browsers always send one of them. GET and HEAD are never checked.
+Only the host is compared, ignoring case, scheme and port, so a TLS-terminating proxy or the Vite dev port does not cause false rejections. The request host comes from Ktor's `origin`, so it follows `XForwardedHeaders` or `ForwardedHeaders` when you install them. Requests with neither header, such as curl, server-to-server calls and tests, are allowed, because browsers always send one of them. GET, HEAD, OPTIONS and TRACE are never checked.
 
 To accept writes from another frontend, such as a separate admin app, list its exact origin:
 
@@ -788,7 +788,7 @@ install(Svelte) {
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
 | `apiDocs` | Serves Swagger UI in development mode. See [API docs](#api-docs) |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](#auth) |
-| `originCheck` | Refuses cross-site POST, PUT, PATCH and DELETE requests to API paths. See [API request guards](#api-request-guards) |
+| `originCheck` | Refuses cross-site requests to API paths for every method except GET, HEAD, OPTIONS and TRACE. See [API request guards](#api-request-guards) |
 | `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |
 | `maxApiBodySize` | Largest request body on API paths, in bytes. `null` disables it |
 | `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](#security-headers) |
@@ -831,7 +831,7 @@ svelte {
 | Setting | Purpose |
 |---|---|
 | `frontendDir` | Directory of the SvelteKit project |
-| `outputDir` | Adapter output, relative to `frontendDir`. Must match the adapter's `pages` option |
+| `outputDir` | Adapter output, a folder inside `frontendDir` given relative to it. Must match the adapter's `pages` option |
 | `packageManager` | `AUTO`, `BUN`, `PNPM`, `NPM` or `YARN`. `AUTO` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |

@@ -237,4 +237,33 @@ class RequestResolutionTest {
             assertEquals("home", response.bodyAsText())
             assertTrue(response.headers[HttpHeaders.ContentType].orEmpty().startsWith("text/html"))
         }
+
+    @Test
+    fun `redirects to pages with spaces and non ascii names are percent encoded`() =
+        testApplication {
+            val build = fixtureBuild(mapOf("café.html" to "cafe", "a b/index.html" to "ab", "index.html" to "home"))
+            application {
+                install(Svelte) {
+                    source = SvelteSource.Directory(build)
+                    dev { mode = DevMode.NEVER }
+                }
+            }
+            val noRedirects = createClient { followRedirects = false }
+            val flat = noRedirects.get("/caf%C3%A9/?x=1")
+            val folder = noRedirects.get("/a%20b")
+            assertEquals(HttpStatusCode.PermanentRedirect, flat.status)
+            assertEquals("/caf%C3%A9?x=1", flat.headers[HttpHeaders.Location])
+            assertEquals("/a%20b/", folder.headers[HttpHeaders.Location])
+            assertEquals("cafe", noRedirects.get("/caf%C3%A9").bodyAsText())
+        }
+
+    @Test
+    fun `redirects keep an encoded query and answer head requests`() =
+        svelteTest {
+            val get = client.get("/about/?q=a%20b%26c&x")
+            val head = client.head("/docs")
+            assertEquals("/about?q=a%20b%26c&x", get.headers[HttpHeaders.Location])
+            assertEquals(HttpStatusCode.PermanentRedirect, head.status)
+            assertEquals("/docs/", head.headers[HttpHeaders.Location])
+        }
 }
