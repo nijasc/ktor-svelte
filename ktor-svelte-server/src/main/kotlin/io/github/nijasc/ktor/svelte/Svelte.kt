@@ -8,7 +8,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
-import io.github.nijasc.ktor.svelte.internal.dev.isLocalRequest
+import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.dev.statusJson
@@ -132,7 +132,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
             if (pluginConfig.statusEndpoint) {
                 get(STATUS_PATH) {
-                    if (!isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))) {
+                    if (!isLocalCall(call)) {
                         call.respondText(STATUS_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
                         return@get
                     }

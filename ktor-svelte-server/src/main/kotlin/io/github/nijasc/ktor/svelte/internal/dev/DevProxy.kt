@@ -71,6 +71,12 @@ internal fun isLocalRequest(
     hostHeader: String?,
 ): Boolean = isLoopbackHost(remoteAddress) && (hostHeader == null || isLoopbackHost(hostWithoutPort(hostHeader)))
 
+private val FORWARDING_HEADERS = listOf(HttpHeaders.Forwarded, HttpHeaders.XForwardedFor, HttpHeaders.XForwardedHost, "X-Real-IP")
+
+internal fun isLocalCall(call: ApplicationCall): Boolean =
+    FORWARDING_HEADERS.none { it in call.request.headers } &&
+        isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))
+
 internal fun requireAllowedTarget(
     url: String,
     allowRemote: Boolean,

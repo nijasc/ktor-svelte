@@ -6,7 +6,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.Manifest
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.Resolution
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
-import io.github.nijasc.ktor.svelte.internal.dev.isLocalRequest
+import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -45,7 +45,7 @@ internal class SvelteHandler(
         val method = call.request.httpMethod
         val path = decodedPath(call)
         if (path == null || resolver.isApiPath(path)) return
-        val mayProxy = allowRemote || isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))
+        val mayProxy = allowRemote || isLocalCall(call)
         if (method != HttpMethod.Get && method != HttpMethod.Head) {
             if (method in PROXIED_BODY_METHODS && mayProxy) devProxy?.forward(call)
             return
