@@ -12,6 +12,9 @@ public class SvelteConfig {
     internal var apiPrefixList: List<String> = listOf("/api")
         private set
 
+    internal var paramRouteList: List<String> = emptyList()
+        private set
+
     internal val cacheConfig: SvelteCacheConfig = SvelteCacheConfig()
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
@@ -33,6 +36,10 @@ public class SvelteConfig {
 
     public fun apiPrefixes(vararg prefixes: String) {
         apiPrefixList = prefixes.toList()
+    }
+
+    public fun paramRoutes(vararg routes: String) {
+        paramRouteList = routes.toList()
     }
 
     public fun cache(configure: SvelteCacheConfig.() -> Unit) {

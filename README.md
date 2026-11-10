@@ -544,7 +544,7 @@ At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more 
 | 3 | `/about` when `about.html` exists, or `/about/` when `about/index.html` exists | Serve the page |
 | 4 | `/about/` when only `about.html` exists, or `/about` when only `about/index.html` exists | 308 redirect to the form that exists, keeping the query string |
 | 5 | Missing path under `/_app/`, or any path with a file extension | 404, never the fallback |
-| 6 | Other path, with a fallback page and a request that accepts HTML | Serve the fallback with status 200 |
+| 6 | Other path, with a fallback page and a request that accepts HTML, or a path matching `paramRoutes` | Serve the fallback with status 200 |
 | 7 | Anything else | `404.html` with status 404 if it exists, otherwise a plain 404 |
 
 Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Step 5 lets SvelteKit recover from stale chunks after a deploy by doing a full page reload.
@@ -558,6 +558,7 @@ The values shown are the defaults.
 ```kotlin
 install(Svelte) {
     apiPrefixes("/api")
+    paramRoutes()
     spaFallback = "200.html"
     notFoundPage = "404.html"
     source = SvelteSource.Classpath
@@ -587,6 +588,7 @@ install(Svelte) {
 | Setting | Purpose |
 |---|---|
 | `apiPrefixes` | Paths the frontend never answers, and the routes included in `generateTs`. `/api` matches `/api` and `/api/x`, not `/apiary` |
+| `paramRoutes` | SvelteKit route patterns such as `/items/[id]`, `/docs/[...rest]` and `/blog/[[page]]`. Matching paths get the fallback even when the request does not accept HTML, for example link previews or tests. Paths with a file extension still return 404 |
 | `spaFallback` | Page for client-side routes. Must match the adapter's `fallback` option. `null` disables it |
 | `notFoundPage` | Page served with status 404. `null` disables it |
 | `source` | `SvelteSource.Classpath`, or `SvelteSource.Directory(path)` to serve a build from disk |
