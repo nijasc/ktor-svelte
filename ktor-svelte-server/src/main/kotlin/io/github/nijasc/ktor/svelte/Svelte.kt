@@ -8,6 +8,7 @@ import io.github.nijasc.ktor.svelte.internal.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.Manifest
 import io.github.nijasc.ktor.svelte.internal.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.Resolution
+import io.github.nijasc.ktor.svelte.internal.SchemaConstraints
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.isLocalRequest
 import io.github.nijasc.ktor.svelte.internal.requireAllowedTarget
@@ -96,8 +97,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (devProxy == null) application.log.warn(MISSING_BUILD_MESSAGE)
         }
 
+        val constraints = SchemaConstraints()
         application.receivePipeline.intercept(ApplicationReceivePipeline.After) { received ->
-            if (received is Validated) received.requireValid()
+            constraints.requireValid(received)
         }
 
         on(CallFailed) { call, cause ->

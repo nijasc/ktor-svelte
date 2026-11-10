@@ -2,6 +2,7 @@ package notes
 
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
+import io.ktor.openapi.JsonSchema
 import kotlinx.serialization.Serializable
 import ktorsvelte.LucideIcon
 import java.util.concurrent.ConcurrentHashMap
@@ -12,7 +13,6 @@ const val MAX_TITLE_LENGTH = 80
 @Serializable
 data class AppConfig(
     val appName: String,
-    val maxTitleLength: Int,
 )
 
 @Serializable
@@ -30,14 +30,14 @@ data class Note(
 
 @Serializable
 data class NoteInput(
+    @JsonSchema.MaxLength(MAX_TITLE_LENGTH)
     val title: String,
     val body: String = "",
     val tags: List<String> = emptyList(),
     val icon: LucideIcon = LucideIcon.StickyNote,
 ) : Validated {
     override fun Validator.rules() {
-        check("title", title.isNotBlank()) { "A note needs a title." }
-        check("title", title.length <= MAX_TITLE_LENGTH) { "Keep the title under $MAX_TITLE_LENGTH characters." }
+        check(::title, title.isNotBlank()) { "A note needs a title." }
     }
 }
 

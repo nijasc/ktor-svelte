@@ -2415,7 +2415,8 @@
                 ],
                 "properties": {
                     "title": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 80
                     },
                     "body": {
                         "type": "string"

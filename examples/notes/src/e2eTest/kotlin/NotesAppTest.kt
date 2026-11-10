@@ -158,6 +158,13 @@ class NotesAppTest {
     }
 
     @Test
+    fun `schema bounds on the dto are enforced`() {
+        val response = send("POST", "/api/notes", """{"title":"${"x".repeat(81)}"}""")
+        assertEquals(422, response.statusCode())
+        assertContains(response.body(), """"title":["Must be at most 80 characters."]""")
+    }
+
+    @Test
     fun `api answers json or xml based on accept`() {
         val json = send("GET", "/api/notes/export", null, "Accept" to "application/json")
         assertContains(json.headers().firstValue("Content-Type").orElse(""), "json")

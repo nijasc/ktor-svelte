@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte
 
 import io.ktor.utils.io.KtorDsl
+import kotlin.reflect.KProperty0
 
 public class ValidationException(
     public val fields: Map<String, List<String>>,
@@ -15,7 +16,22 @@ public class Validator {
         condition: Boolean,
         message: () -> String,
     ) {
-        if (!condition) errors.getOrPut(field) { mutableListOf() } += message()
+        if (!condition) fail(field, message())
+    }
+
+    public fun check(
+        property: KProperty0<*>,
+        condition: Boolean,
+        message: () -> String,
+    ) {
+        check(property.name, condition, message)
+    }
+
+    internal fun fail(
+        field: String,
+        message: String,
+    ) {
+        errors.getOrPut(field) { mutableListOf() } += message
     }
 
     internal fun failures(): Map<String, List<String>> = errors
@@ -23,11 +39,6 @@ public class Validator {
 
 public interface Validated {
     public fun Validator.rules()
-}
-
-internal fun Validated.requireValid() {
-    val validated = this
-    validate { with(validated) { rules() } }
 }
 
 public fun validate(rules: Validator.() -> Unit) {
