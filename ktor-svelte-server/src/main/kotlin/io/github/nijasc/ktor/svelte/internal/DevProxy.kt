@@ -9,6 +9,7 @@ import io.ktor.http.content.OutgoingContent
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
+import io.ktor.server.request.receive
 import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
@@ -144,9 +145,16 @@ internal class DevProxy(
             call.respondText("The ktor-svelte dev proxy does not forward WebSockets.", status = HttpStatusCode.BadGateway)
             return true
         }
+        val method = call.request.httpMethod
+        val body =
+            if (method == HttpMethod.Get || method == HttpMethod.Head) {
+                HttpRequest.BodyPublishers.noBody()
+            } else {
+                HttpRequest.BodyPublishers.ofByteArray(call.receive<ByteArray>())
+            }
         val orderedTargets = listOf(preferredTarget) + (targets - preferredTarget)
         for (target in orderedTargets) {
-            val response = send(call, target) ?: continue
+            val response = send(call, target, body) ?: continue
             preferredTarget = target
             respond(call, response)
             return true
@@ -157,11 +165,12 @@ internal class DevProxy(
     private suspend fun send(
         call: ApplicationCall,
         target: String,
+        body: HttpRequest.BodyPublisher,
     ): HttpResponse<InputStream>? {
         val builder =
             HttpRequest
                 .newBuilder(upstreamUri(target, call.request.uri))
-                .method(call.request.httpMethod.value, HttpRequest.BodyPublishers.noBody())
+                .method(call.request.httpMethod.value, body)
         call.request.headers.forEach { name, values ->
             if (name.lowercase() !in UNFORWARDED_REQUEST_HEADERS) {
                 values.forEach { value -> builder.header(name, value) }
