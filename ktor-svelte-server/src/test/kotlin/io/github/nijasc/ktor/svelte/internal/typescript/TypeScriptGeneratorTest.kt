@@ -331,10 +331,10 @@ class TypeScriptGeneratorTest {
         assertContains(
             source,
             "    bounds: {\n" +
-                "        name: { minlength: 2, maxlength: 80, pattern: '^[a-z]+$' },\n" +
+                "        name: { required: true, minlength: 2, maxlength: 80, pattern: '^[a-z]+$' },\n" +
                 "        age: { min: 0, max: 129 },\n" +
                 "        price: { max: 9.5 },\n" +
-                "    },\n};",
+                "    },\n",
         )
     }
 
@@ -374,5 +374,137 @@ class TypeScriptGeneratorTest {
             )
         assertContains(source, "import type { IsoDate } from './types.js';")
         assertContains(source, "from?: IsoDate")
+    }
+
+    @Test
+    fun `required never makes the browser stricter than the server`() {
+        val source =
+            types(
+                """{"A":{"type":"object","required":["count","price","flag","list","kind","nullableCount","name"],"properties":{
+                "count":{"type":"integer"},
+                "price":{"type":"number"},
+                "optionalCount":{"type":"integer"},
+                "nullableCount":{"type":["integer","null"]},
+                "title":{"type":"string","minLength":1},
+                "empty":{"type":"string","minLength":0},
+                "nullableTitle":{"type":["string","null"],"minLength":1},
+                "name":{"type":"string"},
+                "flag":{"type":"boolean"},
+                "list":{"type":"array","items":{"type":"string"}},
+                "kind":{"type":"string","enum":["X","Y"]}}}}""",
+            )
+        assertContains(
+            source,
+            "    bounds: {\n" +
+                "        count: { required: true },\n" +
+                "        price: { required: true },\n" +
+                "        title: { required: true, minlength: 1 },\n" +
+                "        empty: { minlength: 0 },\n" +
+                "        nullableTitle: { minlength: 1 },\n" +
+                "    },\n",
+        )
+    }
+
+    @Test
+    fun `validate mirrors the server rules and messages`() {
+        val source =
+            types(
+                """{"A":{"type":"object","required":["count","name"],"properties":{
+                "name":{"type":"string","minLength":1,"maxLength":80,"pattern":"^[a-z]+$"},
+                "count":{"type":"integer","minimum":0,"exclusiveMaximum":10},
+                "price":{"type":["number","null"],"exclusiveMinimum":0,"maximum":9.5},
+                "code":{"type":"string","minLength":3}}}}""",
+            )
+        assertContains(
+            source,
+            """
+                validate: (value: A): Record<string, string[]> => {
+                    const errors: Record<string, string[]> = {};
+                    if (typeof value.name === 'string') {
+                        const length = [...value.name].length;
+                        if (length < 1) addError(errors, 'name', 'Must be at least 1 character.');
+                        if (length > 80) addError(errors, 'name', 'Must be at most 80 characters.');
+                        if (!matches('^[a-z]+$', value.name)) addError(errors, 'name', 'Must match ^[a-z]+$.');
+                    }
+                    if (typeof value.count !== 'number' || Number.isNaN(value.count)) addError(errors, 'count', 'Required.');
+                    if (typeof value.count === 'number') {
+                        if (value.count < 0) addError(errors, 'count', 'Must be at least 0.');
+                        if (value.count >= 10) addError(errors, 'count', 'Must be less than 10.');
+                    }
+                    if (typeof value.price === 'number') {
+                        if (value.price <= 0) addError(errors, 'price', 'Must be greater than 0.');
+                        if (value.price > 9.5) addError(errors, 'price', 'Must be at most 9.5.');
+                    }
+                    if (typeof value.code === 'string') {
+                        const length = [...value.code].length;
+                        if (length < 3) addError(errors, 'code', 'Must be at least 3 characters.');
+                    }
+                    return errors;
+                },
+            };
+            """.trimIndent(),
+        )
+        assertContains(source, "function addError(")
+        assertContains(source, "function matches(pattern: string, text: string): boolean {")
+        assertFalse(source.contains("function addNested("))
+    }
+
+    @Test
+    fun `validate recurses into references and lists with server paths`() {
+        val source =
+            types(
+                """{"Order":{"type":"object","properties":{
+                "address":{"${'$'}ref":"#/components/schemas/Address"},
+                "billing":{"oneOf":[{"${'$'}ref":"#/components/schemas/Address"},{"type":"null"}]},
+                "lines":{"type":"array","items":{"${'$'}ref":"#/components/schemas/Line"}},
+                "grid":{"type":"array","items":{"type":"array","items":{"${'$'}ref":"#/components/schemas/Line"}}},
+                "tags":{"type":"array","items":{"type":"string"}}}},
+                "Address":{"type":"object","properties":{"street":{"type":"string","maxLength":5}}},
+                "Line":{"type":"object","properties":{"sku":{"type":"string","pattern":"^[a-z]+$"}}}}""",
+            )
+        assertContains(
+            source,
+            "        if (value.address != null) addNested(errors, `address.`, Address.validate(value.address));\n" +
+                "        if (value.billing != null) addNested(errors, `billing.`, Address.validate(value.billing));\n" +
+                "        if (Array.isArray(value.lines)) {\n" +
+                "            value.lines.forEach((item, index) => {\n" +
+                "                if (item != null) addNested(errors, `lines[\${index}].`, Line.validate(item));\n" +
+                "            });\n" +
+                "        }\n" +
+                "        if (Array.isArray(value.grid)) {\n" +
+                "            value.grid.forEach((item, index) => {\n" +
+                "                if (Array.isArray(item)) {\n" +
+                "                    item.forEach((item2, index2) => {\n" +
+                "                        if (item2 != null) addNested(errors, `grid[\${index}][\${index2}].`, Line.validate(item2));\n" +
+                "                    });\n" +
+                "                }\n" +
+                "            });\n" +
+                "        }\n" +
+                "        return errors;\n",
+        )
+        assertFalse(source.contains("value.tags"))
+    }
+
+    @Test
+    fun `unconstrained objects get no validate`() {
+        val source =
+            types(
+                """{"A":{"type":"object","required":["id"],"properties":{"id":{"type":"integer"},
+                "self":{"${'$'}ref":"#/components/schemas/A"},"b":{"${'$'}ref":"#/components/schemas/B"}}},
+                "B":{"type":"object","properties":{"x":{"type":"string"}}}}""",
+            )
+        assertContains(source, "        id: { required: true },\n")
+        assertFalse(source.contains("validate"))
+        assertFalse(source.contains("function "))
+    }
+
+    @Test
+    fun `recursive types validate through themselves`() {
+        val source =
+            types(
+                """{"Tree":{"type":"object","properties":{"name":{"type":"string","maxLength":3},
+                "children":{"type":"array","items":{"${'$'}ref":"#/components/schemas/Tree"}}}}}""",
+            )
+        assertContains(source, "addNested(errors, `children[\${index}].`, Tree.validate(item));")
     }
 }

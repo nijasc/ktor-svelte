@@ -328,7 +328,7 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 
 | File | Contents |
 |---|---|
-| `types.ts` | An interface or union for every schema, an `empty()` factory for every object, a `const` object for every enum, and date types |
+| `types.ts` | An interface or union for every schema, an `empty()` factory for every object, `bounds` and `validate()` where the schema has constraints, a `const` object for every enum, and date types |
 | `services.ts` | One object per resource, such as `api.notes.list()` |
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
@@ -363,6 +363,38 @@ Properties with [validation annotations](#validation) also appear under `bounds`
 ```
 
 Strings get `minlength`, `maxlength` and `pattern`, numbers get `min` and `max`. A strict bound on an integer moves by one, and on a decimal it is left out, because HTML has no strict bounds. The browser matches `pattern` against the whole value, while the server only looks for a match inside it, so write patterns with `^` and `$` to get the same result in both.
+
+`required: true` is added only where the server would reject an empty field too, so the browser is never stricter than the server: strings with a minimum length of at least 1, and numbers that are required and not nullable, because an empty number input gives `null`. Nullable properties, booleans, lists, objects and enums never get it. A property with only `required` still gets a `bounds` entry.
+
+Every object type that the server checks against annotations, directly or through a nested object or list, also gets `validate()`. It runs the same checks in the browser and returns errors in the same shape as `fields` of a 422, with the same messages and paths such as `lines[1].sku`, plus `Required.` for an empty required number. An empty object means valid. Types without annotations get no `validate()`, just as the server skips them. One error display then covers both instant feedback and the server answer:
+
+```svelte
+<script lang="ts">
+    import { api, isValidationError, NoteInput } from '#api';
+
+    let draft = $state(NoteInput.empty());
+    let errors = $state<Record<string, string[]>>({});
+
+    async function save(event: SubmitEvent) {
+        event.preventDefault();
+        errors = NoteInput.validate(draft);
+        if (Object.keys(errors).length > 0) return;
+        try {
+            await api.notes.create(draft);
+        } catch (error) {
+            if (!isValidationError(error)) throw error;
+            errors = error.body.fields;
+        }
+    }
+</script>
+
+<form onsubmit={save}>
+    <input bind:value={draft.title} oninput={() => (errors = NoteInput.validate(draft))} {...NoteInput.bounds.title} />
+    {#if errors.title}<p role="alert">{errors.title.join(' ')}</p>{/if}
+</form>
+```
+
+Rules in `Validated.rules()` and in `validate { }` inside a route only run on the server, so their errors arrive with the 422.
 
 Dates arrive as strings, but not as plain `string`. A `LocalDate` becomes `IsoDate`, a `LocalTime` becomes `IsoTime`, and an `Instant` or `LocalDateTime` becomes `IsoDateTime`, so a date can't be mixed up with ordinary text. Helpers convert them safely:
 
@@ -495,7 +527,7 @@ post("/api/notes") {
 
 Errors use the JSON name, with paths such as `lines[1].sku` for nested values. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
 
-With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server. See [Generated TypeScript](#generated-typescript).
+With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](#generated-typescript).
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
 

@@ -97,29 +97,27 @@ internal class SchemaConstraints {
         when (annotation) {
             is JsonSchema.MinLength ->
                 if (text != null && text.codePointCount(0, text.length) < annotation.value) {
-                    validator.fail(field, "Must be at least ${characters(annotation.value)}.")
+                    validator.fail(field, ConstraintMessages.minLength(annotation.value))
                 }
 
             is JsonSchema.MaxLength ->
                 if (text != null && text.codePointCount(0, text.length) > annotation.value) {
-                    validator.fail(field, "Must be at most ${characters(annotation.value)}.")
+                    validator.fail(field, ConstraintMessages.maxLength(annotation.value))
                 }
 
             is JsonSchema.Minimum ->
                 if (number != null && (number < annotation.value || (annotation.exclusive && number == annotation.value))) {
-                    val relation = if (annotation.exclusive) "greater than" else "at least"
-                    validator.fail(field, "Must be $relation ${format(annotation.value)}.")
+                    validator.fail(field, ConstraintMessages.minimum(annotation.value, annotation.exclusive))
                 }
 
             is JsonSchema.Maximum ->
                 if (number != null && (number > annotation.value || (annotation.exclusive && number == annotation.value))) {
-                    val relation = if (annotation.exclusive) "less than" else "at most"
-                    validator.fail(field, "Must be $relation ${format(annotation.value)}.")
+                    validator.fail(field, ConstraintMessages.maximum(annotation.value, annotation.exclusive))
                 }
 
             is JsonSchema.Pattern ->
                 if (text != null && !patterns.computeIfAbsent(annotation.value, ::Regex).containsMatchIn(text)) {
-                    validator.fail(field, "Must match ${annotation.value}.")
+                    validator.fail(field, ConstraintMessages.pattern(annotation.value))
                 }
         }
     }
@@ -130,6 +128,24 @@ internal class SchemaConstraints {
             annotation is JsonSchema.Minimum ||
             annotation is JsonSchema.Maximum ||
             annotation is JsonSchema.Pattern
+}
+
+internal object ConstraintMessages {
+    fun minLength(count: Int): String = "Must be at least ${characters(count)}."
+
+    fun maxLength(count: Int): String = "Must be at most ${characters(count)}."
+
+    fun minimum(
+        value: Double,
+        exclusive: Boolean,
+    ): String = "Must be ${if (exclusive) "greater than" else "at least"} ${format(value)}."
+
+    fun maximum(
+        value: Double,
+        exclusive: Boolean,
+    ): String = "Must be ${if (exclusive) "less than" else "at most"} ${format(value)}."
+
+    fun pattern(pattern: String): String = "Must match $pattern."
 
     private fun characters(count: Int): String = if (count == 1) "1 character" else "$count characters"
 
