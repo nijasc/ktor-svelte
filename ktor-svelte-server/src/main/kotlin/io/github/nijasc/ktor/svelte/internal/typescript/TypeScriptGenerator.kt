@@ -571,7 +571,7 @@ internal class TypeScriptGenerator(
     private fun literal(value: JsonElement): String =
         when {
             value is JsonNull -> "null"
-            value is JsonPrimitive && value.isString -> "'" + value.content.replace("\\", "\\\\").replace("'", "\\'") + "'"
+            value is JsonPrimitive && value.isString -> quoted(value.content)
             value is JsonPrimitive -> value.content
             else -> "unknown"
         }
@@ -827,7 +827,23 @@ private fun identifier(value: String): String {
     return if (IDENTIFIER.matches(name)) name else "_$name"
 }
 
-private fun propertyKey(name: String): String = if (IDENTIFIER.matches(name)) name else "'${name.replace("'", "\\'")}'"
+private fun propertyKey(name: String): String = if (IDENTIFIER.matches(name)) name else quoted(name)
+
+private fun quoted(value: String): String =
+    buildString {
+        append('\'')
+        value.forEach { character ->
+            when {
+                character == '\\' -> append("\\\\")
+                character == '\'' -> append("\\'")
+                character == '\n' -> append("\\n")
+                character == '\r' -> append("\\r")
+                character < ' ' || character == ' ' || character == ' ' -> append("\\u%04x".format(character.code))
+                else -> append(character)
+            }
+        }
+        append('\'')
+    }
 
 private fun JsonObject.objectAt(key: String): JsonObject? = this[key] as? JsonObject
 
