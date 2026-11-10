@@ -2,23 +2,24 @@ package io.github.nijasc.ktor.svelte
 
 import io.github.nijasc.ktor.svelte.internal.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.AssetStore
-import io.github.nijasc.ktor.svelte.internal.BuildContentSecurityPolicy
-import io.github.nijasc.ktor.svelte.internal.CONTENT_SECURITY_POLICY
+import io.github.nijasc.ktor.svelte.internal.CONTENT_SECURITY_POLICY_HEADER
 import io.github.nijasc.ktor.svelte.internal.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.DevProxy
 import io.github.nijasc.ktor.svelte.internal.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.Manifest
 import io.github.nijasc.ktor.svelte.internal.OriginCheck
+import io.github.nijasc.ktor.svelte.internal.PageContentSecurityPolicy
 import io.github.nijasc.ktor.svelte.internal.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.Resolution
 import io.github.nijasc.ktor.svelte.internal.SchemaConstraints
+import io.github.nijasc.ktor.svelte.internal.decodedPathOrRaw
 import io.github.nijasc.ktor.svelte.internal.findPayloadTooLarge
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.isLocalRequest
-import io.github.nijasc.ktor.svelte.internal.requestPathForGuards
 import io.github.nijasc.ktor.svelte.internal.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.respondBodyTooLarge
+import io.github.nijasc.ktor.svelte.internal.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.statusJson
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.ktor.http.ContentType
@@ -54,9 +55,6 @@ import io.ktor.server.routing.openapi.hide
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.util.AttributeKey
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private val PROXIED_BODY_METHODS = setOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete)
@@ -89,7 +87,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
         val securityHeaders = pluginConfig.securityHeadersConfig
         val responder =
-            AssetResponder(store, pluginConfig.cacheConfig, buildContentSecurityPolicy(store, securityHeaders, devProxy != null))
+            AssetResponder(store, pluginConfig.cacheConfig, pageContentSecurityPolicy(store, securityHeaders, devProxy != null))
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
@@ -120,13 +118,13 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (pluginConfig.originCheck) {
             val originCheck = OriginCheck(pluginConfig.allowedOriginList)
             onCall { call ->
-                if (resolver.isApiPath(requestPathForGuards(call))) originCheck.refuseIfCrossOrigin(call)
+                if (resolver.isApiPath(decodedPathOrRaw(call))) originCheck.refuseIfCrossOrigin(call)
             }
         }
 
         on(CallFailed) { call, cause ->
             if (cause is ValidationException) {
-                respondValidationFailure(call, cause)
+                respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
                 return@on
             }
             if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) respondBodyTooLarge(call, maxApiBodySize)
@@ -188,7 +186,7 @@ private fun Route.catchAll(
 }
 
 private fun PluginBuilder<SvelteConfig>.installSecurityHeaders(
-    headers: SvelteSecurityHeaders,
+    headers: SvelteSecurityHeadersConfig,
     devProxyActive: Boolean,
 ) {
     val values =
@@ -196,7 +194,7 @@ private fun PluginBuilder<SvelteConfig>.installSecurityHeaders(
             headers.contentTypeOptions?.let { "X-Content-Type-Options" to it },
             headers.frameOptions?.let { "X-Frame-Options" to it },
             headers.referrerPolicy?.let { "Referrer-Policy" to it },
-            headers.contentSecurityPolicy?.takeUnless { devProxyActive }?.let { CONTENT_SECURITY_POLICY to it },
+            headers.contentSecurityPolicy?.takeUnless { devProxyActive }?.let { CONTENT_SECURITY_POLICY_HEADER to it },
         )
     onCall { call ->
         values.forEach { (name, value) -> call.response.header(name, value) }
@@ -209,18 +207,18 @@ private fun PluginBuilder<SvelteConfig>.installBodyLimit(
 ) {
     check(application.pluginOrNull(RequestBodyLimit) == null) { BODY_LIMIT_CONFLICT_MESSAGE }
     application.install(RequestBodyLimit) {
-        bodyLimit { call -> if (resolver.isApiPath(requestPathForGuards(call))) limit else Long.MAX_VALUE }
+        bodyLimit { call -> if (resolver.isApiPath(decodedPathOrRaw(call))) limit else Long.MAX_VALUE }
     }
 }
 
-private fun buildContentSecurityPolicy(
+private fun pageContentSecurityPolicy(
     store: AssetStore,
-    headers: SvelteSecurityHeaders,
+    headers: SvelteSecurityHeadersConfig,
     devProxyActive: Boolean,
-): BuildContentSecurityPolicy? {
+): PageContentSecurityPolicy? {
     val automatic = headers.enabled && headers.automaticContentSecurityPolicy && headers.contentSecurityPolicy == null
     if (!automatic || devProxyActive) return null
-    return BuildContentSecurityPolicy(store, headers.frameOptions, headers.extraCspSources)
+    return PageContentSecurityPolicy(store, headers.frameOptions, headers.extraCspSources)
 }
 
 private class SvelteHandler(
@@ -257,15 +255,6 @@ private class SvelteHandler(
             else -> respondMissingBuild(call, devProxy, devUrl)
         }
     }
-}
-
-private suspend fun respondValidationFailure(
-    call: ApplicationCall,
-    failure: ValidationException,
-) {
-    val fields = JsonObject(failure.fields.mapValues { (_, messages) -> JsonArray(messages.map(::JsonPrimitive)) })
-    val body = JsonObject(mapOf("message" to JsonPrimitive("Validation failed"), "fields" to fields))
-    call.respondText(body.toString(), ContentType.Application.Json, HttpStatusCode.UnprocessableEntity)
 }
 
 private fun isDevProxyActive(

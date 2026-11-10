@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
 import io.github.nijasc.ktor.svelte.internal.ConstraintMessages
+import io.github.nijasc.ktor.svelte.internal.formatNumber
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -295,8 +296,6 @@ internal class TypeScriptGenerator(
             is JsonPrimitive -> listOf(type.content)
             else -> emptyList()
         }
-
-    private fun formatNumber(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
 
     private fun enumDeclaration(
         name: String,

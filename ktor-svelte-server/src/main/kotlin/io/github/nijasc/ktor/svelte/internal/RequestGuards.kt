@@ -12,6 +12,8 @@ import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
 import io.ktor.server.response.respondText
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.net.URI
@@ -55,7 +57,7 @@ internal class OriginCheck(
     }
 }
 
-internal fun requestPathForGuards(call: ApplicationCall): String {
+internal fun decodedPathOrRaw(call: ApplicationCall): String {
     val path = call.request.path()
     return try {
         path.decodeURLPart()
@@ -74,13 +76,15 @@ internal suspend fun respondBodyTooLarge(
     respondJsonMessage(call, HttpStatusCode.PayloadTooLarge, "Request body is larger than the limit of $limit bytes.")
 }
 
-private suspend fun respondJsonMessage(
+internal suspend fun respondJsonMessage(
     call: ApplicationCall,
     status: HttpStatusCode,
     message: String,
+    fields: Map<String, List<String>>? = null,
 ) {
-    val body = JsonObject(mapOf("message" to JsonPrimitive(message)))
-    call.respondText(body.toString(), ContentType.Application.Json, status)
+    val content = mutableMapOf<String, JsonElement>("message" to JsonPrimitive(message))
+    if (fields != null) content["fields"] = JsonObject(fields.mapValues { (_, messages) -> JsonArray(messages.map(::JsonPrimitive)) })
+    call.respondText(JsonObject(content).toString(), ContentType.Application.Json, status)
 }
 
 private fun normalizeOrigin(origin: String): String = origin.trim().trimEnd('/').lowercase()

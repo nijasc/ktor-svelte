@@ -169,21 +169,6 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
             </component>
             """.trimIndent() + "\n"
 
-    private fun compoundConfiguration(
-        name: String,
-        members: List<String>,
-    ): Pair<String, String> {
-        val runs = members.joinToString("\n") { """    <toRun name="${escapeXml(it)}" type="GradleRunConfiguration" />""" }
-        return name to
-            """<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="${escapeXml(name)}" type="CompoundRunConfigurationType">
-$runs
-    <method v="2" />
-  </configuration>
-</component>
-"""
-    }
-
     private fun escapeXml(value: String): String =
         value
             .replace("&", "&amp;")

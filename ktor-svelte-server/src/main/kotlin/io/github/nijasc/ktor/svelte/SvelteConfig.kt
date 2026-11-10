@@ -21,7 +21,7 @@ public class SvelteConfig {
     internal val cacheConfig: SvelteCacheConfig = SvelteCacheConfig()
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
-    internal val securityHeadersConfig: SvelteSecurityHeaders = SvelteSecurityHeaders()
+    internal val securityHeadersConfig: SvelteSecurityHeadersConfig = SvelteSecurityHeadersConfig()
     internal var publicConfigJson: String? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -63,7 +63,7 @@ public class SvelteConfig {
         transportConfig.configure()
     }
 
-    public fun securityHeaders(configure: SvelteSecurityHeaders.() -> Unit = {}) {
+    public fun securityHeaders(configure: SvelteSecurityHeadersConfig.() -> Unit = {}) {
         securityHeadersConfig.configure()
     }
 
@@ -96,7 +96,7 @@ public class SvelteDevConfig {
 }
 
 @KtorDsl
-public class SvelteSecurityHeaders {
+public class SvelteSecurityHeadersConfig {
     internal val extraCspSources: MutableMap<String, MutableList<String>> = linkedMapOf()
 
     public var enabled: Boolean = true
@@ -117,6 +117,12 @@ public class SvelteSecurityHeaders {
         extraCspSources.getOrPut(directive) { mutableListOf() }.addAll(sources)
     }
 }
+
+@Deprecated(
+    "Renamed to match the other configuration classes.",
+    ReplaceWith("SvelteSecurityHeadersConfig"),
+)
+public typealias SvelteSecurityHeaders = SvelteSecurityHeadersConfig
 
 private val CSP_DIRECTIVE = Regex("[a-z][a-z-]*")
 private val CSP_SOURCE = Regex("""[^\s;,]+""")

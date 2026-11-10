@@ -4,6 +4,7 @@ import java.security.MessageDigest
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 
+internal const val CONTENT_SECURITY_POLICY_HEADER = "Content-Security-Policy"
 private const val NONE = "'none'"
 private const val SELF = "'self'"
 
@@ -31,7 +32,7 @@ internal fun frameAncestorsFor(frameOptions: String?): String? =
         else -> null
     }
 
-internal class BuildContentSecurityPolicy(
+internal class PageContentSecurityPolicy(
     private val store: AssetStore,
     frameOptions: String?,
     extraSources: Map<String, List<String>>,

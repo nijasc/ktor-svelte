@@ -16,7 +16,7 @@ import kotlin.io.path.relativeTo
 private const val MANIFEST_RESOURCE = "ktor-svelte/manifest.json"
 private const val PUBLIC_RESOURCE_ROOT = "ktor-svelte/public"
 
-internal fun isHiddenAsset(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
+internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
 
 internal interface AssetStore {
     fun manifest(): Manifest?
@@ -59,7 +59,7 @@ internal class DirectoryAssetStore(
                     .filter { it.isRegularFile(LinkOption.NOFOLLOW_LINKS) }
                     .map { it.relativeTo(root).invariantSeparatorsPathString }
                     .toList()
-                    .filterNot(::isHiddenAsset)
+                    .filterNot(::isHiddenPath)
                     .toSet()
             }
         if (all.none { it.endsWith(".html") }) return null

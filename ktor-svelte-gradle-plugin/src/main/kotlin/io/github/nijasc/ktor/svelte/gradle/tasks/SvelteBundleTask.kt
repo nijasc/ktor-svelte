@@ -15,7 +15,7 @@ import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
 
-private const val FORMAT_VERSION = 1
+private const val MANIFEST_FORMAT_VERSION = 1
 private val ENCODINGS = listOf("br" to ".br", "gzip" to ".gz")
 
 internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
@@ -70,7 +70,7 @@ public abstract class SvelteBundleTask : DefaultTask() {
             files
                 .filterKeys { path -> !isEncodedVariant(path, files.keys) }
                 .map { (path, file) -> "${quote(path)}:${entryJson(path, file, files)}" }
-        return "{\"formatVersion\":$FORMAT_VERSION,\"files\":{${entries.joinToString(",")}}}\n"
+        return "{\"formatVersion\":$MANIFEST_FORMAT_VERSION,\"files\":{${entries.joinToString(",")}}}\n"
     }
 
     private fun entryJson(

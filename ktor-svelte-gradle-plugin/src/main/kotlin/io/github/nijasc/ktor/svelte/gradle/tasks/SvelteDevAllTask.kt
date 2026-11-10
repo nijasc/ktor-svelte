@@ -1,5 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import io.github.nijasc.ktor.svelte.gradle.DEVELOPMENT_SYSTEM_PROPERTY
+import io.github.nijasc.ktor.svelte.gradle.FRONTEND_DIR_SYSTEM_PROPERTY
 import io.github.nijasc.ktor.svelte.gradle.requireExecutable
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -158,8 +160,8 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                     .executablePath.asFile.path,
             ) + debugArguments(debugPort.get()) +
                 listOf(
-                    "-Dio.ktor.development=true",
-                    "-Dktor.svelte.frontendDir=${frontendDir.get().asFile.path}",
+                    "-D$DEVELOPMENT_SYSTEM_PROPERTY=true",
+                    "-D$FRONTEND_DIR_SYSTEM_PROPERTY=${frontendDir.get().asFile.path}",
                     "-cp",
                     appClasspath.asPath,
                     mainClass.get(),
