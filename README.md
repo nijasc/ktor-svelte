@@ -6,7 +6,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/nijasc/ktor-svelte/ci.yml?branch=main&label=CI)](https://github.com/nijasc/ktor-svelte/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/nijasc/ktor-svelte)](LICENSE)
 [![Ktor](https://img.shields.io/badge/Ktor-3.x-087CFA?logo=ktor&logoColor=white)](https://ktor.io)
-[![SvelteKit](https://img.shields.io/badge/SvelteKit-3.x-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev/docs/kit)
+[![Svelte](https://img.shields.io/badge/Svelte-5.57.3%2B-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev)
 
 **Latest release:** [Maven Central](https://central.sonatype.com/artifact/io.github.nijasc/ktor-svelte-server) | [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.nijasc.ktor-svelte) | [Release notes](https://github.com/nijasc/ktor-svelte/releases/latest)
 
