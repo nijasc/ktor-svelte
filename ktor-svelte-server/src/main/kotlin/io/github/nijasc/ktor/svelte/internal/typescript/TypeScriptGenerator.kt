@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
 import io.github.nijasc.ktor.svelte.internal.ConstraintMessages
+import io.github.nijasc.ktor.svelte.internal.formatNumber
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -296,8 +297,6 @@ internal class TypeScriptGenerator(
             else -> emptyList()
         }
 
-    private fun formatNumber(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
-
     private fun enumDeclaration(
         name: String,
         values: List<String>,
@@ -571,7 +570,7 @@ internal class TypeScriptGenerator(
     private fun literal(value: JsonElement): String =
         when {
             value is JsonNull -> "null"
-            value is JsonPrimitive && value.isString -> "'" + value.content.replace("\\", "\\\\").replace("'", "\\'") + "'"
+            value is JsonPrimitive && value.isString -> quoted(value.content)
             value is JsonPrimitive -> value.content
             else -> "unknown"
         }
@@ -654,7 +653,7 @@ internal class TypeScriptGenerator(
         pathParameters.forEach { parameter ->
             val schema = declared.firstOrNull { it.stringAt("name") == parameter && it.stringAt("in") == "path" }?.objectAt("schema")
             val type = schema?.let { tsType(it, references) }?.takeUnless { it == "unknown" || it == "string" } ?: "string | number"
-            signature += "${identifier(parameter)}: $type"
+            signature += "${parameterName(parameter)}: $type"
         }
 
         val requestBody = operation.objectAt("requestBody")
@@ -674,12 +673,7 @@ internal class TypeScriptGenerator(
         }
         signature += "options?: RequestOptions"
 
-        val urlSource =
-            if (pathParameters.isEmpty()) {
-                "'$path'"
-            } else {
-                "`" + PATH_PARAMETER.replace(path) { match -> "\${encodeURIComponent(${identifier(match.groupValues[1])})}" } + "`"
-            }
+        val urlSource = if (pathParameters.isEmpty()) quoted(path) else urlTemplate(path)
         val extras =
             buildList {
                 add("...options")
@@ -707,6 +701,19 @@ internal class TypeScriptGenerator(
             errorStatuses = declaredErrors.keys.toList(),
         )
     }
+
+    private fun urlTemplate(path: String): String =
+        buildString {
+            append('`')
+            var end = 0
+            PATH_PARAMETER.findAll(path).forEach { match ->
+                append(templateText(path.substring(end, match.range.first)))
+                append("\${encodeURIComponent(${parameterName(match.groupValues[1])})}")
+                end = match.range.last + 1
+            }
+            append(templateText(path.substring(end)))
+            append('`')
+        }
 
     private fun errorResponses(
         operation: JsonObject,
@@ -765,7 +772,7 @@ internal class TypeScriptGenerator(
                 .removePrefix(prefix)
                 .split('/')
                 .firstOrNull { it.isNotEmpty() && !it.startsWith("{") }
-        return first?.let(::camelCase)?.let(::identifier) ?: "root"
+        return first?.let { identifier(it, SERVICES_MODULE_NAMES) } ?: "root"
     }
 
     private fun conventionalName(
@@ -811,6 +818,7 @@ private fun typeName(raw: String): String =
         .filter { it.isNotEmpty() }
         .joinToString("") { pascalCase(it) }
         .ifEmpty { "Unnamed" }
+        .let { if (it.first().isDigit()) "_$it" else it }
 
 private fun pascalCase(value: String): String = camelCase(value).replaceFirstChar { it.uppercase() }
 
@@ -822,12 +830,33 @@ private fun camelCase(value: String): String {
         }.joinToString("")
 }
 
-private fun identifier(value: String): String {
+private fun identifier(
+    value: String,
+    taken: Set<String> = emptySet(),
+): String {
     val name = camelCase(value)
-    return if (IDENTIFIER.matches(name)) name else "_$name"
+    return if (IDENTIFIER.matches(name) && name !in RESERVED_WORDS && name !in taken) name else "_$name"
 }
 
-private fun propertyKey(name: String): String = if (IDENTIFIER.matches(name)) name else "'${name.replace("'", "\\'")}'"
+private fun parameterName(value: String): String = identifier(value, ENDPOINT_ARGUMENTS)
+
+private fun propertyKey(name: String): String = if (IDENTIFIER.matches(name)) name else quoted(name)
+
+private fun quoted(value: String): String =
+    buildString {
+        append('\'')
+        value.forEach { character ->
+            when {
+                character == '\\' -> append("\\\\")
+                character == '\'' -> append("\\'")
+                character == '\n' -> append("\\n")
+                character == '\r' -> append("\\r")
+                character < ' ' || character == ' ' || character == ' ' -> append("\\u%04x".format(character.code))
+                else -> append(character)
+            }
+        }
+        append('\'')
+    }
 
 private fun JsonObject.objectAt(key: String): JsonObject? = this[key] as? JsonObject
 
@@ -882,6 +911,60 @@ export const IsoDateTime = {
 """
 
 private const val LUCIDE_TYPE = "LucideIcon"
+private val SERVICES_MODULE_NAMES =
+    setOf("api", "request", "stream", "ApiError", "errorStatuses", "isApiError", "publicConfig", "loadPublicConfig")
+private val ENDPOINT_ARGUMENTS = setOf("body", "query", "options", "encodeURIComponent")
+private val RESERVED_WORDS =
+    setOf(
+        "arguments",
+        "await",
+        "break",
+        "case",
+        "catch",
+        "class",
+        "const",
+        "continue",
+        "debugger",
+        "default",
+        "delete",
+        "do",
+        "else",
+        "enum",
+        "eval",
+        "export",
+        "extends",
+        "false",
+        "finally",
+        "for",
+        "function",
+        "if",
+        "implements",
+        "import",
+        "in",
+        "instanceof",
+        "interface",
+        "let",
+        "new",
+        "null",
+        "package",
+        "private",
+        "protected",
+        "public",
+        "return",
+        "static",
+        "super",
+        "switch",
+        "this",
+        "throw",
+        "true",
+        "try",
+        "typeof",
+        "var",
+        "void",
+        "while",
+        "with",
+        "yield",
+    )
 private const val REQUIRED_MESSAGE = "Required."
 private val CONSTRAINT_KEYWORDS = listOf("minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "pattern")
 

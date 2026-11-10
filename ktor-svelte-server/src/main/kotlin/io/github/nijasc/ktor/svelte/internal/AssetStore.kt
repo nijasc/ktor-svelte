@@ -1,22 +1,26 @@
 package io.github.nijasc.ktor.svelte.internal
 
 import java.io.InputStream
+import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.attribute.FileTime
+import java.security.DigestInputStream
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.fileSize
+import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.inputStream
 import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.readBytes
 import kotlin.io.path.relativeTo
 
 private const val MANIFEST_RESOURCE = "ktor-svelte/manifest.json"
 private const val PUBLIC_RESOURCE_ROOT = "ktor-svelte/public"
 
-internal fun isHiddenAsset(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
+internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
 
 internal interface AssetStore {
     fun manifest(): Manifest?
@@ -43,6 +47,7 @@ internal class DirectoryAssetStore(
     private val rescanOnEveryRead: Boolean,
 ) : AssetStore {
     private val cachedManifest: Manifest? by lazy { scan() }
+    private val hashes = ConcurrentHashMap<String, CachedHash>()
 
     override fun manifest(): Manifest? = if (rescanOnEveryRead) scan() else cachedManifest
 
@@ -59,7 +64,7 @@ internal class DirectoryAssetStore(
                     .filter { it.isRegularFile(LinkOption.NOFOLLOW_LINKS) }
                     .map { it.relativeTo(root).invariantSeparatorsPathString }
                     .toList()
-                    .filterNot(::isHiddenAsset)
+                    .filterNot(::isHiddenPath)
                     .toSet()
             }
         if (all.none { it.endsWith(".html") }) return null
@@ -67,6 +72,7 @@ internal class DirectoryAssetStore(
             all
                 .filterNot { path -> isEncodedVariant(path, all) }
                 .associateWith { path -> entryFor(path, all) }
+        hashes.keys.retainAll(files.keys)
         return Manifest(files)
     }
 
@@ -77,7 +83,7 @@ internal class DirectoryAssetStore(
         val file = root.resolve(path)
         return ManifestEntry(
             size = file.fileSize(),
-            hash = sha256(file),
+            hash = hashOf(path, file),
             encodings =
                 AssetEncoding.entries
                     .filter { encoding -> (path + encoding.fileSuffix) in all }
@@ -90,9 +96,25 @@ internal class DirectoryAssetStore(
         all: Set<String>,
     ): Boolean = AssetEncoding.entries.any { path.endsWith(it.fileSuffix) && path.removeSuffix(it.fileSuffix) in all }
 
-    private fun sha256(file: Path): String =
-        MessageDigest
-            .getInstance("SHA-256")
-            .digest(file.readBytes())
-            .joinToString("") { "%02x".format(it) }
+    private fun hashOf(
+        path: String,
+        file: Path,
+    ): String {
+        val size = file.fileSize()
+        val modified = file.getLastModifiedTime()
+        hashes[path]?.takeIf { it.size == size && it.modified == modified }?.let { return it.hash }
+        return sha256(file).also { hashes[path] = CachedHash(size, modified, it) }
+    }
+
+    private fun sha256(file: Path): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        DigestInputStream(file.inputStream(), digest).use { it.transferTo(OutputStream.nullOutputStream()) }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private class CachedHash(
+        val size: Long,
+        val modified: FileTime,
+        val hash: String,
+    )
 }

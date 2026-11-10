@@ -160,8 +160,8 @@ class SecurityHeadersTest {
 
     @Test
     fun `malformed sources are rejected`() {
-        assertFailsWith<IllegalArgumentException> { SvelteSecurityHeaders().allowCspSources("script-src", "a; b") }
-        assertFailsWith<IllegalArgumentException> { SvelteSecurityHeaders().allowCspSources("Script Src", "a") }
+        assertFailsWith<IllegalArgumentException> { SvelteSecurityHeadersConfig().allowCspSources("script-src", "a; b") }
+        assertFailsWith<IllegalArgumentException> { SvelteSecurityHeadersConfig().allowCspSources("Script Src", "a") }
     }
 
     @Test
