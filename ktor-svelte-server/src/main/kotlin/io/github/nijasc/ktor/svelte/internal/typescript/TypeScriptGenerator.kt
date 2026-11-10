@@ -25,19 +25,22 @@ internal class TypeScriptGenerator(
     private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
     private var enumTypes: Map<Set<String>, EnumType> = emptyMap()
+    private var usesDates = false
 
     fun generate(openApiJson: String): Map<String, String> {
         val document = Json.parseToJsonElement(openApiJson).jsonObject
         val filtered = withApiPathsOnly(document)
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
         enumTypes = nameEnums(filtered, schemas)
+        usesDates = hasDateFormat(filtered) || publicConfigSchema?.let { hasDateFormat(Json.parseToJsonElement(it)) } == true
+        val dateTypes = if (usesDates) DATE_FORMATS.values else emptyList()
         return mapOf(
             "client.ts" to CLIENT_SOURCE,
             "types.ts" to typesSource(schemas) + publicConfigDeclaration(schemas),
             "services.ts" to
                 servicesSource(
                     filtered.objectAt("paths").orEmpty(),
-                    schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name },
+                    schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name } + dateTypes,
                 ),
             "index.ts" to INDEX_SOURCE,
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
@@ -64,7 +67,7 @@ internal class TypeScriptGenerator(
             (prefixes.isEmpty() || prefixes.any { prefix -> prefix == "/" || path == prefix || path.startsWith("$prefix/") })
 
     private fun typesSource(schemas: Map<String, JsonElement>): String {
-        if (schemas.isEmpty() && iconNames.isEmpty() && enumTypes.isEmpty()) return "export {};\n"
+        if (schemas.isEmpty() && iconNames.isEmpty() && enumTypes.isEmpty() && !usesDates) return "export {};\n"
         val references = mutableSetOf<String>()
         val schemaDeclarations =
             schemas.map { (name, schema) -> name to declaration(typeName(name), schema.jsonObject, references, schemas) }
@@ -79,7 +82,8 @@ internal class TypeScriptGenerator(
             } else {
                 ""
             }
-        return iconImport + declarations.ifEmpty { "export {};\n" }
+        val body = listOfNotNull(DATES_SOURCE.takeIf { usesDates }, declarations.ifEmpty { null }).joinToString("\n")
+        return iconImport + body.ifEmpty { "export {};\n" }
     }
 
     private fun declaration(
@@ -296,7 +300,7 @@ internal class TypeScriptGenerator(
                 else -> null
             }
         return when (type) {
-            "string" -> "''"
+            "string" -> dateType(schema)?.let { "'' as $it" } ?: "''"
             "integer", "number" -> "0"
             "boolean" -> "false"
             "array" ->
@@ -378,7 +382,7 @@ internal class TypeScriptGenerator(
         indent: String,
     ): String =
         when (type) {
-            "string" -> "string"
+            "string" -> dateType(schema)?.also { references += it } ?: "string"
             "integer", "number" -> "number"
             "boolean" -> "boolean"
             "null" -> "null"
@@ -684,6 +688,50 @@ private fun JsonObject.arrayAt(key: String): JsonArray? = this[key] as? JsonArra
 private fun JsonObject.stringAt(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 
 private fun JsonObject.stringList(key: String): List<String> = arrayAt(key).orEmpty().map { it.jsonPrimitive.content }
+
+private val DATE_FORMATS = linkedMapOf("date" to "IsoDate", "time" to "IsoTime", "date-time" to "IsoDateTime")
+
+private fun dateType(schema: JsonObject): String? = schema.stringAt("format")?.let(DATE_FORMATS::get)
+
+private fun hasDateFormat(element: JsonElement): Boolean =
+    when (element) {
+        is JsonObject -> dateType(element) != null || element.values.any(::hasDateFormat)
+        is JsonArray -> element.any(::hasDateFormat)
+        else -> false
+    }
+
+private const val DATES_SOURCE = """declare const iso: unique symbol;
+
+const pad = (value: number, width = 2) => String(value).padStart(width, '0');
+
+export type IsoDate = string & { readonly [iso]: 'date' };
+
+export const IsoDate = {
+    parse: (value: IsoDate): Date => {
+        const [year, month, day] = value.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        date.setFullYear(year);
+        return date;
+    },
+    from: (date: Date): IsoDate => `${'$'}{pad(date.getFullYear(), 4)}-${'$'}{pad(date.getMonth() + 1)}-${'$'}{pad(date.getDate())}` as IsoDate,
+    today: (): IsoDate => IsoDate.from(new Date()),
+};
+
+export type IsoTime = string & { readonly [iso]: 'time' };
+
+export const IsoTime = {
+    from: (date: Date): IsoTime => `${'$'}{pad(date.getHours())}:${'$'}{pad(date.getMinutes())}:${'$'}{pad(date.getSeconds())}` as IsoTime,
+};
+
+export type IsoDateTime = string & { readonly [iso]: 'date-time' };
+
+export const IsoDateTime = {
+    parse: (value: IsoDateTime): Date => new Date(value),
+    from: (date: Date): IsoDateTime => date.toISOString() as IsoDateTime,
+    fromLocal: (date: Date): IsoDateTime => `${'$'}{IsoDate.from(date)}T${'$'}{IsoTime.from(date)}` as IsoDateTime,
+    now: (): IsoDateTime => IsoDateTime.from(new Date()),
+};
+"""
 
 private const val LUCIDE_TYPE = "LucideIcon"
 private const val EVENT_STREAM = "text/event-stream"

@@ -328,7 +328,7 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 
 | File | Contents |
 |---|---|
-| `types.ts` | An interface or union for every schema, an `empty()` factory for every object, and a `const` object for every enum |
+| `types.ts` | An interface or union for every schema, an `empty()` factory for every object, a `const` object for every enum, and date types |
 | `services.ts` | One object per resource, such as `api.notes.list()` |
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
@@ -363,6 +363,18 @@ Properties with [validation annotations](#validation) also appear under `bounds`
 ```
 
 Strings get `minlength`, `maxlength` and `pattern`, numbers get `min` and `max`. A strict bound on an integer moves by one, and on a decimal it is left out, because HTML has no strict bounds. The browser matches `pattern` against the whole value, while the server only looks for a match inside it, so write patterns with `^` and `$` to get the same result in both.
+
+Dates arrive as strings, but not as plain `string`. A `LocalDate` becomes `IsoDate`, a `LocalTime` becomes `IsoTime`, and an `Instant` or `LocalDateTime` becomes `IsoDateTime`, so a date can't be mixed up with ordinary text. Helpers convert them safely:
+
+```ts
+import { IsoDate, IsoDateTime } from '#api';
+
+const due = IsoDate.parse(task.due);
+const created = IsoDateTime.parse(note.createdAt).toLocaleString();
+const input = { due: IsoDate.today(), remindAt: IsoDateTime.now() };
+```
+
+`IsoDate.parse` returns local midnight. `new Date('2026-11-10')` would give UTC midnight instead, which shows the previous day west of Greenwich. For an `Instant` use `IsoDateTime.from(date)`, which writes UTC. For a `LocalDateTime` use `IsoDateTime.fromLocal(date)`, which writes no offset. Both share one OpenAPI format, so the type can't tell them apart. The values of `<input type="date">`, `type="time"` and `type="datetime-local"` already have the right shape for `LocalDate`, `LocalTime` and `LocalDateTime`. The helpers are only generated when your API uses a date.
 
 `svelteInit` also sets up the short `#api` import. For a frontend you already have, add it to `frontend/package.json`:
 

@@ -13,6 +13,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class NotesAppTest {
@@ -155,6 +156,11 @@ class NotesAppTest {
         val response = send("POST", "/api/notes", """{"title":" "}""")
         assertEquals(422, response.statusCode())
         assertContains(response.body(), """"title":["A note needs a title."]""")
+    }
+
+    @Test
+    fun `instants travel as iso strings`() {
+        assertTrue(Regex(""""createdAt":\s*"\d{4}-\d{2}-\d{2}T[^"]+Z"""").containsMatchIn(send("GET", "/api/notes/1").body()))
     }
 
     @Test
