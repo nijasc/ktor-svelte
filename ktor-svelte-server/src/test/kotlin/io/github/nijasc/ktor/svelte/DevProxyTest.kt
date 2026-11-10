@@ -3,6 +3,7 @@ package io.github.nijasc.ktor.svelte
 import com.sun.net.httpserver.HttpServer
 import io.github.nijasc.ktor.svelte.internal.isLocalRequest
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.upstreamUri
 import io.ktor.client.request.get
 import io.ktor.client.request.head
 import io.ktor.client.request.header
@@ -369,6 +370,48 @@ class DevProxyTest {
         assertTrue(isLocalRequest("127.0.0.1", null))
         assertFalse(isLocalRequest("10.0.0.1", null))
     }
+
+    @Test
+    fun `upstream uri encodes unsafe characters without double encoding`() {
+        val base = "http://localhost:5173"
+        val cases =
+            mapOf(
+                "/src/routes/(app)/datanode/definition/[id]/+page.svelte" to
+                    "/src/routes/(app)/datanode/definition/%5Bid%5D/+page.svelte",
+                "/a b/c d.js" to "/a%20b/c%20d.js",
+                "/a%20b/%5Bid%5D/x" to "/a%20b/%5Bid%5D/x",
+                "/p?q=a b&r=[1]&s={x}|^`&t=%5B&u=100%" to "/p?q=a%20b&r=%5B1%5D&s=%7Bx%7D%7C%5E%60&t=%5B&u=100%25",
+                "/caf\u00e9" to "/caf%C3%A9",
+            )
+        cases.forEach { (raw, expected) ->
+            assertEquals("$base$expected", upstreamUri(base, raw).toString(), raw)
+        }
+    }
+
+    @Test
+    fun `upstream uri keeps an ipv6 dev url`() {
+        val uri = upstreamUri("http://[::1]:5173", "/src/routes/[id]/+page.svelte?x=[1]")
+        assertEquals("[::1]", uri.host)
+        assertEquals(5173, uri.port)
+        assertEquals("/src/routes/[id]/+page.svelte", uri.path)
+        assertEquals("x=%5B1%5D", uri.rawQuery)
+    }
+
+    @Test
+    fun `bracketed paths reach vite`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.ALWAYS
+                    }
+                }
+            }
+            val response = client.get("/src/routes/(app)/[id]/+page.svelte?a=b")
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(listOf("GET /src/routes/(app)/%5Bid%5D/+page.svelte?a=b"), requests.toList())
+        }
 
     @Test
     fun `environment variable overrides the configured url`() {
