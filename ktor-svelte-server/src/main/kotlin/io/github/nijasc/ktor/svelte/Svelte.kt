@@ -48,6 +48,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
+private val PROXIED_BODY_METHODS = setOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete)
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
@@ -177,12 +178,16 @@ private class SvelteHandler(
     ) {
         val method = call.request.httpMethod
         val path = decodedPath(call)
-        if ((method != HttpMethod.Get && method != HttpMethod.Head) || path == null || resolver.isApiPath(path)) return
+        if (path == null || resolver.isApiPath(path)) return
+        val mayProxy = allowRemote || isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))
+        if (method != HttpMethod.Get && method != HttpMethod.Head) {
+            if (method in PROXIED_BODY_METHODS && mayProxy) devProxy?.forward(call)
+            return
+        }
         if (needsLocalePrefix(path, call.application.libraryConfig)) {
             redirectToLocale(call)
             return
         }
-        val mayProxy = allowRemote || isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))
         if (mayProxy && devProxy?.forward(call) == true) return
         val manifest = store.manifest()
         when {
