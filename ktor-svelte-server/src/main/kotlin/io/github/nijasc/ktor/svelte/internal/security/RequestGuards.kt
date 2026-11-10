@@ -1,4 +1,4 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.security
 
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders

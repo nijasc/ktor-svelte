@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
+import io.github.nijasc.ktor.svelte.gradle.renderTemplate
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
@@ -119,55 +120,20 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
         parameters: String = "",
     ): Pair<String, String> =
         name to
-            """
-            <component name="ProjectRunConfigurationManager">
-              <configuration default="false" name="${escapeXml(name)}" type="GradleRunConfiguration" factoryName="Gradle">
-                <ExternalSystemSettings>
-                  <option name="executionName" />
-                  <option name="externalProjectPath" value="${escapeXml(externalProjectPath.get())}" />
-                  <option name="externalSystemIdString" value="GRADLE" />
-                  <option name="scriptParameters" value="${escapeXml(parameters)}" />
-                  <option name="taskDescriptions">
-                    <list />
-                  </option>
-                  <option name="taskNames">
-                    <list>
-                      <option value="${escapeXml(task)}" />
-                    </list>
-                  </option>
-                  <option name="vmOptions" />
-                </ExternalSystemSettings>
-                <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
-                <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-                <DebugAllEnabled>false</DebugAllEnabled>
-                <RunAsTest>false</RunAsTest>
-                <method v="2" />
-              </configuration>
-            </component>
-            """.trimIndent() + "\n"
+            renderTemplate(
+                "gradle.run.xml",
+                mapOf(
+                    "name" to escapeXml(name),
+                    "projectPath" to escapeXml(externalProjectPath.get()),
+                    "scriptParameters" to escapeXml(parameters),
+                    "task" to escapeXml(task),
+                ),
+            )
 
     private fun remoteDebugConfiguration(
         name: String,
         port: Int,
-    ): Pair<String, String> =
-        name to
-            """
-            <component name="ProjectRunConfigurationManager">
-              <configuration default="false" name="${escapeXml(name)}" type="Remote">
-                <option name="USE_SOCKET_TRANSPORT" value="true" />
-                <option name="SERVER_MODE" value="false" />
-                <option name="SHMEM_ADDRESS" />
-                <option name="HOST" value="127.0.0.1" />
-                <option name="PORT" value="$port" />
-                <option name="AUTO_RESTART" value="true" />
-                <RunnerSettings RunnerId="Debug">
-                  <option name="DEBUG_PORT" value="$port" />
-                  <option name="LOCAL" value="false" />
-                </RunnerSettings>
-                <method v="2" />
-              </configuration>
-            </component>
-            """.trimIndent() + "\n"
+    ): Pair<String, String> = name to renderTemplate("remote-debug.run.xml", mapOf("name" to escapeXml(name), "port" to port.toString()))
 
     private fun escapeXml(value: String): String =
         value

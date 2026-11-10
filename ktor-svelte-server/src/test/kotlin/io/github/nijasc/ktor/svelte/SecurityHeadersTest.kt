@@ -1,6 +1,6 @@
 package io.github.nijasc.ktor.svelte
 
-import io.github.nijasc.ktor.svelte.internal.inlineScriptHashes
+import io.github.nijasc.ktor.svelte.internal.security.inlineScriptHashes
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders

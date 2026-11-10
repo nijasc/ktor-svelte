@@ -1,6 +1,8 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.assets
 
 import io.github.nijasc.ktor.svelte.SvelteCacheConfig
+import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
+import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod

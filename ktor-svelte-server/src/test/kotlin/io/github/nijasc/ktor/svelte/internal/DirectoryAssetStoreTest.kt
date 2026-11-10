@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal
 
+import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import java.nio.file.Files
 import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.setLastModifiedTime

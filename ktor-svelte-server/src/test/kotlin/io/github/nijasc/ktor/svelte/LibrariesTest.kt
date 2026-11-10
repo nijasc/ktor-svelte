@@ -1,5 +1,8 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.LibraryConfig
+import io.github.nijasc.ktor.svelte.internal.needsLocalePrefix
+import io.github.nijasc.ktor.svelte.internal.resolveLocale
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText

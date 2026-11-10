@@ -18,7 +18,7 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 
 ## Layout
 
-- `ktor-svelte-server/`: Ktor runtime library. `internal/` holds everything not in the public API.
+- `ktor-svelte-server/`: Ktor runtime library. The root package holds only the public API. `internal/` holds the rest, split into `assets`, `security`, `validation`, `dev` and `typescript`.
 - `ktor-svelte-gradle-plugin/`: Gradle plugin. Must stay configuration-cache compatible.
 - `examples/basic/`: smallest possible app.
 - `examples/notes/`: feature-rich app using `generateTs`, `transport` and real CRUD.

@@ -1,0 +1,12 @@
+public enum class AppTheme(
+    public val cssName: String,
+) {
+{{entries}}
+    ;
+
+    public companion object {
+        public val default: AppTheme = {{defaultTheme}}
+
+        public fun fromCssName(name: String): AppTheme? = entries.firstOrNull { it.cssName == name }
+    }
+}

@@ -1,36 +1,32 @@
 package io.github.nijasc.ktor.svelte
 
-import io.github.nijasc.ktor.svelte.internal.AssetResponder
-import io.github.nijasc.ktor.svelte.internal.AssetStore
-import io.github.nijasc.ktor.svelte.internal.CONTENT_SECURITY_POLICY_HEADER
-import io.github.nijasc.ktor.svelte.internal.ClasspathAssetStore
-import io.github.nijasc.ktor.svelte.internal.DevProxy
-import io.github.nijasc.ktor.svelte.internal.DirectoryAssetStore
-import io.github.nijasc.ktor.svelte.internal.Manifest
-import io.github.nijasc.ktor.svelte.internal.OriginCheck
-import io.github.nijasc.ktor.svelte.internal.PageContentSecurityPolicy
-import io.github.nijasc.ktor.svelte.internal.RequestResolver
-import io.github.nijasc.ktor.svelte.internal.Resolution
-import io.github.nijasc.ktor.svelte.internal.SchemaConstraints
-import io.github.nijasc.ktor.svelte.internal.decodedPathOrRaw
-import io.github.nijasc.ktor.svelte.internal.findPayloadTooLarge
+import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
+import io.github.nijasc.ktor.svelte.internal.SvelteHandler
+import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
+import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
+import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
+import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
+import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
+import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.dev.statusJson
 import io.github.nijasc.ktor.svelte.internal.installTransport
-import io.github.nijasc.ktor.svelte.internal.isLocalCall
-import io.github.nijasc.ktor.svelte.internal.requireAllowedTarget
-import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
-import io.github.nijasc.ktor.svelte.internal.respondBodyTooLarge
-import io.github.nijasc.ktor.svelte.internal.respondJsonMessage
-import io.github.nijasc.ktor.svelte.internal.statusJson
+import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
+import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
+import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
+import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
+import io.github.nijasc.ktor.svelte.internal.security.findPayloadTooLarge
+import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
+import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
+import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.decodeURLPart
-import io.ktor.http.encodeURLPath
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationPlugin
 import io.ktor.server.application.PluginBuilder
 import io.ktor.server.application.createApplicationPlugin
@@ -42,11 +38,8 @@ import io.ktor.server.plugins.bodylimit.RequestBodyLimit
 import io.ktor.server.plugins.swagger.swaggerUI
 import io.ktor.server.request.ApplicationReceivePipeline
 import io.ktor.server.request.header
-import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
-import io.ktor.server.request.uri
 import io.ktor.server.response.header
-import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.application
@@ -58,19 +51,13 @@ import io.ktor.server.routing.routing
 import io.ktor.util.AttributeKey
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
-private val PROXIED_BODY_METHODS = setOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete)
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
 private const val STATUS_PATH = "/_ktor-svelte/status"
 private const val STATUS_REFUSED_MESSAGE = "The ktor-svelte status endpoint only answers requests from this machine."
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
-private const val REMOTE_REFUSED_MESSAGE =
-    "The ktor-svelte dev proxy only answers requests from this machine. Set dev { allowRemote = true } to change that."
 private const val BODY_LIMIT_CONFLICT_MESSAGE =
     "RequestBodyLimit is already installed. Set maxApiBodySize = null in install(Svelte) to keep your own limits."
-private const val MISSING_BUILD_MESSAGE =
-    "ktor-svelte found no frontend build. Build the app with the ktor-svelte Gradle plugin, " +
-        "and do not pass -Psvelte.skip=true or -Psvelte.dev=true."
 
 public val Svelte: ApplicationPlugin<SvelteConfig> =
     createApplicationPlugin("Svelte", ::SvelteConfig) {
@@ -222,42 +209,6 @@ private fun pageContentSecurityPolicy(
     return PageContentSecurityPolicy(store, headers.frameOptions, headers.extraCspSources)
 }
 
-private class SvelteHandler(
-    private val store: AssetStore,
-    private val resolver: RequestResolver,
-    private val responder: AssetResponder,
-    private val devProxy: DevProxy?,
-    private val devUrl: String,
-    private val allowRemote: Boolean,
-) {
-    val proxiesToVite: Boolean get() = devProxy != null
-
-    suspend fun handle(
-        call: ApplicationCall,
-        privateResponses: Boolean = false,
-    ) {
-        val method = call.request.httpMethod
-        val path = decodedPath(call)
-        if (path == null || resolver.isApiPath(path)) return
-        val mayProxy = allowRemote || isLocalCall(call)
-        if (method != HttpMethod.Get && method != HttpMethod.Head) {
-            if (method in PROXIED_BODY_METHODS && mayProxy) devProxy?.forward(call)
-            return
-        }
-        if (needsLocalePrefix(path, call.application.libraryConfig)) {
-            redirectToLocale(call)
-            return
-        }
-        if (mayProxy && devProxy?.forward(call) == true) return
-        val manifest = store.manifest()
-        when {
-            manifest != null -> respondFromManifest(call, path, manifest, resolver, responder, privateResponses)
-            devProxy != null && !mayProxy -> call.respondText(REMOTE_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
-            else -> respondMissingBuild(call, devProxy, devUrl)
-        }
-    }
-}
-
 private fun isDevProxyActive(
     mode: DevMode,
     application: Application,
@@ -276,55 +227,3 @@ private fun createStore(
         SvelteSource.Classpath -> ClasspathAssetStore(application.environment.classLoader)
         is SvelteSource.Directory -> DirectoryAssetStore(source.path, rescanOnEveryRead = application.developmentMode)
     }
-
-private fun decodedPath(call: ApplicationCall): String? =
-    try {
-        call.request.path().decodeURLPart()
-    } catch (_: IllegalArgumentException) {
-        null
-    }
-
-private suspend fun respondMissingBuild(
-    call: ApplicationCall,
-    devProxy: DevProxy?,
-    devUrl: String,
-) {
-    val message =
-        if (devProxy != null) {
-            "ktor-svelte could not reach the Vite dev server at $devUrl and found no frontend build. " +
-                "Start Vite with ./gradlew svelteDev."
-        } else {
-            MISSING_BUILD_MESSAGE
-        }
-    call.respondText(message, status = HttpStatusCode.ServiceUnavailable)
-}
-
-private suspend fun respondFromManifest(
-    call: ApplicationCall,
-    path: String,
-    manifest: Manifest,
-    resolver: RequestResolver,
-    responder: AssetResponder,
-    privateResponses: Boolean,
-) {
-    when (val resolution = resolver.resolve(path, acceptsHtml(call), manifest)) {
-        is Resolution.Serve -> {
-            responder.respond(call, resolution.path, manifest.files.getValue(resolution.path), resolution.notFound, privateResponses)
-        }
-
-        is Resolution.Redirect -> {
-            val query = call.request.uri.substringAfter('?', "")
-            val path = resolution.location.encodeURLPath()
-            val location = if (query.isEmpty()) path else "$path?$query"
-            call.response.header(HttpHeaders.Location, location)
-            call.respond(HttpStatusCode.PermanentRedirect)
-        }
-
-        Resolution.Unhandled -> {}
-    }
-}
-
-private fun acceptsHtml(call: ApplicationCall): Boolean {
-    val accept = call.request.header(HttpHeaders.Accept)?.lowercase() ?: return true
-    return "text/html" in accept || "text/*" in accept || "*/*" in accept
-}

@@ -7,7 +7,7 @@ import java.io.File
 private val PLACEHOLDER = Regex("\\{([A-Za-z_][A-Za-z0-9_]*)}")
 private val MESSAGE_KEY = Regex("[A-Za-z][A-Za-z0-9_-]*")
 
-public data class MessageCatalog(
+internal data class MessageCatalog(
     val locales: Map<String, Map<String, String>>,
 ) {
     val keys: List<String> get() =
@@ -24,7 +24,7 @@ public data class MessageCatalog(
             .toList()
 }
 
-public fun propertyName(key: String): String {
+internal fun propertyName(key: String): String {
     val parts = key.split('-', '_').filter { it.isNotEmpty() }
     return parts
         .mapIndexed { index, part ->
@@ -38,7 +38,7 @@ public fun propertyName(key: String): String {
         }.joinToString("")
 }
 
-public fun readMessages(
+internal fun readMessages(
     directory: File,
     locales: List<String>,
 ): MessageCatalog {

@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal
 
+import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.ktor.http.HttpMethod
 import kotlin.test.Test
 import kotlin.test.assertFalse

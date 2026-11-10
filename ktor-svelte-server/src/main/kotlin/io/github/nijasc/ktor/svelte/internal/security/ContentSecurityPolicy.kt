@@ -1,5 +1,7 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.security
 
+import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.ManifestEntry
 import java.security.MessageDigest
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap

@@ -29,8 +29,13 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 | Path | What lives there |
 |---|---|
 | `ktor-svelte-server/` | The Ktor plugin. `Svelte.kt` is the entry point and `internal/` is everything users cannot see |
+| `ktor-svelte-server/.../internal/` | `SvelteHandler` answers frontend requests, `LibraryConfig` reads the library settings the Gradle plugin bundles |
+| `ktor-svelte-server/.../internal/assets/` | Manifest, asset stores, path resolution and the responder that sets caching headers |
+| `ktor-svelte-server/.../internal/security/` | Origin check, body limit responses and the per-page Content-Security-Policy |
+| `ktor-svelte-server/.../internal/validation/` | `SchemaConstraints`, which checks received values against `JsonSchema` annotations and `Validated` rules |
+| `ktor-svelte-server/.../internal/dev/` | The Vite dev proxy and the status endpoint |
 | `ktor-svelte-server/.../internal/typescript/` | OpenAPI to TypeScript. `TypeScriptGenerator` takes OpenAPI JSON and returns files, so it is easy to test |
-| `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/` |
+| `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/`, and `libraries/` generates the files for configured frontend libraries |
 | `examples/basic/` | The smallest possible app |
 | `examples/notes/` | The feature-rich app. New features should show up here |
 | `.run/` | Shared IntelliJ run configurations |
@@ -39,7 +44,7 @@ The examples are separate Gradle builds that pull in the root build with `includ
 
 ## Frontend libraries
 
-Package versions for `svelteSync` are in `libraries/LibrarySpec.kt`, and the DaisyUI theme list is in `SvelteLibraries.kt`. When you change a generator, run `./gradlew -p examples/notes svelteSync` and commit the result. CI fails if the notes app is out of sync.
+Package versions for `svelteSync` are in `libraries/LibrarySpec.kt`, and the DaisyUI theme list is in `SvelteLibraries.kt`. The fixed parts of generated files are templates in `ktor-svelte-gradle-plugin/src/main/resources/.../gradle/templates/`, and the static TypeScript of `generateTs` sits in `ktor-svelte-server/src/main/resources/.../internal/typescript/`. Templates use `{{name}}` placeholders, and rendering fails when a value is missing or unused, so edit a template like the file it produces. When you change a generator, run `./gradlew -p examples/notes svelteSync` and commit the result. CI fails if the notes app is out of sync.
 
 ## Project setup
 

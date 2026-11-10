@@ -200,13 +200,6 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec : jav
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/github/nijasc/ktor/svelte/gradle/libraries/FrontendFilesKt {
-	public static final field ROOT_LAYOUT Ljava/lang/String;
-	public static final fun frontendFiles (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;Z)Ljava/util/Map;
-	public static final fun iconConstant (Ljava/lang/String;)Ljava/lang/String;
-	public static final fun iconSources (Ljava/util/List;)Ljava/util/Map;
-}
-
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec : java/io/Serializable {
 	public fun <init> (Ljava/util/List;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;)V
 	public final fun component1 ()Ljava/util/List;
@@ -220,11 +213,6 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec : java
 	public final fun getStrategy ()Lio/github/nijasc/ktor/svelte/gradle/LocaleStrategy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/github/nijasc/ktor/svelte/gradle/libraries/KotlinFilesKt {
-	public static final fun kotlinFiles (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;Ljava/util/List;Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;Z)Ljava/util/Map;
-	public static final fun runtimeProperties (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;)Ljava/lang/String;
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : java/io/Serializable {
@@ -251,24 +239,6 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun isEmpty ()Z
 	public fun toString ()Ljava/lang/String;
 	public final fun validate ()V
-}
-
-public final class io/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog {
-	public fun <init> (Ljava/util/Map;)V
-	public final fun component1 ()Ljava/util/Map;
-	public final fun copy (Ljava/util/Map;)Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;
-	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;Ljava/util/Map;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getKeys ()Ljava/util/List;
-	public final fun getLocales ()Ljava/util/Map;
-	public fun hashCode ()I
-	public final fun placeholders (Ljava/lang/String;)Ljava/util/List;
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/github/nijasc/ktor/svelte/gradle/libraries/MessagesKt {
-	public static final fun propertyName (Ljava/lang/String;)Ljava/lang/String;
-	public static final fun readMessages (Ljava/io/File;Ljava/util/List;)Lio/github/nijasc/ktor/svelte/gradle/libraries/MessageCatalog;
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec : java/io/Serializable {

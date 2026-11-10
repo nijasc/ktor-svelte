@@ -3,6 +3,7 @@ package io.github.nijasc.ktor.svelte.internal
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.ValidationException
 import io.github.nijasc.ktor.svelte.Validator
+import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.ktor.openapi.JsonSchema
 import kotlinx.serialization.Serializable
 import kotlin.test.Test

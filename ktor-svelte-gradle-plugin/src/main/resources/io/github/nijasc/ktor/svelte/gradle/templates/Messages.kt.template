@@ -1,0 +1,22 @@
+public class Messages private constructor(
+    public val locale: String,
+    private val table: Map<String, String>,
+) {
+{{functions}}
+
+    public companion object {
+        public val locales: List<String> = listOf({{locales}})
+        public val defaultLocale: String = {{defaultLocale}}
+
+        private val tables: Map<String, Map<String, String>> by lazy {
+            mapOf(
+{{tables}},
+            )
+        }
+
+        public fun forLocale(locale: String): Messages {
+            val resolved = if (locale in tables) locale else defaultLocale
+            return Messages(resolved, tables.getValue(resolved))
+        }
+    }
+}
