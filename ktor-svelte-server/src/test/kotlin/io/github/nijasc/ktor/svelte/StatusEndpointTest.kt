@@ -179,5 +179,13 @@ class StatusEndpointTest {
             val response = client.get("/_ktor-svelte/status") { header(HttpHeaders.Host, "app.example.com") }
             assertEquals(HttpStatusCode.Forbidden, response.status)
             assertFalse(response.bodyAsText().contains("fingerprint"))
+            listOf(HttpHeaders.XForwardedFor, HttpHeaders.Forwarded, "X-Real-IP").forEach { name ->
+                val proxied =
+                    client.get("/_ktor-svelte/status") {
+                        header(HttpHeaders.Host, "127.0.0.1:8080")
+                        header(name, "203.0.113.9")
+                    }
+                assertEquals(HttpStatusCode.Forbidden, proxied.status, name)
+            }
         }
 }
