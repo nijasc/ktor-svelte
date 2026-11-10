@@ -18,8 +18,10 @@ import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
 import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
 import io.github.nijasc.ktor.svelte.internal.security.findPayloadTooLarge
+import io.github.nijasc.ktor.svelte.internal.security.mayHideErrorDetails
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
+import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.ktor.http.ContentType
@@ -110,12 +112,19 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
         }
 
+        val hideErrorDetails = pluginConfig.hideErrorDetails
         on(CallFailed) { call, cause ->
             if (cause is ValidationException) {
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
                 return@on
             }
-            if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) respondBodyTooLarge(call, maxApiBodySize)
+            if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) {
+                respondBodyTooLarge(call, maxApiBodySize)
+                return@on
+            }
+            if (hideErrorDetails && mayHideErrorDetails(call)) {
+                respondWithoutDetails(call, cause, resolver.isApiPath(decodedPathOrRaw(call)))
+            }
         }
 
         val automaticRouting = pluginConfig.routing == SvelteRouting.Automatic

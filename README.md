@@ -688,6 +688,8 @@ install(Svelte) {
 
 Refused requests get a JSON body such as `{"message":"Request body is larger than the limit of 1048576 bytes."}`.
 
+**Error details.** In production, an exception that no route handles answers with its status and a generic message, such as `{"message":"Internal Server Error."}` on API paths, instead of the exception message, which Ktor sends by default and which can reveal internals. Malformed or unreadable bodies keep their 400 or 415 without naming your classes. The exception is still logged. In development mode, or when you install `StatusPages`, nothing changes. Set `hideErrorDetails = false` to send the messages again.
+
 To raise the limit, or turn the origin check off:
 
 ```kotlin
@@ -748,6 +750,7 @@ install(Svelte) {
     apiDocsPath = "/api/docs"
     routing = SvelteRouting.Automatic
     originCheck = true
+    hideErrorDetails = true
     allowedOrigins()
     maxApiBodySize = 1048576
 
@@ -789,6 +792,7 @@ install(Svelte) {
 | `apiDocs` | Serves Swagger UI in development mode. See [API docs](#api-docs) |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](#auth) |
 | `originCheck` | Refuses cross-site requests to API paths for every method except GET, HEAD, OPTIONS and TRACE. See [API request guards](#api-request-guards) |
+| `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](#api-request-guards) |
 | `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |
 | `maxApiBodySize` | Largest request body on API paths, in bytes. `null` disables it |
 | `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](#security-headers) |
