@@ -6,11 +6,11 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_MARKER
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.PACKAGE_VERSIONS
-import io.github.nijasc.ktor.svelte.gradle.libraries.ROOT_LAYOUT
 import io.github.nijasc.ktor.svelte.gradle.libraries.frontendFiles
 import io.github.nijasc.ktor.svelte.gradle.libraries.iconSources
 import io.github.nijasc.ktor.svelte.gradle.libraries.kotlinFiles
 import io.github.nijasc.ktor.svelte.gradle.libraries.readMessages
+import io.github.nijasc.ktor.svelte.gradle.libraries.rootLayout
 import io.github.nijasc.ktor.svelte.gradle.libraries.runtimeProperties
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -174,7 +174,7 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
         val layout = frontend.resolve("src/routes/+layout.svelte")
         if (!layout.isFile) {
             layout.parentFile.mkdirs()
-            layout.writeText(ROOT_LAYOUT)
+            layout.writeText(rootLayout())
         } else if ("ktor-svelte/app.css" !in layout.readText()) {
             logger.warn("ktor-svelte: add import '#lib/ktor-svelte/app.css'; to src/routes/+layout.svelte to load your styles.")
         }
