@@ -186,7 +186,7 @@ private fun Route.catchAll(
 }
 
 private fun PluginBuilder<SvelteConfig>.installSecurityHeaders(
-    headers: SvelteSecurityHeaders,
+    headers: SvelteSecurityHeadersConfig,
     devProxyActive: Boolean,
 ) {
     val values =
@@ -213,7 +213,7 @@ private fun PluginBuilder<SvelteConfig>.installBodyLimit(
 
 private fun pageContentSecurityPolicy(
     store: AssetStore,
-    headers: SvelteSecurityHeaders,
+    headers: SvelteSecurityHeadersConfig,
     devProxyActive: Boolean,
 ): PageContentSecurityPolicy? {
     val automatic = headers.enabled && headers.automaticContentSecurityPolicy && headers.contentSecurityPolicy == null

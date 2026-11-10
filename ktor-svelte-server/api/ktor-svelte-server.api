@@ -81,7 +81,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteRouting : java/lang/Enum {
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/SvelteRouting;
 }
 
-public final class io/github/nijasc/ktor/svelte/SvelteSecurityHeaders {
+public final class io/github/nijasc/ktor/svelte/SvelteSecurityHeadersConfig {
 	public fun <init> ()V
 	public final fun allowCspSources (Ljava/lang/String;[Ljava/lang/String;)V
 	public final fun getAutomaticContentSecurityPolicy ()Z
