@@ -17,7 +17,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import java.net.URI
 import java.net.URISyntaxException
 
-private val UNSAFE_METHODS = setOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete)
+private val SAFE_METHODS = setOf(HttpMethod.Get, HttpMethod.Head, HttpMethod.Options, HttpMethod("TRACE"))
 private const val SEC_FETCH_SITE = "Sec-Fetch-Site"
 private const val CROSS_ORIGIN_MESSAGE =
     "Cross-origin API request refused. Add the origin with allowedOrigins(...) in install(Svelte) to allow it."
@@ -33,7 +33,7 @@ internal class OriginCheck(
         secFetchSite: String?,
         requestHost: String,
     ): Boolean {
-        if (method !in UNSAFE_METHODS) return true
+        if (method in SAFE_METHODS) return true
         if (origin == null) return !secFetchSite.equals("cross-site", ignoreCase = true)
         if (origin.trim() == "null") return false
         if (normalizeOrigin(origin) in allowed) return true

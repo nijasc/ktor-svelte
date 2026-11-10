@@ -4,13 +4,16 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.options
 import io.ktor.client.request.post
 import io.ktor.client.request.put
+import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
@@ -22,8 +25,10 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.options
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
+import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
@@ -32,6 +37,8 @@ import io.ktor.utils.io.writeFully
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+
+private val PROPFIND = HttpMethod("PROPFIND")
 
 class RequestGuardsTest {
     private fun guardTest(
@@ -51,6 +58,8 @@ class RequestGuardsTest {
                 put("/api/notes") { call.respondText("updated") }
                 delete("/api/notes") { call.respondText("deleted") }
                 get("/api/notes") { call.respondText("listed") }
+                options("/api/notes") { call.respondText("options") }
+                route("/api/notes", PROPFIND) { handle { call.respondText("properties") } }
                 post("/api/greeting") { call.respond(call.receive<Greeting>()) }
                 post("/length") { call.respondText("${call.request.contentLength()}") }
                 post("/upload") { call.respondText("size ${call.receiveText().length}") }
@@ -91,6 +100,30 @@ class RequestGuardsTest {
             val delete = client.delete("/api/notes") { header(HttpHeaders.Origin, "https://evil.example") }
             assertEquals(HttpStatusCode.Forbidden, put.status)
             assertEquals(HttpStatusCode.Forbidden, delete.status)
+        }
+
+    @Test
+    fun `methods outside the safe set are checked`() =
+        guardTest {
+            val evil =
+                client.request("/api/notes") {
+                    method = PROPFIND
+                    header(HttpHeaders.Origin, "https://evil.example")
+                }
+            val same =
+                client.request("/api/notes") {
+                    method = PROPFIND
+                    header(HttpHeaders.Origin, "http://localhost")
+                }
+            assertEquals(HttpStatusCode.Forbidden, evil.status)
+            assertEquals("properties", same.bodyAsText())
+        }
+
+    @Test
+    fun `options is never checked`() =
+        guardTest {
+            val response = client.options("/api/notes") { header(HttpHeaders.Origin, "https://evil.example") }
+            assertEquals("options", response.bodyAsText())
         }
 
     @Test
