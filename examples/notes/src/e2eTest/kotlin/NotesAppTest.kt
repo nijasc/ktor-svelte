@@ -7,6 +7,8 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.security.MessageDigest
+import java.util.Base64
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -94,6 +96,24 @@ class NotesAppTest {
         listOf("/", "/api/stats", "/api/nothing").forEach { path ->
             assertEquals("nosniff", send("GET", path).headers().firstValue("X-Content-Type-Options").orElse(""), path)
         }
+    }
+
+    @Test
+    fun `pages carry a content security policy that allows their inline scripts`() {
+        listOf("/", "/about", "/notes").forEach { path ->
+            val response = send("GET", path, null, html)
+            val policy = response.headers().firstValue("Content-Security-Policy").orElse("")
+            assertContains(policy, "script-src 'self' 'sha256-", message = path)
+            assertContains(policy, "object-src 'none'", message = path)
+            val inlineScripts =
+                Regex("""<script>(.*?)</script>""", RegexOption.DOT_MATCHES_ALL).findAll(response.body()).map { it.groupValues[1] }.toList()
+            assertEquals(2, inlineScripts.size, path)
+            inlineScripts.forEach { script ->
+                val digest = MessageDigest.getInstance("SHA-256").digest(script.toByteArray())
+                assertContains(policy, "'sha256-${Base64.getEncoder().encodeToString(digest)}'", message = path)
+            }
+        }
+        assertFalse(send("GET", "/api/stats").headers().firstValue("Content-Security-Policy").isPresent)
     }
 
     @Test
