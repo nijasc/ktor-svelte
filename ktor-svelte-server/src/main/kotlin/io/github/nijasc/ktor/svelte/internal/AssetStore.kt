@@ -1,16 +1,17 @@
 package io.github.nijasc.ktor.svelte.internal
 
 import java.io.InputStream
+import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.security.DigestInputStream
 import java.security.MessageDigest
 import kotlin.io.path.fileSize
 import kotlin.io.path.inputStream
 import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.readBytes
 import kotlin.io.path.relativeTo
 
 private const val MANIFEST_RESOURCE = "ktor-svelte/manifest.json"
@@ -90,9 +91,9 @@ internal class DirectoryAssetStore(
         all: Set<String>,
     ): Boolean = AssetEncoding.entries.any { path.endsWith(it.fileSuffix) && path.removeSuffix(it.fileSuffix) in all }
 
-    private fun sha256(file: Path): String =
-        MessageDigest
-            .getInstance("SHA-256")
-            .digest(file.readBytes())
-            .joinToString("") { "%02x".format(it) }
+    private fun sha256(file: Path): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        DigestInputStream(file.inputStream(), digest).use { it.transferTo(OutputStream.nullOutputStream()) }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
 }
