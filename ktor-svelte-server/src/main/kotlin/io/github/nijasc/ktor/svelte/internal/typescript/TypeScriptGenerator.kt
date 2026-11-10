@@ -654,7 +654,7 @@ internal class TypeScriptGenerator(
         pathParameters.forEach { parameter ->
             val schema = declared.firstOrNull { it.stringAt("name") == parameter && it.stringAt("in") == "path" }?.objectAt("schema")
             val type = schema?.let { tsType(it, references) }?.takeUnless { it == "unknown" || it == "string" } ?: "string | number"
-            signature += "${identifier(parameter)}: $type"
+            signature += "${parameterName(parameter)}: $type"
         }
 
         val requestBody = operation.objectAt("requestBody")
@@ -709,7 +709,7 @@ internal class TypeScriptGenerator(
             var end = 0
             PATH_PARAMETER.findAll(path).forEach { match ->
                 append(templateText(path.substring(end, match.range.first)))
-                append("\${encodeURIComponent(${identifier(match.groupValues[1])})}")
+                append("\${encodeURIComponent(${parameterName(match.groupValues[1])})}")
                 end = match.range.last + 1
             }
             append(templateText(path.substring(end)))
@@ -773,7 +773,7 @@ internal class TypeScriptGenerator(
                 .removePrefix(prefix)
                 .split('/')
                 .firstOrNull { it.isNotEmpty() && !it.startsWith("{") }
-        return first?.let(::camelCase)?.let(::identifier) ?: "root"
+        return first?.let { identifier(it, SERVICES_MODULE_NAMES) } ?: "root"
     }
 
     private fun conventionalName(
@@ -819,6 +819,7 @@ private fun typeName(raw: String): String =
         .filter { it.isNotEmpty() }
         .joinToString("") { pascalCase(it) }
         .ifEmpty { "Unnamed" }
+        .let { if (it.first().isDigit()) "_$it" else it }
 
 private fun pascalCase(value: String): String = camelCase(value).replaceFirstChar { it.uppercase() }
 
@@ -830,10 +831,15 @@ private fun camelCase(value: String): String {
         }.joinToString("")
 }
 
-private fun identifier(value: String): String {
+private fun identifier(
+    value: String,
+    taken: Set<String> = emptySet(),
+): String {
     val name = camelCase(value)
-    return if (IDENTIFIER.matches(name)) name else "_$name"
+    return if (IDENTIFIER.matches(name) && name !in RESERVED_WORDS && name !in taken) name else "_$name"
 }
+
+private fun parameterName(value: String): String = identifier(value, ENDPOINT_ARGUMENTS)
 
 private fun propertyKey(name: String): String = if (IDENTIFIER.matches(name)) name else quoted(name)
 
@@ -906,6 +912,60 @@ export const IsoDateTime = {
 """
 
 private const val LUCIDE_TYPE = "LucideIcon"
+private val SERVICES_MODULE_NAMES =
+    setOf("api", "request", "stream", "ApiError", "errorStatuses", "isApiError", "publicConfig", "loadPublicConfig")
+private val ENDPOINT_ARGUMENTS = setOf("body", "query", "options", "encodeURIComponent")
+private val RESERVED_WORDS =
+    setOf(
+        "arguments",
+        "await",
+        "break",
+        "case",
+        "catch",
+        "class",
+        "const",
+        "continue",
+        "debugger",
+        "default",
+        "delete",
+        "do",
+        "else",
+        "enum",
+        "eval",
+        "export",
+        "extends",
+        "false",
+        "finally",
+        "for",
+        "function",
+        "if",
+        "implements",
+        "import",
+        "in",
+        "instanceof",
+        "interface",
+        "let",
+        "new",
+        "null",
+        "package",
+        "private",
+        "protected",
+        "public",
+        "return",
+        "static",
+        "super",
+        "switch",
+        "this",
+        "throw",
+        "true",
+        "try",
+        "typeof",
+        "var",
+        "void",
+        "while",
+        "with",
+        "yield",
+    )
 private const val REQUIRED_MESSAGE = "Required."
 private val CONSTRAINT_KEYWORDS = listOf("minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "pattern")
 

@@ -65,6 +65,25 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `reserved words and module names never become identifiers`() {
+        val source =
+            services(
+                """{"/api/default/{class}":{"get":{}},"/api/request/{options}":{"get":{}},"/api/notes/{body}":{"get":{}}}""",
+            )
+        assertContains(source, "export const _default = {\n    get: (_class: string | number, options?: RequestOptions)")
+        assertContains(source, "`/api/default/\${encodeURIComponent(_class)}`")
+        assertContains(source, "export const _request = {\n    get: (_options: string | number, options?: RequestOptions)")
+        assertContains(source, "get: (_body: string | number, options?: RequestOptions)")
+        assertContains(source, "export const api = { _default, _request, notes };")
+    }
+
+    @Test
+    fun `type names never start with a digit`() {
+        val source = types("""{"2fa-code":{"type":"string"}}""")
+        assertContains(source, "export type _2faCode = string;")
+    }
+
+    @Test
     fun `single value enums stay literals`() {
         val source = types("""{"A":{"type":"object","properties":{"kind":{"type":"string","enum":["Only"]}}}}""")
         assertContains(source, "kind?: 'Only';")
