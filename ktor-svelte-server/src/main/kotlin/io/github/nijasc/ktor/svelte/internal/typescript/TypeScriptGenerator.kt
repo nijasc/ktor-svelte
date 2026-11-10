@@ -33,7 +33,7 @@ internal class TypeScriptGenerator(
         enumTypes = nameEnums(filtered, schemas)
         return mapOf(
             "client.ts" to CLIENT_SOURCE,
-            "types.ts" to typesSource(schemas) + publicConfigDeclaration(),
+            "types.ts" to typesSource(schemas) + publicConfigDeclaration(schemas),
             "services.ts" to
                 servicesSource(
                     filtered.objectAt("paths").orEmpty(),
@@ -54,9 +54,9 @@ internal class TypeScriptGenerator(
         return JsonObject(document + ("paths" to JsonObject(paths)))
     }
 
-    private fun publicConfigDeclaration(): String {
+    private fun publicConfigDeclaration(schemas: Map<String, JsonElement>): String {
         val schema = publicConfigSchema ?: return ""
-        return "\n" + declaration("PublicConfig", Json.parseToJsonElement(schema).jsonObject, mutableSetOf())
+        return "\n" + declaration("PublicConfig", Json.parseToJsonElement(schema).jsonObject, mutableSetOf(), schemas)
     }
 
     private fun isApiPath(path: String): Boolean =
@@ -67,7 +67,7 @@ internal class TypeScriptGenerator(
         if (schemas.isEmpty() && iconNames.isEmpty() && enumTypes.isEmpty()) return "export {};\n"
         val references = mutableSetOf<String>()
         val schemaDeclarations =
-            schemas.map { (name, schema) -> name to declaration(typeName(name), schema.jsonObject, references) }
+            schemas.map { (name, schema) -> name to declaration(typeName(name), schema.jsonObject, references, schemas) }
         val enumDeclarations =
             enumTypes.values.filter { it.inline }.map { it.name to enumDeclaration(it.name, it.values) }
         val declarations = (schemaDeclarations + enumDeclarations).sortedBy { it.first }.joinToString("\n") { it.second }
@@ -86,12 +86,15 @@ internal class TypeScriptGenerator(
         name: String,
         schema: JsonObject,
         references: MutableSet<String>,
+        schemas: Map<String, JsonElement>,
     ): String {
         val enumValues = enumValues(schema)
         if (enumValues != null && schema["enum"]?.jsonArray?.none { it is JsonNull } == true) return enumDeclaration(name, enumValues)
-        val properties = schema.objectAt("properties")
-        if (properties != null && schema["allOf"] == null) {
-            return "export interface $name ${objectBody(schema, references, indent = "")}\n"
+        if (hasEmptyFactory(schema)) {
+            return "export interface $name ${objectBody(schema, references, indent = "")}\n\n" +
+                "export const $name = {\n" +
+                "    empty: (): $name => (${emptyObject(schema, schemas, "    ", emptySet())}),\n" +
+                "};\n"
         }
         return "export type $name = ${tsType(schema, references)};\n"
     }
@@ -198,6 +201,77 @@ internal class TypeScriptGenerator(
         val owner: String,
         val property: String,
     )
+
+    private fun hasEmptyFactory(schema: JsonObject): Boolean = schema.objectAt("properties") != null && schema["allOf"] == null
+
+    private fun emptyObject(
+        schema: JsonObject,
+        schemas: Map<String, JsonElement>,
+        indent: String,
+        visiting: Set<String>,
+    ): String {
+        val properties = schema.objectAt("properties").orEmpty()
+        if (properties.isEmpty()) return "{}"
+        val lines =
+            properties.map { (name, value) ->
+                "$indent    ${propertyKey(name)}: ${emptyValue(value.jsonObject, schemas, "$indent    ", visiting)},"
+            }
+        return (listOf("{") + lines + "$indent}").joinToString("\n")
+    }
+
+    private fun emptyValue(
+        schema: JsonObject,
+        schemas: Map<String, JsonElement>,
+        indent: String,
+        visiting: Set<String>,
+    ): String {
+        if (isNullable(schema)) return "null"
+        schema.stringAt("\$ref")?.let { reference ->
+            val raw = reference.substringAfterLast('/')
+            val target = schemas[raw] as? JsonObject ?: return "null"
+            if (hasEmptyFactory(target)) return "${typeName(raw)}.empty()"
+            if (raw in visiting) return "null"
+            return emptyValue(target, schemas, indent, visiting + raw)
+        }
+        schema["enum"]?.let { values -> return values.jsonArray.firstOrNull()?.let(::literal) ?: "null" }
+        schema["const"]?.let { value -> return literal(value) }
+        (schema.arrayAt("oneOf") ?: schema.arrayAt("anyOf"))?.let { options ->
+            return options.firstOrNull()?.let { emptyValue(it.jsonObject, schemas, indent, visiting) } ?: "null"
+        }
+        schema.arrayAt("allOf")?.let { parts ->
+            if (parts.size == 1) return emptyValue(parts.single().jsonObject, schemas, indent, visiting)
+            return parts.joinToString(", ", "{ ", " }") { "..." + emptyValue(it.jsonObject, schemas, indent, visiting) }
+        }
+        val type =
+            when (val declared = schema["type"]) {
+                is JsonArray -> declared.firstOrNull()?.jsonPrimitive?.content
+                is JsonPrimitive -> declared.contentOrNull
+                else -> null
+            }
+        return when (type) {
+            "string" -> "''"
+            "integer", "number" -> "0"
+            "boolean" -> "false"
+            "array" ->
+                schema
+                    .arrayAt("prefixItems")
+                    ?.joinToString(", ", "[", "]") { emptyValue(it.jsonObject, schemas, indent, visiting) }
+                    ?: "[]"
+            "object" -> emptyObject(schema, schemas, indent, visiting)
+            null -> if (schema["properties"] != null) emptyObject(schema, schemas, indent, visiting) else "null"
+            else -> "null"
+        }
+    }
+
+    private fun isNullable(schema: JsonObject): Boolean {
+        val type = schema["type"]
+        val options = schema.arrayAt("oneOf").orEmpty() + schema.arrayAt("anyOf").orEmpty()
+        return (type is JsonArray && type.any { it.jsonPrimitive.content == "null" }) ||
+            (type is JsonPrimitive && type.content == "null") ||
+            (schema["nullable"] as? JsonPrimitive)?.contentOrNull == "true" ||
+            schema.arrayAt("enum").orEmpty().any { it is JsonNull } ||
+            options.any { (it as? JsonObject)?.let(::isNullable) == true }
+    }
 
     private fun objectBody(
         schema: JsonObject,

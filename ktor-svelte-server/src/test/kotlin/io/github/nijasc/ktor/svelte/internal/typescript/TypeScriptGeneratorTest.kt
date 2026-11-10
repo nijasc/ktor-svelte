@@ -43,7 +43,7 @@ class TypeScriptGeneratorTest {
     fun `single value enums stay literals`() {
         val source = types("""{"A":{"type":"object","properties":{"kind":{"type":"string","enum":["Only"]}}}}""")
         assertContains(source, "kind?: 'Only';")
-        assertFalse(source.contains("export const"))
+        assertFalse(source.contains("as const"))
     }
 
     @Test
@@ -79,7 +79,7 @@ class TypeScriptGeneratorTest {
             "Note":{"type":"object","properties":{"mood":{"type":"string","enum":["BAD","GOOD"]}}}}"""
         val source = types(schemas)
         assertContains(source, "    mood?: Mood;")
-        assertEquals(1, Regex("export const ").findAll(source).count())
+        assertEquals(1, Regex("as const;").findAll(source).count())
     }
 
     @Test
@@ -256,5 +256,65 @@ class TypeScriptGeneratorTest {
         val paths = """{"/api/b":{"get":{}},"/api/a":{"get":{}}}"""
         assertEquals(generate(paths = paths), generate(paths = paths))
         assertContains(generate(paths = paths).getValue("services.ts"), "export const api = { a, b };")
+    }
+
+    @Test
+    fun `objects get an empty factory with zero values`() {
+        val source =
+            types(
+                """{"A":{"type":"object","required":["s"],"properties":{
+                "s":{"type":"string"},"i":{"type":"integer"},"f":{"type":"number"},"b":{"type":"boolean"},
+                "n":{"type":["string","null"]},"l":{"type":"array","items":{"type":"string"}},
+                "m":{"type":"object","additionalProperties":{"type":"integer"}},
+                "e":{"type":"string","enum":["X","Y"]}}}}""",
+            )
+        assertContains(
+            source,
+            """
+            export const A = {
+                empty: (): A => ({
+                    s: '',
+                    i: 0,
+                    f: 0,
+                    b: false,
+                    n: null,
+                    l: [],
+                    m: {},
+                    e: 'X',
+                }),
+            };
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `empty factories nest through references and inline objects`() {
+        val source =
+            types(
+                """{"A":{"type":"object","properties":{"b":{"${'$'}ref":"#/components/schemas/B"},
+                "c":{"oneOf":[{"${'$'}ref":"#/components/schemas/B"},{"type":"null"}]},
+                "d":{"type":"object","properties":{"x":{"type":"integer"}}}}},
+                "B":{"type":"object","properties":{"y":{"type":"string"}}}}""",
+            )
+        assertContains(source, "        b: B.empty(),")
+        assertContains(source, "        c: null,")
+        assertContains(source, "        d: {\n            x: 0,\n        },")
+        assertContains(source, "export const B = {\n    empty: (): B => ({\n        y: '',\n    }),\n};")
+    }
+
+    @Test
+    fun `nullable references and openapi 3_0 nullable become null`() {
+        val source =
+            types(
+                """{"A":{"type":"object","properties":{"x":{"type":"string","nullable":true},
+                "y":{"anyOf":[{"type":"integer"},{"type":"null"}]}}}}""",
+            )
+        assertContains(source, "        x: null,")
+        assertContains(source, "        y: null,")
+    }
+
+    @Test
+    fun `index exports type values so empty factories are importable`() {
+        assertContains(generate().getValue("index.ts"), "export * from './types.js';")
     }
 }
