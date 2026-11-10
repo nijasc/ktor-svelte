@@ -220,6 +220,25 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `event stream responses become async generators`() {
+        val paths =
+            """{"/api/ticks":{"get":{"responses":{"200":{"description":"ok","content":{"text/event-stream":
+            {"schema":{"${'$'}ref":"#/components/schemas/Tick"}}}}}}},
+            "/api/notes":{"get":{"responses":{"200":{"description":"ok"}}}}}"""
+        val result = generate(paths = paths, schemas = """{"Tick":{"type":"object"}}""")
+        val services = result.getValue("services.ts")
+        assertContains(services, "import { ApiError, request, stream, type RequestOptions } from './client.js';")
+        assertContains(services, "stream<Tick>('GET', '/api/ticks'")
+        assertContains(services, "request<void>('GET', '/api/notes'")
+        assertContains(result.getValue("client.ts"), "export async function* stream<T>")
+    }
+
+    @Test
+    fun `the client import skips stream without event streams`() {
+        assertContains(services("""{"/api/notes":{"get":{}}}"""), "import { ApiError, request, type RequestOptions } from './client.js';")
+    }
+
+    @Test
     fun `the icon enum becomes one named type`() {
         val result =
             TypeScriptGenerator(listOf("/api"), iconNames = listOf("House", "Plus")).generate(

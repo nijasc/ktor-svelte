@@ -332,8 +332,9 @@ internal class TypeScriptGenerator(
                 "export const $group = {\n$members\n};\n"
             }
         val typeImports = references.filter { name -> name in schemaNames.map(::typeName) }
+        val clientImports = if (groups.values.flatten().any { it.streaming }) "ApiError, request, stream" else "ApiError, request"
         return buildString {
-            append("import { ApiError, request, type RequestOptions } from './client.js';\n")
+            append("import { $clientImports, type RequestOptions } from './client.js';\n")
             val imports = if (publicConfigSchema != null) typeImports + "PublicConfig" else typeImports
             if (imports.isNotEmpty()) append("import type { ${imports.joinToString()} } from './types.js';\n")
             append("\n")
@@ -413,15 +414,18 @@ internal class TypeScriptGenerator(
                 if (requestBody != null) add("body")
             }
         val returnType = responseType(operation, references)
+        val streaming = isEventStream(operation)
         val declaredErrors = errorResponses(operation, references)
         return Endpoint(
             name = operation.stringAt("operationId")?.let(::camelCase) ?: conventionalName(path, method),
             parameters = pathParameters,
             source = { key ->
                 val arguments = (extras + "operation: '$key'").joinToString()
-                "(${signature.joinToString()}) => request<$returnType>('${method.uppercase()}', $urlSource, { $arguments })"
+                val call = if (streaming) "stream" else "request"
+                "(${signature.joinToString()}) => $call<$returnType>('${method.uppercase()}', $urlSource, { $arguments })"
             },
             references = references,
+            streaming = streaming,
             errorType =
                 declaredErrors.values
                     .distinct()
@@ -460,12 +464,21 @@ internal class TypeScriptGenerator(
                 ?.jsonObject
                 ?: return "unknown"
         val content = success.objectAt("content") ?: return "void"
+        content.objectAt(EVENT_STREAM)?.let { return it.objectAt("schema")?.let { schema -> tsType(schema, references) } ?: "string" }
         val json = content.keys.firstOrNull { it.contains("json") }
         if (json != null) {
             return content.objectAt(json)?.objectAt("schema")?.let { tsType(it, references) } ?: "unknown"
         }
         return "string"
     }
+
+    private fun isEventStream(operation: JsonObject): Boolean =
+        operation
+            .objectAt("responses")
+            .orEmpty()
+            .filterKeys { it.startsWith("2") }
+            .values
+            .any { (it as? JsonObject)?.objectAt("content")?.containsKey(EVENT_STREAM) == true }
 
     private fun preferredSchema(content: JsonObject): JsonObject? {
         val key = content.keys.firstOrNull { it.contains("json") } ?: content.keys.firstOrNull()
@@ -507,6 +520,7 @@ internal class TypeScriptGenerator(
         val parameters: List<String>,
         val source: (String) -> String,
         val references: Set<String>,
+        val streaming: Boolean,
         val errorType: String?,
         val errorStatuses: List<Int>,
     )
@@ -551,6 +565,7 @@ private fun JsonObject.stringAt(key: String): String? = (this[key] as? JsonPrimi
 private fun JsonObject.stringList(key: String): List<String> = arrayAt(key).orEmpty().map { it.jsonPrimitive.content }
 
 private const val LUCIDE_TYPE = "LucideIcon"
+private const val EVENT_STREAM = "text/event-stream"
 
 private const val PUBLIC_CONFIG_SOURCE = """let publicConfig: Promise<PublicConfig> | undefined;
 
@@ -635,22 +650,65 @@ async function parseResponse(response: Response): Promise<unknown> {
     return text === '' ? undefined : text;
 }
 
-export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+function prepare(method: string, path: string, options: InternalOptions, accept: string) {
     const { query, body, operation, fetch: customFetch, headers, ...init } = options;
     const send = customFetch ?? apiConfig.fetch ?? fetch;
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
-    merged.set('Accept', 'application/json');
+    merged.set('Accept', accept);
     new Headers(headers).forEach((value, key) => merged.set(key, value));
     let payload: BodyInit | undefined;
     if (body !== undefined) {
         payload = isRawBody(body) ? body : JSON.stringify(body);
         if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
     }
-    const response = await send(url, { ...init, method, headers: merged, body: payload });
+    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload }) };
+}
+
+async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
-    const parsed = await parseResponse(response);
-    if (!response.ok) throw new ApiError(response.status, parsed, url, operation);
-    return parsed as T;
+    if (!response.ok) throw new ApiError(response.status, await parseResponse(response), url, operation);
+    return response;
+}
+
+export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+    const { url, operation, send } = prepare(method, path, options, 'application/json');
+    const response = await checked(await send(), url, operation);
+    return (await parseResponse(response)) as T;
+}
+
+function eventData<T>(data: string): T {
+    try {
+        return JSON.parse(data) as T;
+    } catch {
+        return data as T;
+    }
+}
+
+export async function* stream<T>(method: string, path: string, options: InternalOptions = {}): AsyncGenerator<T, void, undefined> {
+    const { url, operation, send } = prepare(method, path, options, 'text/event-stream');
+    const response = await checked(await send(), url, operation);
+    if (!response.body) return;
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = '';
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += value;
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop() ?? '';
+            for (const frame of frames) {
+                const data = frame
+                    .split(/\r?\n/)
+                    .filter((line) => line.startsWith('data:'))
+                    .map((line) => line.slice(5).replace(/^ /, ''))
+                    .join('\n');
+                if (data !== '') yield eventData<T>(data);
+            }
+        }
+    } finally {
+        reader.cancel().catch(() => undefined);
+    }
 }
 """

@@ -67,21 +67,64 @@ async function parseResponse(response: Response): Promise<unknown> {
     return text === '' ? undefined : text;
 }
 
-export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+function prepare(method: string, path: string, options: InternalOptions, accept: string) {
     const { query, body, operation, fetch: customFetch, headers, ...init } = options;
     const send = customFetch ?? apiConfig.fetch ?? fetch;
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
-    merged.set('Accept', 'application/json');
+    merged.set('Accept', accept);
     new Headers(headers).forEach((value, key) => merged.set(key, value));
     let payload: BodyInit | undefined;
     if (body !== undefined) {
         payload = isRawBody(body) ? body : JSON.stringify(body);
         if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
     }
-    const response = await send(url, { ...init, method, headers: merged, body: payload });
+    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload }) };
+}
+
+async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
-    const parsed = await parseResponse(response);
-    if (!response.ok) throw new ApiError(response.status, parsed, url, operation);
-    return parsed as T;
+    if (!response.ok) throw new ApiError(response.status, await parseResponse(response), url, operation);
+    return response;
+}
+
+export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+    const { url, operation, send } = prepare(method, path, options, 'application/json');
+    const response = await checked(await send(), url, operation);
+    return (await parseResponse(response)) as T;
+}
+
+function eventData<T>(data: string): T {
+    try {
+        return JSON.parse(data) as T;
+    } catch {
+        return data as T;
+    }
+}
+
+export async function* stream<T>(method: string, path: string, options: InternalOptions = {}): AsyncGenerator<T, void, undefined> {
+    const { url, operation, send } = prepare(method, path, options, 'text/event-stream');
+    const response = await checked(await send(), url, operation);
+    if (!response.body) return;
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = '';
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += value;
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop() ?? '';
+            for (const frame of frames) {
+                const data = frame
+                    .split(/\r?\n/)
+                    .filter((line) => line.startsWith('data:'))
+                    .map((line) => line.slice(5).replace(/^ /, ''))
+                    .join('\n');
+                if (data !== '') yield eventData<T>(data);
+            }
+        }
+    } finally {
+        reader.cancel().catch(() => undefined);
+    }
 }
