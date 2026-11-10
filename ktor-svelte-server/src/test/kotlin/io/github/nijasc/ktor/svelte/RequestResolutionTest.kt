@@ -256,4 +256,14 @@ class RequestResolutionTest {
             assertEquals("/a%20b/", folder.headers[HttpHeaders.Location])
             assertEquals("cafe", noRedirects.get("/caf%C3%A9").bodyAsText())
         }
+
+    @Test
+    fun `redirects keep an encoded query and answer head requests`() =
+        svelteTest {
+            val get = client.get("/about/?q=a%20b%26c&x")
+            val head = client.head("/docs")
+            assertEquals("/about?q=a%20b%26c&x", get.headers[HttpHeaders.Location])
+            assertEquals(HttpStatusCode.PermanentRedirect, head.status)
+            assertEquals("/docs/", head.headers[HttpHeaders.Location])
+        }
 }
