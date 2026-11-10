@@ -414,6 +414,13 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifySync
 	public final fun verify ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyTsTask : org/gradle/api/tasks/JavaExec {
+	public fun <init> ()V
+	public fun exec ()V
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getReportFile ()Lorg/gradle/api/file/RegularFileProperty;
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/ToolVersionSource : org/gradle/api/provider/ValueSource {
 	public static final field UNAVAILABLE Ljava/lang/String;
 	public fun <init> ()V

@@ -336,6 +336,8 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 
 Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
 
+With the `application` plugin, `check` runs `svelteVerifyTs`. It starts your app once, generates the TypeScript in memory and fails if the committed files differ, so a changed DTO or route can't drift away from the frontend unnoticed. Line endings are ignored. It passes when `generateTs` is off. To fix a failure, run `svelteGenerateTs`, or start the app in development mode, and commit the result. To leave it out of `check`, set `svelte.verifyTs=false` in `gradle.properties` or pass `-Psvelte.verifyTs=false`.
+
 Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
 
 ```ts
@@ -854,6 +856,7 @@ The package manager must already be installed. The plugin does not download Node
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
+| `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
 | `svelteCheck` | Runs your `check` script |
 | `svelteRun --script=lint` | Runs any `package.json` script |
 | `svelteOutdated` | Lists outdated frontend dependencies |
@@ -866,6 +869,7 @@ The package manager must already be installed. The plugin does not download Node
 |---|---|
 | `-Psvelte.skip=true` | Skips the frontend build, and warns if a JAR is being built |
 | `-Psvelte.dev=true` | Same as skip, and also sets `-Dio.ktor.development=true` on `run` |
+| `-Psvelte.verifyTs=false` | Leaves `svelteVerifyTs` out of `check` |
 
 ## Dev workflow
 

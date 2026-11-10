@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle
 
+import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -253,5 +254,75 @@ class UtilityTasksTest {
         assertContains(output, "only=true")
         assertContains(output, "frontend=")
         assertEquals(emptyList(), project.calls())
+    }
+
+    private fun verifyingApp(staleFile: String?): TestProject {
+        val project = project()
+        project.buildScript(applicationBuild)
+        val source = dir.resolve("src/main/java/Main.java")
+        source.parentFile.mkdirs()
+        val report =
+            if (staleFile == null) {
+                "\"\""
+            } else {
+                "new java.io.File(\"$staleFile\").getAbsolutePath() + System.lineSeparator()"
+            }
+        source.writeText(
+            """
+            public class Main {
+                public static void main(String[] args) throws Exception {
+                    System.out.println("development=" + System.getProperty("io.ktor.development"));
+                    System.out.println("frontend=" + System.getProperty("ktor.svelte.frontendDir"));
+                    String target = System.getProperty("ktor.svelte.generateTsVerify");
+                    if (target != null) java.nio.file.Files.writeString(java.nio.file.Path.of(target), $report);
+                }
+            }
+            """.trimIndent(),
+        )
+        return project
+    }
+
+    @Test
+    fun `svelteVerifyTs exists only with the application plugin`() {
+        val project = project()
+        assertContains(project.runAndFail("svelteVerifyTs").output, "not found")
+        project.buildScript(applicationBuild)
+        assertContains(project.run("tasks", "--group=svelte").output, "svelteVerifyTs")
+    }
+
+    @Test
+    fun `check verifies generated TypeScript and passes when it is up to date`() {
+        val result = verifyingApp(staleFile = null).run("check", "--configuration-cache")
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":svelteVerifyTs")?.outcome)
+        assertContains(result.output, "development=true")
+        assertContains(result.output, "frontend=")
+        assertContains(result.output, "generated TypeScript is up to date")
+    }
+
+    @Test
+    fun `svelteVerifyTs lists stale files and says how to fix them`() {
+        val output = verifyingApp(staleFile = "frontend/src/lib/api/types.ts").runAndFail("check").output
+
+        assertContains(output, "Generated TypeScript is out of date: frontend/src/lib/api/types.ts.")
+        assertContains(output, "Run svelteGenerateTs, or start the app in development mode, and commit the result.")
+    }
+
+    @Test
+    fun `svelteVerifyTs passes when the app does not generate TypeScript`() {
+        val project = project()
+        project.buildScript(applicationBuild)
+        val source = dir.resolve("src/main/java/Main.java")
+        source.parentFile.mkdirs()
+        source.writeText("public class Main { public static void main(String[] args) {} }")
+
+        assertContains(project.run("svelteVerifyTs").output, "generateTs is off")
+    }
+
+    @Test
+    fun `verifyTs property takes svelteVerifyTs out of check`() {
+        val result = verifyingApp(staleFile = "frontend/src/lib/api/types.ts").run("check", "-Psvelte.verifyTs=false")
+
+        assertEquals(null, result.task(":svelteVerifyTs"))
     }
 }

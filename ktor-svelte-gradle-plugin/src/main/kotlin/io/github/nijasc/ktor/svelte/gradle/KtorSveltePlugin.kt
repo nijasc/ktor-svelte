@@ -20,6 +20,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -45,6 +46,7 @@ private const val TASK_GROUP = "svelte"
 private val DEEP_CLEAN_FRONTEND_PATHS = listOf("node_modules", ".svelte-kit", ".vite", ".turbo", ".cache", ".eslintcache")
 private const val SKIP_PROPERTY = "svelte.skip"
 private const val DEV_PROPERTY = "svelte.dev"
+private const val VERIFY_TS_PROPERTY = "svelte.verifyTs"
 private const val SKIP_WARNING =
     "ktor-svelte: building a JAR with the frontend build skipped. The JAR may hold a stale frontend, or none."
 
@@ -270,20 +272,26 @@ public class KtorSveltePlugin : Plugin<Project> {
     ) {
         val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
         val application = project.extensions.getByType(JavaApplication::class.java)
-        project.tasks.register("svelteGenerateTs", JavaExec::class.java) { task ->
-            task.group = TASK_GROUP
-            task.description = "Starts the app once to regenerate TypeScript from its routes. Needs generateTs = true."
-            task.mainClass.set(application.mainClass)
-            task.classpath =
-                project.files(
-                    main.map { it.output.classesDirs },
-                    project.layout.projectDirectory.dir("src/main/resources"),
-                    project.configurations.named("runtimeClasspath"),
-                )
-            task.systemProperty("io.ktor.development", "true")
-            task.systemProperty("ktor.svelte.generateTsOnly", "true")
-            task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
-        }
+        val generateTs =
+            project.tasks.register("svelteGenerateTs", JavaExec::class.java) { task ->
+                configureGenerateTsExec(project, extension, task)
+                task.description = "Starts the app once to regenerate TypeScript from its routes. Needs generateTs = true."
+                task.systemProperty("ktor.svelte.generateTsOnly", "true")
+            }
+        val verifyTs =
+            project.tasks.register("svelteVerifyTs", SvelteVerifyTsTask::class.java) { task ->
+                configureGenerateTsExec(project, extension, task)
+                task.description = "Starts the app once and fails if the committed generated TypeScript is out of date."
+                task.reportFile.set(project.layout.buildDirectory.file("ktor-svelte/verify-ts.txt"))
+                task.projectDirectory.set(project.layout.projectDirectory)
+                task.mustRunAfter(generateTs)
+            }
+        val verifyTsInCheck =
+            project.providers
+                .gradleProperty(VERIFY_TS_PROPERTY)
+                .map { it.toBoolean() }
+                .getOrElse(true)
+        if (verifyTsInCheck) project.tasks.named("check").configure { it.dependsOn(verifyTs) }
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
         val toolchain = project.extensions.getByType(JavaPluginExtension::class.java).toolchain
         val install = project.tasks.named("svelteInstall", SvelteInstallTask::class.java)
@@ -306,6 +314,24 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.gradleExecutable.set(gradleExecutablePath(gradleHome))
             task.javaLauncher.set(toolchains.launcherFor(toolchain))
         }
+    }
+
+    private fun configureGenerateTsExec(
+        project: Project,
+        extension: SvelteExtension,
+        task: JavaExec,
+    ) {
+        val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
+        task.group = TASK_GROUP
+        task.mainClass.set(project.extensions.getByType(JavaApplication::class.java).mainClass)
+        task.classpath =
+            project.files(
+                main.map { it.output.classesDirs },
+                project.layout.projectDirectory.dir("src/main/resources"),
+                project.configurations.named("runtimeClasspath"),
+            )
+        task.systemProperty("io.ktor.development", "true")
+        task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
     }
 
     private fun serializeFrontendTasks(project: Project) {
