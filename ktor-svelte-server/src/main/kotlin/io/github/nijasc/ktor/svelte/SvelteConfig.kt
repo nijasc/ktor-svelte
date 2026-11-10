@@ -37,6 +37,7 @@ public class SvelteConfig {
     public var routing: SvelteRouting = SvelteRouting.Automatic
     public var statusEndpoint: Boolean = false
     public var originCheck: Boolean = true
+    public var hideErrorDetails: Boolean = true
     public var maxApiBodySize: Long? = 1024L * 1024L
 
     public fun apiPrefixes(vararg prefixes: String) {
