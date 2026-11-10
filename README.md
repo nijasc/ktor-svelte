@@ -831,7 +831,7 @@ svelte {
 | Setting | Purpose |
 |---|---|
 | `frontendDir` | Directory of the SvelteKit project |
-| `outputDir` | Adapter output, relative to `frontendDir`. Must match the adapter's `pages` option |
+| `outputDir` | Adapter output, a folder inside `frontendDir` given relative to it. Must match the adapter's `pages` option |
 | `packageManager` | `AUTO`, `BUN`, `PNPM`, `NPM` or `YARN`. `AUTO` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
