@@ -24,6 +24,7 @@ dependencies {
     api(libs.ktor.server.routing.openapi)
     api(libs.ktor.serialization.json)
     implementation(libs.ktor.server.swagger)
+    implementation(libs.ktor.server.body.limit)
     api(libs.serialization.json)
     compileOnly(libs.ktor.serialization.xml)
 

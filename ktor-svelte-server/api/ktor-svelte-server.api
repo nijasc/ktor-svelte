@@ -24,6 +24,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
 
 public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public fun <init> ()V
+	public final fun allowedOrigins ([Ljava/lang/String;)V
 	public final fun apiPrefixes ([Ljava/lang/String;)V
 	public final fun cache (Lkotlin/jvm/functions/Function1;)V
 	public final fun dev (Lkotlin/jvm/functions/Function1;)V
@@ -31,7 +32,9 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getApiDocsPath ()Ljava/lang/String;
 	public final fun getGenerateTs ()Z
 	public final fun getGenerateTsOutput ()Ljava/lang/String;
+	public final fun getMaxApiBodySize ()Ljava/lang/Long;
 	public final fun getNotFoundPage ()Ljava/lang/String;
+	public final fun getOriginCheck ()Z
 	public final fun getRouting ()Lio/github/nijasc/ktor/svelte/SvelteRouting;
 	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
 	public final fun getSpaFallback ()Ljava/lang/String;
@@ -43,7 +46,9 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setApiDocsPath (Ljava/lang/String;)V
 	public final fun setGenerateTs (Z)V
 	public final fun setGenerateTsOutput (Ljava/lang/String;)V
+	public final fun setMaxApiBodySize (Ljava/lang/Long;)V
 	public final fun setNotFoundPage (Ljava/lang/String;)V
+	public final fun setOriginCheck (Z)V
 	public final fun setPublicConfig (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;)V
 	public final fun setRouting (Lio/github/nijasc/ktor/svelte/SvelteRouting;)V
 	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V

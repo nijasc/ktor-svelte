@@ -592,6 +592,42 @@ This sends `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Refer
 
 `contentSecurityPolicy` is off by default, because SvelteKit's inline startup script would break under a strict policy. Use SvelteKit's own `csp` option in `hash` mode, or set this property yourself and test it. It is never sent in dev, because it would break Vite.
 
+## API request guards
+
+Two checks protect every path under your API prefixes. Both are on by default.
+
+**Origin check.** POST, PUT, PATCH and DELETE requests from a browser on another site are refused with 403, so a cookie session cannot be used for cross-site request forgery. A request is refused when:
+
+- its `Origin` header names a different host than the request, or is `null`, or
+- it has no `Origin` but sends `Sec-Fetch-Site: cross-site`.
+
+Only the host is compared, ignoring case, scheme and port, so a TLS-terminating proxy or the Vite dev port does not cause false rejections. The request host comes from Ktor's `origin`, so it follows `XForwardedHeaders` or `ForwardedHeaders` when you install them. Requests with neither header, such as curl, server-to-server calls and tests, are allowed, because browsers always send one of them. GET and HEAD are never checked.
+
+To accept writes from another frontend, such as a separate admin app, list its exact origin:
+
+```kotlin
+install(Svelte) {
+    allowedOrigins("https://admin.example.com")
+}
+```
+
+**Body size limit.** Request bodies on API paths are limited to 1 MiB. Larger bodies get 413, whether they send `Content-Length` or are chunked. It uses Ktor's `RequestBodyLimit` plugin, so do not install that plugin yourself unless you set `maxApiBodySize = null`.
+
+Refused requests get a JSON body such as `{"message":"Request body is larger than the limit of 1048576 bytes."}`.
+
+To raise the limit, or turn the origin check off:
+
+```kotlin
+install(Svelte) {
+    originCheck = false
+    maxApiBodySize = 10L * 1024 * 1024
+}
+```
+
+Set `maxApiBodySize = null` to remove the limit.
+
+Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
+
 ## API docs
 
 `apiDocs = true` serves Swagger UI at `/api/docs` in development mode only, using the same OpenAPI document as `generateTs`. Change the path with `apiDocsPath`. The page loads its scripts from a public CDN, so it needs internet access.
@@ -638,6 +674,9 @@ install(Svelte) {
     apiDocs = false
     apiDocsPath = "/api/docs"
     routing = SvelteRouting.Automatic
+    originCheck = true
+    allowedOrigins()
+    maxApiBodySize = 1048576
 
     cache {
         immutable = "public, max-age=31536000, immutable"
@@ -667,6 +706,9 @@ install(Svelte) {
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
 | `apiDocs` | Serves Swagger UI in development mode. See [API docs](#api-docs) |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](#auth) |
+| `originCheck` | Refuses cross-site POST, PUT, PATCH and DELETE requests to API paths. See [API request guards](#api-request-guards) |
+| `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |
+| `maxApiBodySize` | Largest request body on API paths, in bytes. `null` disables it |
 | `securityHeaders { }` | See [Security headers](#security-headers) |
 | `publicConfig(value)` | See [Runtime config](#runtime-config) |
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |

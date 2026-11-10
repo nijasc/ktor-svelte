@@ -12,6 +12,9 @@ public class SvelteConfig {
     internal var apiPrefixList: List<String> = listOf("/api")
         private set
 
+    internal var allowedOriginList: List<String> = emptyList()
+        private set
+
     internal var paramRouteList: List<String> = emptyList()
         private set
 
@@ -34,9 +37,15 @@ public class SvelteConfig {
     public var apiDocsPath: String = "/api/docs"
     public var routing: SvelteRouting = SvelteRouting.Automatic
     public var statusEndpoint: Boolean = false
+    public var originCheck: Boolean = true
+    public var maxApiBodySize: Long? = 1024L * 1024L
 
     public fun apiPrefixes(vararg prefixes: String) {
         apiPrefixList = prefixes.toList()
+    }
+
+    public fun allowedOrigins(vararg origins: String) {
+        allowedOriginList = origins.toList()
     }
 
     public fun paramRoutes(vararg routes: String) {
