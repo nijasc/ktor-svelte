@@ -29,6 +29,27 @@ class RequestResolverTest {
     }
 
     @Test
+    fun `param routes serve the fallback even without an html accept header`() {
+        val paramResolver =
+            RequestResolver(
+                listOf("/api"),
+                spaFallback = "200.html",
+                notFoundPage = "404.html",
+                paramRoutes = listOf("/items/[id]", "/docs/[...rest]", "/blog/[[page]]"),
+            )
+        val manifest = manifestOf("200.html", "404.html")
+        val fallback = Resolution.Serve("200.html")
+        assertEquals(fallback, paramResolver.resolve("/items/7", acceptsHtml = false, manifest))
+        assertEquals(fallback, paramResolver.resolve("/items/7/", acceptsHtml = false, manifest))
+        assertEquals(fallback, paramResolver.resolve("/docs/a/b/c", acceptsHtml = false, manifest))
+        assertEquals(fallback, paramResolver.resolve("/blog", acceptsHtml = false, manifest))
+        assertEquals(fallback, paramResolver.resolve("/blog/2", acceptsHtml = false, manifest))
+        assertEquals(Resolution.Serve("404.html", notFound = true), paramResolver.resolve("/items", acceptsHtml = false, manifest))
+        assertEquals(Resolution.Serve("404.html", notFound = true), paramResolver.resolve("/items/7/x", acceptsHtml = false, manifest))
+        assertEquals(Resolution.Unhandled, paramResolver.resolve("/items/photo.png", acceptsHtml = false, manifest))
+    }
+
+    @Test
     fun `root api prefix claims every path`() {
         val rootResolver = RequestResolver(listOf("/"), spaFallback = null, notFoundPage = null)
         assertEquals(Resolution.Unhandled, rootResolver.resolve("/about", acceptsHtml = true, manifestOf("about.html")))

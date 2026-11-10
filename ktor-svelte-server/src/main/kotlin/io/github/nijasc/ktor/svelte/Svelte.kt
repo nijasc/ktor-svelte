@@ -60,7 +60,8 @@ private const val MISSING_BUILD_MESSAGE =
 public val Svelte: ApplicationPlugin<SvelteConfig> =
     createApplicationPlugin("Svelte", ::SvelteConfig) {
         val store = createStore(pluginConfig.source, application)
-        val resolver = RequestResolver(pluginConfig.apiPrefixList, pluginConfig.spaFallback, pluginConfig.notFoundPage)
+        val resolver =
+            RequestResolver(pluginConfig.apiPrefixList, pluginConfig.spaFallback, pluginConfig.notFoundPage, pluginConfig.paramRouteList)
         val responder = AssetResponder(store, pluginConfig.cacheConfig)
         val devUrl = resolveDevServerUrl(pluginConfig.devConfig.url, System.getenv(DEV_SERVER_VARIABLE))
         val allowRemote = pluginConfig.devConfig.allowRemote
