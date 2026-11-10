@@ -41,14 +41,14 @@ internal class TypeScriptGenerator(
         validationHelpers.clear()
         val types = typesSource(schemas) + publicConfigDeclaration(schemas)
         return mapOf(
-            "client.ts" to CLIENT_SOURCE,
+            "client.ts" to typeScriptTemplate("client.ts"),
             "types.ts" to types + validationHelpers.joinToString("") { "\n" + it.source },
             "services.ts" to
                 servicesSource(
                     filtered.objectAt("paths").orEmpty(),
                     schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name } + dateTypes,
                 ),
-            "index.ts" to INDEX_SOURCE,
+            "index.ts" to typeScriptTemplate("index.ts"),
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
     }
@@ -88,7 +88,7 @@ internal class TypeScriptGenerator(
             } else {
                 ""
             }
-        val body = listOfNotNull(DATES_SOURCE.takeIf { usesDates }, declarations.ifEmpty { null }).joinToString("\n")
+        val body = listOfNotNull(typeScriptTemplate("dates.ts").takeIf { usesDates }, declarations.ifEmpty { null }).joinToString("\n")
         return iconImport + body.ifEmpty { "export {};\n" }
     }
 
@@ -613,7 +613,7 @@ internal class TypeScriptGenerator(
             append("\n")
             serviceBlocks.forEach { block -> append(block).append("\n") }
             append(errorsSource(errors))
-            if (publicConfigSchema != null) append(PUBLIC_CONFIG_SOURCE)
+            if (publicConfigSchema != null) append(typeScriptTemplate("public-config.ts"))
             append("export const api = { ${groups.keys.sorted().joinToString()} };\n")
         }
     }
@@ -848,216 +848,19 @@ private fun hasDateFormat(element: JsonElement): Boolean =
         else -> false
     }
 
-private const val DATES_SOURCE = """declare const iso: unique symbol;
-
-const pad = (value: number, width = 2) => String(value).padStart(width, '0');
-
-export type IsoDate = string & { readonly [iso]: 'date' };
-
-export const IsoDate = {
-    parse: (value: IsoDate): Date => {
-        const [year, month, day] = value.split('-').map(Number);
-        const date = new Date(year, month - 1, day);
-        date.setFullYear(year);
-        return date;
-    },
-    from: (date: Date): IsoDate => `${'$'}{pad(date.getFullYear(), 4)}-${'$'}{pad(date.getMonth() + 1)}-${'$'}{pad(date.getDate())}` as IsoDate,
-    today: (): IsoDate => IsoDate.from(new Date()),
-};
-
-export type IsoTime = string & { readonly [iso]: 'time' };
-
-export const IsoTime = {
-    from: (date: Date): IsoTime => `${'$'}{pad(date.getHours())}:${'$'}{pad(date.getMinutes())}:${'$'}{pad(date.getSeconds())}` as IsoTime,
-};
-
-export type IsoDateTime = string & { readonly [iso]: 'date-time' };
-
-export const IsoDateTime = {
-    parse: (value: IsoDateTime): Date => new Date(value),
-    from: (date: Date): IsoDateTime => date.toISOString() as IsoDateTime,
-    fromLocal: (date: Date): IsoDateTime => `${'$'}{IsoDate.from(date)}T${'$'}{IsoTime.from(date)}` as IsoDateTime,
-    now: (): IsoDateTime => IsoDateTime.from(new Date()),
-};
-"""
-
 private const val LUCIDE_TYPE = "LucideIcon"
 private const val REQUIRED_MESSAGE = "Required."
 private val CONSTRAINT_KEYWORDS = listOf("minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "pattern")
 
 private enum class ValidationHelper(
-    val source: String,
+    private val file: String,
 ) {
-    ADD_ERROR(
-        """function addError(errors: Record<string, string[]>, field: string, message: string): void {
-    (errors[field] ??= []).push(message);
-}
-""",
-    ),
-    ADD_NESTED(
-        """function addNested(errors: Record<string, string[]>, prefix: string, nested: Record<string, string[]>): void {
-    for (const [field, messages] of Object.entries(nested)) {
-        for (const message of messages) addError(errors, prefix + field, message);
-    }
-}
-""",
-    ),
-    MATCHES(
-        """function matches(pattern: string, text: string): boolean {
-    try {
-        return new RegExp(pattern, 'u').test(text);
-    } catch {
-        return true;
-    }
-}
-""",
-    ),
+    ADD_ERROR("add-error.ts"),
+    ADD_NESTED("add-nested.ts"),
+    MATCHES("matches.ts"),
+    ;
+
+    val source: String get() = typeScriptTemplate(file)
 }
 
 private const val EVENT_STREAM = "text/event-stream"
-
-private const val PUBLIC_CONFIG_SOURCE = """let publicConfig: Promise<PublicConfig> | undefined;
-
-export function loadPublicConfig(options?: RequestOptions): Promise<PublicConfig> {
-    publicConfig ??= request<PublicConfig>('GET', '/_ktor-svelte/config.json', { ...options });
-    return publicConfig;
-}
-
-"""
-
-private const val INDEX_SOURCE = """export * from './client.js';
-export * from './services.js';
-export * from './types.js';
-"""
-
-private const val CLIENT_SOURCE = """export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
-    fetch?: typeof fetch;
-}
-
-export interface ApiConfig {
-    baseUrl: string;
-    headers: Record<string, string>;
-    fetch?: typeof fetch;
-    onUnauthorized?: (response: Response) => void;
-}
-
-export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
-
-export class ApiError<E = unknown> extends Error {
-    constructor(
-        readonly status: number,
-        readonly body: E,
-        readonly url: string,
-        readonly operation?: string
-    ) {
-        super(`Request to ${'$'}{url} failed with status ${'$'}{status}`);
-        this.name = 'ApiError';
-    }
-}
-
-export interface ValidationProblem {
-    message: string;
-    fields: Record<string, string[]>;
-}
-
-export function isValidationError(error: unknown): error is ApiError<ValidationProblem> {
-    return (
-        error instanceof ApiError &&
-        error.status === 422 &&
-        typeof error.body === 'object' &&
-        error.body !== null &&
-        'fields' in error.body
-    );
-}
-
-interface InternalOptions extends RequestOptions {
-    query?: Record<string, unknown>;
-    body?: unknown;
-    operation?: string;
-}
-
-function queryString(query: Record<string, unknown> | undefined): string {
-    if (!query) return '';
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
-        if (value === undefined || value === null) continue;
-        for (const item of Array.isArray(value) ? value : [value]) params.append(key, String(item));
-    }
-    const text = params.toString();
-    return text ? `?${'$'}{text}` : '';
-}
-
-function isRawBody(body: unknown): body is BodyInit {
-    return typeof body === 'string' || body instanceof FormData || body instanceof Blob || body instanceof URLSearchParams;
-}
-
-async function parseResponse(response: Response): Promise<unknown> {
-    if (response.status === 204 || response.status === 205) return undefined;
-    const contentType = response.headers.get('content-type') ?? '';
-    if (contentType.includes('json')) return response.json();
-    const text = await response.text();
-    return text === '' ? undefined : text;
-}
-
-function prepare(method: string, path: string, options: InternalOptions, accept: string) {
-    const { query, body, operation, fetch: customFetch, headers, ...init } = options;
-    const send = customFetch ?? apiConfig.fetch ?? fetch;
-    const url = apiConfig.baseUrl + path + queryString(query);
-    const merged = new Headers(apiConfig.headers);
-    merged.set('Accept', accept);
-    new Headers(headers).forEach((value, key) => merged.set(key, value));
-    let payload: BodyInit | undefined;
-    if (body !== undefined) {
-        payload = isRawBody(body) ? body : JSON.stringify(body);
-        if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
-    }
-    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload }) };
-}
-
-async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
-    if (response.status === 401) apiConfig.onUnauthorized?.(response);
-    if (!response.ok) throw new ApiError(response.status, await parseResponse(response), url, operation);
-    return response;
-}
-
-export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
-    const { url, operation, send } = prepare(method, path, options, 'application/json');
-    const response = await checked(await send(), url, operation);
-    return (await parseResponse(response)) as T;
-}
-
-function eventData<T>(data: string): T {
-    try {
-        return JSON.parse(data) as T;
-    } catch {
-        return data as T;
-    }
-}
-
-export async function* stream<T>(method: string, path: string, options: InternalOptions = {}): AsyncGenerator<T, void, undefined> {
-    const { url, operation, send } = prepare(method, path, options, 'text/event-stream');
-    const response = await checked(await send(), url, operation);
-    if (!response.body) return;
-    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-    let buffer = '';
-    try {
-        for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += value;
-            const frames = buffer.split(/\r?\n\r?\n/);
-            buffer = frames.pop() ?? '';
-            for (const frame of frames) {
-                const data = frame
-                    .split(/\r?\n/)
-                    .filter((line) => line.startsWith('data:'))
-                    .map((line) => line.slice(5).replace(/^ /, ''))
-                    .join('\n');
-                if (data !== '') yield eventData<T>(data);
-            }
-        }
-    } finally {
-        reader.cancel().catch(() => undefined);
-    }
-}
-"""
