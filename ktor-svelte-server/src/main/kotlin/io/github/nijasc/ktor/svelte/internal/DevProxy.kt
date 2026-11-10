@@ -85,6 +85,44 @@ internal fun resolveDevServerUrl(
     environmentOverride: String?,
 ): String = environmentOverride?.takeIf { it.isNotBlank() } ?: configured
 
+private const val URI_SAFE_PUNCTUATION = "-._~!$&'()*+,;=:@/?"
+
+private fun isPercentEscape(
+    value: String,
+    index: Int,
+): Boolean = index + 2 < value.length && value[index + 1].isHexDigit() && value[index + 2].isHexDigit()
+
+private fun Char.isHexDigit(): Boolean = this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'
+
+internal fun upstreamUri(
+    target: String,
+    requestUri: String,
+): URI {
+    val encoded = StringBuilder(target.length + requestUri.length + 16).append(target)
+    var index = 0
+    while (index < requestUri.length) {
+        val char = requestUri[index]
+        when {
+            char == '%' && isPercentEscape(requestUri, index) -> {
+                encoded.append(requestUri, index, index + 3)
+                index += 3
+            }
+            char in 'a'..'z' || char in 'A'..'Z' || char in '0'..'9' || char in URI_SAFE_PUNCTUATION -> {
+                encoded.append(char)
+                index++
+            }
+            else -> {
+                val length = if (Character.isHighSurrogate(char) && index + 1 < requestUri.length) 2 else 1
+                requestUri.substring(index, index + length).toByteArray(Charsets.UTF_8).forEach {
+                    encoded.append('%').append("%02X".format(it.toInt() and 0xFF))
+                }
+                index += length
+            }
+        }
+    }
+    return URI.create(encoded.toString())
+}
+
 internal class DevProxy(
     baseUrl: String,
 ) {
@@ -122,7 +160,7 @@ internal class DevProxy(
     ): HttpResponse<InputStream>? {
         val builder =
             HttpRequest
-                .newBuilder(URI.create(target + call.request.uri))
+                .newBuilder(upstreamUri(target, call.request.uri))
                 .method(call.request.httpMethod.value, HttpRequest.BodyPublishers.noBody())
         call.request.headers.forEach { name, values ->
             if (name.lowercase() !in UNFORWARDED_REQUEST_HEADERS) {
