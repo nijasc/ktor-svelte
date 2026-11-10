@@ -1,4 +1,4 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.assets
 
 internal sealed interface Resolution {
     data class Serve(

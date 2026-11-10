@@ -1,4 +1,4 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.assets
 
 import java.io.InputStream
 import java.nio.file.Files

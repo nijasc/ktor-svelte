@@ -1,5 +1,7 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.dev
 
+import io.github.nijasc.ktor.svelte.internal.assets.MANIFEST_FORMAT_VERSION
+import io.github.nijasc.ktor.svelte.internal.assets.Manifest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.security.MessageDigest

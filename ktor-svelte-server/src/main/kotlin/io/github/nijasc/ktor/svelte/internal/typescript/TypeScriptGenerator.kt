@@ -1,7 +1,8 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
-import io.github.nijasc.ktor.svelte.internal.ConstraintMessages
-import io.github.nijasc.ktor.svelte.internal.formatNumber
+import io.github.nijasc.ktor.svelte.internal.validation.ConstraintMessages
+import io.github.nijasc.ktor.svelte.internal.validation.formatNumber
+import io.github.nijasc.ktor.svelte.svelte
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement

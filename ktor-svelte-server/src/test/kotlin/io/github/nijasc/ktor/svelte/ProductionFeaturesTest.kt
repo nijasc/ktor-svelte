@@ -1,6 +1,6 @@
 package io.github.nijasc.ktor.svelte
 
-import io.github.nijasc.ktor.svelte.internal.privateCacheControl
+import io.github.nijasc.ktor.svelte.internal.assets.privateCacheControl
 import io.github.nijasc.ktor.svelte.internal.typescript.TypeScriptGenerator
 import io.ktor.client.request.basicAuth
 import io.ktor.client.request.get

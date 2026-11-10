@@ -1,9 +1,9 @@
 package io.github.nijasc.ktor.svelte
 
 import com.sun.net.httpserver.HttpServer
-import io.github.nijasc.ktor.svelte.internal.isLocalRequest
-import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
-import io.github.nijasc.ktor.svelte.internal.upstreamUri
+import io.github.nijasc.ktor.svelte.internal.dev.isLocalRequest
+import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.dev.upstreamUri
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.head

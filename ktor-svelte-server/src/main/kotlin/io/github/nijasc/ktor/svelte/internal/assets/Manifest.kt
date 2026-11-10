@@ -1,4 +1,4 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.assets
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

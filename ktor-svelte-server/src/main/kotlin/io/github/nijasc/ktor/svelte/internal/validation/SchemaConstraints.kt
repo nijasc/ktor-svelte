@@ -1,4 +1,4 @@
-package io.github.nijasc.ktor.svelte.internal
+package io.github.nijasc.ktor.svelte.internal.validation
 
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.ValidationException
