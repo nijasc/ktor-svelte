@@ -2,10 +2,13 @@ package io.github.nijasc.ktor.svelte.gradle.libraries
 
 import groovy.json.JsonOutput
 import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
+import io.github.nijasc.ktor.svelte.gradle.renderTemplate
 
 private const val HEADER = "// $GENERATED_MARKER\n"
 
 private fun json(value: Any?): String = JsonOutput.toJson(value)
+
+private fun tsArray(values: List<String>): String = json(values).replace('"', '\'')
 
 private fun typeUnion(values: List<String>): String = values.joinToString(" | ") { json(it).replace('"', '\'') }
 
@@ -18,7 +21,7 @@ internal fun frontendFiles(
         put("vite.config.ts", viteConfig(spec, hasUserViteConfig))
         if (spec.usesCss) put("$GENERATED_DIR/app.css", appCss(spec))
         if (spec.daisy != null) put("$GENERATED_DIR/theme.ts", themeSource(spec.daisy))
-        if (spec.lucide) put("$GENERATED_DIR/Icon.svelte", ICON_COMPONENT)
+        if (spec.lucide) put("$GENERATED_DIR/Icon.svelte", renderTemplate("Icon.svelte"))
         if (spec.i18n != null && messages != null) put("$GENERATED_DIR/i18n.ts", i18nSource(spec.i18n, messages))
         if (spec.usesHooks) {
             put("$GENERATED_DIR/server-hooks.ts", serverHooks(spec))
@@ -110,28 +113,10 @@ private fun appCss(spec: LibrarySpec): String =
 
 private fun themeSource(daisy: DaisySpec): String =
     HEADER +
-        """
-export const themes = ${json(daisy.allThemes).replace('"', '\'')} as const;
-
-export type ThemeName = (typeof themes)[number];
-
-export const defaultTheme: ThemeName = '${daisy.defaultTheme}';
-
-function readCookie(): string | undefined {
-    return document.cookie.match(/(?:^|; )$THEME_COOKIE=([^;]+)/)?.[1];
-}
-
-export function getTheme(): ThemeName {
-    if (typeof document === 'undefined') return defaultTheme;
-    const saved = readCookie();
-    return themes.find((theme) => theme === saved) ?? defaultTheme;
-}
-
-export function setTheme(theme: ThemeName): void {
-    document.documentElement.dataset.theme = theme;
-    document.cookie = `$THEME_COOKIE=${'$'}{theme}; path=/; max-age=31536000; samesite=lax`;
-}
-""".trimStart()
+        renderTemplate(
+            "theme.ts",
+            mapOf("themes" to tsArray(daisy.allThemes), "defaultTheme" to daisy.defaultTheme, "cookie" to THEME_COOKIE),
+        )
 
 private fun i18nSource(
     i18n: I18nSpec,
@@ -170,55 +155,27 @@ private fun i18nSource(
             "    location.reload();\n"
         }
     val localizeBody = if (urlPrefix) "`/${'$'}{getLocale()}${'$'}{path}`" else "path"
+    val prefixCookie =
+        if (urlPrefix) {
+            "    document.cookie = `$LOCALE_COOKIE=${'$'}{getLocale()}; path=/; max-age=31536000; samesite=lax`;\n"
+        } else {
+            ""
+        }
     return HEADER +
-        """
-const messages = {
-$tables
-} as const;
-
-export const locales = ${json(i18n.locales).replace('"', '\'')} as const;
-
-export type Locale = (typeof locales)[number];
-
-export const defaultLocale: Locale = '${i18n.defaultLocale}';
-
-declare global {
-    var __ktorSvelteLocale: Locale | undefined;
-}
-
-function matchLocale(tag: string | undefined): Locale | undefined {
-    if (!tag) return undefined;
-    const lower = tag.toLowerCase();
-    return locales.find((locale) => locale.toLowerCase() === lower) ?? locales.find((locale) => locale.toLowerCase() === lower.split('-')[0]);
-}
-
-export function getLocale(): Locale {
-    if (typeof document === 'undefined') return globalThis.__ktorSvelteLocale ?? defaultLocale;
-$browserLocale    const cookie = document.cookie.match(/(?:^|; )$LOCALE_COOKIE=([^;]+)/)?.[1];
-    return matchLocale(cookie) ?? matchLocale(navigator.language) ?? defaultLocale;
-}
-
-export function setLocale(locale: Locale): void {
-    document.cookie = `$LOCALE_COOKIE=${'$'}{locale}; path=/; max-age=31536000; samesite=lax`;
-$setLocaleBody}
-
-export function localizeHref(path: string): string {
-    return $localizeBody;
-}
-
-function translate(key: keyof (typeof messages)[Locale], values?: Record<string, string | number>): string {
-    const text: string = messages[getLocale()][key];
-    return values ? text.replace(/\{(\w+)}/g, (match, name) => String(values[name] ?? match)) : text;
-}
-
-export const m = {
-$functions
-};
-
-if (typeof document !== 'undefined') {
-    document.documentElement.lang = getLocale();
-${if (urlPrefix) "    document.cookie = `$LOCALE_COOKIE=${'$'}{getLocale()}; path=/; max-age=31536000; samesite=lax`;\n" else ""}}
-""".trimStart()
+        renderTemplate(
+            "i18n.ts",
+            mapOf(
+                "tables" to tables,
+                "locales" to tsArray(i18n.locales),
+                "defaultLocale" to i18n.defaultLocale,
+                "browserLocale" to browserLocale,
+                "cookie" to LOCALE_COOKIE,
+                "setLocaleBody" to setLocaleBody,
+                "localizeBody" to localizeBody,
+                "functions" to functions,
+                "prefixCookie" to prefixCookie,
+            ),
+        )
 }
 
 private fun serverHooks(spec: LibrarySpec): String {
@@ -260,42 +217,8 @@ private fun serverHooks(spec: LibrarySpec): String {
         "    });\n};\n"
 }
 
-private fun universalHooks(i18n: I18nSpec): String =
-    HEADER +
-        """
-import type { Reroute } from '@sveltejs/kit/hooks';
-
-const locales: readonly string[] = ${json(i18n.locales).replace('"', '\'')};
-
-export const reroute: Reroute = ({ url }) => {
-    const segments = url.pathname.split('/');
-    if (!locales.includes(segments[1])) return url.pathname;
-    return '/' + segments.slice(2).join('/');
-};
-""".trimStart()
+private fun universalHooks(i18n: I18nSpec): String = HEADER + renderTemplate("hooks.ts", mapOf("locales" to tsArray(i18n.locales)))
 
 private const val HOOKS_SERVER = HEADER + "export { ktorSvelteHandle as handle } from './lib/ktor-svelte/server-hooks.js';\n"
 
-private const val ICON_COMPONENT = """<script lang="ts">
-    import type { Component } from 'svelte';
-    import { icons, type LucideIconName } from './icons.js';
-
-    let { name, ...rest }: { name: LucideIconName; size?: number | string; color?: string; class?: string; strokeWidth?: number | string } =
-        ${'$'}props();
-
-    let loaded: Promise<{ default: Component<any> }> = ${'$'}derived(icons[name]());
-</script>
-
-{#await loaded then icon}
-    <icon.default {...rest} />
-{/await}
-"""
-
-internal const val ROOT_LAYOUT: String = """<script lang="ts">
-    import '#lib/ktor-svelte/app.css';
-
-    let { children } = ${'$'}props();
-</script>
-
-{@render children()}
-"""
+internal fun rootLayout(): String = renderTemplate("+layout.svelte")

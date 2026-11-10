@@ -1,5 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
+import io.github.nijasc.ktor.svelte.gradle.renderTemplate
+
 private const val MAX_GENERATED_LINE_LENGTH = 140
 
 private fun kotlinString(value: String): String =
@@ -65,12 +67,13 @@ private fun themeEnum(
     daisy: DaisySpec,
 ): String =
     fileHeader(generatedPackage) +
-        "public enum class AppTheme(\n    public val cssName: String,\n) {\n" +
-        daisy.allThemes.joinToString(",\n", postfix = ",\n") { "    ${themeConstant(it)}(${kotlinString(it)})" } +
-        "    ;\n\n    public companion object {\n" +
-        "        public val default: AppTheme = ${themeConstant(daisy.defaultTheme)}\n\n" +
-        "        public fun fromCssName(name: String): AppTheme? = entries.firstOrNull { it.cssName == name }\n" +
-        "    }\n}\n"
+        renderTemplate(
+            "AppTheme.kt.template",
+            mapOf(
+                "entries" to daisy.allThemes.joinToString(",\n", postfix = ",") { "    ${themeConstant(it)}(${kotlinString(it)})" },
+                "defaultTheme" to themeConstant(daisy.defaultTheme),
+            ),
+        )
 
 private fun messagesClass(
     spec: LibrarySpec,
@@ -90,16 +93,15 @@ private fun messagesClass(
         }
     val i18n = spec.i18n!!
     return fileHeader(spec.generatedPackage) +
-        "public class Messages private constructor(\n    public val locale: String,\n    private val table: Map<String, String>,\n) {\n" +
-        functions +
-        "\n\n    public companion object {\n" +
-        "        public val locales: List<String> = listOf(${i18n.locales.joinToString(", ") { kotlinString(it) }})\n" +
-        "        public val defaultLocale: String = ${kotlinString(i18n.defaultLocale)}\n\n" +
-        "        private val tables: Map<String, Map<String, String>> by lazy {\n" +
-        "            mapOf(\n$tables,\n            )\n        }\n\n" +
-        "        public fun forLocale(locale: String): Messages {\n" +
-        "            val resolved = if (locale in tables) locale else defaultLocale\n" +
-        "            return Messages(resolved, tables.getValue(resolved))\n        }\n    }\n}\n"
+        renderTemplate(
+            "Messages.kt.template",
+            mapOf(
+                "functions" to functions,
+                "locales" to i18n.locales.joinToString(", ") { kotlinString(it) },
+                "defaultLocale" to kotlinString(i18n.defaultLocale),
+                "tables" to tables,
+            ),
+        )
 }
 
 private fun messageFunction(
