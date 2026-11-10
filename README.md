@@ -669,12 +669,12 @@ No CSP is sent while the dev proxy is active, because Vite injects its own scrip
 
 Two checks protect every path under your API prefixes. Both are on by default.
 
-**Origin check.** POST, PUT, PATCH and DELETE requests from a browser on another site are refused with 403, so a cookie session cannot be used for cross-site request forgery. A request is refused when:
+**Origin check.** POST, PUT, PATCH, DELETE and every other method except GET, HEAD, OPTIONS and TRACE from a browser on another site are refused with 403, so a cookie session cannot be used for cross-site request forgery. A request is refused when:
 
 - its `Origin` header names a different host than the request, or is `null`, or
 - it has no `Origin` but sends `Sec-Fetch-Site: cross-site`.
 
-Only the host is compared, ignoring case, scheme and port, so a TLS-terminating proxy or the Vite dev port does not cause false rejections. The request host comes from Ktor's `origin`, so it follows `XForwardedHeaders` or `ForwardedHeaders` when you install them. Requests with neither header, such as curl, server-to-server calls and tests, are allowed, because browsers always send one of them. GET and HEAD are never checked.
+Only the host is compared, ignoring case, scheme and port, so a TLS-terminating proxy or the Vite dev port does not cause false rejections. The request host comes from Ktor's `origin`, so it follows `XForwardedHeaders` or `ForwardedHeaders` when you install them. Requests with neither header, such as curl, server-to-server calls and tests, are allowed, because browsers always send one of them. GET, HEAD, OPTIONS and TRACE are never checked.
 
 To accept writes from another frontend, such as a separate admin app, list its exact origin:
 
@@ -788,7 +788,7 @@ install(Svelte) {
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
 | `apiDocs` | Serves Swagger UI in development mode. See [API docs](#api-docs) |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](#auth) |
-| `originCheck` | Refuses cross-site POST, PUT, PATCH and DELETE requests to API paths. See [API request guards](#api-request-guards) |
+| `originCheck` | Refuses cross-site requests to API paths for every method except GET, HEAD, OPTIONS and TRACE. See [API request guards](#api-request-guards) |
 | `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |
 | `maxApiBodySize` | Largest request body on API paths, in bytes. `null` disables it |
 | `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](#security-headers) |
