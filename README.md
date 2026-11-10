@@ -866,7 +866,7 @@ The package manager must already be installed. The plugin does not download Node
 | `svelteOutdated` | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
 | `svelteClean` | Deletes `node_modules`, `.svelte-kit` and the build output |
-| `deepClean` | Runs `clean`, then also deletes `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept |
+| `deepClean` | Runs `clean`, then also deletes the project's `.gradle` and `.kotlin` directories, `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept |
 | `svelteGenerateRunConfigurations` | Writes IntelliJ run configurations to `.run/`, keeping any that exist |
 
 | Property | Effect |
