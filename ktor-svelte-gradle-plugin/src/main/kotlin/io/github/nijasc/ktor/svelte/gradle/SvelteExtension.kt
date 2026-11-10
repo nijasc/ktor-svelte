@@ -33,4 +33,5 @@ public abstract class SvelteExtension {
 public abstract class SvelteDevSettings {
     public abstract val port: Property<Int>
     public abstract val script: Property<String>
+    public abstract val debugPort: Property<Int>
 }

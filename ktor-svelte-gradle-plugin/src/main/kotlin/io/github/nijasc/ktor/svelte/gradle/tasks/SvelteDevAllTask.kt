@@ -48,6 +48,9 @@ internal class ChangeDetector(
     }
 }
 
+internal fun debugArguments(port: Int): List<String> =
+    if (port > 0) listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:$port") else emptyList()
+
 internal fun stopProcessTree(process: Process) {
     val descendants = process.descendants().toList()
     descendants.forEach { it.destroy() }
@@ -63,6 +66,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
 
     @get:Input
     public abstract val port: Property<Int>
+
+    @get:Input
+    public abstract val debugPort: Property<Int>
 
     @get:Input
     public abstract val mainClass: Property<String>
@@ -94,6 +100,11 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
             var app = startApp()
             running += app
             logger.lifecycle("ktor-svelte: Vite, the Kotlin compiler and the app are running. Stop this task to stop them all.")
+            if (debugPort.get() > 0) {
+                logger.lifecycle(
+                    "ktor-svelte: attach a debugger to 127.0.0.1:${debugPort.get()}. It reconnects after each restart if auto restart is on.",
+                )
+            }
 
             val classes = classesDirectories.files
             val detector = ChangeDetector(fingerprintOf(classes), SETTLE_MILLIS)
@@ -145,12 +156,14 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 javaLauncher
                     .get()
                     .executablePath.asFile.path,
-                "-Dio.ktor.development=true",
-                "-Dktor.svelte.frontendDir=${frontendDir.get().asFile.path}",
-                "-cp",
-                appClasspath.asPath,
-                mainClass.get(),
-            )
+            ) + debugArguments(debugPort.get()) +
+                listOf(
+                    "-Dio.ktor.development=true",
+                    "-Dktor.svelte.frontendDir=${frontendDir.get().asFile.path}",
+                    "-cp",
+                    appClasspath.asPath,
+                    mainClass.get(),
+                )
         return start("app", command, projectDirectory.get().asFile)
     }
 

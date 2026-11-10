@@ -66,6 +66,9 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
     public abstract val hasApplicationPlugin: Property<Boolean>
 
     @get:Input
+    public abstract val debugPort: Property<Int>
+
+    @get:Input
     public abstract val externalProjectPath: Property<String>
 
     @get:Input
@@ -90,6 +93,7 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
                     add(gradleConfiguration("${prefix}Ktor", "${tasks}run", "-Psvelte.dev=true"))
                     add(gradleConfiguration("${prefix}Generate TypeScript", "${tasks}svelteGenerateTs"))
                     add(gradleConfiguration("${prefix}Dev", "${tasks}svelteDevAll"))
+                    if (debugPort.get() > 0) add(remoteDebugConfiguration("${prefix}Debug app", debugPort.get()))
                 }
             }.mapNotNull { (name, xml) ->
                 val file = directory.resolve(name.replace(Regex("[^A-Za-z0-9 _-]"), "_") + ".run.xml")
@@ -137,6 +141,29 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
                 <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
                 <DebugAllEnabled>false</DebugAllEnabled>
                 <RunAsTest>false</RunAsTest>
+                <method v="2" />
+              </configuration>
+            </component>
+            """.trimIndent() + "\n"
+
+    private fun remoteDebugConfiguration(
+        name: String,
+        port: Int,
+    ): Pair<String, String> =
+        name to
+            """
+            <component name="ProjectRunConfigurationManager">
+              <configuration default="false" name="${escapeXml(name)}" type="Remote">
+                <option name="USE_SOCKET_TRANSPORT" value="true" />
+                <option name="SERVER_MODE" value="false" />
+                <option name="SHMEM_ADDRESS" />
+                <option name="HOST" value="127.0.0.1" />
+                <option name="PORT" value="$port" />
+                <option name="AUTO_RESTART" value="true" />
+                <RunnerSettings RunnerId="Debug">
+                  <option name="DEBUG_PORT" value="$port" />
+                  <option name="LOCAL" value="false" />
+                </RunnerSettings>
                 <method v="2" />
               </configuration>
             </component>

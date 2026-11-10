@@ -142,6 +142,10 @@ class UtilityTasksTest {
         }
         assertContains(dir.resolve(".run/Ktor.run.xml").readText(), "-Psvelte.dev=true")
         assertContains(dir.resolve(".run/Dev.run.xml").readText(), "svelteDevAll")
+        val debug = dir.resolve(".run/Debug app.run.xml").readText()
+        assertContains(debug, "type=\"Remote\"")
+        assertContains(debug, "value=\"5005\"")
+        assertContains(debug, "AUTO_RESTART")
     }
 
     @Test
@@ -156,6 +160,7 @@ class UtilityTasksTest {
                 .map { it.name }
         assertTrue("Vite.run.xml" in files)
         assertFalse("Dev.run.xml" in files)
+        assertFalse("Debug app.run.xml" in files)
     }
 
     @Test
