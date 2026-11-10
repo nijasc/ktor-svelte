@@ -28,6 +28,8 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
@@ -60,6 +62,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         registerUtilityTasks(project, extension, install)
         registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
         configureClean(project, extension)
+        serializeFrontendTasks(project)
 
         project.pluginManager.withPlugin("java") {
             wireResources(project, bundle)
@@ -305,6 +308,17 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
     }
 
+    private fun serializeFrontendTasks(project: Project) {
+        val lock =
+            project.gradle.sharedServices.registerIfAbsent(
+                "ktorSvelteFrontend${project.path}",
+                FrontendLock::class.java,
+            ) { it.maxParallelUsages.set(1) }
+        project.tasks.withType(SvelteToolTask::class.java).configureEach { task ->
+            if (task !is SvelteDevTask && task !is SvelteDevAllTask) task.usesService(lock)
+        }
+    }
+
     private fun gradleExecutablePath(gradleHome: File?): String {
         val isWindows = System.getProperty("os.name").orEmpty().startsWith("Windows")
         val name = if (isWindows) "gradle.bat" else "gradle"
@@ -511,3 +525,5 @@ private class FrontendDirArgument(
 ) : CommandLineArgumentProvider {
     override fun asArguments(): Iterable<String> = listOf("-Dktor.svelte.frontendDir=${frontendDir.get().asFile.absolutePath}")
 }
+
+internal abstract class FrontendLock : BuildService<BuildServiceParameters.None>
