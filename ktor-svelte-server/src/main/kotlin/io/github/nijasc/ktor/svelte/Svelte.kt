@@ -14,7 +14,7 @@ import io.github.nijasc.ktor.svelte.internal.Resolution
 import io.github.nijasc.ktor.svelte.internal.SchemaConstraints
 import io.github.nijasc.ktor.svelte.internal.findPayloadTooLarge
 import io.github.nijasc.ktor.svelte.internal.installTransport
-import io.github.nijasc.ktor.svelte.internal.isLocalRequest
+import io.github.nijasc.ktor.svelte.internal.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.requestPathForGuards
 import io.github.nijasc.ktor.svelte.internal.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.resolveDevServerUrl
@@ -146,7 +146,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
             if (pluginConfig.statusEndpoint) {
                 get(STATUS_PATH) {
-                    if (!isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))) {
+                    if (!isLocalCall(call)) {
                         call.respondText(STATUS_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
                         return@get
                     }
@@ -240,7 +240,7 @@ private class SvelteHandler(
         val method = call.request.httpMethod
         val path = decodedPath(call)
         if (path == null || resolver.isApiPath(path)) return
-        val mayProxy = allowRemote || isLocalRequest(call.request.local.remoteAddress, call.request.header(HttpHeaders.Host))
+        val mayProxy = allowRemote || isLocalCall(call)
         if (method != HttpMethod.Get && method != HttpMethod.Head) {
             if (method in PROXIED_BODY_METHODS && mayProxy) devProxy?.forward(call)
             return
