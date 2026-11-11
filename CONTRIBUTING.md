@@ -98,11 +98,11 @@ The release workflow publishes it to GitHub Pages for every release.
 
 ## Rules
 
-**No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the README. Generated files and the `x-release-please` markers in the README are the only exceptions.
+**No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the docs. Generated files and the `x-release-please` markers in the README are the only exceptions.
 
-**Keep the README up to date, in the same commit.** It uses plain ASCII: no em dashes, arrows, box drawing or emoji.
+**Keep the docs up to date, in the same commit.** `README.md` stays short: what ktor-svelte is, the quick start and a list of pages. Everything else goes into the matching page in `docs/`. The docs use plain ASCII: no em dashes, arrows, box drawing or emoji.
 
-**Error messages link to README sections.** Each module has a `DocLink` enum with the anchors it uses, and `DocLinkTest` fails when a heading they point at is renamed or removed. Rename the anchor in `DocLink` together with the heading.
+**Error messages link to the docs.** Each module has a `DocLink` enum with the page and section each message points at, and `DocLinkTest` fails when a page is moved or a heading is renamed. Update `DocLink` together with the docs.
 
 **Format Kotlin before you commit:**
 
