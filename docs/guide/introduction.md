@@ -54,3 +54,4 @@ The frontend is plain files, so there is no Node process in production. SvelteKi
 - New project: [Getting started](getting-started.md)
 - Existing Ktor or SvelteKit app: [Add to an existing project](existing-project.md)
 - See it working first: [Examples](../examples.md)
+- Deciding between setups: [Compared with other setups](comparison.md)
