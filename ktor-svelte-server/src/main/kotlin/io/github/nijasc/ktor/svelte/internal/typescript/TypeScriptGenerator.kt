@@ -630,18 +630,22 @@ internal class TypeScriptGenerator(
                 }
             }
         }
+        val exportNames = SERVICES_MODULE_NAMES.toMutableSet().apply { addAll(groups.keys) }
         val serviceBlocks =
             groups.toSortedMap().map { (group, endpoints) ->
                 val taken = mutableSetOf<String>()
+                val exports = StringBuilder()
                 val members =
                     endpoints.joinToString("\n") { endpoint ->
                         references += endpoint.references
                         val name = uniqueName(endpoint.name, endpoint.parameters, taken)
                         val operation = "$group.$name"
                         endpoint.errorType?.let { errors += ErrorEntry(operation, it, endpoint.errorStatuses) }
-                        "    ${propertyKey(name)}: ${endpoint.source(operation)},"
+                        val exportName = exportName("$group-$name", exportNames)
+                        exports.append("export const $exportName = ${endpoint.source(operation)};\n")
+                        "    ${propertyKey(name)}: $exportName,"
                     }
-                "export const $group = {\n$members\n};\n"
+                "$exports\nexport const $group = {\n$members\n};\n"
             }
         val typeImports = references.filter { name -> name in schemaNames.map(::typeName) }
         val clientImports = if (groups.values.flatten().any { it.streaming }) "ApiError, request, stream" else "ApiError, request"
@@ -667,6 +671,16 @@ internal class TypeScriptGenerator(
             "    return error instanceof ApiError && error.operation === operation && " +
             "(errorStatuses[operation] ?? []).includes(error.status);\n" +
             "}\n\n"
+    }
+
+    private fun exportName(
+        value: String,
+        taken: MutableSet<String>,
+    ): String {
+        val base = identifier(value)
+        val free = generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base$it" }.first { it !in taken }
+        taken += free
+        return free
     }
 
     private fun uniqueName(

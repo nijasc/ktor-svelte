@@ -490,6 +490,14 @@ Routes that declare a `text/event-stream` response, for example through `describ
 for await (const tick of api.ticks.watch()) console.log(tick);
 ```
 
+Every endpoint is also exported on its own, named after its group and service, such as `notesList` or `notesGet`. Import those in pages that use only a few endpoints, and the bundler leaves the rest of the client out of that page:
+
+```ts
+import { notesGet } from '#api';
+
+const note = await notesGet(1);
+```
+
 For paged lists, return `Page<T>` from `io.github.nijasc.ktor.svelte` and read a `cursor` query parameter. `next` is the cursor of the following page, or `null` on the last one:
 
 ```kotlin
