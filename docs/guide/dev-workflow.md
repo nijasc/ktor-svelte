@@ -33,6 +33,8 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
 
+Open `http://localhost:8080/_ktor-svelte/routes` to see every Ktor route next to every SvelteKit page, with the file and line of each route and a warning on routes that hide a page. Ask for `application/json` to get the same table as JSON. It exists only in development and answers only requests from this machine.
+
 Prefer separate terminals? Run these instead:
 
 ```bash
