@@ -9,6 +9,7 @@ dependencies {
     implementation(plugin(libs.plugins.kotlin.jvm))
     implementation(plugin(libs.plugins.kotlin.serialization))
     implementation(plugin(libs.plugins.ktlint))
+    implementation(plugin(libs.plugins.dokka))
     implementation(plugin(libs.plugins.maven.publish))
     implementation(plugin(libs.plugins.plugin.publish))
 }
