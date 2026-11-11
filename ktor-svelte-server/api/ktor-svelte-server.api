@@ -117,7 +117,9 @@ public final class io/github/nijasc/ktor/svelte/SvelteRateLimitConfig {
 	public final fun getApiWrites ()I
 	public final fun getEnabled ()Z
 	public final fun getPeriod-UwyO8pc ()J
-	public final fun limit-SxA4cEA (Ljava/lang/String;IJ)V
+	public final fun key (Lkotlin/jvm/functions/Function2;)V
+	public final fun limit-exY8QGI (Ljava/lang/String;IJLkotlin/jvm/functions/Function2;)V
+	public static synthetic fun limit-exY8QGI$default (Lio/github/nijasc/ktor/svelte/SvelteRateLimitConfig;Ljava/lang/String;IJLkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public final fun setApiWrites (I)V
 	public final fun setEnabled (Z)V
 	public final fun setPeriod-LRDsOJo (J)V

@@ -122,6 +122,47 @@ class RateLimitTest {
     }
 
     @Test
+    fun `a custom key decides who shares a limit`() =
+        rateLimited({
+            rateLimit {
+                apiWrites = 2
+                key { call -> call.request.headers["X-User"] ?: "anonymous" }
+                limit("login", 5, 1.minutes)
+            }
+        }) {
+            suspend fun postAs(
+                user: String,
+                address: String,
+            ) = client.post("/api/notes") {
+                header("X-User", user)
+                header(HttpHeaders.XForwardedFor, address)
+            }
+            assertEquals(HttpStatusCode.OK, postAs("ada", "203.0.113.1").status)
+            assertEquals(HttpStatusCode.OK, postAs("ada", "203.0.113.2").status)
+            assertEquals(HttpStatusCode.TooManyRequests, postAs("ada", "203.0.113.3").status)
+            assertEquals(HttpStatusCode.OK, postAs("grace", "203.0.113.1").status)
+        }
+
+    @Test
+    fun `a named limit can use its own key`() =
+        rateLimited({
+            rateLimit {
+                limit("login", requests = 1, per = 1.minutes) { call -> call.request.headers["X-Account"] ?: "none" }
+            }
+        }) {
+            suspend fun login(
+                account: String,
+                address: String,
+            ) = client.post("/api/login") {
+                header("X-Account", account)
+                header(HttpHeaders.XForwardedFor, address)
+            }
+            assertEquals(HttpStatusCode.OK, login("ada@example.com", "198.51.100.1").status)
+            assertEquals(HttpStatusCode.TooManyRequests, login("ada@example.com", "198.51.100.2").status)
+            assertEquals(HttpStatusCode.OK, login("grace@example.com", "198.51.100.1").status)
+        }
+
+    @Test
     fun `invalid named limits are rejected`() {
         assertFailsWith<IllegalArgumentException> { SvelteRateLimitConfig().limit("login", 0, 1.minutes) }
         assertFailsWith<IllegalArgumentException> { SvelteRateLimitConfig().limit("login", 1, 0.minutes) }
