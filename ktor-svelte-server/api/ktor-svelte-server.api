@@ -74,6 +74,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getStatusEndpoint ()Z
 	public final fun healthCheck (Lkotlin/jvm/functions/Function1;)V
 	public final fun paramRoutes ([Ljava/lang/String;)V
+	public final fun rateLimit (Lkotlin/jvm/functions/Function1;)V
 	public final fun securityHeaders (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun securityHeaders$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun setApiDocs (Z)V
@@ -107,6 +108,17 @@ public final class io/github/nijasc/ktor/svelte/SvelteKt {
 	public static final fun getSvelte ()Lio/ktor/server/application/ApplicationPlugin;
 	public static final fun svelte (Lio/ktor/server/routing/Route;Ljava/util/List;)V
 	public static synthetic fun svelte$default (Lio/ktor/server/routing/Route;Ljava/util/List;ILjava/lang/Object;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteRateLimitConfig {
+	public fun <init> ()V
+	public final fun getApiWrites ()I
+	public final fun getEnabled ()Z
+	public final fun getPeriod-UwyO8pc ()J
+	public final fun limit-SxA4cEA (Ljava/lang/String;IJ)V
+	public final fun setApiWrites (I)V
+	public final fun setEnabled (Z)V
+	public final fun setPeriod-LRDsOJo (J)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteRouting : java/lang/Enum {

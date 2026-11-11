@@ -758,6 +758,27 @@ Set `maxApiBodySize = null` to remove the limit.
 
 Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
 
+**Rate limit.** Each client may send 120 writes per minute to your API paths, meaning every method except GET, HEAD, OPTIONS and TRACE. More get 429 with a `Retry-After` header. Reads and frontend files are never limited. Clients are told apart by `call.request.origin.remoteHost`, so behind a reverse proxy install `XForwardedHeaders` or `ForwardedHeaders`, or every user shares one limit.
+
+Routes such as login need a much tighter limit. Name one, and wrap the routes in Ktor's own `rateLimit`:
+
+```kotlin
+install(Svelte) {
+    rateLimit {
+        apiWrites = 300
+        limit("login", requests = 5, per = 1.minutes)
+    }
+}
+
+routing {
+    rateLimit(RateLimitName("login")) {
+        post("/api/login") { /* ... */ }
+    }
+}
+```
+
+It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless you set `rateLimit { enabled = false }`. `apiWrites = 0` keeps the named limits but drops the default one.
+
 ## Reporting a vulnerability
 
 See [SECURITY.md](SECURITY.md) for how to report a vulnerability privately, and for a table of every secure default.
