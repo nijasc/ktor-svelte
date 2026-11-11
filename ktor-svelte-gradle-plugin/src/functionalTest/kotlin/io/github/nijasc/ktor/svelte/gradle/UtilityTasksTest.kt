@@ -188,6 +188,7 @@ class UtilityTasksTest {
         assertTrue(project.frontend.resolve("package.json").isFile)
         assertTrue(project.frontend.resolve("vite.config.ts").isFile)
         assertTrue(project.frontend.resolve(".gitignore").isFile)
+        assertContains(project.frontend.resolve(".editorconfig").readText(), "end_of_line = lf")
         assertContains(project.frontend.resolve("package.json").readText(), "#api")
         assertEquals(listOf("install"), project.calls())
     }
