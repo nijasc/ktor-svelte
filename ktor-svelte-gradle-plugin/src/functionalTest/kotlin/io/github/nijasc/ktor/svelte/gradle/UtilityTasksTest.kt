@@ -70,8 +70,15 @@ class UtilityTasksTest {
         project.frontend.resolve(".eslintcache").writeText("{}")
         val buildOutput = dir.resolve("build/marker").apply { parentFile.mkdirs() }
         buildOutput.writeText("x")
+        val gradleMarker = dir.resolve(".gradle/stale-marker").apply { parentFile.mkdirs() }
+        gradleMarker.writeText("x")
+        val kotlinMarker = dir.resolve(".kotlin/sessions/marker").apply { parentFile.mkdirs() }
+        kotlinMarker.writeText("x")
 
         project.run("deepClean")
+
+        assertFalse(gradleMarker.exists())
+        assertFalse(kotlinMarker.exists())
 
         listOf("node_modules", ".svelte-kit", ".vite", ".turbo", ".cache", ".eslintcache", "build").forEach {
             assertFalse(project.frontend.resolve(it).exists(), it)

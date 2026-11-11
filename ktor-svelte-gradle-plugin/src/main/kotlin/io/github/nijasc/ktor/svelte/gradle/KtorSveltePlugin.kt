@@ -44,6 +44,7 @@ import java.util.Properties
 
 private const val TASK_GROUP = "svelte"
 private val DEEP_CLEAN_FRONTEND_PATHS = listOf("node_modules", ".svelte-kit", ".vite", ".turbo", ".cache", ".eslintcache")
+private val DEEP_CLEAN_PROJECT_PATHS = listOf(".gradle", ".kotlin")
 private const val SKIP_PROPERTY = "svelte.skip"
 private const val DEV_PROPERTY = "svelte.dev"
 private const val VERIFY_TS_PROPERTY = "svelte.verifyTs"
@@ -211,9 +212,12 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
         project.tasks.register("deepClean", Delete::class.java) { task ->
             task.group = TASK_GROUP
-            task.description = "Runs clean and deletes node_modules, frontend caches and the frontend build output."
+            task.description = "Runs clean and deletes .gradle, .kotlin, node_modules, frontend caches and the frontend build output."
             project.pluginManager.withPlugin("base") { task.dependsOn("clean") }
             task.delete(frontendOutput(extension))
+            DEEP_CLEAN_PROJECT_PATHS.forEach { path ->
+                task.delete(project.layout.projectDirectory.dir(path))
+            }
             DEEP_CLEAN_FRONTEND_PATHS.forEach { path ->
                 task.delete(extension.frontendDir.map { it.dir(path) })
             }
