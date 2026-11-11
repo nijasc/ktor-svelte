@@ -185,6 +185,29 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `multipart bodies become FormData`() {
+        val source =
+            services(
+                """{"/api/files":{"post":{"requestBody":{"content":{"multipart/form-data":{}}},"responses":{"204":{"description":"ok"}}}}}""",
+            )
+        assertContains(
+            source,
+            "create: (body: FormData, options?: RequestOptions) => request<void>('POST', '/api/files', { ...options, body,",
+        )
+    }
+
+    @Test
+    fun `the client reports upload progress through XMLHttpRequest`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    onUploadProgress?: (progress: UploadProgress) => void;")
+        assertContains(
+            client,
+            "const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);",
+        )
+        assertContains(client, "const empty = [101, 204, 205, 304].includes(xhr.status);")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")
