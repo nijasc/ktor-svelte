@@ -172,6 +172,16 @@ class NotesAppTest {
     }
 
     @Test
+    fun `the feed pages through notes with a cursor`() {
+        val first = send("GET", "/api/notes/feed?limit=1").body()
+        assertContains(first, "\"title\":\"Welcome\"")
+        assertContains(first, "\"next\":\"1\"")
+        val second = send("GET", "/api/notes/feed?limit=1&cursor=1").body()
+        assertContains(second, "\"title\":\"Try hot reload\"")
+        assertFalse(second.contains("Welcome"))
+    }
+
+    @Test
     fun `validation errors come back as json`() {
         val response = send("POST", "/api/notes", """{"title":" "}""")
         assertEquals(422, response.statusCode())
