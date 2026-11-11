@@ -1063,6 +1063,10 @@ Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localh
 - No range requests, so large media does not belong in the SvelteKit build.
 - `generateTs` builds on Ktor's OpenAPI support, which Ktor still marks as experimental.
 
+## Recipes
+
+[docs/recipes.md](docs/recipes.md) shows complete solutions for tasks most apps need: [sign in with a session cookie](docs/recipes.md#sign-in-with-a-session-cookie), [upload files](docs/recipes.md#upload-files), [stream live updates](docs/recipes.md#stream-live-updates), [page through long lists](docs/recipes.md#page-through-long-lists) and [add an admin area](docs/recipes.md#add-an-admin-area).
+
 ## FAQ
 
 **Why `adapter-static` and no server-side rendering?** ktor-svelte exists to ship one JVM app. SSR needs a JavaScript runtime that renders every request, so production would need Node next to the JVM, or a JavaScript engine inside it. That means two processes or a slow embedded engine, two places for auth and config, and two things to deploy and monitor. With `adapter-static`, the frontend is plain files, Ktor is the only backend, and the JAR is the whole app.
