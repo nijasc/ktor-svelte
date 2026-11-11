@@ -29,6 +29,11 @@ public abstract class SvelteExtension {
     public fun libraries(action: Action<SvelteLibraries>) {
         action.execute(libraries)
     }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(SvelteExtension::class.java, "svelte", name)
 }
 
 public abstract class SvelteDevSettings {
@@ -36,4 +41,9 @@ public abstract class SvelteDevSettings {
     public abstract val script: Property<String>
     public abstract val debugPort: Property<Int>
     public abstract val openBrowser: Property<Boolean>
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(SvelteDevSettings::class.java, "dev", name)
 }
