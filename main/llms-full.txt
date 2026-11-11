@@ -878,7 +878,7 @@ Strings get `minlength`, `maxlength` and `pattern`, numbers get `min` and `max`.
 
 Every object type that the server checks against annotations, directly or through a nested object or list, also gets `validate()`. It runs the same checks in the browser and returns errors in the same shape as `fields` of a 422, with the same messages and paths such as `lines[1].sku`, plus `Required.` for an empty required number. An empty object means valid. Types without annotations get no `validate()`, just as the server skips them. One error display then covers both instant feedback and the server answer:
 
-```svelte
+```svelte stackblitz
 <script lang="ts">
     import { api, isValidationError, NoteInput } from '#api';
 
