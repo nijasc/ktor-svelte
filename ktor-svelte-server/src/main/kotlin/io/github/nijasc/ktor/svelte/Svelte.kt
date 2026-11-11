@@ -44,6 +44,7 @@ import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.PluginBuilder
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
+import io.ktor.server.application.hooks.ResponseSent
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.application.pluginOrNull
@@ -99,6 +100,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
+        val metrics = SvelteMetrics()
+        application.attributes.put(SvelteMetricsKey, metrics)
 
         installTransport(application, pluginConfig.transportConfig)
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
@@ -133,7 +136,17 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (pluginConfig.originCheck) {
             val originCheck = OriginCheck(pluginConfig.allowedOriginList, application.developmentMode)
             onCall { call ->
-                if (resolver.isApiPath(decodedPathOrRaw(call))) originCheck.refuseIfCrossOrigin(call)
+                if (resolver.isApiPath(decodedPathOrRaw(call)) &&
+                    originCheck.refuseIfCrossOrigin(call)
+                ) {
+                    metrics.crossOrigin.incrementAndGet()
+                }
+            }
+        }
+
+        on(ResponseSent) { call ->
+            if (call.response.status() == HttpStatusCode.TooManyRequests && resolver.isApiPath(decodedPathOrRaw(call))) {
+                metrics.rateLimited.incrementAndGet()
             }
         }
 
@@ -148,6 +161,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 return@on
             }
             if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) {
+                metrics.bodyTooLarge.incrementAndGet()
                 respondBodyTooLarge(call, maxApiBodySize)
                 return@on
             }
@@ -175,7 +189,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                         return@get
                     }
                     call.response.header(HttpHeaders.CacheControl, "no-store")
-                    call.respondText(statusJson(store.manifest(), devProxy, devUrl), ContentType.Application.Json)
+                    call.respondText(statusJson(store.manifest(), devProxy, devUrl, metrics), ContentType.Application.Json)
                 }.hide()
             }
             if (pluginConfig.healthEndpoint) {

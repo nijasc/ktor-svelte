@@ -91,6 +91,15 @@ Set `maxApiBodySize = null` to remove the limit.
 
 Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
 
+**Counting refusals.** ktor-svelte counts every refused request, so attacks and misconfigurations show up as numbers, not only as log lines. Read the counters from `application.svelteMetrics`, or from the `refusals` object of the status endpoint. To export them, bind them to your metrics library, for example Micrometer:
+
+```kotlin
+val metrics = svelteMetrics
+registry.gauge("svelte.refusals", listOf(Tag.of("reason", "cross_origin")), metrics) { it.crossOriginRefusals.toDouble() }
+registry.gauge("svelte.refusals", listOf(Tag.of("reason", "body_too_large")), metrics) { it.bodyTooLargeRefusals.toDouble() }
+registry.gauge("svelte.refusals", listOf(Tag.of("reason", "rate_limit")), metrics) { it.rateLimitRefusals.toDouble() }
+```
+
 **JSON shape.** A small body can still be expensive to parse when it nests thousands of arrays. JSON bodies on API paths are checked while they stream in, before any parsing: more than 64 levels of nesting answers 400 with `{"message":"Request JSON is nested deeper than 64 levels."}`. Set `maxJsonStringLength` to also refuse long strings, which is off by default because the body limit already caps them:
 
 ```kotlin

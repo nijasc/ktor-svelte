@@ -125,6 +125,16 @@ public final class io/github/nijasc/ktor/svelte/SvelteKt {
 	public static synthetic fun svelte$default (Lio/ktor/server/routing/Route;Ljava/util/List;ILjava/lang/Object;)V
 }
 
+public final class io/github/nijasc/ktor/svelte/SvelteMetrics {
+	public final fun getBodyTooLargeRefusals ()J
+	public final fun getCrossOriginRefusals ()J
+	public final fun getRateLimitRefusals ()J
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteMetricsKt {
+	public static final fun getSvelteMetrics (Lio/ktor/server/application/Application;)Lio/github/nijasc/ktor/svelte/SvelteMetrics;
+}
+
 public final class io/github/nijasc/ktor/svelte/SvelteRateLimitConfig {
 	public fun <init> ()V
 	public final fun getAlgorithm ()Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
