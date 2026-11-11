@@ -46,7 +46,7 @@ public abstract class SvelteInitTask : SvelteToolTask() {
         val tool = FrontendTool(chooseTool())
         requireToolOnPath(tool)
         TEMPLATE_FILES.forEach { path -> copyTemplate(path, target) }
-        runTool(tool, listOf("install"))
+        runToolQuietly(tool, listOf("install"))
         logger.lifecycle("ktor-svelte: created a SvelteKit project in $target using ${tool.executableName}.")
         logger.lifecycle("Next: run svelteDoctor to check the setup, then svelteDev and run -Psvelte.dev=true.")
     }
