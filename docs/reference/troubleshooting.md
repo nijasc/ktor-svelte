@@ -16,6 +16,10 @@ The package manager the lockfile asks for is not installed, or Gradle cannot see
 
 The frontend build produced no pages where the plugin looked. Check that the frontend uses `adapter-static`, and that `svelte { outputDir }` matches the adapter's `pages` option. The default for both is `build`.
 
+### ktor-svelte has no setting 'x' in svelte { }
+
+A Groovy build script assigns a setting that does not exist, usually a typo. The message names the closest setting and lists all of them. See [Gradle settings](./gradle.md) for what each one does.
+
 ### Frontend libraries are out of sync
 
 `build.gradle.kts` changed the frontend libraries, but `package.json`, the lockfile or the generated files were not updated. Run `./gradlew svelteSync` and commit the result.
