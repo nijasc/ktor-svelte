@@ -104,6 +104,19 @@ The API reference is built with Dokka from the public API of both modules:
 
 Every release runs the `Docs` workflow, which builds the site and the API reference for that version and publishes them to the `gh-pages` branch: under `/v<version>/`, and also at the root when it is the newest release. The version switcher in the site reads `versions.json` from there. To publish a release again, run the `Docs` workflow by hand with its version.
 
+## CI
+
+Pull requests only run the jobs their changes can affect. `.github/scripts/changed-areas.sh` sorts the changed files into areas, and each job in `ci.yml` checks the areas it needs:
+
+| Area | Changed paths | Jobs |
+|---|---|---|
+| code | `ktor-svelte-server/`, `ktor-svelte-gradle-plugin/`, `build-logic/`, `gradle/`, root build files, `version.txt` | everything |
+| examples | `examples/` | example builds, generated client check |
+| setup | `scripts/` | setup script builds |
+| docs | `docs/` | docs site build |
+
+A pull request that only changes Markdown outside `docs/` runs no build at all. Pushes to `main`, and pull requests that change `ci.yml` or the script itself, run every job. A new push to a pull request cancels its previous run. When you add a folder that a job depends on, add it to the script.
+
 ## Rules
 
 **No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the docs. Generated files and the `x-release-please` markers in the README are the only exceptions.
