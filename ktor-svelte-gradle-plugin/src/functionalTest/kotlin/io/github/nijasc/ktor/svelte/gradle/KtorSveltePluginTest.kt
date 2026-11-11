@@ -53,6 +53,25 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `frontend output is hidden on success and shown on failure`() {
+        val project = project()
+        assertFalse(project.run("jar").output.contains("fake build output"))
+
+        project.frontend.resolve("fail-run").writeText("")
+        val failed = project.runAndFail("jar").output
+
+        assertContains(failed, "fake build error")
+        assertContains(failed, "'bun run build' failed with exit code 3")
+        assertContains(failed, "-Psvelte.verbose=true")
+    }
+
+    @Test
+    fun `verbose property shows frontend output`() {
+        val project = project()
+        assertContains(project.run("jar", "-Psvelte.verbose=true").output, "fake build output")
+    }
+
+    @Test
     fun `second run is up to date and does not call the tool`() {
         val project = project()
         project.run("jar")
@@ -319,12 +338,14 @@ class KtorSveltePluginTest {
         project.run("jar")
         project.frontend.resolve("build/index.html.br").writeText("compressed")
         project.frontend.resolve("build/index.html.gz").writeText("compressed!")
+        project.frontend.resolve("build/index.html.zst").writeText("zstd")
 
         project.run("svelteBundle", "-x", "svelteBuild")
 
         val manifest = dir.resolve("build/generated/ktor-svelte/resources/ktor-svelte/manifest.json").readText()
-        assertContains(manifest, "\"encodings\":{\"br\":{\"size\":10},\"gzip\":{\"size\":11}}")
+        assertContains(manifest, "\"encodings\":{\"zstd\":{\"size\":4},\"br\":{\"size\":10},\"gzip\":{\"size\":11}}")
         assertFalse(manifest.contains("\"index.html.br\":"))
+        assertFalse(manifest.contains("\"index.html.zst\":"))
     }
 
     @Test

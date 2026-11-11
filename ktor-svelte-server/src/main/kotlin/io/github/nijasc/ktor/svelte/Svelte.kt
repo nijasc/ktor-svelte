@@ -99,6 +99,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.apiPrefixList,
             listOfNotNull(docsPath),
             pluginConfig.publicConfigSchema,
+            pluginConfig.declaredErrorList.toList(),
         )
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
 
@@ -170,6 +171,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 }.hide()
             }
             if (docsPath != null) {
+                application.log.info("ktor-svelte serves API docs at $docsPath")
                 swaggerUI(docsPath) {
                     info = OpenApiInfo(title = "API", version = "dev")
                     source = OpenApiDocSource.Routing(ContentType.Application.Json)

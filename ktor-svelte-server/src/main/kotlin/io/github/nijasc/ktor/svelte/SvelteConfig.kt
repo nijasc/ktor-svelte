@@ -1,5 +1,7 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.typescript.DeclaredError
+import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.KotlinxJsonSchemaInference
 import io.ktor.utils.io.KtorDsl
@@ -23,6 +25,7 @@ public class SvelteConfig {
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
     internal val securityHeadersConfig: SvelteSecurityHeadersConfig = SvelteSecurityHeadersConfig()
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
+    internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
     internal var publicConfigJson: String? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -76,6 +79,21 @@ public class SvelteConfig {
 
     public inline fun <reified T : Any> publicConfig(value: T) {
         setPublicConfig(Json.encodeToString(serializer<T>(), value), KotlinxJsonSchemaInference.buildSchema(typeOf<T>()))
+    }
+
+    public inline fun <reified T : Any> errorResponse(vararg statuses: HttpStatusCode) {
+        addErrorResponse(T::class.simpleName ?: "ErrorBody", KotlinxJsonSchemaInference.buildSchema(typeOf<T>()), statuses.toList())
+    }
+
+    @PublishedApi
+    internal fun addErrorResponse(
+        name: String,
+        schema: JsonSchema,
+        statuses: List<HttpStatusCode>,
+    ) {
+        require(statuses.isNotEmpty()) { "errorResponse needs at least one status code." }
+        require(statuses.all { it.value >= 400 }) { "errorResponse only takes error status codes, 400 and above." }
+        declaredErrorList += DeclaredError(name, Json.encodeToString(JsonSchema.serializer(), schema), statuses.map { it.value })
     }
 
     @PublishedApi

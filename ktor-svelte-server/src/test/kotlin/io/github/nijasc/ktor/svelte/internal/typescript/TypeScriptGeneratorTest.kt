@@ -192,6 +192,28 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client pages through cursor endpoints`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "export async function* pages<Q extends { cursor?: string }, T>(")
+        assertContains(client, "cursor = page.next ?? undefined;")
+    }
+
+    @Test
+    fun `an error a route declares itself wins over a declared one`() {
+        val problem = """{"type":"object","required":["message"],"properties":{"message":{"type":"string"}}}"""
+        val failure = """{"type":"object","required":["reason"],"properties":{"reason":{"type":"string"}}}"""
+        val source =
+            TypeScriptGenerator(listOf("/api"), declaredErrors = listOf(DeclaredError("Failure", failure, listOf(404, 500))))
+                .generate(
+                    """{"openapi":"3.1.1","info":{"title":"t","version":"1"},"paths":{"/api/a":{"get":{"responses":{
+                    "404":{"description":"","content":{"application/json":{"schema":{"${'$'}ref":"#/components/schemas/Problem"}}}}}}}},
+                    "components":{"schemas":{"Problem":$problem}}}""",
+                ).getValue("services.ts")
+        assertContains(source, "    'a.list': Problem | Failure;")
+        assertContains(source, "    'a.list': [404, 500],")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")
@@ -202,7 +224,7 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
-    fun `sub resources are named from their path`() {
+    fun `sub resources are na from their path`() {
         val source =
             services(
                 """{"/api/notes/{id}/archive":{"post":{"responses":{"204":{"description":"ok"}}}},

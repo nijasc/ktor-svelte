@@ -138,3 +138,21 @@ export async function* stream<T>(method: string, path: string, options: Internal
         reader.cancel().catch(() => undefined);
     }
 }
+
+export interface PageOf<T> {
+    items: T[];
+    next?: string | null;
+}
+
+export async function* pages<Q extends { cursor?: string }, T>(
+    load: (query: Q, options?: RequestOptions) => Promise<PageOf<T>>,
+    query?: Omit<Q, 'cursor'>,
+    options?: RequestOptions
+): AsyncGenerator<T[], void, undefined> {
+    let cursor: string | undefined;
+    do {
+        const page = await load({ ...query, cursor } as Q, options);
+        yield page.items;
+        cursor = page.next ?? undefined;
+    } while (cursor !== undefined);
+}
