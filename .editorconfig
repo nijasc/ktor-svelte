@@ -17,5 +17,8 @@ ktlint_standard_function-naming = disabled
 ktlint_standard_no-wildcard-imports = enabled
 max_line_length = 140
 
-[*.bat]
+[*.{svelte,ts,js,css,html}]
+max_line_length = 120
+
+[*.{bat,cmd}]
 end_of_line = crlf
