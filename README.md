@@ -807,7 +807,7 @@ install(Svelte) {
 
 A route of yours such as `get("/{slug}")` beats the frontend. That is intended, but it can hide pages.
 
-ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`.
+ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`.
 
 If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
 
@@ -824,6 +824,7 @@ svelte {
     buildEnv = emptySet()
     addRuntimeDependency = true
     includeSourceMaps = false
+    precompress = true
     dev {
         port = 5173
         script = "dev"
@@ -842,6 +843,7 @@ svelte {
 | `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](#frontend-libraries) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
+| `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
 | `dev.script` | `package.json` script that starts Vite |
 | `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |
