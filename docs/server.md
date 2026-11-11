@@ -85,6 +85,8 @@ implementation("io.ktor:ktor-server-compression-zstd:<ktor version>")
 
 It adds a native library of about 7 MB to your JAR, which is why it is not included by default.
 
+Compression and secrets: a response that contains a secret, such as an API key, next to text an attacker can choose can leak that secret byte by byte through its compressed size (the BREACH attack). ktor-svelte's own CSRF protection uses no tokens, so it is not affected. If one of your endpoints returns such a mix, turn `apiCompression` off or install `Compression` yourself with a condition that skips that route.
+
 If you install `Compression` yourself, before or after `install(Svelte)`, or use `transport { compression() }`, your configuration is used instead. To send API responses uncompressed:
 
 ```kotlin
