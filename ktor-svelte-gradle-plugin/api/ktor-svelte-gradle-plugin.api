@@ -414,7 +414,6 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyTsTa
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/ToolVersionSource : org/gradle/api/provider/ValueSource {
 	public static final field UNAVAILABLE Ljava/lang/String;
 	public fun <init> ()V
-	protected abstract fun getExecOperations ()Lorg/gradle/process/ExecOperations;
 	public synthetic fun obtain ()Ljava/lang/Object;
 	public fun obtain ()Ljava/lang/String;
 }
