@@ -22,7 +22,9 @@ At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more 
 | 6 | Other path, with a fallback page and a request that accepts HTML, or a path matching `paramRoutes` | Serve the fallback with status 200 |
 | 7 | Anything else | `404.html` with status 404 if it exists, otherwise a plain 404 |
 
-Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Step 5 lets SvelteKit recover from stale chunks after a deploy by doing a full page reload.
+Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Other methods on a path that resolves to a page or file, such as a POST to `/about`, answer 405 with `Allow: GET, HEAD, OPTIONS`, and OPTIONS answers 204 with the same header. Paths that resolve to nothing stay 404. In development, POST, PUT, PATCH and DELETE still go to Vite first.
+
+Step 5 lets SvelteKit recover from stale chunks after a deploy by doing a full page reload.
 
 ## Limits
 
