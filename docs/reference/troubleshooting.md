@@ -58,6 +58,10 @@ ktor-svelte installs these plugins for its body and rate limits. To use your own
 
 With `routing = SvelteRouting.Manual`, call `install(Svelte)` before the `routing { }` block that calls `svelte()`.
 
+### The Ktor route GET /about hides the frontend page about.html
+
+A route in your app answers the same path as a prerendered page, so the page is never served. Move the route under your API prefix, or rename the page.
+
 ## Requests
 
 ### 403: Cross-origin API request refused

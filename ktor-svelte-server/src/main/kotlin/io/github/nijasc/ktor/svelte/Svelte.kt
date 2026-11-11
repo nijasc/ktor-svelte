@@ -13,6 +13,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
+import io.github.nijasc.ktor.svelte.internal.constantGetPaths
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
@@ -39,6 +40,7 @@ import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonShape
 import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
 import io.github.nijasc.ktor.svelte.internal.settingsSummary
+import io.github.nijasc.ktor.svelte.internal.shadowedPages
 import io.github.nijasc.ktor.svelte.internal.startupLine
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -137,6 +139,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val summary = if (application.developmentMode) settingsSummary(pluginConfig, devUrl.takeIf { devProxy != null }) else emptyList()
         application.monitor.subscribe(ApplicationStarted) {
             if (summary.isNotEmpty()) application.log.info("ktor-svelte settings:\n" + summary.joinToString("\n") { "  $it" })
+            val manifest = store.manifest()
+            val root = application.pluginOrNull(RoutingRoot)
+            if (manifest != null && root != null) {
+                shadowedPages(constantGetPaths(root), manifest, resolver).forEach { (route, page) ->
+                    application.log.warn(
+                        "ktor-svelte: the Ktor route GET $route hides the frontend page $page. Move the route or rename the page.",
+                    )
+                }
+            }
             application.log.info(startupLine(store.manifest(), devUrl.takeIf { devProxy != null }))
         }
         if (store.manifest() == null) {
