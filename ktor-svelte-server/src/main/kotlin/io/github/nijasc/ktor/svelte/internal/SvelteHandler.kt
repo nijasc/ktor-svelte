@@ -47,7 +47,8 @@ internal class SvelteHandler(
         if (path == null || resolver.isApiPath(path)) return
         val mayProxy = allowRemote || isLocalCall(call)
         if (method != HttpMethod.Get && method != HttpMethod.Head) {
-            if (method in PROXIED_BODY_METHODS && mayProxy) devProxy?.forward(call)
+            if (method in PROXIED_BODY_METHODS && mayProxy && devProxy?.forward(call) == true) return
+            respondWrongMethod(call, path, method)
             return
         }
         if (needsLocalePrefix(path, call.application.libraryConfig)) {
@@ -62,7 +63,25 @@ internal class SvelteHandler(
             else -> respondMissingBuild(call, devProxy, devUrl)
         }
     }
+
+    private suspend fun respondWrongMethod(
+        call: ApplicationCall,
+        path: String,
+        method: HttpMethod,
+    ) {
+        val manifest = store.manifest() ?: return
+        val resolution = resolver.resolve(path, acceptsHtml(call), manifest)
+        if (resolution !is Resolution.Serve || resolution.notFound) return
+        call.response.header(HttpHeaders.Allow, ALLOWED_FRONTEND_METHODS)
+        if (method == HttpMethod.Options) {
+            call.respond(HttpStatusCode.NoContent)
+        } else {
+            call.respond(HttpStatusCode.MethodNotAllowed)
+        }
+    }
 }
+
+private const val ALLOWED_FRONTEND_METHODS = "GET, HEAD, OPTIONS"
 
 private fun decodedPath(call: ApplicationCall): String? =
     try {
