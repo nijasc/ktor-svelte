@@ -41,6 +41,8 @@ svelte {
 
 The package manager must already be installed. The plugin does not download Node or Bun.
 
+In a Groovy `build.gradle`, a misspelled setting such as `fronendDir = file('web')` fails with the closest name and the list of settings, instead of Gradle's generic missing property error. The Kotlin DSL catches the same mistake when it compiles the script.
+
 ## Gradle tasks
 
 | Task | What it does |

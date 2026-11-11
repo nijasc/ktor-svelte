@@ -55,6 +55,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/DaisySettings {
 	public abstract fun getThemeNames ()Lorg/gradle/api/provider/ListProperty;
 	public final fun prefersDark (Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;)V
 	public final fun prefersDark (Ljava/lang/String;)V
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 	public final fun themes ([Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;)V
 }
 
@@ -108,6 +109,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/I18nSettings {
 	public abstract fun getMessagesDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getStrategy ()Lorg/gradle/api/provider/Property;
 	public final fun locales ([Ljava/lang/String;)V
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/KtorSveltePlugin : org/gradle/api/Plugin {
@@ -141,6 +143,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteDevSettings {
 	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
@@ -157,6 +160,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPrecompress ()Lorg/gradle/api/provider/Property;
 	public final fun libraries (Lorg/gradle/api/Action;)V
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
@@ -171,6 +175,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public abstract fun getTailwindSettings ()Lio/github/nijasc/ktor/svelte/gradle/TailwindSettings;
 	public final fun i18n (Lorg/gradle/api/Action;)V
 	public final fun lucide ()V
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 	public final fun tailwind (Lorg/gradle/api/Action;)V
 	public static synthetic fun tailwind$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
 }
@@ -181,6 +186,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/TailwindSettings {
 	public abstract fun getEnabled ()Lorg/gradle/api/provider/Property;
 	public abstract fun getFormsPlugin ()Lorg/gradle/api/provider/Property;
 	public abstract fun getTypographyPlugin ()Lorg/gradle/api/provider/Property;
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 	public final fun typography ()V
 }
 
