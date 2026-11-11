@@ -12,6 +12,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
+import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
@@ -150,6 +151,14 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (call.response.status() == HttpStatusCode.TooManyRequests && resolver.isApiPath(decodedPathOrRaw(call))) {
                 metrics.rateLimited.incrementAndGet()
             }
+        }
+
+        val slowApiCall = pluginConfig.devConfig.slowApiCall
+        if (slowApiCall != null && application.developmentMode) {
+            val slowCalls = SlowCallLog(slowApiCall, resolver)
+            slowCalls.install(application)
+            onCall { call -> slowCalls.started(call) }
+            on(ResponseSent) { call -> slowCalls.finished(call) }
         }
 
         val hideErrorDetails = pluginConfig.hideErrorDetails
