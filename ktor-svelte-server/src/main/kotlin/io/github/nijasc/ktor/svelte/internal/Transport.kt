@@ -26,7 +26,8 @@ internal fun installTransport(
 ) {
     if (transport.negotiation.isNotEmpty()) {
         check(application.pluginOrNull(ContentNegotiation) == null) {
-            "ContentNegotiation is already installed. Remove it, or remove the formats from install(Svelte) { transport { } }."
+            "ContentNegotiation is already installed. Remove it, or remove the formats from install(Svelte) { transport { } }." +
+                DocLink.TRANSPORT.see()
         }
         application.install(ContentNegotiation) {
             transport.negotiation.forEach { configure -> configure() }
@@ -34,7 +35,8 @@ internal fun installTransport(
     }
     transport.compressionConfig?.let { configure ->
         check(application.pluginOrNull(Compression) == null) {
-            "Compression is already installed. Remove it, or remove compression() from install(Svelte) { transport { } }."
+            "Compression is already installed. Remove it, or remove compression() from install(Svelte) { transport { } }." +
+                DocLink.TRANSPORT.see()
         }
         application.install(Compression) { configure() }
     }

@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
+import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.ktor.openapi.OpenApiDoc
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
@@ -74,7 +75,7 @@ internal fun installTypeScriptGeneration(
                 application.log.info("ktor-svelte has nothing to verify: generateTs is off.")
                 Runtime.getRuntime().halt(0)
             }
-            application.log.error("svelteGenerateTs needs install(Svelte) { generateTs = true }.")
+            application.log.error("svelteGenerateTs needs install(Svelte) { generateTs = true }." + DocLink.GENERATED_TYPESCRIPT.see())
             Runtime.getRuntime().halt(1)
         }
         return

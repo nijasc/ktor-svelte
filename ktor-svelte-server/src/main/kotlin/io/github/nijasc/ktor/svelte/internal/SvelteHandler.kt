@@ -24,9 +24,9 @@ import io.ktor.server.response.respondText
 private val PROXIED_BODY_METHODS = setOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete)
 private const val REMOTE_REFUSED_MESSAGE =
     "The ktor-svelte dev proxy only answers requests from this machine. Set dev { allowRemote = true } to change that."
-internal const val MISSING_BUILD_MESSAGE =
+internal val MISSING_BUILD_MESSAGE =
     "ktor-svelte found no frontend build. Build the app with the ktor-svelte Gradle plugin, " +
-        "and do not pass -Psvelte.skip=true or -Psvelte.dev=true."
+        "and do not pass -Psvelte.skip=true or -Psvelte.dev=true." + DocLink.DEV_WORKFLOW.see()
 
 internal class SvelteHandler(
     private val store: AssetStore,

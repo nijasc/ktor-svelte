@@ -72,7 +72,7 @@ internal fun resolveLocale(
         ?: matchLocale(cookie, config.locales)
         ?: acceptedLanguages.firstNotNullOfOrNull { matchLocale(it, config.locales) }
         ?: config.defaultLocale
-        ?: error("i18n is not configured. Add svelte { libraries { i18n { } } } to your build.")
+        ?: error("i18n is not configured. Add svelte { libraries { i18n { } } } to your build." + DocLink.I18N.see())
 }
 
 internal fun needsLocalePrefix(
