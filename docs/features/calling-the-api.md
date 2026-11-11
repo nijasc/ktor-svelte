@@ -120,6 +120,20 @@ To refresh the files without your dev server, for example in CI, run the task be
 ./gradlew svelteGenerateTs
 ```
 
+## Reload after a deploy
+
+Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API:
+
+```ts
+import { apiConfig } from '#api';
+
+apiConfig.onNewBuild = () => {
+    showToast('A new version is available.', { action: 'Reload', onAction: () => location.reload() });
+};
+```
+
+Set `buildHeader = false` in `install(Svelte)` to leave the header out.
+
 ## Request IDs
 
 Every call from the generated client sends a fresh `X-Request-Id`. The server keeps it when it is well formed, letters, digits, dots, dashes and underscores up to 128 characters, or generates one, and sends it back in the response. Unhandled errors are logged with it, and `ApiError.requestId` carries it, so a user can quote one ID that support finds in the logs:

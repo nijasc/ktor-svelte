@@ -4,6 +4,7 @@ import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
 import io.ktor.openapi.JsonSchema
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import ktorsvelte.LucideIcon
 import java.util.concurrent.ConcurrentHashMap
@@ -64,6 +65,22 @@ data class Greeting(
     val locale: String,
     val theme: String,
 )
+
+@Serializable
+sealed interface Activity
+
+@Serializable
+@SerialName("created")
+data class Created(
+    val at: Instant,
+) : Activity
+
+@Serializable
+@SerialName("archived")
+data class Archived(
+    val at: Instant,
+    val title: String,
+) : Activity
 
 @Serializable
 data class UploadReceipt(

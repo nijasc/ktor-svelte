@@ -4,6 +4,7 @@ import io.github.nijasc.ktor.svelte.internal.DocLink
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -23,6 +24,7 @@ internal data class ManifestEntry(
     val size: Long,
     val hash: String,
     val encodings: Map<AssetEncoding, Long> = emptyMap(),
+    val scriptHashes: List<String>? = null,
 )
 
 internal data class Manifest(
@@ -56,6 +58,7 @@ internal data class Manifest(
                                         .jsonPrimitive.long
                             }
                         }.toMap(),
+                scriptHashes = entry["scripts"]?.jsonArray?.map { it.jsonPrimitive.content },
             )
         }
     }

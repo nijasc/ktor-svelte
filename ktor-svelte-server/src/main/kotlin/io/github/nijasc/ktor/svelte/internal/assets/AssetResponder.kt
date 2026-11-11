@@ -21,6 +21,7 @@ import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import java.io.InputStream
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 
 private const val IMMUTABLE_PREFIX = "_app/immutable/"
 private const val VERSION_FILE = "_app/version.json"
@@ -37,6 +38,8 @@ internal class AssetResponder(
     private val cache: SvelteCacheConfig,
     private val contentSecurityPolicy: PageContentSecurityPolicy? = null,
 ) {
+    private val prepared = ConcurrentHashMap<String, PreparedHeaders>()
+
     suspend fun respond(
         call: ApplicationCall,
         path: String,
@@ -46,15 +49,15 @@ internal class AssetResponder(
     ) {
         val range = requestedRange(call, entry, notFound)
         val encoding = if (range != null) null else selectEncoding(call, entry)
-        val eTag = if (encoding == null) "\"${entry.hash}\"" else "\"${entry.hash}-${encoding.manifestKey}\""
+        val headers = preparedFor(path, entry)
+        val eTag = headers.eTags.getValue(encoding)
         val status = if (notFound) HttpStatusCode.NotFound else HttpStatusCode.OK
 
-        val cacheControl = cacheControlFor(path)
-        call.response.header(HttpHeaders.CacheControl, if (privateResponse) privateCacheControl(cacheControl) else cacheControl)
+        call.response.header(HttpHeaders.CacheControl, if (privateResponse) headers.privateCacheControl else headers.cacheControl)
         call.response.header(HttpHeaders.ETag, eTag)
         if (entry.encodings.isNotEmpty()) call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
-        val contentType = ContentType.defaultForFilePath(path).withCharsetIfNeeded(Charsets.UTF_8)
-        if (contentSecurityPolicy != null && contentType.match(ContentType.Text.Html)) {
+        val contentType = headers.contentType
+        if (contentSecurityPolicy != null && headers.isHtml) {
             call.response.header(CONTENT_SECURITY_POLICY_HEADER, contentSecurityPolicy.forPage(path, entry))
         }
 
@@ -132,6 +135,27 @@ internal class AssetResponder(
         return parseRange(header, entry.size)
     }
 
+    private fun preparedFor(
+        path: String,
+        entry: ManifestEntry,
+    ): PreparedHeaders {
+        prepared[path]?.takeIf { it.hash == entry.hash && it.encodings == entry.encodings.keys }?.let { return it }
+        val contentType = ContentType.defaultForFilePath(path).withCharsetIfNeeded(Charsets.UTF_8)
+        val cacheControl = cacheControlFor(path)
+        val eTags = HashMap<AssetEncoding?, String>()
+        eTags[null] = "\"${entry.hash}\""
+        entry.encodings.keys.forEach { encoding -> eTags[encoding] = "\"${entry.hash}-${encoding.manifestKey}\"" }
+        return PreparedHeaders(
+            hash = entry.hash,
+            encodings = entry.encodings.keys,
+            contentType = contentType,
+            isHtml = contentType.match(ContentType.Text.Html),
+            cacheControl = cacheControl,
+            privateCacheControl = privateCacheControl(cacheControl),
+            eTags = eTags,
+        ).also { prepared[path] = it }
+    }
+
     private fun cacheControlFor(path: String): String =
         when {
             path.startsWith(IMMUTABLE_PREFIX) -> cache.immutable
@@ -162,6 +186,16 @@ internal class AssetResponder(
         return header.split(',').map { it.trim().removePrefix("W/") }.any { it == "*" || it == eTag }
     }
 }
+
+private class PreparedHeaders(
+    val hash: String,
+    val encodings: Set<AssetEncoding>,
+    val contentType: ContentType,
+    val isHtml: Boolean,
+    val cacheControl: String,
+    val privateCacheControl: String,
+    val eTags: Map<AssetEncoding?, String>,
+)
 
 private class HeadContent(
     override val status: HttpStatusCode,

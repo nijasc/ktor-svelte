@@ -138,6 +138,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/PackageManager : java/lan
 public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteDevSettings {
 	public fun <init> ()V
 	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
 }
@@ -288,6 +289,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask
 	public abstract fun getGradleExecutable ()Lorg/gradle/api/provider/Property;
 	public abstract fun getJavaLauncher ()Lorg/gradle/api/provider/Property;
 	public abstract fun getMainClass ()Lorg/gradle/api/provider/Property;
+	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
