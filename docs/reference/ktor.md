@@ -65,6 +65,7 @@ install(Svelte) {
 | `buildHeader` | Sends the frontend build fingerprint on API responses as `X-Ktor-Svelte-Build`, so the client can notice a deploy. On by default |
 | `maxJsonDepth` | Refuses JSON request bodies on API paths that nest deeper than this, with 400. `64` by default, `null` turns it off |
 | `maxJsonStringLength` | Refuses JSON request bodies on API paths with a longer string, with 400. Off by default |
+| `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](../security.md#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](../features/transport.md#api-compression) |
 | `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |

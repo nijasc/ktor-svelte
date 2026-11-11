@@ -14,11 +14,13 @@ import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
+import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.dev.statusJson
 import io.github.nijasc.ktor.svelte.internal.installApiCompression
+import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
 import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
@@ -107,6 +109,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         installTransport(application, pluginConfig.transportConfig)
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
+        if (pluginConfig.requestIds) installRequestIds(application)
         installTypeScriptGeneration(
             application,
             pluginConfig.generateTs,
@@ -156,6 +159,14 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (call.response.status() == HttpStatusCode.TooManyRequests && resolver.isApiPath(decodedPathOrRaw(call))) {
                 metrics.rateLimited.incrementAndGet()
             }
+        }
+
+        val slowApiCall = pluginConfig.devConfig.slowApiCall
+        if (slowApiCall != null && application.developmentMode) {
+            val slowCalls = SlowCallLog(slowApiCall, resolver)
+            slowCalls.install(application)
+            onCall { call -> slowCalls.started(call) }
+            on(ResponseSent) { call -> slowCalls.finished(call) }
         }
 
         val hideErrorDetails = pluginConfig.hideErrorDetails

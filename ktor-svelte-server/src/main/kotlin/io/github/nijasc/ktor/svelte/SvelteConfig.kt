@@ -8,6 +8,8 @@ import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import kotlin.reflect.typeOf
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 @KtorDsl
 public class SvelteConfig {
@@ -46,6 +48,7 @@ public class SvelteConfig {
     public var hideErrorDetails: Boolean = true
     public var apiCompression: Boolean = true
     public var buildHeader: Boolean = true
+    public var requestIds: Boolean = true
     public var maxApiBodySize: Long? = 1024L * 1024L
     public var maxJsonDepth: Int? = 64
     public var maxJsonStringLength: Int? = null
@@ -127,6 +130,7 @@ public class SvelteDevConfig {
     public var url: String = "http://localhost:5173"
     public var mode: DevMode = DevMode.AUTO
     public var allowRemote: Boolean = false
+    public var slowApiCall: Duration? = 500.milliseconds
 }
 
 @KtorDsl

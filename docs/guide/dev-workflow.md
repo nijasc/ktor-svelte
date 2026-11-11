@@ -25,6 +25,14 @@ For the edits you make most, install the live templates once with `./gradlew sve
 
 To debug your Kotlin code, start `Dev` as usual and then start the `Debug app` run configuration in debug mode. IntelliJ debugs Gradle tasks only when they run a JVM through Gradle, and `svelteDevAll` starts the app itself, so the app instead listens for a debugger on `127.0.0.1:5005` (see `dev.debugPort`). `Debug app` has auto restart on, so it reconnects after each restart. Outside IntelliJ, attach any JDWP debugger to that port. Two apps running `svelteDevAll` at once need different debug ports.
 
+In development, API calls that take 500 ms or longer are logged with the route that served them, so you can jump straight to the code:
+
+```
+ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.kt:19)
+```
+
+Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
+
 Prefer separate terminals? Run these instead:
 
 ```bash
