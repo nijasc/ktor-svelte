@@ -18,6 +18,7 @@ import kotlin.test.assertNull
 class CachingAndCompressionTest {
     private val compressedFiles =
         mapOf(
+            "about.html.zst" to "zstd",
             "about.html.br" to "brotli-bytes",
             "about.html.gz" to "gzip-bytes!",
         )
@@ -104,6 +105,32 @@ class CachingAndCompressionTest {
             assertEquals("br", response.headers[HttpHeaders.ContentEncoding])
             assertEquals(HttpHeaders.AcceptEncoding, response.headers[HttpHeaders.Vary])
             assertEquals("brotli-bytes", response.bodyAsText())
+        }
+
+    @Test
+    fun `zstd is preferred when the browser accepts it`() =
+        svelteTest {
+            val response = client.get("/about") { header(HttpHeaders.AcceptEncoding, "gzip, deflate, br, zstd") }
+            assertEquals("zstd", response.headers[HttpHeaders.ContentEncoding])
+            assertEquals("4", response.headers[HttpHeaders.ContentLength])
+            assertEquals("zstd", response.bodyAsText())
+            assertNotEquals(
+                client.get("/about") { header(HttpHeaders.AcceptEncoding, "br") }.headers[HttpHeaders.ETag],
+                response.headers[HttpHeaders.ETag],
+            )
+        }
+
+    @Test
+    fun `brotli is served when zstd is refused`() =
+        svelteTest {
+            val response = client.get("/about") { header(HttpHeaders.AcceptEncoding, "br, zstd;q=0") }
+            assertEquals("br", response.headers[HttpHeaders.ContentEncoding])
+        }
+
+    @Test
+    fun `zstd variants cannot be requested directly`() =
+        svelteTest {
+            assertEquals(HttpStatusCode.NotFound, client.get("/about.html.zst").status)
         }
 
     @Test
