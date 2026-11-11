@@ -73,6 +73,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     public abstract val debugPort: Property<Int>
 
     @get:Input
+    public abstract val openBrowser: Property<Boolean>
+
+    @get:Input
     public abstract val mainClass: Property<String>
 
     @get:Internal
@@ -94,6 +97,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     public fun runAll() {
         val running = mutableListOf<Process>()
         val banner = ReadyBanner(port.get())
+        if (openBrowser.get()) banner.onFirstReady = ::openInBrowser
         val stopAll = Thread { running.forEach(::stopProcessTree) }
         Runtime.getRuntime().addShutdownHook(stopAll)
         try {
@@ -128,6 +132,12 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
             running.forEach(::stopProcessTree)
             Runtime.getRuntime().removeShutdownHook(stopAll)
         }
+    }
+
+    private fun openInBrowser(url: String) {
+        val command = browserCommand(System.getProperty("os.name"), System.getenv(), url) ?: return
+        runCatching { ProcessBuilder(command).redirectErrorStream(true).start() }
+            .onFailure { logger.info("ktor-svelte could not open a browser: ${it.message}") }
     }
 
     private fun startVite(): Process {

@@ -15,6 +15,7 @@ internal class ReadyBanner(
 ) {
     private var apiDocsPath: String? = null
     private var announced = false
+    var onFirstReady: (String) -> Unit = {}
 
     @Synchronized
     fun onAppLine(line: String): String? {
@@ -27,6 +28,7 @@ internal class ReadyBanner(
                 ?.let(::browsableUrl) ?: return null
         if (announced) return "ktor-svelte: the app is ready again at $appUrl"
         announced = true
+        onFirstReady(appUrl)
         val rows =
             listOfNotNull(
                 "App" to appUrl,
