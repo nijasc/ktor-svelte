@@ -6,7 +6,6 @@ import io.ktor.http.HttpMethod
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.application.pluginOrNull
-import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.ratelimit.RateLimit
 import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.request.httpMethod
@@ -26,7 +25,7 @@ internal fun installRateLimits(
         if (config.apiWrites > 0) {
             global {
                 rateLimiter(limit = config.apiWrites, refillPeriod = config.period)
-                requestKey { call -> call.request.origin.remoteHost }
+                requestKey(config.clientKey)
                 requestWeight { call, _ ->
                     if (call.request.httpMethod !in READ_METHODS && resolver.isApiPath(decodedPathOrRaw(call))) 1 else 0
                 }
@@ -34,8 +33,8 @@ internal fun installRateLimits(
         }
         config.namedLimits.forEach { (name, limit) ->
             register(RateLimitName(name)) {
-                rateLimiter(limit = limit.first, refillPeriod = limit.second)
-                requestKey { call -> call.request.origin.remoteHost }
+                rateLimiter(limit = limit.requests, refillPeriod = limit.period)
+                requestKey(limit.key ?: config.clientKey)
             }
         }
     }
