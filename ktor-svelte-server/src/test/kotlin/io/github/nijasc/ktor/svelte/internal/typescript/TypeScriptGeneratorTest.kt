@@ -256,6 +256,17 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `latest cancels the previous call`() {
+        val client = generate().getValue("client.ts")
+        assertContains(
+            client,
+            "export function latest<A extends unknown[], R>(call: (...args: A) => Promise<R>): (...args: A) => Promise<R> {",
+        )
+        assertContains(client, "previous?.abort();")
+        assertContains(client, "throw new DOMException('The request was superseded.', 'AbortError');")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")
