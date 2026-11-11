@@ -32,6 +32,7 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.serialization.xml)
     testImplementation(libs.ktor.server.auth)
+    testImplementation(libs.ktor.server.forwarded.header)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(platform(libs.junit.bom))
     testRuntimeOnly(libs.junit.platform.launcher)
