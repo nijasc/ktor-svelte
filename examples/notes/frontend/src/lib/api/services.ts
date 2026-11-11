@@ -18,6 +18,11 @@ export const notesGet = (id: string | number, options?: RequestOptions) => reque
 export const notesUpdate = (id: string | number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', `/api/notes/${encodeURIComponent(id)}`, { ...options, body, operation: 'notes.update' });
 export const notesDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.delete' });
 export const notesArchive = (id: string | number, options?: RequestOptions) => request<Note>('POST', `/api/notes/${encodeURIComponent(id)}/archive`, { ...options, operation: 'notes.archive' });
+/**
+ * Uploads files to a note.
+ *
+ * Send the files as multipart form data. The response lists the received file names and the total size.
+ */
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => request<UploadReceipt>('POST', `/api/notes/${encodeURIComponent(id)}/attachments`, { ...options, body, operation: 'notes.attachments' });
 
 export const notes = {
@@ -29,6 +34,11 @@ export const notes = {
     update: notesUpdate,
     delete: notesDelete,
     archive: notesArchive,
+    /**
+     * Uploads files to a note.
+     *
+     * Send the files as multipart form data. The response lists the received file names and the total size.
+     */
     attachments: notesAttachments,
 };
 
