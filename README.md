@@ -647,7 +647,7 @@ img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-sr
 base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 ```
 
-`script-src` lists the SHA-256 hash of each inline `<script>` in that page, which covers SvelteKit's startup script and the theme and locale script ktor-svelte adds, and nothing else. The hashes are computed once per page, the first time it is served, and cached. Other inline scripts and scripts from other origins are blocked. The other directives exist for these reasons:
+`script-src` lists the SHA-256 hash of each inline `<script>` in that page, which covers SvelteKit's startup script and the theme and locale script ktor-svelte adds, and nothing else. In production, the hashes of every page are computed once in the background at startup, so the first visit after a deploy does not pay for it. A page that changes is hashed again. Other inline scripts and scripts from other origins are blocked. The other directives exist for these reasons:
 
 - `style-src 'unsafe-inline'`: Svelte transitions and many components set inline styles, and SvelteKit can inline small CSS files.
 - `img-src` and `font-src` allow `data:` because Tailwind, DaisyUI and Vite inline small images, icons and fonts as data URLs. `blob:` covers images made in the browser, such as upload previews.

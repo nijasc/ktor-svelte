@@ -53,6 +53,14 @@ internal class PageContentSecurityPolicy(
         return policy
     }
 
+    fun precomputeAll() {
+        store
+            .manifest()
+            ?.files
+            ?.filterKeys { it.endsWith(".html") }
+            ?.forEach { (path, entry) -> forPage(path, entry) }
+    }
+
     fun render(scriptHashes: List<String>): String =
         directives.entries.joinToString("; ") { (name, sources) ->
             val all = if (name == "script-src") sources + scriptHashes else sources
