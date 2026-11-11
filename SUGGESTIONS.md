@@ -142,6 +142,25 @@ None yet.
 | PERF-07 | Cache the result of `acceptsHtml` and `needsLocalePrefix` checks per path pattern | Every request repeats string splitting that only depends on the path | S |
 | PERF-08 | Skip `SchemaConstraints` for types without constraints or `Validated` rules, cached per class | Since the nested walk landed, every received object is walked even when nothing can fail | S |
 | PERF-09 | Parse the manifest during startup instead of on the first request | The first visitor after a deploy pays for parsing a large manifest, and a broken manifest is found late | S |
+| PERF-10 | Compute the CSP script hashes in `svelteBundle` and store them in the manifest | The runtime reads and hashes every HTML page again after each deploy; the build already has the files open | S |
+| PERF-11 | Build ETag strings, Cache-Control values and content types once per manifest entry | They are formatted again on every request although they never change for a given file | S |
+| PERF-12 | Keep a bounded cache from request path to resolution result | Page lookups try several candidate file names per request; popular paths resolve the same way every time | S |
+| PERF-13 | Read classpath assets on `Dispatchers.IO`, or through a non-blocking channel | Asset streams are blocking `InputStream`s read from the request coroutine, which can stall the event loop under load | S |
+| PERF-14 | Stream dev proxy responses with `BodyHandlers.ofPublisher` instead of a blocking stream | Each proxied Vite response holds a thread while it is copied, which slows HMR with many modules | S |
+| PERF-15 | Serve zstd variants (`.zst`) when the browser accepts `zstd` | Current Chrome and Firefox accept zstd, which decompresses faster than Brotli at a similar size | M |
+| PERF-16 | Precompress files in `svelteBundle` that the adapter left uncompressed, such as files from `static/` | Only Vite output is precompressed, so SVG, JSON and fonts from `static/` go out uncompressed | S |
+| PERF-17 | Recompress with Brotli quality 11 and zopfli for gzip in `svelteBundle`, opt-in | The build runs once, and maximum compression saves bytes on every download | M |
+| PERF-18 | Let apps list extra immutable path prefixes, for example hashed fonts in `static/` | Only `_app/immutable/` gets a one-year cache, so other hashed files are revalidated on every visit | S |
+| PERF-19 | Document and test HTTP/2 with Netty, including h2c behind a proxy | A SvelteKit page loads many small chunks, which HTTP/2 multiplexing handles much better | S |
+| PERF-20 | Generate one export per endpoint in `services.ts` next to the grouped objects | Bundlers cannot drop unused methods from an exported object, so every page ships the whole client | M |
+| PERF-21 | Deduplicate identical in-flight GET requests in the generated client, opt-in | Components that load the same data at once send the same request several times | S |
+| PERF-22 | Split i18n message tables into one lazily loaded module per locale | Every visitor downloads the messages of all locales today | M |
+| PERF-23 | Offer a setting to leave gzip variants out of the JAR when Brotli exists | Almost all browsers accept Brotli, and the gzip copies make the JAR noticeably larger | S |
+| PERF-24 | Mark `svelteInstall` up to date from a hash of the lockfile instead of the presence of `node_modules` | A changed lockfile with an existing `node_modules` skips the install, and an unchanged one still runs the up-to-date check slowly on Windows | S |
+| PERF-25 | Make `svelteBuild` relocatable for the remote build cache | Teams with a shared Gradle cache rebuild the frontend on every machine | M |
+| PERF-26 | Stop running `bun --version` or `npm --version` while Gradle configures the build | `ToolVersionSource` starts a process during configuration of every build that includes the frontend tasks | S |
+| PERF-27 | Restart only the app classloader in `svelteDevAll` instead of the whole JVM | A full JVM restart per Kotlin change takes seconds that a classloader swap avoids | L |
+| PERF-28 | Make `svelteVerifyTs` up to date when classes and resources are unchanged | `check` starts the app on every run, even when nothing that affects the generated TypeScript changed | S |
 
 ### Features
 
