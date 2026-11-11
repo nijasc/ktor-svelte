@@ -115,11 +115,11 @@ By default every client address gets its own budget. Choose another key when tha
 ```kotlin
 rateLimit {
     key { call -> call.sessions.get<UserSession>()?.userId ?: call.request.origin.remoteHost }
-    limit("login", requests = 5, per = 1.minutes) { call -> call.receive<Login>().email }
+    limit("export", requests = 2, per = 1.hours) { call -> call.sessions.get<UserSession>()?.userId ?: "anonymous" }
 }
 ```
 
-The default limit runs before routing, so read the user from the session there, not from `call.principal()`, which only `authenticate` routes set.
+The default limit runs before routing, so read the user from the session there, not from `call.principal()`, which only `authenticate` routes set. Do not read the request body in a key: it would be gone by the time your route receives it.
 
 It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless you set `rateLimit { enabled = false }`. `apiWrites = 0` keeps the named limits but drops the default one.
 
