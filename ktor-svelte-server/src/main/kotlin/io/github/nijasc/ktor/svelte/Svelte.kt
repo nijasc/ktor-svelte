@@ -18,7 +18,10 @@ import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.dev.routeTable
 import io.github.nijasc.ktor.svelte.internal.dev.statusJson
+import io.github.nijasc.ktor.svelte.internal.dev.toHtml
+import io.github.nijasc.ktor.svelte.internal.dev.toJson
 import io.github.nijasc.ktor.svelte.internal.installApiCompression
 import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
@@ -51,6 +54,7 @@ import io.ktor.server.application.hooks.CallFailed
 import io.ktor.server.application.hooks.ResponseSent
 import io.ktor.server.application.install
 import io.ktor.server.application.log
+import io.ktor.server.application.plugin
 import io.ktor.server.application.pluginOrNull
 import io.ktor.server.plugins.bodylimit.RequestBodyLimit
 import io.ktor.server.plugins.swagger.swaggerUI
@@ -60,6 +64,7 @@ import io.ktor.server.request.path
 import io.ktor.server.response.header
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.RoutingRoot
 import io.ktor.server.routing.application
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.OpenApiDocSource
@@ -73,6 +78,7 @@ import kotlinx.coroutines.launch
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
 private const val STATUS_PATH = "/_ktor-svelte/status"
+private const val ROUTES_PATH = "/_ktor-svelte/routes"
 private const val HEALTH_PATH = "/_ktor-svelte/health"
 private const val STATUS_REFUSED_MESSAGE = "The ktor-svelte status endpoint only answers requests from this machine."
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
@@ -199,6 +205,21 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 get(PUBLIC_CONFIG_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")
                     call.respondText(publicConfigJson, ContentType.Application.Json)
+                }.hide()
+            }
+            if (application.developmentMode) {
+                get(ROUTES_PATH) {
+                    if (!isLocalCall(call)) {
+                        call.respondText(STATUS_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
+                        return@get
+                    }
+                    val table = routeTable(application.plugin(RoutingRoot), store.manifest(), resolver, pluginConfig.paramRouteList)
+                    call.response.header(HttpHeaders.CacheControl, "no-store")
+                    if (call.request.header(HttpHeaders.Accept)?.contains("application/json") == true) {
+                        call.respondText(table.toJson(), ContentType.Application.Json)
+                    } else {
+                        call.respondText(table.toHtml(), ContentType.Text.Html)
+                    }
                 }.hide()
             }
             if (pluginConfig.statusEndpoint) {
