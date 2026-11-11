@@ -8,8 +8,15 @@ import io.ktor.server.routing.PathSegmentTailcardRouteSelector
 import io.ktor.server.routing.RoutingNode
 import java.io.DataInputStream
 
+private val handlersGetter = RoutingNode::class.java.methods.firstOrNull { it.name.startsWith("getHandlers") && it.parameterCount == 0 }
+
+internal fun handlerSource(node: RoutingNode): SourceLocation? {
+    val getter = handlersGetter ?: return null
+    val handler = runCatching { (getter.invoke(node) as? List<*>)?.lastOrNull() }.getOrNull() ?: return null
+    return sourceOf(handler)
+}
+
 internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> {
-    val handlersGetter = RoutingNode::class.java.methods.firstOrNull { it.name.startsWith("getHandlers") && it.parameterCount == 0 }
     val locations = mutableMapOf<String, SourceLocation>()
 
     fun walk(
@@ -27,9 +34,8 @@ internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> {
                 else -> path
             }
         val nodeMethod = (selector as? HttpMethodRouteSelector)?.method?.value ?: method
-        if (nodeMethod != null && handlersGetter != null) {
-            val handler = runCatching { (handlersGetter.invoke(node) as? List<*>)?.lastOrNull() }.getOrNull()
-            handler?.let(::sourceOf)?.let { locations.putIfAbsent("$nodeMethod ${nodePath.ifEmpty { "/" }}", it) }
+        if (nodeMethod != null) {
+            handlerSource(node)?.let { locations.putIfAbsent("$nodeMethod ${nodePath.ifEmpty { "/" }}", it) }
         }
         node.children.forEach { walk(it, nodePath, nodeMethod) }
     }
