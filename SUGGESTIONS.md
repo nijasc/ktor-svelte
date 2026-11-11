@@ -87,6 +87,28 @@ None yet.
 | DX-19 | Support `@JsonSchema.Description` in generated types as part of the type name or a separate docs JSON | Field descriptions are lost on the way to the frontend | M |
 | DX-20 | Let `svelteDoctor --fix` apply the fixes it can do on its own | Most doctor findings have one obvious fix, such as adding `#api` to package.json | M |
 | DX-21 | Provide an IntelliJ live template set for routes, DTOs and generated client calls | Speeds up the most common edits in a ktor-svelte project | S |
+| DX-22 | Show a small dev overlay in the browser when the generated client changed or the app restarted, with a reload button | After a Kotlin change the page keeps old types and calls until the developer notices and reloads | M |
+| DX-23 | Print a startup banner in development with the active settings: API prefixes, origin check, CSP mode, body limit and dev proxy target | Secure defaults change behaviour, and seeing them at startup saves debugging a 403 or 413 | S |
+| DX-24 | Add a `--ci` mode to `svelteDoctor` with JSON output and a non-zero exit code on problems | Teams can run the same checks in CI instead of only on a laptop | S |
+| DX-25 | Generate stable query keys (`api.notes.list.key(query)`) for TanStack Query and similar caches | Every app that adds a data cache writes these keys by hand and gets them out of sync | S |
+| DX-26 | Generate a runes-based `resource()` helper that exposes `data`, `error` and `loading` for any service call | Loading and error state around API calls is the most repeated code in Svelte components | M |
+| DX-27 | Inline `publicConfig` into the served HTML so it is available synchronously | `loadPublicConfig()` forces an async step before the first render for values the server already knows | M |
+| DX-28 | Detect a frontend folder named `web`, `ui` or `client` when `frontend` is missing, and say which setting to change | The first build of an existing project fails with a generic message about a missing folder | S |
+| DX-29 | Link every ktor-svelte error message to its README section | Messages say what to do, but not where the longer explanation is | S |
+| DX-30 | Let `svelteRun` pass extra arguments to the script (`--args="--fix"`) | Scripts such as lint and test often need flags, and today they need a separate package.json entry | S |
+| DX-31 | Add `publicEnv("PUBLIC_X")` to the DSL, which checks the `PUBLIC_` prefix and adds it to `buildEnv` | Passing a non-public variable to the frontend build by mistake should fail the build, not leak the value | S |
+| DX-32 | Reload `publicConfig` in development without restarting the app | Tweaking a config value currently costs a full restart | S |
+| DX-33 | Read `PUBLIC_API_URL` into `apiConfig.baseUrl` automatically when it is set | Deployments that serve the frontend from a CDN need this wiring in every app | S |
+| DX-34 | Add a dev-only switch that delays or fails chosen endpoints (`?__ktorSvelteDelay=2000`) | Loading and error states are hard to test against a fast local backend | M |
+| DX-35 | Ship a `ktor-svelte-testing` artifact with `svelteTestApplication { }` and a fixture build | Users who test their routes with the plugin installed copy the fixture code from this repository | M |
+| DX-36 | Show a route table at `/_ktor-svelte/routes` in development with Ktor routes and SvelteKit pages side by side | Overlaps between API routes and pages are a common source of "why does this 404" | M |
+| DX-37 | Warn at startup when a Ktor route shadows a prerendered page or the SPA fallback | A route registered before the plugin silently wins over a page with the same path | S |
+| DX-38 | Answer the missing-build 503 in development with a short HTML help page instead of plain text | The browser is where developers look first, and a page can link the fix and the doctor command | S |
+| DX-39 | Report i18n keys that are used in Svelte files but missing from the catalog, and keys that are never used | Typos in message keys compile only because the generated `m` object is typed; unused keys pile up silently | M |
+| DX-40 | Add a `--dry-run` flag to `svelteSync` that prints the planned package.json and file changes | Developers want to see what the plugin will change before it rewrites their files | S |
+| DX-41 | Hide Vite and package manager output on success and show it in full on failure, with `-Psvelte.verbose=true` to always show it | Gradle builds print hundreds of frontend lines that nobody reads unless something breaks | S |
+| DX-42 | Read a shared `.env.development` in both Vite and the Ktor app in development | Ports, URLs and feature flags are configured twice today and drift apart | M |
+| DX-43 | Offer an optional Kotlin Multiplatform module for DTOs so Kotlin/JS or Wasm frontends can share them | Teams that use Kotlin on the frontend want the same classes instead of generated TypeScript | L |
 
 ### Project setup and tooling
 
