@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import { writeLlmsFiles } from './llms';
 import { socialHead, writeSocialImages } from './socialImages';
@@ -32,7 +34,36 @@ export default defineConfig({
             sidebar: siteConfig.site.themeConfig.sidebar
         });
     },
+    markdown: {
+        config(md) {
+            const fence = md.renderer.rules.fence!;
+            md.renderer.rules.fence = (tokens, index, options, env, self) => {
+                const token = tokens[index];
+                const words = token.info.trim().split(/\s+/);
+                if (!words.includes('stackblitz')) return fence(tokens, index, options, env, self);
+                token.info = words.filter((word) => word !== 'stackblitz').join(' ');
+                const code = Buffer.from(token.content, 'utf8').toString('base64');
+                return fence(tokens, index, options, env, self) + `<StackBlitzButton code="${code}" />`;
+            };
+        }
+    },
     vite: {
+        plugins: [
+            {
+                name: 'notes-client',
+                resolveId: (id) => (id === 'virtual:notes-client' ? '\0virtual:notes-client' : undefined),
+                load(id) {
+                    if (id !== '\0virtual:notes-client') return undefined;
+                    const directory = fileURLToPath(new URL('../../examples/notes/frontend/src/lib/api/', import.meta.url));
+                    const files = Object.fromEntries(
+                        readdirSync(directory)
+                            .filter((name) => name.endsWith('.ts'))
+                            .map((name) => [name, readFileSync(directory + name, 'utf8')])
+                    );
+                    return `export default ${JSON.stringify(files)};`;
+                }
+            }
+        ],
         define: {
             __DOCS_VERSION__: JSON.stringify(version),
             __DOCS_SITE_ROOT__: JSON.stringify(siteRoot)
