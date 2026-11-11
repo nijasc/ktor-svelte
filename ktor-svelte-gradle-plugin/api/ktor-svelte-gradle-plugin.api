@@ -154,6 +154,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getLibraries ()Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;
 	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPrecompress ()Lorg/gradle/api/provider/Property;
 	public final fun libraries (Lorg/gradle/api/Action;)V
 }
 
@@ -271,6 +272,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteBundleTask
 	public abstract fun getBundleDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getIncludeSourceMaps ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOutputDirName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPrecompress ()Lorg/gradle/api/provider/Property;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteCheckTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {

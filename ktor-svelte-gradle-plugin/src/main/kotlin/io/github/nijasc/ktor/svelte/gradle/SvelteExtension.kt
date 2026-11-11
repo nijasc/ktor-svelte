@@ -14,6 +14,7 @@ public abstract class SvelteExtension {
     public abstract val buildEnv: SetProperty<String>
     public abstract val addRuntimeDependency: Property<Boolean>
     public abstract val includeSourceMaps: Property<Boolean>
+    public abstract val precompress: Property<Boolean>
 
     @get:Nested
     public abstract val dev: SvelteDevSettings
