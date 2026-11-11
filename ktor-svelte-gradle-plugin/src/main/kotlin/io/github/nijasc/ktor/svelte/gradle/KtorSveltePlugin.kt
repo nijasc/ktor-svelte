@@ -4,6 +4,7 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.DaisySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
+import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
@@ -215,9 +216,15 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.description = "Runs clean and deletes .gradle, .kotlin, node_modules, frontend caches and the frontend build output."
             project.pluginManager.withPlugin("base") { task.dependsOn("clean") }
             task.delete(frontendOutput(extension))
-            DEEP_CLEAN_PROJECT_PATHS.forEach { path ->
-                task.delete(project.layout.projectDirectory.dir(path))
-            }
+            task.doLast(
+                DeleteUnlockedFiles(
+                    DEEP_CLEAN_PROJECT_PATHS.map {
+                        project.layout.projectDirectory
+                            .dir(it)
+                            .asFile
+                    },
+                ),
+            )
             DEEP_CLEAN_FRONTEND_PATHS.forEach { path ->
                 task.delete(extension.frontendDir.map { it.dir(path) })
             }
