@@ -479,6 +479,24 @@ Routes that declare a `text/event-stream` response, for example through `describ
 for await (const tick of api.ticks.watch()) console.log(tick);
 ```
 
+For paged lists, return `Page<T>` from `io.github.nijasc.ktor.svelte` and read a `cursor` query parameter. `next` is the cursor of the following page, or `null` on the last one:
+
+```kotlin
+get("/api/notes/feed") {
+    val cursor = call.queryParameters["cursor"]
+    val page: Page<Note> = store.page(cursor, limit = 20)
+    call.respond(page)
+}
+```
+
+`pages` turns any such endpoint into an async iterator that fetches one page at a time, typed from the endpoint:
+
+```ts
+import { api, pages } from '#api';
+
+for await (const notes of pages(api.notes.getFeed, { limit: '50' })) render(notes);
+```
+
 Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
 
 ```ts
