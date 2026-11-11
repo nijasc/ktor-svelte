@@ -1,0 +1,9 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+
+module:ktor-svelte-gradle-plugin
+io.github.nijasc.ktor.svelte.gradle
+io.github.nijasc.ktor.svelte.gradle.libraries
+io.github.nijasc.ktor.svelte.gradle.tasks
+module:ktor-svelte-server
+io.github.nijasc.ktor.svelte
