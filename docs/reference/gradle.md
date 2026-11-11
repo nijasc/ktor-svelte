@@ -18,6 +18,7 @@ svelte {
         port = 5173
         script = "dev"
         debugPort = 5005
+        openBrowser = true
     }
 }
 ```
@@ -36,6 +37,7 @@ svelte {
 | `dev.port` | Port passed to Vite by `svelteDev` |
 | `dev.script` | `package.json` script that starts Vite |
 | `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |
+| `dev.openBrowser` | Opens the app in the default browser once `svelteDevAll` is ready, the first time only. Never in CI or without a display |
 
 The package manager must already be installed. The plugin does not download Node or Bun.
 
