@@ -1,26 +1,39 @@
 import { ApiError, request, type RequestOptions } from './client.js';
 import type { Greeting, Note, NoteInput, NoteStats, NotesExport, Problem, PublicConfig } from './types.js';
 
+export const greetingList = (query?: { name?: string }, options?: RequestOptions) => request<Greeting>('GET', '/api/greeting', { ...options, query, operation: 'greeting.list' });
+
 export const greeting = {
-    list: (query?: { name?: string }, options?: RequestOptions) => request<Greeting>('GET', '/api/greeting', { ...options, query, operation: 'greeting.list' }),
+    list: greetingList,
 };
 
-export const notes = {
-    list: (query?: { search?: string; tag?: string }, options?: RequestOptions) => request<Note[]>('GET', '/api/notes', { ...options, query, operation: 'notes.list' }),
-    create: (body: NoteInput, options?: RequestOptions) => request<Note>('POST', '/api/notes', { ...options, body, operation: 'notes.create' }),
-    getExport: (options?: RequestOptions) => request<NotesExport>('GET', '/api/notes/export', { ...options, operation: 'notes.getExport' }),
-    getFeed: (query?: { cursor?: string; limit?: string }, options?: RequestOptions) => request<{
+export const notesList = (query?: { search?: string; tag?: string }, options?: RequestOptions) => request<Note[]>('GET', '/api/notes', { ...options, query, operation: 'notes.list' });
+export const notesCreate = (body: NoteInput, options?: RequestOptions) => request<Note>('POST', '/api/notes', { ...options, body, operation: 'notes.create' });
+export const notesGetExport = (options?: RequestOptions) => request<NotesExport>('GET', '/api/notes/export', { ...options, operation: 'notes.getExport' });
+export const notesGetFeed = (query?: { cursor?: string; limit?: string }, options?: RequestOptions) => request<{
     items: Note[];
     next?: string | null;
-}>('GET', '/api/notes/feed', { ...options, query, operation: 'notes.getFeed' }),
-    get: (id: string | number, options?: RequestOptions) => request<Note>('GET', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' }),
-    update: (id: string | number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', `/api/notes/${encodeURIComponent(id)}`, { ...options, body, operation: 'notes.update' }),
-    delete: (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.delete' }),
-    archive: (id: string | number, options?: RequestOptions) => request<Note>('POST', `/api/notes/${encodeURIComponent(id)}/archive`, { ...options, operation: 'notes.archive' }),
+}>('GET', '/api/notes/feed', { ...options, query, operation: 'notes.getFeed' });
+export const notesGet = (id: string | number, options?: RequestOptions) => request<Note>('GET', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' });
+export const notesUpdate = (id: string | number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', `/api/notes/${encodeURIComponent(id)}`, { ...options, body, operation: 'notes.update' });
+export const notesDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.delete' });
+export const notesArchive = (id: string | number, options?: RequestOptions) => request<Note>('POST', `/api/notes/${encodeURIComponent(id)}/archive`, { ...options, operation: 'notes.archive' });
+
+export const notes = {
+    list: notesList,
+    create: notesCreate,
+    getExport: notesGetExport,
+    getFeed: notesGetFeed,
+    get: notesGet,
+    update: notesUpdate,
+    delete: notesDelete,
+    archive: notesArchive,
 };
 
+export const statsList = (options?: RequestOptions) => request<NoteStats>('GET', '/api/stats', { ...options, operation: 'stats.list' });
+
 export const stats = {
-    list: (options?: RequestOptions) => request<NoteStats>('GET', '/api/stats', { ...options, operation: 'stats.list' }),
+    list: statsList,
 };
 
 export interface ApiErrors {
@@ -49,3 +62,25 @@ export function loadPublicConfig(options?: RequestOptions): Promise<PublicConfig
 }
 
 export const api = { greeting, notes, stats };
+
+function bindFetch<T extends object>(target: T, fetch: typeof globalThis.fetch): T {
+    const bound: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(target)) {
+        if (typeof value !== 'function') {
+            bound[key] = bindFetch(value as object, fetch);
+            continue;
+        }
+        const arity = value.length;
+        bound[key] = (...args: unknown[]) => {
+            const padded = args.slice(0, arity);
+            padded.length = arity;
+            padded[arity - 1] = { fetch, ...(padded[arity - 1] as RequestOptions | undefined) };
+            return value(...padded);
+        };
+    }
+    return bound as T;
+}
+
+export function apiWith(event: { fetch: typeof globalThis.fetch }): typeof api {
+    return bindFetch(api, event.fetch);
+}

@@ -1,13 +1,13 @@
 import { error } from '@sveltejs/kit';
-import { api, isApiError } from '#api';
+import { apiWith, isApiError } from '#api';
 import type { PageLoad } from './$types';
 
 export const prerender = false;
 export const ssr = false;
 
-export const load: PageLoad = async ({ fetch, params }) => {
+export const load: PageLoad = async (event) => {
     try {
-        return { note: await api.notes.get(params.id, { fetch }) };
+        return { note: await apiWith(event).notes.get(event.params.id) };
     } catch (failure) {
         if (isApiError(failure, 'notes.get')) error(failure.status, failure.body.message);
         throw failure;

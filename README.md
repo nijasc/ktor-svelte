@@ -490,6 +490,14 @@ Routes that declare a `text/event-stream` response, for example through `describ
 for await (const tick of api.ticks.watch()) console.log(tick);
 ```
 
+Every endpoint is also exported on its own, named after its group and service, such as `notesList` or `notesGet`. Import those in pages that use only a few endpoints, and the bundler leaves the rest of the client out of that page:
+
+```ts
+import { notesGet } from '#api';
+
+const note = await notesGet(1);
+```
+
 For paged lists, return `Page<T>` from `io.github.nijasc.ktor.svelte` and read a `cursor` query parameter. `next` is the cursor of the following page, or `null` on the last one:
 
 ```kotlin
@@ -508,12 +516,15 @@ import { api, pages } from '#api';
 for await (const notes of pages(api.notes.getFeed, { limit: '50' })) render(notes);
 ```
 
-Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
+Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, use `apiWith(event)`. It is the same client, but every call goes through SvelteKit's `fetch`, which prerendering and client-side navigation need:
 
 ```ts
-export const load: PageLoad = async ({ fetch }) => ({
-    notes: await api.notes.list(undefined, { fetch })
-});
+import { apiWith } from '#api';
+
+export const load: PageLoad = async (event) => {
+    const api = apiWith(event);
+    return { notes: await api.notes.list(), stats: await api.stats.list() };
+};
 ```
 
 In development, ktor-svelte also writes `build/ktor-svelte/routes.json`, which maps every generated service to the Kotlin route that serves it:
@@ -523,6 +534,8 @@ In development, ktor-svelte also writes `build/ktor-svelte/routes.json`, which m
 ```
 
 Search it for the operation name you see in the frontend, or let an editor plugin use it to jump from a call to its route. `file` is relative to your source root, and `line` is the line of the route's handler. It lives in `build/` because line numbers change with every edit. When ktor-svelte cannot read a handler's location, the entry has only `method` and `path`.
+
+A `fetch` passed in the options of a single call still wins.
 
 To refresh the files without your dev server, for example in CI, run the task below and check for a diff. It starts your app once, so the app's port must be free.
 
@@ -752,6 +765,27 @@ install(Svelte) {
 Set `maxApiBodySize = null` to remove the limit.
 
 Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
+
+**Rate limit.** Each client may send 120 writes per minute to your API paths, meaning every method except GET, HEAD, OPTIONS and TRACE. More get 429 with a `Retry-After` header. Reads and frontend files are never limited. Clients are told apart by `call.request.origin.remoteHost`, so behind a reverse proxy install `XForwardedHeaders` or `ForwardedHeaders`, or every user shares one limit.
+
+Routes such as login need a much tighter limit. Name one, and wrap the routes in Ktor's own `rateLimit`:
+
+```kotlin
+install(Svelte) {
+    rateLimit {
+        apiWrites = 300
+        limit("login", requests = 5, per = 1.minutes)
+    }
+}
+
+routing {
+    rateLimit(RateLimitName("login")) {
+        post("/api/login") { /* ... */ }
+    }
+}
+```
+
+It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless you set `rateLimit { enabled = false }`. `apiWrites = 0` keeps the named limits but drops the default one.
 
 ## Reporting a vulnerability
 
