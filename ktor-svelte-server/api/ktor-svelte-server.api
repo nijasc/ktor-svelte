@@ -107,6 +107,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setNotFoundPage (Ljava/lang/String;)V
 	public final fun setOriginCheck (Z)V
 	public final fun setPublicConfig (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;)V
+	public final fun setPublicConfig (Lkotlin/jvm/functions/Function0;Lio/ktor/openapi/JsonSchema;)V
 	public final fun setRequestIds (Z)V
 	public final fun setRouting (Lio/github/nijasc/ktor/svelte/SvelteRouting;)V
 	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V

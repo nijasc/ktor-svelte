@@ -29,7 +29,7 @@ public class SvelteConfig {
     internal val rateLimitConfig: SvelteRateLimitConfig = SvelteRateLimitConfig()
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
-    internal var publicConfigJson: String? = null
+    internal var publicConfigProvider: (() -> String)? = null
         private set
     internal var publicConfigSchema: String? = null
         private set
@@ -94,6 +94,11 @@ public class SvelteConfig {
         setPublicConfig(Json.encodeToString(serializer<T>(), value), KotlinxJsonSchemaInference.buildSchema(typeOf<T>()))
     }
 
+    public inline fun <reified T : Any> publicConfig(noinline provider: () -> T) {
+        val serializer = serializer<T>()
+        setPublicConfig({ Json.encodeToString(serializer, provider()) }, KotlinxJsonSchemaInference.buildSchema(typeOf<T>()))
+    }
+
     public inline fun <reified T : Any> errorResponse(vararg statuses: HttpStatusCode) {
         addErrorResponse(T::class.simpleName ?: "ErrorBody", KotlinxJsonSchemaInference.buildSchema(typeOf<T>()), statuses.toList())
     }
@@ -114,7 +119,15 @@ public class SvelteConfig {
         json: String,
         schema: JsonSchema,
     ) {
-        publicConfigJson = json
+        setPublicConfig({ json }, schema)
+    }
+
+    @PublishedApi
+    internal fun setPublicConfig(
+        provider: () -> String,
+        schema: JsonSchema,
+    ) {
+        publicConfigProvider = provider
         publicConfigSchema = Json.encodeToString(JsonSchema.serializer(), schema)
     }
 }
