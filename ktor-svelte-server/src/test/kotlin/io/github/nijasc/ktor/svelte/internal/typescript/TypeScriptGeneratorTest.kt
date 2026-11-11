@@ -207,6 +207,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `a field action is generated and exported`() {
+        val files = generate()
+        assertContains(files.getValue("form.ts"), "export function field(node: FieldElement, options: FieldOptions = {}) {")
+        assertContains(files.getValue("index.ts"), "export * from './form.js';")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")
