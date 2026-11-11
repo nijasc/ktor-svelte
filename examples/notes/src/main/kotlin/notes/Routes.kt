@@ -74,6 +74,8 @@ fun Route.noteRoutes(store: NoteStore) {
                 }
                 call.respond(UploadReceipt(names, received))
             }.describe {
+                summary = "Uploads files to a note."
+                description = "Send the files as multipart form data. The response lists the received file names and the total size."
                 requestBody { ContentType.MultiPart.FormData() }
             }
 

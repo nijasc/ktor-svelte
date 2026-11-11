@@ -286,6 +286,21 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `summaries and descriptions become JSDoc`() {
+        val source =
+            services(
+                """{"/api/a":{"get":{"summary":"Lists things.","description":"Newest first.\nAt most 50.","responses":{"200":{"description":"ok"}}}},
+                "/api/b":{"get":{"summary":"Ends with */ inside","responses":{"200":{"description":"ok"}}}},
+                "/api/c":{"get":{"summary":"","responses":{"200":{"description":"ok"}}}}}""",
+            )
+        assertContains(source, "/**\n * Lists things.\n *\n * Newest first.\n * At most 50.\n */\nexport const aList = ")
+        assertContains(source, "    /**\n     * Lists things.\n     *\n     * Newest first.\n     * At most 50.\n     */\n    list: aList,")
+        assertContains(source, "/** Ends with *\\/ inside */\nexport const bList = ")
+        assertContains(source, ");\n\nexport const c = {")
+        assertFalse(source.contains("/**  */"))
+    }
+
+    @Test
     fun `latest cancels the previous call`() {
         val client = generate().getValue("client.ts")
         assertContains(

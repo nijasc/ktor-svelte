@@ -98,6 +98,26 @@ const input = { due: IsoDate.today(), remindAt: IsoDateTime.now() };
 }
 ```
 
+## Documentation in the editor
+
+A `summary` and `description` set in `describe { }` end up as JSDoc on the generated function, so the editor shows them when you hover over a call:
+
+```kotlin
+post("/api/notes/{id}/attachments") { /* ... */ }.describe {
+    summary = "Uploads files to a note."
+    description = "Send the files as multipart form data."
+}
+```
+
+```ts
+/**
+ * Uploads files to a note.
+ *
+ * Send the files as multipart form data.
+ */
+export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
+```
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.
