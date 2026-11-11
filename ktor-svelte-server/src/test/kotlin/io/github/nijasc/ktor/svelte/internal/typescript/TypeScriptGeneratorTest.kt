@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class TypeScriptGeneratorTest {
     private fun generate(
@@ -70,10 +71,12 @@ class TypeScriptGeneratorTest {
             services(
                 """{"/api/default/{class}":{"get":{}},"/api/request/{options}":{"get":{}},"/api/notes/{body}":{"get":{}}}""",
             )
-        assertContains(source, "export const _default = {\n    get: (_class: string | number, options?: RequestOptions)")
+        assertContains(source, "export const defaultGet = (_class: string | number, options?: RequestOptions)")
+        assertContains(source, "export const _default = {\n    get: defaultGet,\n};")
         assertContains(source, "`/api/default/\${encodeURIComponent(_class)}`")
-        assertContains(source, "export const _request = {\n    get: (_options: string | number, options?: RequestOptions)")
-        assertContains(source, "get: (_body: string | number, options?: RequestOptions)")
+        assertContains(source, "export const requestGet = (_options: string | number, options?: RequestOptions)")
+        assertContains(source, "export const _request = {\n    get: requestGet,\n};")
+        assertContains(source, "export const notesGet = (_body: string | number, options?: RequestOptions)")
         assertContains(source, "export const api = { _default, _request, notes };")
     }
 
@@ -192,6 +195,15 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `apiWith binds fetch for load functions after the api object`() {
+        val source = services("""{"/api/a":{"get":{"responses":{"200":{"description":"ok"}}}}}""")
+        val api = source.indexOf("export const api = { a };")
+        val apiWith = source.indexOf("export function apiWith(event: { fetch: typeof globalThis.fetch }): typeof api {")
+        assertTrue(api in 0 until apiWith)
+        assertContains(source, "padded[arity - 1] = { fetch, ...(padded[arity - 1] as RequestOptions | undefined) };")
+    }
+
+    @Test
     fun `the client pages through cursor endpoints`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "export async function* pages<Q extends { cursor?: string }, T>(")
@@ -230,21 +242,36 @@ class TypeScriptGeneratorTest {
                 """{"/api/notes/{id}/archive":{"post":{"responses":{"204":{"description":"ok"}}}},
                 "/api/notes/export":{"get":{"responses":{"200":{"description":"ok","content":{"application/xml":{}}}}}}}""",
             )
-        assertContains(source, "archive: (id: string | number")
+        assertContains(source, "export const notesArchive = (id: string | number")
         assertContains(source, "request<void>")
-        assertContains(source, "getExport: (options?: RequestOptions) => request<string>")
+        assertContains(source, "export const notesGetExport = (options?: RequestOptions) => request<string>")
     }
 
     @Test
     fun `operation id wins over the conventional name`() {
-        assertContains(services("""{"/api/notes":{"get":{"operationId":"search-notes"}}}"""), "searchNotes: (")
+        assertContains(services("""{"/api/notes":{"get":{"operationId":"search-notes"}}}"""), "export const notesSearchNotes = (")
     }
 
     @Test
     fun `name collisions stay unique`() {
         val source = services("""{"/api/a/{x}":{"get":{}},"/api/a/{y}":{"get":{}}}""")
-        assertContains(source, "get: (x:")
-        assertContains(source, "getY: (y:")
+        assertContains(source, "export const aGet = (x:")
+        assertContains(source, "export const aGetY = (y:")
+        assertContains(source, "export const a = {\n    get: aGet,\n    getY: aGetY,\n};")
+    }
+
+    @Test
+    fun `endpoint exports never collide with groups, module names or each other`() {
+        val source =
+            services(
+                """{"/api/notes":{"get":{}},"/api/notes-list":{"get":{}},"/api/api":{"get":{"operationId":"x"}},
+                "/api/is":{"get":{"operationId":"ApiError"}}}""",
+            )
+        assertContains(source, "export const notesList2 = (")
+        assertContains(source, "export const notes = {\n    list: notesList2,\n};")
+        assertContains(source, "export const notesListList = (")
+        assertContains(source, "export const apiX = (")
+        assertContains(source, "export const isApiError2 = (")
     }
 
     @Test
