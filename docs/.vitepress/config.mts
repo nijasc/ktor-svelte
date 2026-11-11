@@ -1,13 +1,15 @@
 import { defineConfig } from 'vitepress';
+import { writeLlmsFiles } from './llms';
 
 const repository = 'https://github.com/nijasc/ktor-svelte';
 const siteRoot = '/ktor-svelte/';
 const base = process.env.DOCS_BASE ?? siteRoot;
 const version = process.env.DOCS_VERSION ?? 'main';
+const description = 'Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.';
 
 export default defineConfig({
     title: 'ktor-svelte',
-    description: 'Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.',
+    description,
     base,
     cleanUrls: true,
     lastUpdated: true,
@@ -17,6 +19,16 @@ export default defineConfig({
         ['meta', { property: 'og:title', content: 'ktor-svelte' }],
         ['meta', { property: 'og:description', content: 'One app. One JAR. One port. Ktor and SvelteKit together.' }]
     ],
+    buildEnd(siteConfig) {
+        writeLlmsFiles({
+            srcDir: siteConfig.srcDir,
+            outDir: siteConfig.outDir,
+            siteUrl: `https://nijasc.github.io${base}`,
+            title: `ktor-svelte ${version}`,
+            description,
+            sidebar: siteConfig.site.themeConfig.sidebar
+        });
+    },
     vite: {
         define: {
             __DOCS_VERSION__: JSON.stringify(version),
