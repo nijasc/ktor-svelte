@@ -55,8 +55,6 @@ internal class AssetResponder(
         val status = if (notFound) HttpStatusCode.NotFound else HttpStatusCode.OK
 
         call.response.header(HttpHeaders.CacheControl, if (privateResponse) headers.privateCacheControl else headers.cacheControl)
-        call.response.header(HttpHeaders.ETag, eTag)
-        if (entry.encodings.isNotEmpty()) call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
         val contentType = headers.contentType
         if (contentSecurityPolicy != null && headers.isHtml) {
             call.response.header(CONTENT_SECURITY_POLICY_HEADER, contentSecurityPolicy.forPage(path, entry))
@@ -67,6 +65,8 @@ internal class AssetResponder(
                 return
             }
         }
+        call.response.header(HttpHeaders.ETag, eTag)
+        if (entry.encodings.isNotEmpty()) call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
 
         if (!notFound && matchesIfNoneMatch(call.request.header(HttpHeaders.IfNoneMatch), eTag)) {
             call.respond(HttpStatusCode.NotModified)
