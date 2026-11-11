@@ -1029,3 +1029,8 @@ internal data class GeneratedOperation(
     val method: String,
     val path: String,
 )
+
+internal data class SourceLocation(
+    val file: String,
+    val line: Int,
+)
