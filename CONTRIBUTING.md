@@ -104,6 +104,8 @@ The API reference is built with Dokka from the public API of both modules:
 ./gradlew dokkaGenerate
 ```
 
+Each build also renders a 1200x630 social preview image for every page into `og/`, from the page title, its section and its first paragraph, and adds Open Graph and Twitter tags that point to it. The template is in `docs/.vitepress/socialImages.ts`. It renders with `@resvg/resvg-js` and DejaVu Sans on Linux or Arial on Windows and macOS.
+
 Every release runs the `Docs` workflow, which builds the site and the API reference for that version and publishes them to the `gh-pages` branch: under `/v<version>/`, and also at the root when it is the newest release. The version switcher in the site reads `versions.json` from there. The same workflow then deploys the whole `gh-pages` branch to GitHub Pages, so the repository's Pages source stays set to GitHub Actions. To publish a release again, run the `Docs` workflow by hand with its version. Every push to `main` that changes the docs or the public sources also publishes them under `/main/`, listed as "main (unreleased)" in the version switcher. Runs that overlap retry their push to `gh-pages` on a fresh clone, and each deployment serves the newest state of the branch.
 
 ## CI
