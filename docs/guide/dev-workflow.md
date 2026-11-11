@@ -19,11 +19,27 @@ ktor-svelte is ready. Open the app URL, not the Vite one:
   Vite:     http://localhost:5173
 ```
 
-The API docs line appears when `apiDocs = true`. After a restart it prints one line with the app URL instead. The URL comes from Ktor's `Responding at` log line, so keep Ktor's INFO logging on for the application logger.
+It also opens the app in your default browser, the first time only, so restarts do not open new tabs. It never does so in CI or on a Linux machine without a display. Turn it off with `svelte { dev { openBrowser = false } }`. The API docs line appears when `apiDocs = true`. After a restart it prints one line with the app URL instead. The URL comes from Ktor's `Responding at` log line, so keep Ktor's INFO logging on for the application logger.
 
 For the edits you make most, install the live templates once with `./gradlew svelteLiveTemplates --install` and restart the IDE. In Kotlin, `ksget`, `kspost` and `kspage` write routes, and `ksdto` and `ksinput` write DTOs with bounds and rules. In TypeScript, `ksapi` calls the generated client, `ksload` writes a `load` function with `apiWith`, and `kserror` wraps code in typed error handling.
 
 To debug your Kotlin code, start `Dev` as usual and then start the `Debug app` run configuration in debug mode. IntelliJ debugs Gradle tasks only when they run a JVM through Gradle, and `svelteDevAll` starts the app itself, so the app instead listens for a debugger on `127.0.0.1:5005` (see `dev.debugPort`). `Debug app` has auto restart on, so it reconnects after each restart. Outside IntelliJ, attach any JDWP debugger to that port. Two apps running `svelteDevAll` at once need different debug ports.
+
+At startup in development, the app logs which protections and settings are active, so a 403, 413 or 429 does not come as a surprise:
+
+```
+ktor-svelte settings:
+  API prefixes: /api
+  Dev proxy: http://localhost:5173
+  Origin check: on (same host only)
+  Body limit: 1 MiB, JSON depth: 64
+  Rate limit: 120 writes per 1m per client, FixedWindow
+  Content-Security-Policy: off while proxying to Vite
+  Error details: hidden in production, shown now
+  API compression: on, request IDs: on
+```
+
+Production logs only the version and the build fingerprint.
 
 In development, API calls that take 500 ms or longer are logged with the route that served them, so you can jump straight to the code:
 

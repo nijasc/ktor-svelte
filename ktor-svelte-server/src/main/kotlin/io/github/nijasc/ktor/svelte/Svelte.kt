@@ -1,5 +1,7 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.BUILD_HEADER
+import io.github.nijasc.ktor.svelte.internal.BuildFingerprint
 import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
@@ -34,6 +36,7 @@ import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonShape
 import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
+import io.github.nijasc.ktor.svelte.internal.settingsSummary
 import io.github.nijasc.ktor.svelte.internal.startupLine
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -120,8 +123,16 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.declaredErrorList.toList(),
         )
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
+        if (pluginConfig.buildHeader) {
+            val build = BuildFingerprint(store)
+            onCall { call ->
+                if (resolver.isApiPath(decodedPathOrRaw(call))) build.current()?.let { call.response.header(BUILD_HEADER, it) }
+            }
+        }
 
+        val summary = if (application.developmentMode) settingsSummary(pluginConfig, devUrl.takeIf { devProxy != null }) else emptyList()
         application.monitor.subscribe(ApplicationStarted) {
+            if (summary.isNotEmpty()) application.log.info("ktor-svelte settings:\n" + summary.joinToString("\n") { "  $it" })
             application.log.info(startupLine(store.manifest(), devUrl.takeIf { devProxy != null }))
         }
         if (store.manifest() == null) {

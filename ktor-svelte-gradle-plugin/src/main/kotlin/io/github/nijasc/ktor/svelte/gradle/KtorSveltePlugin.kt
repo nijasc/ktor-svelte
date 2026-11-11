@@ -321,6 +321,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.script.set(extension.dev.script)
             task.port.set(extension.dev.port)
             task.debugPort.set(extension.dev.debugPort)
+            task.openBrowser.set(extension.dev.openBrowser)
             task.mainClass.set(application.mainClass)
             task.appClasspath.from(
                 main.map { it.output.classesDirs },
@@ -380,6 +381,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
         extension.dev.debugPort.convention(5005)
+        extension.dev.openBrowser.convention(true)
         return extension
     }
 

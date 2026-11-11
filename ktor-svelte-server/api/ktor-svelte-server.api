@@ -71,10 +71,12 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getApiCompression ()Z
 	public final fun getApiDocs ()Z
 	public final fun getApiDocsPath ()Ljava/lang/String;
+	public final fun getBuildHeader ()Z
 	public final fun getGenerateTs ()Z
 	public final fun getGenerateTsOutput ()Ljava/lang/String;
 	public final fun getHealthEndpoint ()Z
 	public final fun getHideErrorDetails ()Z
+	public final fun getInlinePublicConfig ()Z
 	public final fun getMaxApiBodySize ()Ljava/lang/Long;
 	public final fun getMaxJsonDepth ()Ljava/lang/Integer;
 	public final fun getMaxJsonStringLength ()Ljava/lang/Integer;
@@ -93,10 +95,12 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setApiCompression (Z)V
 	public final fun setApiDocs (Z)V
 	public final fun setApiDocsPath (Ljava/lang/String;)V
+	public final fun setBuildHeader (Z)V
 	public final fun setGenerateTs (Z)V
 	public final fun setGenerateTsOutput (Ljava/lang/String;)V
 	public final fun setHealthEndpoint (Z)V
 	public final fun setHideErrorDetails (Z)V
+	public final fun setInlinePublicConfig (Z)V
 	public final fun setMaxApiBodySize (Ljava/lang/Long;)V
 	public final fun setMaxJsonDepth (Ljava/lang/Integer;)V
 	public final fun setMaxJsonStringLength (Ljava/lang/Integer;)V
@@ -115,9 +119,11 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public fun <init> ()V
 	public final fun getAllowRemote ()Z
 	public final fun getMode ()Lio/github/nijasc/ktor/svelte/DevMode;
+	public final fun getSlowApiCall-FghU774 ()Lkotlin/time/Duration;
 	public final fun getUrl ()Ljava/lang/String;
 	public final fun setAllowRemote (Z)V
 	public final fun setMode (Lio/github/nijasc/ktor/svelte/DevMode;)V
+	public final fun setSlowApiCall-BwNAW2A (Lkotlin/time/Duration;)V
 	public final fun setUrl (Ljava/lang/String;)V
 }
 
