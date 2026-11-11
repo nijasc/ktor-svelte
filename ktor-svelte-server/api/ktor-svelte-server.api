@@ -32,6 +32,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getApiDocsPath ()Ljava/lang/String;
 	public final fun getGenerateTs ()Z
 	public final fun getGenerateTsOutput ()Ljava/lang/String;
+	public final fun getHealthEndpoint ()Z
 	public final fun getHideErrorDetails ()Z
 	public final fun getMaxApiBodySize ()Ljava/lang/Long;
 	public final fun getNotFoundPage ()Ljava/lang/String;
@@ -40,6 +41,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
 	public final fun getSpaFallback ()Ljava/lang/String;
 	public final fun getStatusEndpoint ()Z
+	public final fun healthCheck (Lkotlin/jvm/functions/Function1;)V
 	public final fun paramRoutes ([Ljava/lang/String;)V
 	public final fun securityHeaders (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun securityHeaders$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
@@ -47,6 +49,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setApiDocsPath (Ljava/lang/String;)V
 	public final fun setGenerateTs (Z)V
 	public final fun setGenerateTsOutput (Ljava/lang/String;)V
+	public final fun setHealthEndpoint (Z)V
 	public final fun setHideErrorDetails (Z)V
 	public final fun setMaxApiBodySize (Ljava/lang/Long;)V
 	public final fun setNotFoundPage (Ljava/lang/String;)V
