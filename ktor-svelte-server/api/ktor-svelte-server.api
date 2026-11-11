@@ -62,6 +62,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getApiCompression ()Z
 	public final fun getApiDocs ()Z
 	public final fun getApiDocsPath ()Ljava/lang/String;
+	public final fun getBuildHeader ()Z
 	public final fun getGenerateTs ()Z
 	public final fun getGenerateTsOutput ()Ljava/lang/String;
 	public final fun getHealthEndpoint ()Z
@@ -81,6 +82,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setApiCompression (Z)V
 	public final fun setApiDocs (Z)V
 	public final fun setApiDocsPath (Ljava/lang/String;)V
+	public final fun setBuildHeader (Z)V
 	public final fun setGenerateTs (Z)V
 	public final fun setGenerateTsOutput (Ljava/lang/String;)V
 	public final fun setHealthEndpoint (Z)V
