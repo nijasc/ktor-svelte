@@ -156,6 +156,36 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `discriminated unions get the type names and an exhaustive match`() {
+        val source =
+            types(
+                """{"Shape":{"oneOf":[{"${'$'}ref":"#/components/schemas/Circle"},{"${'$'}ref":"#/components/schemas/Square"}],
+                "discriminator":{"propertyName":"kind","mapping":{"circle":"#/components/schemas/Circle","square":"#/components/schemas/Square"}}},
+                "Circle":{"type":"object","required":["kind"],"properties":{"kind":{"type":"string","enum":["circle"]}}},
+                "Square":{"type":"object","required":["kind"],"properties":{"kind":{"type":"string","enum":["square"]}}}}""",
+            )
+        assertContains(source, "export type Shape = Circle | Square;\n\nexport const Shape = {\n    types: ['circle', 'square'] as const,")
+        assertContains(source, "match: <R>(value: Shape, cases: { [K in Shape['kind']]: (value: Extract<Shape, { kind: K }>) => R }): R =>")
+    }
+
+    @Test
+    fun `type names come from the subtypes when the mapping is missing`() {
+        val source =
+            types(
+                """{"Event":{"oneOf":[{"type":"object","properties":{"type":{"type":"string","enum":["a"]}}},
+                {"type":"object","properties":{"type":{"type":"string","enum":["b"]}}}],"discriminator":{"propertyName":"type"}}}""",
+            )
+        assertContains(source, "types: ['a', 'b'] as const,")
+    }
+
+    @Test
+    fun `unions without a discriminator stay plain types`() {
+        val source = types("""{"U":{"oneOf":[{"type":"string"},{"type":"integer"}]}}""")
+        assertContains(source, "export type U = string | number;")
+        assertFalse(source.contains("export const U"))
+    }
+
+    @Test
     fun `arrays of unions get parentheses`() {
         val source = types("""{"L":{"type":"array","items":{"oneOf":[{"type":"string"},{"type":"integer"}]}}}""")
         assertContains(source, "export type L = (string | number)[];")
@@ -268,6 +298,13 @@ class TypeScriptGeneratorTest {
         assertContains(source, "/** Ends with *\\/ inside */\nexport const bList = ")
         assertContains(source, ");\n\nexport const c = {")
         assertFalse(source.contains("/**  */"))
+    }
+
+    @Test
+    fun `the client reports a new frontend build`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    onNewBuild?: (build: string) => void;")
+        assertContains(client, "if (knownBuild !== undefined && build !== knownBuild) apiConfig.onNewBuild?.(build);")
     }
 
     @Test

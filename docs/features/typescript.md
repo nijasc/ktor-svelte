@@ -118,6 +118,36 @@ post("/api/notes/{id}/attachments") { /* ... */ }.describe {
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
 ```
 
+## Sealed classes
+
+A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.
+
+```kotlin
+@Serializable
+sealed interface Activity
+
+@Serializable
+@SerialName("created")
+data class Created(val at: Instant) : Activity
+
+@Serializable
+@SerialName("archived")
+data class Archived(val at: Instant, val title: String) : Activity
+```
+
+```ts
+import { Activity, api } from '#api';
+
+const lines = (await api.notes.getActivity(id)).map((item) =>
+    Activity.match(item, {
+        created: (created) => `Created at ${created.at}`,
+        archived: (archived) => `Archived "${archived.title}"`
+    })
+);
+```
+
+Use `@SerialName` for short type names. Without it, the type name is the fully qualified class name.
+
 ## Getting exact types
 
 Ktor's compiler plugin reads `call.receive<T>()`, `call.respond()` and `call.queryParameters` for you, so plain routes get full types. Add the Ktor Gradle plugin:

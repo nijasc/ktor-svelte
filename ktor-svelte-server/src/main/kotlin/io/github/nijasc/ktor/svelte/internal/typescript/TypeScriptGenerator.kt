@@ -150,7 +150,47 @@ internal class TypeScriptGenerator(
                 validateSource(name, schema, schemas) +
                 "};\n"
         }
-        return "export type $name = ${tsType(schema, references)};\n"
+        val union = "export type $name = ${tsType(schema, references)};\n"
+        return union + (discriminatedCompanion(name, schema, schemas) ?: "")
+    }
+
+    private fun discriminatedCompanion(
+        name: String,
+        schema: JsonObject,
+        schemas: Map<String, JsonElement>,
+    ): String? {
+        val property = schema.objectAt("discriminator")?.stringAt("propertyName") ?: return null
+        val options = schema.arrayAt("oneOf") ?: schema.arrayAt("anyOf") ?: return null
+        val mapped =
+            schema
+                .objectAt("discriminator")
+                ?.objectAt("mapping")
+                ?.keys
+                ?.toList()
+                .orEmpty()
+        val values =
+            mapped.ifEmpty {
+                options.map { option ->
+                    val resolved = referencedSchema(option.jsonObject)?.let { schemas[it]?.jsonObject } ?: option.jsonObject
+                    val literal =
+                        resolved
+                            .objectAt("properties")
+                            ?.objectAt(property)
+                            ?.arrayAt("enum")
+                            ?.singleOrNull()
+                    (literal as? JsonPrimitive)?.contentOrNull ?: return null
+                }
+            }
+        if (values.isEmpty()) return null
+        val key = literal(JsonPrimitive(property))
+        val typeList = values.joinToString { literal(JsonPrimitive(it)) }
+        return "\nexport const $name = {\n" +
+            "    types: [$typeList] as const,\n" +
+            "    match: <R>(value: $name, cases: { [K in $name[$key]]: (value: Extract<$name, { ${propertyKey(
+                property,
+            )}: K }>) => R }): R =>\n" +
+            "        (cases[value[$key]] as (value: $name) => R)(value),\n" +
+            "};\n"
     }
 
     private fun boundsSource(schema: JsonObject): String {

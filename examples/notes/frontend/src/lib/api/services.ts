@@ -1,5 +1,5 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { Greeting, Note, NoteInput, NoteStats, NotesExport, Problem, UploadReceipt, PublicConfig } from './types.js';
+import type { Activity, Greeting, Note, NoteInput, NoteStats, NotesExport, Problem, UploadReceipt, PublicConfig } from './types.js';
 
 export const greetingList = (query?: { name?: string }, options?: RequestOptions) => request<Greeting>('GET', '/api/greeting', { ...options, query, operation: 'greeting.list' });
 
@@ -17,6 +17,7 @@ export const notesGetFeed = (query?: { cursor?: string; limit?: string }, option
 export const notesGet = (id: string | number, options?: RequestOptions) => request<Note>('GET', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' });
 export const notesUpdate = (id: string | number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', `/api/notes/${encodeURIComponent(id)}`, { ...options, body, operation: 'notes.update' });
 export const notesDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.delete' });
+export const notesGetActivity = (id: string | number, options?: RequestOptions) => request<Activity[]>('GET', `/api/notes/${encodeURIComponent(id)}/activity`, { ...options, operation: 'notes.getActivity' });
 export const notesArchive = (id: string | number, options?: RequestOptions) => request<Note>('POST', `/api/notes/${encodeURIComponent(id)}/archive`, { ...options, operation: 'notes.archive' });
 /**
  * Uploads files to a note.
@@ -33,6 +34,7 @@ export const notes = {
     get: notesGet,
     update: notesUpdate,
     delete: notesDelete,
+    getActivity: notesGetActivity,
     archive: notesArchive,
     /**
      * Uploads files to a note.
@@ -52,6 +54,7 @@ export interface ApiErrors {
     'notes.get': Problem;
     'notes.update': Problem;
     'notes.delete': Problem;
+    'notes.getActivity': Problem;
     'notes.archive': Problem;
     'notes.attachments': Problem;
 }
@@ -60,6 +63,7 @@ const errorStatuses: Record<string, number[]> = {
     'notes.get': [404],
     'notes.update': [404],
     'notes.delete': [404],
+    'notes.getActivity': [404],
     'notes.archive': [404],
     'notes.attachments': [404],
 };

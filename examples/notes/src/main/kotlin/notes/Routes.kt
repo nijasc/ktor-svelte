@@ -79,6 +79,13 @@ fun Route.noteRoutes(store: NoteStore) {
                 requestBody { ContentType.MultiPart.FormData() }
             }
 
+            get("/activity") {
+                val note = store.find(call.noteId()) ?: return@get call.respondMissing()
+                val activity: List<Activity> =
+                    listOfNotNull(Created(note.createdAt), Archived(note.createdAt, note.title).takeIf { note.status == NoteStatus.ARCHIVED })
+                call.respond(activity)
+            }
+
             post("/archive") {
                 val note: Note? = store.archive(call.noteId())
                 if (note == null) call.respondMissing() else call.respond(note)

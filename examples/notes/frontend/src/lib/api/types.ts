@@ -34,6 +34,40 @@ export const IsoDateTime = {
     now: (): IsoDateTime => IsoDateTime.from(new Date()),
 };
 
+export type Activity = Archived | Created;
+
+export const Activity = {
+    types: ['archived', 'created'] as const,
+    match: <R>(value: Activity, cases: { [K in Activity['type']]: (value: Extract<Activity, { type: K }>) => R }): R =>
+        (cases[value['type']] as (value: Activity) => R)(value),
+};
+
+export interface Archived {
+    type: 'archived';
+    at: IsoDateTime;
+    title: string;
+}
+
+export const Archived = {
+    empty: (): Archived => ({
+        type: 'archived',
+        at: '' as IsoDateTime,
+        title: '',
+    }),
+};
+
+export interface Created {
+    type: 'created';
+    at: IsoDateTime;
+}
+
+export const Created = {
+    empty: (): Created => ({
+        type: 'created',
+        at: '' as IsoDateTime,
+    }),
+};
+
 export interface Greeting {
     message: string;
     locale: string;
