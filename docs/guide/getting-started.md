@@ -40,10 +40,22 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 
 Every project also gets a Gradle version catalog, JSON and typed error responses, ktlint, ESLint and Prettier, a `README.md`, a `.env.example` and a `.gitignore`. With sign in or Postgres, it also gets a `.env` with random secrets, which is not committed.
 
-To skip the questions, add `--yes` and any options. Turn something off with `--no-`, such as `--no-lucide`:
+## Build the command
+
+Pick what you want, and copy the command for your system. It skips every question.
+
+<SetupBuilder />
+
+To write the command by hand, add `--yes` and any options from the table. Turn something off with `--no-`, such as `--no-lucide`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.sh | sh -s -- --yes --name=shop
+```
+
+On Windows, `irm ... | iex` cannot pass options, so run the script as a script block. Put options that contain a comma, such as `--locales=en,de`, in single quotes, or PowerShell splits them:
+
+```powershell
+powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.ps1))) --yes --name=shop --i18n '--locales=en,de'"
 ```
 
 Next, build something real in the [tutorial](tutorial.md).
