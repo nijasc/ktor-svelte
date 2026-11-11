@@ -132,7 +132,13 @@ public abstract class SvelteBundleTask : DefaultTask() {
                 files[path + suffix]?.let { variant -> "${quote(key)}:{\"size\":${variant.length()}}" }
             }
         val encodingsJson = if (encodings.isEmpty()) "" else ",\"encodings\":{${encodings.joinToString(",")}}"
-        return "{\"size\":${file.length()},\"hash\":${quote(sha256(file))}$encodingsJson}"
+        val scriptsJson =
+            if (path.endsWith(".html")) {
+                ",\"scripts\":[${inlineScriptHashes(file.readText()).joinToString(",") { quote(it) }}]"
+            } else {
+                ""
+            }
+        return "{\"size\":${file.length()},\"hash\":${quote(sha256(file))}$encodingsJson$scriptsJson}"
     }
 
     private fun isEncodedVariant(
