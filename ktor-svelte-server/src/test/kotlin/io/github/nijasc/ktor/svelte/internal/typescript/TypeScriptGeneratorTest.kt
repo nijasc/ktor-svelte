@@ -188,6 +188,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client can share GET requests in flight when asked to`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    dedupeGets?: boolean;")
+        assertContains(client, "apiConfig.dedupeGets === true && method === 'GET' && !options.signal && !options.fetch && !options.headers")
+    }
+
+    @Test
     fun `apiWith binds fetch for load functions after the api object`() {
         val source = services("""{"/api/a":{"get":{"responses":{"200":{"description":"ok"}}}}}""")
         val api = source.indexOf("export const api = { a };")
@@ -229,7 +236,7 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
-    fun `sub resources are named from their path`() {
+    fun `sub resources are na from their path`() {
         val source =
             services(
                 """{"/api/notes/{id}/archive":{"post":{"responses":{"204":{"description":"ok"}}}},

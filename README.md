@@ -460,6 +460,8 @@ await api.notes.update(1, { title: 'Oat milk' });
 apiConfig.headers['Authorization'] = 'Bearer token';
 ```
 
+When several components load the same data at the same time, set `apiConfig.dedupeGets = true`. Identical GET requests that are still in flight then share one network request and get the same parsed result, so do not mutate it. Calls with their own `headers`, `fetch` or `signal` are never shared, and nothing is cached after a response arrives. It is off by default.
+
 Errors are typed too. Ktor's compiler plugin finds error responses such as `call.respond(HttpStatusCode.NotFound, Problem(...))`, and `isApiError` narrows the body:
 
 ```ts

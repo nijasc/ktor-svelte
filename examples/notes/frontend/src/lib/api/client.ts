@@ -7,6 +7,7 @@ export interface ApiConfig {
     headers: Record<string, string>;
     fetch?: typeof fetch;
     onUnauthorized?: (response: Response) => void;
+    dedupeGets?: boolean;
 }
 
 export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
@@ -88,10 +89,19 @@ async function checked(response: Response, url: string, operation: string | unde
     return response;
 }
 
+const inFlight = new Map<string, Promise<unknown>>();
+
+function isShareable(method: string, options: InternalOptions): boolean {
+    return apiConfig.dedupeGets === true && method === 'GET' && !options.signal && !options.fetch && !options.headers;
+}
+
 export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
     const { url, operation, send } = prepare(method, path, options, 'application/json');
-    const response = await checked(await send(), url, operation);
-    return (await parseResponse(response)) as T;
+    const run = async () => (await parseResponse(await checked(await send(), url, operation))) as T;
+    if (!isShareable(method, options)) return run();
+    const pending = inFlight.get(url) ?? run().finally(() => inFlight.delete(url));
+    inFlight.set(url, pending);
+    return pending as Promise<T>;
 }
 
 function eventData<T>(data: string): T {
