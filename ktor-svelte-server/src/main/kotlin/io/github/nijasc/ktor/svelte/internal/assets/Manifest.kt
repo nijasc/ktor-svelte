@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal.assets
 
+import io.github.nijasc.ktor.svelte.internal.DocLink
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
@@ -33,7 +34,8 @@ internal data class Manifest(
             val formatVersion = root.getValue("formatVersion").jsonPrimitive.int
             check(formatVersion == MANIFEST_FORMAT_VERSION) {
                 "ktor-svelte manifest has format version $formatVersion, but this runtime reads version " +
-                    "$MANIFEST_FORMAT_VERSION. Use the same version of the Gradle plugin and ktor-svelte-server."
+                    "$MANIFEST_FORMAT_VERSION. Use the same version of the Gradle plugin and ktor-svelte-server." +
+                    DocLink.COMPATIBILITY.see()
             }
             val files = root.getValue("files").jsonObject.mapValues { (_, value) -> parseEntry(value.jsonObject) }
             return Manifest(files)

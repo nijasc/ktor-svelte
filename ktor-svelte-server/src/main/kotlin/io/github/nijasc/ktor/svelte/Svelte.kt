@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
@@ -65,8 +66,9 @@ private const val HEALTH_PATH = "/_ktor-svelte/health"
 private const val STATUS_REFUSED_MESSAGE = "The ktor-svelte status endpoint only answers requests from this machine."
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
-private const val BODY_LIMIT_CONFLICT_MESSAGE =
-    "RequestBodyLimit is already installed. Set maxApiBodySize = null in install(Svelte) to keep your own limits."
+private val BODY_LIMIT_CONFLICT_MESSAGE =
+    "RequestBodyLimit is already installed. Set maxApiBodySize = null in install(Svelte) to keep your own limits." +
+        DocLink.API_REQUEST_GUARDS.see()
 
 public val Svelte: ApplicationPlugin<SvelteConfig> =
     createApplicationPlugin("Svelte", ::SvelteConfig) {
@@ -185,7 +187,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 public fun Route.svelte(public: List<String> = emptyList()) {
     val handler =
         application.attributes.getOrNull(SvelteHandlerKey)
-            ?: error("Install the Svelte plugin before calling svelte() in routing.")
+            ?: error("Install the Svelte plugin before calling svelte() in routing." + DocLink.KTOR.see())
     if (public.isEmpty()) {
         catchAll(handler, privateResponses = true)
         return

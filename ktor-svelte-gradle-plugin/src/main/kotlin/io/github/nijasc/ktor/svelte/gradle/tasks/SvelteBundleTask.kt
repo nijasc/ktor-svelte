@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import io.github.nijasc.ktor.svelte.gradle.DocLink
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
@@ -67,7 +68,7 @@ public abstract class SvelteBundleTask : DefaultTask() {
             throw GradleException(
                 "ktor-svelte found no HTML files in $source. " +
                     "Check that the frontend uses adapter-static, and that svelte.outputDir " +
-                    "('${outputDirName.get()}') matches the adapter's pages option.",
+                    "('${outputDirName.get()}') matches the adapter's pages option." + DocLink.ADD_TO_AN_EXISTING_PROJECT.see(),
             )
         }
 

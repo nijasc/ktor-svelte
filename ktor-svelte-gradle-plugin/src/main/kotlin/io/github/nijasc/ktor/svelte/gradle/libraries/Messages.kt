@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
 import groovy.json.JsonSlurper
+import io.github.nijasc.ktor.svelte.gradle.DocLink
 import org.gradle.api.GradleException
 import java.io.File
 
@@ -45,7 +46,7 @@ internal fun readMessages(
     val catalogs =
         locales.associateWith { locale ->
             val file = directory.resolve("$locale.json")
-            if (!file.isFile) throw GradleException("i18n is missing $file. Create it with one key per message.")
+            if (!file.isFile) throw GradleException("i18n is missing $file. Create it with one key per message." + DocLink.I18N.see())
             val parsed = JsonSlurper().parse(file) as? Map<*, *> ?: throw GradleException("$file must hold one JSON object.")
             parsed.entries.associate { (key, value) ->
                 if (key !is String || !MESSAGE_KEY.matches(key)) throw GradleException("$file has an invalid key: $key")
@@ -73,5 +74,9 @@ private fun validateCatalog(catalog: MessageCatalog) {
             if (expected != actual) problems += "$locale '$key' uses $actual, but ${first.key} uses $expected."
         }
     }
-    if (problems.isNotEmpty()) throw GradleException("i18n messages do not match:\n  " + problems.joinToString("\n  "))
+    if (problems.isNotEmpty()) {
+        throw GradleException(
+            "i18n messages do not match:\n  " + problems.joinToString("\n  ") + "\n" + DocLink.I18N.see().trim(),
+        )
+    }
 }
