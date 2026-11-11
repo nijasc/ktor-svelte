@@ -22,11 +22,14 @@ import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HE
 import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
 import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
+import io.github.nijasc.ktor.svelte.internal.security.findJsonShapeException
 import io.github.nijasc.ktor.svelte.internal.security.findPayloadTooLarge
+import io.github.nijasc.ktor.svelte.internal.security.installJsonShapeLimits
 import io.github.nijasc.ktor.svelte.internal.security.installRateLimits
 import io.github.nijasc.ktor.svelte.internal.security.mayHideErrorDetails
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
+import io.github.nijasc.ktor.svelte.internal.security.respondJsonShape
 import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -120,6 +123,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         val maxApiBodySize = pluginConfig.maxApiBodySize
         if (maxApiBodySize != null) installBodyLimit(resolver, maxApiBodySize)
+        installJsonShapeLimits(application, resolver, pluginConfig.maxJsonDepth, pluginConfig.maxJsonStringLength)
         installRateLimits(application, pluginConfig.rateLimitConfig, resolver)
         if (pluginConfig.originCheck) {
             val originCheck = OriginCheck(pluginConfig.allowedOriginList, application.developmentMode)
@@ -132,6 +136,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         on(CallFailed) { call, cause ->
             if (cause is ValidationException) {
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
+                return@on
+            }
+            cause.findJsonShapeException()?.let { shape ->
+                respondJsonShape(call, shape)
                 return@on
             }
             if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) {
