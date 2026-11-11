@@ -86,6 +86,16 @@ HMR is not covered by automated tests. Check it before changing the dev proxy:
 5. Remove `server.hmr` from `vite.config.ts`, restart, and repeat step 3. The console should show one WebSocket error and then Vite's direct connection fallback.
 6. Stop the task, and check that nothing is still listening on ports 5173 and 8080. Also try closing the terminal instead of stopping it.
 
+## API reference
+
+The API reference is built with Dokka from the public API of both modules, with links to the source on GitHub. Build it locally into `build/dokka/html`:
+
+```bash
+./gradlew dokkaGenerate
+```
+
+The release workflow publishes it to GitHub Pages for every release.
+
 ## Rules
 
 **No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the README. Generated files and the `x-release-please` markers in the README are the only exceptions.
