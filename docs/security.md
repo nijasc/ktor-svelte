@@ -114,4 +114,4 @@ It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless
 
 ## Reporting a vulnerability
 
-See [SECURITY.md](../SECURITY.md) for how to report a vulnerability privately, and for a table of every secure default.
+See [SECURITY.md](https://github.com/nijasc/ktor-svelte/blob/main/SECURITY.md) for how to report a vulnerability privately, and for a table of every secure default.

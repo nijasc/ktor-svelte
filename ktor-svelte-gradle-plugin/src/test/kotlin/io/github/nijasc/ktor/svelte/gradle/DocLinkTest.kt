@@ -6,8 +6,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DocLinkTest {
-    private fun anchors(page: String): Set<String> =
-        File("../$page")
+    private fun anchors(file: File): Set<String> =
+        file
             .readLines()
             .filter { it.startsWith("#") }
             .map { heading ->
@@ -20,16 +20,17 @@ class DocLinkTest {
             }.toSet()
 
     @Test
-    fun `every linked page and section exists`() {
+    fun `every linked docs page and section exists`() {
         DocLink.entries.forEach { link ->
-            assertTrue(File("../${link.page}").isFile, "${link.page} does not exist")
-            link.anchor?.let { anchor -> assertTrue(anchor in anchors(link.page), "${link.page} has no section for #$anchor") }
+            val file = File("../docs/${link.page}.md")
+            assertTrue(file.isFile, "docs/${link.page}.md does not exist")
+            link.anchor?.let { anchor -> assertTrue(anchor in anchors(file), "docs/${link.page}.md has no section for #$anchor") }
         }
     }
 
     @Test
-    fun `links point at the repository`() {
-        assertEquals("https://github.com/nijasc/ktor-svelte/blob/main/docs/frontend-libraries.md", DocLink.FRONTEND_LIBRARIES.url)
-        assertEquals(" See https://github.com/nijasc/ktor-svelte#create-a-project", DocLink.CREATE_A_PROJECT.see())
+    fun `links point at the docs site`() {
+        assertEquals("https://nijasc.github.io/ktor-svelte/features/frontend-libraries#i18n", DocLink.I18N.url)
+        assertEquals(" See https://nijasc.github.io/ktor-svelte/guide/getting-started", DocLink.CREATE_A_PROJECT.see())
     }
 }

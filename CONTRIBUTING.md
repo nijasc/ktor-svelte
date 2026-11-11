@@ -86,21 +86,29 @@ HMR is not covered by automated tests. Check it before changing the dev proxy:
 5. Remove `server.hmr` from `vite.config.ts`, restart, and repeat step 3. The console should show one WebSocket error and then Vite's direct connection fallback.
 6. Stop the task, and check that nothing is still listening on ports 5173 and 8080. Also try closing the terminal instead of stopping it.
 
-## API reference
+## Docs site
 
-The API reference is built with Dokka from the public API of both modules, with links to the source on GitHub. Build it locally into `build/dokka/html`:
+The docs in `docs/` are a [VitePress](https://vitepress.dev) site with search. Run it locally with hot reload:
+
+```bash
+cd docs && bun install && bun run dev
+```
+
+`bun run build` fails on any dead link, and CI runs it for every pull request. The changelog page is generated from the GitHub release notes when the site is built.
+
+The API reference is built with Dokka from the public API of both modules:
 
 ```bash
 ./gradlew dokkaGenerate
 ```
 
-The release workflow publishes it to GitHub Pages for every release.
+Every release runs the `Docs` workflow, which builds the site and the API reference for that version and publishes them to the `gh-pages` branch: under `/v<version>/`, and also at the root when it is the newest release. The version switcher in the site reads `versions.json` from there. To publish a release again, run the `Docs` workflow by hand with its version.
 
 ## Rules
 
 **No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the docs. Generated files and the `x-release-please` markers in the README are the only exceptions.
 
-**Keep the docs up to date, in the same commit.** `README.md` stays short: what ktor-svelte is, the quick start and a list of pages. Everything else goes into the matching page in `docs/`. The docs use plain ASCII: no em dashes, arrows, box drawing or emoji.
+**Keep the docs up to date, in the same commit.** `README.md` stays short: what ktor-svelte is, the quick start and links to the docs site. Everything else goes into the matching page in `docs/`, and new pages go into the sidebar in `docs/.vitepress/config.mts`. The docs use plain ASCII: no em dashes, arrows, box drawing or emoji.
 
 **Error messages link to the docs.** Each module has a `DocLink` enum with the page and section each message points at, and `DocLinkTest` fails when a page is moved or a heading is renamed. Update `DocLink` together with the docs.
 
