@@ -654,6 +654,7 @@ internal class TypeScriptGenerator(
             append(errorsSource(errors))
             if (publicConfigSchema != null) append(typeScriptTemplate("public-config.ts"))
             append("export const api = { ${groups.keys.sorted().joinToString()} };\n")
+            append(typeScriptTemplate("api-with.ts"))
         }
     }
 

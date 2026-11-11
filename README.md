@@ -508,13 +508,18 @@ import { api, pages } from '#api';
 for await (const notes of pages(api.notes.getFeed, { limit: '50' })) render(notes);
 ```
 
-Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
+Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, use `apiWith(event)`. It is the same client, but every call goes through SvelteKit's `fetch`, which prerendering and client-side navigation need:
 
 ```ts
-export const load: PageLoad = async ({ fetch }) => ({
-    notes: await api.notes.list(undefined, { fetch })
-});
+import { apiWith } from '#api';
+
+export const load: PageLoad = async (event) => {
+    const api = apiWith(event);
+    return { notes: await api.notes.list(), stats: await api.stats.list() };
+};
 ```
+
+A `fetch` passed in the options of a single call still wins.
 
 To refresh the files without your dev server, for example in CI, run the task below and check for a diff. It starts your app once, so the app's port must be free.
 
