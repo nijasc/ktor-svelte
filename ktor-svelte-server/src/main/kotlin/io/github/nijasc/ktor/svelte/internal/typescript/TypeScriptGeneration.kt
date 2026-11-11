@@ -5,10 +5,16 @@ import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.log
+import io.ktor.server.application.pluginOrNull
+import io.ktor.server.routing.RoutingRoot
 import io.ktor.server.routing.openapi.OpenApiDocSource
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolute
@@ -20,6 +26,28 @@ import kotlin.io.path.writeText
 private const val GENERATE_ONLY_PROPERTY = "ktor.svelte.generateTsOnly"
 private const val FRONTEND_DIR_PROPERTY = "ktor.svelte.frontendDir"
 private const val VERIFY_REPORT_PROPERTY = "ktor.svelte.generateTsVerify"
+private val ROUTE_SOURCES = Path("build/ktor-svelte/routes.json")
+private val prettyJson = Json { prettyPrint = true }
+
+internal fun routeSourcesJson(
+    operations: List<GeneratedOperation>,
+    sources: Map<String, SourceLocation>,
+): String =
+    prettyJson.encodeToString(
+        JsonObject.serializer(),
+        buildJsonObject {
+            operations.sortedBy { it.name }.forEach { operation ->
+                putJsonObject(operation.name) {
+                    put("method", operation.method)
+                    put("path", operation.path)
+                    sources["${operation.method} ${operation.path}"]?.let { source ->
+                        put("file", source.file)
+                        put("line", source.line)
+                    }
+                }
+            }
+        },
+    ) + "\n"
 
 internal fun writeIfChanged(
     directory: Path,
@@ -115,6 +143,14 @@ private fun generate(
         } else {
             val changed = writeIfChanged(output, files)
             if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
+            application.pluginOrNull(RoutingRoot)?.let { root ->
+                writeIfChanged(
+                    ROUTE_SOURCES.parent,
+                    mapOf(
+                        ROUTE_SOURCES.fileName.toString() to routeSourcesJson(generator.operations, routeSources(root)),
+                    ),
+                )
+            }
         }
         true
     } catch (failure: Exception) {

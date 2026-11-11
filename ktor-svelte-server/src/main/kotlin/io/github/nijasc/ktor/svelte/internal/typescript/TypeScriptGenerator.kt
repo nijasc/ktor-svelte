@@ -34,6 +34,7 @@ internal class TypeScriptGenerator(
     private var enumTypes: Map<Set<String>, EnumType> = emptyMap()
     private var usesDates = false
     private val validationHelpers = sortedSetOf<ValidationHelper>()
+    val operations = mutableListOf<GeneratedOperation>()
 
     fun generate(openApiJson: String): Map<String, String> {
         val document = Json.parseToJsonElement(openApiJson).jsonObject
@@ -43,6 +44,7 @@ internal class TypeScriptGenerator(
         usesDates = hasDateFormat(filtered) || publicConfigSchema?.let { hasDateFormat(Json.parseToJsonElement(it)) } == true
         val dateTypes = if (usesDates) DATE_FORMATS.values else emptyList()
         validationHelpers.clear()
+        operations.clear()
         val types = typesSource(schemas) + publicConfigDeclaration(schemas)
         return mapOf(
             "client.ts" to typeScriptTemplate("client.ts"),
@@ -638,6 +640,7 @@ internal class TypeScriptGenerator(
                         references += endpoint.references
                         val name = uniqueName(endpoint.name, endpoint.parameters, taken)
                         val operation = "$group.$name"
+                        operations += GeneratedOperation(operation, endpoint.method, endpoint.path)
                         endpoint.errorType?.let { errors += ErrorEntry(operation, it, endpoint.errorStatuses) }
                         "    ${propertyKey(name)}: ${endpoint.source(operation)},"
                     }
@@ -724,6 +727,8 @@ internal class TypeScriptGenerator(
         val streaming = isEventStream(operation)
         val declaredErrors = errorResponses(operation, references)
         return Endpoint(
+            method = method.uppercase(),
+            path = path,
             name = operation.stringAt("operationId")?.let(::camelCase) ?: conventionalName(path, method),
             parameters = pathParameters,
             source = { key ->
@@ -836,6 +841,8 @@ internal class TypeScriptGenerator(
     }
 
     private class Endpoint(
+        val method: String,
+        val path: String,
         val name: String,
         val parameters: List<String>,
         val source: (String) -> String,
@@ -992,4 +999,10 @@ internal data class DeclaredError(
     val name: String,
     val schema: String,
     val statuses: List<Int>,
+)
+
+internal data class GeneratedOperation(
+    val name: String,
+    val method: String,
+    val path: String,
 )
