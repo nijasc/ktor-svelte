@@ -8,11 +8,6 @@ import io.ktor.server.routing.PathSegmentTailcardRouteSelector
 import io.ktor.server.routing.RoutingNode
 import java.io.DataInputStream
 
-internal data class SourceLocation(
-    val file: String,
-    val line: Int,
-)
-
 internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> {
     val handlersGetter = RoutingNode::class.java.methods.firstOrNull { it.name.startsWith("getHandlers") && it.parameterCount == 0 }
     val locations = mutableMapOf<String, SourceLocation>()
@@ -26,8 +21,8 @@ internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> {
         val nodePath =
             when (selector) {
                 is PathSegmentConstantRouteSelector -> "$path/${selector.value}"
-                is PathSegmentParameterRouteSelector -> "$path/${selector.prefix.orEmpty()}{${selector.name}}${selector.suffix.orEmpty()}"
-                is PathSegmentOptionalParameterRouteSelector -> "$path/${selector.prefix.orEmpty()}{${selector.name}}${selector.suffix.orEmpty()}"
+                is PathSegmentParameterRouteSelector -> path + parameterSegment(selector.prefix, selector.name, selector.suffix)
+                is PathSegmentOptionalParameterRouteSelector -> path + parameterSegment(selector.prefix, selector.name, selector.suffix)
                 is PathSegmentTailcardRouteSelector -> "$path/{${selector.name}...}"
                 else -> path
             }
@@ -42,22 +37,22 @@ internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> {
     return locations
 }
 
+private fun parameterSegment(
+    prefix: String?,
+    name: String,
+    suffix: String?,
+): String = "/${prefix.orEmpty()}{$name}${suffix.orEmpty()}"
+
 internal fun sourceOf(handler: Any): SourceLocation? {
     val type = handler.javaClass
     val bytes = type.classLoader?.getResourceAsStream(type.name.replace('.', '/') + ".class")?.use { it.readBytes() } ?: return null
-    val info = runCatching { readClassInfo(bytes) }.getOrNull() ?: return null
-    val file = info.sourceFile ?: return null
-    val line = info.firstLine ?: return null
+    val (file, line) = runCatching { readSourceAndFirstLine(bytes) }.getOrNull() ?: return null
+    if (file == null || line == null) return null
     val directory = type.packageName.replace('.', '/')
     return SourceLocation(if (directory.isEmpty()) file else "$directory/$file", line)
 }
 
-private class ClassInfo(
-    val sourceFile: String?,
-    val firstLine: Int?,
-)
-
-private fun readClassInfo(bytes: ByteArray): ClassInfo {
+private fun readSourceAndFirstLine(bytes: ByteArray): Pair<String?, Int?> {
     val input = DataInputStream(bytes.inputStream())
     check(input.readInt() == 0xCAFEBABE.toInt())
     input.skipBytes(4)
@@ -105,7 +100,7 @@ private fun readClassInfo(bytes: ByteArray): ClassInfo {
         val length = input.readInt()
         if (attribute == "SourceFile") sourceFile = utf8[input.readUnsignedShort()] else input.skipBytes(length)
     }
-    return ClassInfo(sourceFile, firstLine)
+    return sourceFile to firstLine
 }
 
 private fun firstLineOf(
