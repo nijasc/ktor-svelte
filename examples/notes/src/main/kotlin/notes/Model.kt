@@ -1,9 +1,9 @@
 package notes
 
+import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
 import io.ktor.openapi.JsonSchema
-import io.github.nijasc.ktor.svelte.Page
 import kotlinx.serialization.Serializable
 import ktorsvelte.LucideIcon
 import java.util.concurrent.ConcurrentHashMap
