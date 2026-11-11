@@ -1,27 +1,23 @@
 package io.github.nijasc.ktor.svelte.internal
 
-internal const val REPOSITORY_URL = "https://github.com/nijasc/ktor-svelte"
+internal const val DOCS_URL = "https://nijasc.github.io/ktor-svelte"
 
 internal enum class DocLink(
     val page: String,
     val anchor: String?,
 ) {
-    ADD_TO_AN_EXISTING_PROJECT("README.md", "add-to-an-existing-project"),
-    API_REQUEST_GUARDS("docs/security.md", "api-request-guards"),
-    COMPATIBILITY("README.md", "compatibility"),
-    DAISYUI("docs/frontend-libraries.md", "daisyui"),
-    DEV_WORKFLOW("docs/dev-workflow.md", null),
-    GENERATED_TYPESCRIPT("docs/typescript.md", null),
-    I18N("docs/frontend-libraries.md", "i18n"),
-    KTOR("docs/configuration.md", "ktor"),
-    TRANSPORT("docs/server.md", "transport"),
+    ADD_TO_AN_EXISTING_PROJECT("guide/existing-project", null),
+    API_REQUEST_GUARDS("security", "api-request-guards"),
+    COMPATIBILITY("reference/compatibility", null),
+    DAISYUI("features/frontend-libraries", "daisyui"),
+    DEV_WORKFLOW("guide/dev-workflow", null),
+    GENERATED_TYPESCRIPT("features/typescript", null),
+    I18N("features/frontend-libraries", "i18n"),
+    KTOR("reference/ktor", null),
+    TRANSPORT("features/transport", null),
     ;
 
-    val url: String
-        get() {
-            val base = if (page == "README.md") REPOSITORY_URL else "$REPOSITORY_URL/blob/main/$page"
-            return if (anchor == null) base else "$base#$anchor"
-        }
+    val url: String get() = if (anchor == null) "$DOCS_URL/$page" else "$DOCS_URL/$page#$anchor"
 
     fun see(): String = " See $url"
 }
