@@ -26,6 +26,8 @@ internal interface AssetStore {
     fun manifest(): Manifest?
 
     fun open(path: String): InputStream?
+
+    fun localFile(path: String): Path? = null
 }
 
 internal class ClasspathAssetStore(
@@ -51,9 +53,11 @@ internal class DirectoryAssetStore(
 
     override fun manifest(): Manifest? = if (rescanOnEveryRead) scan() else cachedManifest
 
-    override fun open(path: String): InputStream? {
+    override fun open(path: String): InputStream? = localFile(path)?.inputStream()
+
+    override fun localFile(path: String): Path? {
         val file = root.resolve(path).normalize()
-        return if (file.startsWith(root.normalize()) && file.isRegularFile(LinkOption.NOFOLLOW_LINKS)) file.inputStream() else null
+        return file.takeIf { it.startsWith(root.normalize()) && it.isRegularFile(LinkOption.NOFOLLOW_LINKS) }
     }
 
     private fun scan(): Manifest? {
