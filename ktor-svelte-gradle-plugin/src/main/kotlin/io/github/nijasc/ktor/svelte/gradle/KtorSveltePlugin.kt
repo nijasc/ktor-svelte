@@ -238,7 +238,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
         project.tasks.register("svelteRun", SvelteRunScriptTask::class.java) { task ->
             configureToolTask(task, extension)
-            task.description = "Runs a package.json script: svelteRun --script=lint"
+            task.description = "Runs a package.json script: svelteRun --script=lint --args=\"--fix\""
             task.dependsOn(install)
         }
         project.tasks.register("svelteInit", SvelteInitTask::class.java) { task ->

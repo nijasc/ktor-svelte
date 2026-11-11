@@ -39,14 +39,48 @@ public abstract class SvelteRunScriptTask : SvelteToolTask() {
     @get:Option(option = "script", description = "The package.json script to run")
     public abstract val script: Property<String>
 
+    @get:Input
+    @get:Optional
+    @get:Option(option = "args", description = "Arguments passed to the script, for example --args=\"--fix --quiet\"")
+    public abstract val scriptArguments: Property<String>
+
     @TaskAction
     public fun runScript() {
         val name =
             script.orNull
                 ?: throw GradleException("Name a package.json script, for example: svelteRun --script=lint")
         val tool = tool()
-        runTool(tool, tool.runArguments(name))
+        runTool(tool, tool.runArguments(name, splitArguments(scriptArguments.getOrElse(""))))
     }
+}
+
+internal fun splitArguments(line: String): List<String> {
+    val arguments = mutableListOf<String>()
+    val current = StringBuilder()
+    var quote: Char? = null
+    var started = false
+    line.forEach { character ->
+        when {
+            quote != null && character == quote -> quote = null
+            quote != null -> current.append(character)
+            character == '"' || character == '\'' -> {
+                quote = character
+                started = true
+            }
+            character.isWhitespace() -> {
+                if (started) arguments += current.toString()
+                current.clear()
+                started = false
+            }
+            else -> {
+                current.append(character)
+                started = true
+            }
+        }
+    }
+    if (quote != null) throw GradleException("Unclosed quote in svelteRun --args: $line")
+    if (started) arguments += current.toString()
+    return arguments
 }
 
 @UntrackedTask(because = "Runs the frontend's own type checker")
