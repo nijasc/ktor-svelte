@@ -945,7 +945,7 @@ On Gradle 8.x, use Shadow 9.2 or older if you use Shadow. Newer versions need a 
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Releases are automated with release-please, and release notes live on the [releases page](https://github.com/nijasc/ktor-svelte/releases).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). Releases are automated with release-please, and release notes live on the [releases page](https://github.com/nijasc/ktor-svelte/releases).
 
 ## License
 

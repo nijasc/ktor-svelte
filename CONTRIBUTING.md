@@ -4,6 +4,8 @@ Thanks for helping out. This project cares about two things more than anything e
 
 Fair warning: much of this code was written with AI, and the maintainer has limited time. Small, focused pull requests get merged fastest.
 
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
+
 ## Getting set up
 
 You need:
