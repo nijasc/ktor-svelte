@@ -111,13 +111,19 @@ class GenerateTsTest {
 
         val services = output.resolve("services.ts").readText()
         assertContains(services, "export const todos = {")
-        assertContains(services, "list: (query?: { search?: string }, options?: RequestOptions) => request<Todo[]>('GET', '/api/todos'")
         assertContains(
             services,
-            "get: (id: string | number, options?: RequestOptions) => request<Todo>('GET', `/api/todos/\${encodeURIComponent(id)}`",
+            "export const todosList = (query?: { search?: string }, options?: RequestOptions) => request<Todo[]>('GET', '/api/todos'",
         )
-        assertContains(services, "create: (body: NewTodo, options?: RequestOptions) => request<Todo>('POST', '/api/todos'")
-        assertContains(services, "delete: (id: string | number, options?: RequestOptions) => request<void>('DELETE'")
+        assertContains(
+            services,
+            "export const todosGet = (id: string | number, options?: RequestOptions) => request<Todo>('GET', `/api/todos/\${encodeURIComponent(id)}`",
+        )
+        assertContains(
+            services,
+            "export const todosCreate = (body: NewTodo, options?: RequestOptions) => request<Todo>('POST', '/api/todos'",
+        )
+        assertContains(services, "export const todosDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE'")
         assertContains(services, "export const api = { todos };")
         assertFalse(services.contains("health"))
 
