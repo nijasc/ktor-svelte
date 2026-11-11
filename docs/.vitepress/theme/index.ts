@@ -2,6 +2,7 @@ import DefaultTheme from 'vitepress/theme';
 import type { Theme } from 'vitepress';
 import { h } from 'vue';
 import ArchitectureDiagram from './ArchitectureDiagram.vue';
+import SetupBuilder from './SetupBuilder.vue';
 import VersionBanner from './VersionBanner.vue';
 import VersionSwitcher from './VersionSwitcher.vue';
 import './custom.css';
@@ -15,5 +16,6 @@ export default {
         }),
     enhanceApp({ app }) {
         app.component('ArchitectureDiagram', ArchitectureDiagram);
+        app.component('SetupBuilder', SetupBuilder);
     }
 } satisfies Theme;
