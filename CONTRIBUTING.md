@@ -154,6 +154,8 @@ type(scope): summary
 | `feat!` or `BREAKING CHANGE:` | Anything that breaks users | Major, or minor before 1.0 |
 | `docs`, `test`, `build`, `ci`, `refactor`, `chore` | Everything else | None |
 
+A change that makes existing apps behave differently, such as a new default, a new response status or a renamed setting, also adds its steps to the upgrade guide of the next minor release in `docs/migrations/`, and lists it in `docs/migrations/index.md` and the sidebar. The changelog links a release to its guide when the file exists.
+
 Scopes are `server`, `gradle-plugin`, `example` and `repo`. Write `feat` and `fix` summaries for users, since they appear in the release notes as they are.
 
 There is no changelog file and you never bump a version by hand. [release-please](https://github.com/googleapis/release-please) keeps a release pull request open on `main`. Merging it creates the tag and GitHub release, then publishes both artifacts.

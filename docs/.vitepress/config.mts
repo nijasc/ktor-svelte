@@ -94,6 +94,18 @@ export default defineConfig({
                     { text: 'Changelog', link: '/changelog' },
                     { text: 'API reference', link: `https://nijasc.github.io${base}api/` }
                 ]
+            },
+            {
+                text: 'Upgrading',
+                collapsed: true,
+                items: [
+                    { text: 'Overview', link: '/migrations/' },
+                    { text: 'To 0.10', link: '/migrations/0.10' },
+                    { text: 'To 0.9', link: '/migrations/0.9' },
+                    { text: 'To 0.8', link: '/migrations/0.8' },
+                    { text: 'To 0.7', link: '/migrations/0.7' },
+                    { text: 'To 0.6', link: '/migrations/0.6' }
+                ]
             }
         ],
         socialLinks: [{ icon: 'github', link: repository }],
