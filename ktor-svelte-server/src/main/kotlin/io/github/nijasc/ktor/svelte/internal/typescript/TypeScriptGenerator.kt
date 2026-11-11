@@ -646,8 +646,9 @@ internal class TypeScriptGenerator(
                         operations += GeneratedOperation(operation, endpoint.method, endpoint.path)
                         endpoint.errorType?.let { errors += ErrorEntry(operation, it, endpoint.errorStatuses) }
                         val exportName = exportName("$group-$name", exportNames)
+                        exports.append(jsDoc(endpoint.docs, ""))
                         exports.append("export const $exportName = ${endpoint.source(operation)};\n")
-                        "    ${propertyKey(name)}: $exportName,"
+                        jsDoc(endpoint.docs, "    ") + "    ${propertyKey(name)}: $exportName,"
                     }
                 "$exports\nexport const $group = {\n$members\n};\n"
             }
@@ -752,6 +753,11 @@ internal class TypeScriptGenerator(
             method = method.uppercase(),
             path = path,
             name = operation.stringAt("operationId")?.let(::camelCase) ?: conventionalName(path, method),
+            docs =
+                listOfNotNull(operation.stringAt("summary"), operation.stringAt("description"))
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .distinct(),
             parameters = pathParameters,
             source = { key ->
                 val arguments = (extras + "operation: '$key'").joinToString()
@@ -862,10 +868,21 @@ internal class TypeScriptGenerator(
         }
     }
 
+    private fun jsDoc(
+        lines: List<String>,
+        indent: String,
+    ): String {
+        if (lines.isEmpty()) return ""
+        val text = lines.joinToString("\n\n").replace("*/", "*\\/").lines()
+        if (text.size == 1) return "$indent/** ${text.single()} */\n"
+        return "$indent/**\n" + text.joinToString("") { line -> "$indent *${if (line.isEmpty()) "" else " $line"}\n" } + "$indent */\n"
+    }
+
     private class Endpoint(
         val method: String,
         val path: String,
         val name: String,
+        val docs: List<String>,
         val parameters: List<String>,
         val source: (String) -> String,
         val references: Set<String>,
