@@ -35,6 +35,7 @@ ktor-svelte turns these protections on without any configuration. The README exp
 | Strict `Content-Security-Policy` on every HTML page, with hashes for inline scripts | on | `securityHeaders { automaticContentSecurityPolicy }` |
 | Cross-site writes to API paths are refused with 403 | on | `originCheck`, `allowedOrigins(...)` |
 | Request bodies on API paths are limited to 1 MiB | on | `maxApiBodySize` |
+| Writes to API paths are limited to 120 per minute per client | on | `rateLimit { }` |
 | Unhandled exceptions answer with a generic message in production | on | `hideErrorDetails` |
 | Request bodies are validated against `@JsonSchema` and `Validated` rules, including nested values | on for annotated types | none |
 | The dev proxy serves only loopback clients with a local `Host`, only targets loopback hosts, and never forwards credentials | on | `dev.allowRemote` |
