@@ -28,6 +28,14 @@ java -jar build/libs/my-app-all.jar
 
 The app starts in production mode unless you pass `-Dio.ktor.development=true`. In production, a missing frontend build stops the app at startup, the dev proxy is off, error details are hidden, and every page gets its Content-Security-Policy.
 
+At startup the app logs which ktor-svelte version and which frontend build it serves:
+
+```
+ktor-svelte 0.9.0 serves frontend build b3f58012c3ff with 19 files
+```
+
+The fingerprint is a hash of every file in the build, so two servers with the same fingerprint serve exactly the same frontend. The status endpoint reports the full fingerprint.
+
 Keep secrets in environment variables, never in `publicConfig` or the frontend. Projects from the setup script read them in `Env.kt` and list them in `.env.example`.
 
 ## Docker
