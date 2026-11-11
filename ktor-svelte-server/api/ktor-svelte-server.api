@@ -80,6 +80,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getMaxJsonStringLength ()Ljava/lang/Integer;
 	public final fun getNotFoundPage ()Ljava/lang/String;
 	public final fun getOriginCheck ()Z
+	public final fun getRequestIds ()Z
 	public final fun getRouting ()Lio/github/nijasc/ktor/svelte/SvelteRouting;
 	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
 	public final fun getSpaFallback ()Ljava/lang/String;
@@ -102,6 +103,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setNotFoundPage (Ljava/lang/String;)V
 	public final fun setOriginCheck (Z)V
 	public final fun setPublicConfig (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;)V
+	public final fun setRequestIds (Z)V
 	public final fun setRouting (Lio/github/nijasc/ktor/svelte/SvelteRouting;)V
 	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
 	public final fun setSpaFallback (Ljava/lang/String;)V

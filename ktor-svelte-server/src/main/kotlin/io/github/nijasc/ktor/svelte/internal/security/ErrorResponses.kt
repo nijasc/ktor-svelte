@@ -5,6 +5,7 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.log
 import io.ktor.server.application.pluginRegistry
 import io.ktor.server.engine.defaultExceptionStatusCode
+import io.ktor.server.plugins.callid.callId
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.uri
 import io.ktor.server.response.respondText
@@ -24,7 +25,8 @@ internal suspend fun respondWithoutDetails(
 ) {
     val status = defaultExceptionStatusCode(cause) ?: HttpStatusCode.InternalServerError
     if (status == HttpStatusCode.InternalServerError) {
-        call.application.log.error("Unhandled: ${call.request.httpMethod.value} - ${call.request.uri}", cause)
+        val requestId = call.callId?.let { " [request $it]" }.orEmpty()
+        call.application.log.error("Unhandled: ${call.request.httpMethod.value} - ${call.request.uri}$requestId", cause)
     }
     val message = "${status.description}."
     if (asJson) respondJsonMessage(call, status, message) else call.respondText(message, status = status)
