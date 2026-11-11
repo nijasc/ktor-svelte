@@ -46,4 +46,6 @@ To skip the questions, add `--yes` and any options. Turn something off with `--n
 curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.sh | sh -s -- --yes --name=shop
 ```
 
+Next, build something real in the [tutorial](tutorial.md).
+
 Prefer to read scripts before running them? They are in [`scripts/`](https://github.com/nijasc/ktor-svelte/tree/main/scripts).
