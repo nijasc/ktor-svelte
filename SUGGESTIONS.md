@@ -25,6 +25,12 @@ None yet.
 | SEC-09 | Offer a session helper (signed, `HttpOnly`, `Secure`, `SameSite=Lax` cookie) | The pentest app had to hand-roll its session cookie, which is where most real apps make mistakes | M |
 | SEC-10 | Add a CI job that runs OWASP ZAP baseline against the notes example | Turns the manual pentest into a regression check for headers, cookies and error leaks | M |
 | SEC-11 | Hash `buildEnv` values instead of storing them as task inputs | Secret values passed through `buildEnv` end up in the configuration cache; a hash keeps up-to-date checks working | S |
+| SEC-12 | Warn at startup when `allowedOrigins` contains `http://` origins in production | A plain HTTP origin can be spoofed on the network, which defeats the origin check | S |
+| SEC-13 | Fail the build when the frontend output contains a `.map` file referenced from JS while `includeSourceMaps` is off | The map is left out, but the `sourceMappingURL` comment still tells attackers where to look | S |
+| SEC-14 | Scan the frontend build for strings that look like secrets (API keys, private keys) in `svelteBundle` | `PUBLIC_` env vars are easy to misuse, and a leaked key in a JAR is hard to take back | M |
+| SEC-15 | Add a `Content-Security-Policy-Report-Only` mode with a report endpoint | Teams can roll out a stricter CSP without breaking production first | M |
+| SEC-16 | Limit JSON nesting depth and array length on received bodies | The 1 MiB body limit still allows deeply nested JSON that is slow to parse and validate | S |
+| SEC-17 | Run `npm audit` or `bun audit` in `svelteDoctor` and in CI for the examples | Known vulnerable frontend packages are reported nowhere today | S |
 
 ### Correctness and robustness
 
