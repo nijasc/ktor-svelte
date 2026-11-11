@@ -24,6 +24,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
       - run: ./gradlew check apiCheck
         shell: bash
+      - if: matrix.os == 'ubuntu-latest'
+        run: ./gradlew dokkaGenerate
 
   gradle-8:
     runs-on: ubuntu-latest
