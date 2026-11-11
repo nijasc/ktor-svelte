@@ -46,3 +46,7 @@ pnpm-debug.log*
 
 .claude/settings.local.json
 .claude/worktrees/
+
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/changelog.md

@@ -1,0 +1,14 @@
+{
+    "name": "ktor-svelte-docs",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "changelog": "bun scripts/changelog.mjs",
+        "dev": "bun scripts/changelog.mjs && vitepress dev",
+        "build": "bun scripts/changelog.mjs && vitepress build",
+        "preview": "vitepress preview"
+    },
+    "devDependencies": {
+        "vitepress": "1.6.4"
+    }
+}
