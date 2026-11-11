@@ -133,3 +133,23 @@ try {
 ```
 
 The ID is available in routes as `call.callId`, and with Ktor's `CallLogging` you can put it into every log line with `callIdMdc("requestId")`. The client only sends the header to its own origin, so it never causes CORS preflights. If you install Ktor's `CallId` yourself, your setup is used. `requestIds = false` turns it off.
+
+## Search as you type
+
+When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:
+
+```ts
+import { api, isAbortError, latest } from '#api';
+
+const search = latest(api.notes.list);
+
+async function onInput(term: string) {
+    try {
+        notes = await search({ search: term });
+    } catch (error) {
+        if (!isAbortError(error)) throw error;
+    }
+}
+```
+
+A superseded call always rejects with an `AbortError`, even when it was cancelled while its body was being read. Your own `signal` still works alongside it.
