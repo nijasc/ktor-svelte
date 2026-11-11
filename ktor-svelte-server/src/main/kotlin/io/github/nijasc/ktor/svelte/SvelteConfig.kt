@@ -47,6 +47,7 @@ public class SvelteConfig {
     public var originCheck: Boolean = true
     public var hideErrorDetails: Boolean = true
     public var apiCompression: Boolean = true
+    public var buildHeader: Boolean = true
     public var requestIds: Boolean = true
     public var maxApiBodySize: Long? = 1024L * 1024L
     public var maxJsonDepth: Int? = 64

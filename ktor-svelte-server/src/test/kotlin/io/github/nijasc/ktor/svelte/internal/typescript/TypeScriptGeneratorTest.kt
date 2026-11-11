@@ -256,6 +256,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client reports a new frontend build`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    onNewBuild?: (build: string) => void;")
+        assertContains(client, "if (knownBuild !== undefined && build !== knownBuild) apiConfig.onNewBuild?.(build);")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")

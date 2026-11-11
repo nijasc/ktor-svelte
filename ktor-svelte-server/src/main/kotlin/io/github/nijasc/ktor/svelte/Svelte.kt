@@ -1,5 +1,7 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.BUILD_HEADER
+import io.github.nijasc.ktor.svelte.internal.BuildFingerprint
 import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
@@ -118,6 +120,12 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.declaredErrorList.toList(),
         )
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
+        if (pluginConfig.buildHeader) {
+            val build = BuildFingerprint(store)
+            onCall { call ->
+                if (resolver.isApiPath(decodedPathOrRaw(call))) build.current()?.let { call.response.header(BUILD_HEADER, it) }
+            }
+        }
 
         application.monitor.subscribe(ApplicationStarted) {
             application.log.info(startupLine(store.manifest(), devUrl.takeIf { devProxy != null }))
