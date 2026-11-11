@@ -19,9 +19,9 @@ With the `application` plugin, `check` runs `svelteVerifyTs`. It starts your app
 Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
 
 ```ts
-import { NoteStatus } from '#api';
+import { Status } from '#api';
 
-const archived = notes.filter((note) => note.status === NoteStatus.ARCHIVED);
+const archived = notes.filter((note) => note.status === Status.ARCHIVED);
 ```
 
 Enums that appear in several classes with the same values share one generated name. The name comes from the property, such as `status` becoming `Status`. When two different enums would get the same name, the owning class is added in front, such as `NoteStatus`.
