@@ -9,6 +9,7 @@ import io.github.nijasc.ktor.svelte.internal.SvelteHandler
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.ConfigInjector
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
@@ -98,7 +99,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (contentSecurityPolicy != null && !application.developmentMode) {
             application.launch(Dispatchers.IO) { contentSecurityPolicy.precomputeAll() }
         }
-        val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy)
+        val configInjector = pluginConfig.publicConfigJson?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
+        val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector)
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
