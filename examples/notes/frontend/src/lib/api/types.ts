@@ -146,6 +146,21 @@ export const Status = {
 
 export type Status = (typeof Status)[keyof typeof Status];
 
+export interface UploadReceipt {
+    files: string[];
+    bytes: number;
+}
+
+export const UploadReceipt = {
+    empty: (): UploadReceipt => ({
+        files: [],
+        bytes: 0,
+    }),
+    bounds: {
+        bytes: { required: true },
+    },
+};
+
 export interface PublicConfig {
     appName: string;
 }

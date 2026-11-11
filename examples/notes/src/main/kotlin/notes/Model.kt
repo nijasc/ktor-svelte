@@ -66,6 +66,12 @@ data class Greeting(
 )
 
 @Serializable
+data class UploadReceipt(
+    val files: List<String>,
+    val bytes: Long,
+)
+
+@Serializable
 data class Problem(
     val message: String,
 )

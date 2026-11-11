@@ -394,6 +394,58 @@
                 }
             }
         },
+        "/api/notes/{id}/attachments": {
+            "post": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {}
+                    }
+                },
+                "responses": {
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            },
+                            "application/xml": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadReceipt"
+                                }
+                            },
+                            "application/xml": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadReceipt"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/stats": {
             "get": {
                 "summary": "",
@@ -4575,6 +4627,25 @@
                 "properties": {
                     "message": {
                         "type": "string"
+                    }
+                }
+            },
+            "UploadReceipt": {
+                "type": "object",
+                "title": "UploadReceipt",
+                "required": [
+                    "files",
+                    "bytes"
+                ],
+                "properties": {
+                    "files": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "bytes": {
+                        "type": "integer"
                     }
                 }
             },

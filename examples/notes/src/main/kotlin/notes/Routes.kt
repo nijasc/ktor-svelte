@@ -1,13 +1,19 @@
 package notes
 
 import io.github.nijasc.ktor.svelte.Page
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
+import io.ktor.utils.io.discard
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
@@ -53,6 +59,22 @@ fun Route.noteRoutes(store: NoteStore) {
 
             delete {
                 if (store.delete(call.noteId())) call.respond(HttpStatusCode.NoContent) else call.respondMissing()
+            }
+
+            post("/attachments") {
+                if (store.find(call.noteId()) == null) return@post call.respondMissing()
+                var received = 0L
+                val names = mutableListOf<String>()
+                call.receiveMultipart().forEachPart { part ->
+                    if (part is PartData.FileItem) {
+                        names += part.originalFileName ?: part.name.orEmpty()
+                        received += part.provider().discard()
+                    }
+                    part.dispose()
+                }
+                call.respond(UploadReceipt(names, received))
+            }.describe {
+                requestBody { ContentType.MultiPart.FormData() }
             }
 
             post("/archive") {

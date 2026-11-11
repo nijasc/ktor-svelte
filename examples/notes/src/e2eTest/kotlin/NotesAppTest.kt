@@ -60,7 +60,7 @@ class NotesAppTest {
             val publisher = body?.let(HttpRequest.BodyPublishers::ofString) ?: HttpRequest.BodyPublishers.noBody()
             val builder = HttpRequest.newBuilder(URI.create("http://localhost:$port$path")).method(method, publisher)
             if (body != null) builder.header("Content-Type", "application/json")
-            headers.forEach { (name, value) -> builder.header(name, value) }
+            headers.forEach { (name, value) -> builder.setHeader(name, value) }
             return http.send(builder.build(), HttpResponse.BodyHandlers.ofString())
         }
     }
@@ -169,6 +169,29 @@ class NotesAppTest {
     fun `search filters notes`() {
         assertContains(send("GET", "/api/notes?search=welcome").body(), "Welcome")
         assertFalse(send("GET", "/api/notes?search=nothing-matches").body().contains("Welcome"))
+    }
+
+    @Test
+    fun `attachments are received as multipart form data`() {
+        val boundary = "ktor-svelte-boundary"
+        val body =
+            listOf(
+                "--$boundary",
+                "Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"",
+                "Content-Type: text/plain",
+                "",
+                "hello",
+                "--$boundary--",
+                "",
+            ).joinToString("\r\n")
+        val contentType = "Content-Type" to "multipart/form-data; boundary=$boundary"
+
+        val received = send("POST", "/api/notes/1/attachments", body, contentType)
+        assertEquals(200, received.statusCode())
+        assertContains(received.body(), "\"files\":[\"a.txt\"]")
+        assertContains(received.body(), "\"bytes\":5")
+
+        assertEquals(404, send("POST", "/api/notes/999/attachments", body, contentType).statusCode())
     }
 
     @Test
