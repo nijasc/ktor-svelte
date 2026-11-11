@@ -328,6 +328,58 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `large text files without a variant are gzipped`() {
+        val project = project()
+        project.run("jar")
+        val build = project.frontend.resolve("build")
+        val svg = "<svg>" + "<path d=\"M0 0L10 10\"/>".repeat(200) + "</svg>"
+        build.resolve("logo.svg").writeText(svg)
+        build.resolve("small.json").writeText("{}")
+        build.resolve("photo.png").writeBytes(ByteArray(4096))
+        build.resolve("index.html").writeText("<h1>" + "home ".repeat(400) + "</h1>")
+        build.resolve("index.html.br").writeText("brotli")
+
+        project.run("svelteBundle", "-x", "svelteBuild")
+
+        val bundle = dir.resolve("build/generated/ktor-svelte/resources/ktor-svelte")
+        val gzipped = bundle.resolve("public/logo.svg.gz")
+        assertTrue(gzipped.isFile)
+        assertEquals(
+            svg,
+            java.util.zip
+                .GZIPInputStream(gzipped.inputStream())
+                .use { it.readBytes().decodeToString() },
+        )
+        assertFalse(bundle.resolve("public/small.json.gz").exists())
+        assertFalse(bundle.resolve("public/photo.png.gz").exists())
+        assertFalse(bundle.resolve("public/index.html.gz").exists())
+        val manifest = bundle.resolve("manifest.json").readText()
+        assertContains(manifest, "\"logo.svg\":{\"size\":${svg.length},")
+        assertContains(manifest, "\"encodings\":{\"gzip\":{\"size\":${gzipped.length()}}}")
+        assertFalse(manifest.contains("\"logo.svg.gz\":"))
+    }
+
+    @Test
+    fun `precompression can be turned off`() {
+        val project = project()
+        project.buildScript(
+            javaBuild +
+                """
+
+                svelte {
+                    precompress = false
+                }
+                """.trimIndent(),
+        )
+        project.run("jar")
+        project.frontend.resolve("build/logo.svg").writeText("<svg>" + "<g/>".repeat(1000) + "</svg>")
+
+        project.run("svelteBundle", "-x", "svelteBuild")
+
+        assertFalse(dir.resolve("build/generated/ktor-svelte/resources/ktor-svelte/public/logo.svg.gz").exists())
+    }
+
+    @Test
     fun `hidden files and source maps stay out of the bundle`() {
         val project = project()
         project.run("jar")
