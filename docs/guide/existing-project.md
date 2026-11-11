@@ -7,7 +7,7 @@ Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `b
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    id("io.github.nijasc.ktor-svelte") version "0.10.0"
+    id("io.github.nijasc.ktor-svelte") version "0.10.1"
 }
 ```
 <!-- x-release-please-end -->
@@ -63,6 +63,6 @@ The Gradle plugin adds the runtime for you. If you only want the library, add it
 
 <!-- x-release-please-start-version -->
 ```kotlin
-implementation("io.github.nijasc:ktor-svelte-server:0.10.0")
+implementation("io.github.nijasc:ktor-svelte-server:0.10.1")
 ```
 <!-- x-release-please-end -->
