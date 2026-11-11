@@ -42,6 +42,12 @@ data class NewTodo(
     val title: String,
 )
 
+@Serializable
+data class Failure(
+    val message: String,
+    val code: String,
+)
+
 @OptIn(ExperimentalKtorApi::class)
 class GenerateTsTest {
     private fun frontend(): Path {
@@ -55,6 +61,7 @@ class GenerateTsTest {
         output: Path,
         developmentMode: Boolean = true,
         generate: Boolean = true,
+        config: SvelteConfig.() -> Unit = {},
     ) = testApplication {
         serverConfig { this.developmentMode = developmentMode }
         val build = fixtureBuild()
@@ -65,6 +72,7 @@ class GenerateTsTest {
                 generateTs = generate
                 generateTsOutput = output.toString()
                 transport { json() }
+                config()
             }
             routing {
                 get("/api/todos") { call.respond(emptyList<Todo>()) }.describe {
@@ -130,6 +138,32 @@ class GenerateTsTest {
         assertNotNull(output.resolve("client.ts").readText())
         assertContains(output.resolve("index.ts").readText(), "export * from './services.js';")
         assertContains(output.resolve("openapi.json").readText(), "\"/api/todos\"")
+    }
+
+    @Test
+    fun `declared error responses join the typed errors of every endpoint`() {
+        val output = frontend().resolve("src/lib/api")
+
+        generatedApi(output) {
+            errorResponse<Failure>(HttpStatusCode.Conflict, HttpStatusCode.InternalServerError)
+        }
+
+        val types = output.resolve("types.ts").readText()
+        assertContains(types, "export interface Failure {")
+        assertContains(types, "code: string;")
+        val services = output.resolve("services.ts").readText()
+        assertContains(services, "import type { Failure, NewTodo, Todo } from './types.js';")
+        assertContains(services, "    'todos.list': Failure;")
+        assertContains(services, "    'todos.create': Failure;")
+        assertContains(services, "    'todos.list': [409, 500],")
+        assertContains(output.resolve("openapi.json").readText(), "\"#/components/schemas/Failure\"")
+    }
+
+    @Test
+    fun `declared errors only take error statuses`() {
+        val config = SvelteConfig()
+        kotlin.test.assertFailsWith<IllegalArgumentException> { config.errorResponse<Failure>(HttpStatusCode.OK) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { config.errorResponse<Failure>() }
     }
 
     @Test

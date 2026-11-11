@@ -10,6 +10,10 @@ export const greeting = {
 export const notesList = (query?: { search?: string; tag?: string }, options?: RequestOptions) => request<Note[]>('GET', '/api/notes', { ...options, query, operation: 'notes.list' });
 export const notesCreate = (body: NoteInput, options?: RequestOptions) => request<Note>('POST', '/api/notes', { ...options, body, operation: 'notes.create' });
 export const notesGetExport = (options?: RequestOptions) => request<NotesExport>('GET', '/api/notes/export', { ...options, operation: 'notes.getExport' });
+export const notesGetFeed = (query?: { cursor?: string; limit?: string }, options?: RequestOptions) => request<{
+    items: Note[];
+    next?: string | null;
+}>('GET', '/api/notes/feed', { ...options, query, operation: 'notes.getFeed' });
 export const notesGet = (id: string | number, options?: RequestOptions) => request<Note>('GET', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' });
 export const notesUpdate = (id: string | number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', `/api/notes/${encodeURIComponent(id)}`, { ...options, body, operation: 'notes.update' });
 export const notesDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.delete' });
@@ -19,6 +23,7 @@ export const notes = {
     list: notesList,
     create: notesCreate,
     getExport: notesGetExport,
+    getFeed: notesGetFeed,
     get: notesGet,
     update: notesUpdate,
     delete: notesDelete,

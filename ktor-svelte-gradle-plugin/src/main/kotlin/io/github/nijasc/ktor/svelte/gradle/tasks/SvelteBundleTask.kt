@@ -18,7 +18,7 @@ import java.util.zip.Deflater
 import java.util.zip.GZIPOutputStream
 
 private const val MANIFEST_FORMAT_VERSION = 1
-private val ENCODINGS = listOf("br" to ".br", "gzip" to ".gz")
+private val ENCODINGS = listOf("zstd" to ".zst", "br" to ".br", "gzip" to ".gz")
 private const val MIN_COMPRESSIBLE_SIZE = 1024L
 private const val MAX_USEFUL_RATIO = 0.9
 private val COMPRESSIBLE_EXTENSIONS =
@@ -29,7 +29,8 @@ internal fun isCompressible(path: String): Boolean =
 
 internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
 
-internal fun isSourceMap(path: String): Boolean = path.removeSuffix(".br").removeSuffix(".gz").endsWith(".map")
+internal fun isSourceMap(path: String): Boolean =
+    ENCODINGS.fold(path) { stripped, (_, suffix) -> stripped.removeSuffix(suffix) }.endsWith(".map")
 
 @CacheableTask
 public abstract class SvelteBundleTask : DefaultTask() {
