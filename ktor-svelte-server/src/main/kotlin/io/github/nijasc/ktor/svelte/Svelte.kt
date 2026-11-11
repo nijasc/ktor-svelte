@@ -13,6 +13,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ConfigInjector
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
@@ -102,7 +103,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (contentSecurityPolicy != null && !application.developmentMode) {
             application.launch(Dispatchers.IO) { contentSecurityPolicy.precomputeAll() }
         }
-        val configInjector = pluginConfig.publicConfigJson?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
+        val publicConfig = pluginConfig.publicConfigProvider?.let { PublicConfigSource(it, application.developmentMode) }
+        val configInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
         val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector)
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
@@ -195,15 +197,14 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         }
 
         val automaticRouting = pluginConfig.routing == SvelteRouting.Automatic
-        val publicConfigJson = pluginConfig.publicConfigJson
         application.routing {
             if (automaticRouting) {
                 catchAll(handler)
             }
-            if (publicConfigJson != null) {
+            if (publicConfig != null) {
                 get(PUBLIC_CONFIG_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")
-                    call.respondText(publicConfigJson, ContentType.Application.Json)
+                    call.respondText(publicConfig.current(), ContentType.Application.Json)
                 }.hide()
             }
             if (pluginConfig.statusEndpoint) {

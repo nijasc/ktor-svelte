@@ -14,27 +14,45 @@ internal class InjectedPage(
     val eTag: String,
 )
 
+private class RenderedConfig(
+    val json: String,
+) {
+    val element = "<script type=\"application/json\" id=\"$CONFIG_ELEMENT_ID\">${escapeForScript(json)}</script>"
+    val hash = sha256(json.toByteArray()).take(12)
+}
+
 internal class ConfigInjector(
     private val store: AssetStore,
-    configJson: String,
+    private val config: PublicConfigSource,
 ) {
-    private val element = "<script type=\"application/json\" id=\"$CONFIG_ELEMENT_ID\">${escapeForScript(configJson)}</script>"
-    private val configHash = sha256(configJson.toByteArray()).take(12)
+    @Volatile
+    private var rendered: RenderedConfig? = null
     private val pages = ConcurrentHashMap<String, Pair<String, InjectedPage>>()
 
     fun pageFor(
         path: String,
         entry: ManifestEntry,
     ): InjectedPage? {
-        pages[path]?.let { (hash, page) -> if (hash == entry.hash) return page }
+        val current = renderedConfig()
+        val eTag = "${entry.hash}-c${current.hash}"
+        pages[path]?.let { (cachedETag, page) -> if (cachedETag == eTag) return page }
         val html = store.open(path)?.use { it.readBytes().decodeToString() } ?: return null
-        val plain = inject(html).toByteArray()
-        val page = InjectedPage(plain, gzip(plain), "${entry.hash}-c$configHash")
-        pages[path] = entry.hash to page
+        val plain = inject(html, current.element).toByteArray()
+        val page = InjectedPage(plain, gzip(plain), eTag)
+        pages[path] = eTag to page
         return page
     }
 
-    fun inject(html: String): String {
+    private fun renderedConfig(): RenderedConfig {
+        val json = config.current()
+        rendered?.takeIf { it.json == json }?.let { return it }
+        return RenderedConfig(json).also { rendered = it }
+    }
+
+    private fun inject(
+        html: String,
+        element: String,
+    ): String {
         val head = HEAD_TAG.find(html) ?: return element + html
         return html.substring(0, head.range.last + 1) + element + html.substring(head.range.last + 1)
     }

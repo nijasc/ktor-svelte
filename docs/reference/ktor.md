@@ -73,7 +73,7 @@ install(Svelte) {
 | `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](../security.md#security-headers) |
 | `securityHeaders.contentSecurityPolicy` | Your own policy, sent unchanged on every response. `null` uses the automatic policy |
 | `securityHeaders.automaticContentSecurityPolicy` | Sends a strict CSP built from the inline scripts of each HTML page. Extend it with `allowCspSources(directive, sources)` |
-| `publicConfig(value)` | See [Runtime config](../features/runtime-config.md) |
+| `publicConfig(value)` | Values for the frontend. `publicConfig { ... }` reads them again on every request in development. See [Runtime config](../features/runtime-config.md) |
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
 | `dev.mode` | `AUTO` follows Ktor's development mode. `ALWAYS` and `NEVER` force it |
