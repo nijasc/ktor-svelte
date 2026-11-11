@@ -1,0 +1,57 @@
+<templateSet group="ktor-svelte">
+  <template name="ksget" value="get(&quot;/api/$PATH$&quot;) {&#10;    call.respond($END$)&#10;}" description="ktor-svelte: GET route" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="&quot;items&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="KOTLIN_STATEMENT" value="true" />
+    </context>
+  </template>
+  <template name="kspost" value="post(&quot;/api/$PATH$&quot;) {&#10;    val input = call.receive&lt;$INPUT$&gt;()&#10;    call.respond(HttpStatusCode.Created, $END$)&#10;}" description="ktor-svelte: POST route that receives a validated body" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="&quot;items&quot;" alwaysStopAt="true" />
+    <variable name="INPUT" expression="" defaultValue="&quot;ItemInput&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="KOTLIN_STATEMENT" value="true" />
+    </context>
+  </template>
+  <template name="kspage" value="get(&quot;/api/$PATH$&quot;) {&#10;    val cursor = call.queryParameters[&quot;cursor&quot;]&#10;    val page: io.github.nijasc.ktor.svelte.Page&lt;$TYPE$&gt; = $END$&#10;    call.respond(page)&#10;}" description="ktor-svelte: paged GET route" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="&quot;items&quot;" alwaysStopAt="true" />
+    <variable name="TYPE" expression="" defaultValue="&quot;Item&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="KOTLIN_STATEMENT" value="true" />
+    </context>
+  </template>
+  <template name="ksdto" value="@kotlinx.serialization.Serializable&#10;data class $NAME$(&#10;    $END$&#10;)" description="ktor-svelte: serializable DTO" toReformat="true" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="&quot;Item&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="KOTLIN_TOPLEVEL" value="true" />
+    </context>
+  </template>
+  <template name="ksinput" value="@kotlinx.serialization.Serializable&#10;data class $NAME$(&#10;    @io.ktor.openapi.JsonSchema.MaxLength(80)&#10;    val title: String,&#10;) : io.github.nijasc.ktor.svelte.Validated {&#10;    override fun io.github.nijasc.ktor.svelte.Validator.rules() {&#10;        check(::title, title.isNotBlank()) { &quot;$MESSAGE$&quot; }$END$&#10;    }&#10;}" description="ktor-svelte: request body with bounds and rules" toReformat="true" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="&quot;ItemInput&quot;" alwaysStopAt="true" />
+    <variable name="MESSAGE" expression="" defaultValue="&quot;A title is required.&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="KOTLIN_TOPLEVEL" value="true" />
+    </context>
+  </template>
+  <template name="ksapi" value="const $NAME$ = await api.$GROUP$.$CALL$($END$);" description="ktor-svelte: call the generated client" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;items&quot;" alwaysStopAt="true" />
+    <variable name="GROUP" expression="" defaultValue="&quot;items&quot;" alwaysStopAt="true" />
+    <variable name="CALL" expression="" defaultValue="&quot;list&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="TypeScript" value="true" />
+    </context>
+  </template>
+  <template name="ksload" value="import { apiWith } from '#api';&#10;import type { PageLoad } from './$$types';&#10;&#10;export const load: PageLoad = async (event) =&gt; {&#10;    const api = apiWith(event);&#10;    return { $NAME$: await api.$GROUP$.$CALL$() };&#10;};$END$" description="ktor-svelte: SvelteKit load function with the generated client" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;items&quot;" alwaysStopAt="true" />
+    <variable name="GROUP" expression="" defaultValue="&quot;items&quot;" alwaysStopAt="true" />
+    <variable name="CALL" expression="" defaultValue="&quot;list&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="TypeScript" value="true" />
+    </context>
+  </template>
+  <template name="kserror" value="try {&#10;    $SELECTION$$END$&#10;} catch (error) {&#10;    if (isValidationError(error)) errors = error.body.fields;&#10;    else if (isApiError(error, '$OPERATION$')) message = error.body.message;&#10;    else throw error;&#10;}" description="ktor-svelte: handle validation and typed API errors" toReformat="false" toShortenFQNames="false">
+    <variable name="OPERATION" expression="" defaultValue="&quot;items.get&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="TypeScript" value="true" />
+    </context>
+  </template>
+</templateSet>

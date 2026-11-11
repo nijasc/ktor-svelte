@@ -38,6 +38,7 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 | `ktor-svelte-server/.../internal/dev/` | The Vite dev proxy and the status endpoint |
 | `ktor-svelte-server/.../internal/typescript/` | OpenAPI to TypeScript. `TypeScriptGenerator` takes OpenAPI JSON and returns files, so it is easy to test |
 | `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/`, and `libraries/` generates the files for configured frontend libraries |
+| `build-logic/` | Convention plugins shared by both modules: Kotlin, ktlint and toolchain setup, and the publishing metadata |
 | `examples/basic/` | The smallest possible app |
 | `examples/notes/` | The feature-rich app. New features should show up here |
 | `.run/` | Shared IntelliJ run configurations |
@@ -90,6 +91,8 @@ HMR is not covered by automated tests. Check it before changing the dev proxy:
 **No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the README. Generated files and the `x-release-please` markers in the README are the only exceptions.
 
 **Keep the README up to date, in the same commit.** It uses plain ASCII: no em dashes, arrows, box drawing or emoji.
+
+**Error messages link to README sections.** Each module has a `DocLink` enum with the anchors it uses, and `DocLinkTest` fails when a heading they point at is renamed or removed. Rename the anchor in `DocLink` together with the heading.
 
 **Format Kotlin before you commit:**
 

@@ -14,6 +14,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateSourcesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteLiveTemplatesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
@@ -263,6 +264,11 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
+        project.tasks.register("svelteLiveTemplates", SvelteLiveTemplatesTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Writes IntelliJ live templates for routes, DTOs and client calls. Add --install to copy them into the IDE."
+            task.templateFile.set(project.layout.buildDirectory.file("ktor-svelte/live-templates/ktor-svelte.xml"))
+        }
         project.tasks.register("svelteGenerateRunConfigurations", SvelteRunConfigurationsTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Writes IntelliJ run configurations to .run in the root project."
@@ -511,7 +517,9 @@ public class KtorSveltePlugin : Plugin<Project> {
     private fun frontendOutput(extension: SvelteExtension) =
         extension.frontendDir.zip(extension.outputDir) { dir, output ->
             if (!isFolderInsideFrontend(output)) {
-                throw GradleException("svelte.outputDir must be a path inside svelte.frontendDir, but was '$output'.")
+                throw GradleException(
+                    "svelte.outputDir must be a path inside svelte.frontendDir, but was '$output'." + DocLink.GRADLE.see(),
+                )
             }
             dir.dir(output)
         }

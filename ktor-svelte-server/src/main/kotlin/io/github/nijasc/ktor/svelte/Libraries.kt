@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.github.nijasc.ktor.svelte.internal.libraryConfig
 import io.github.nijasc.ktor.svelte.internal.resolveLocale
 import io.ktor.server.application.ApplicationCall
@@ -24,5 +25,5 @@ public val ApplicationCall.svelteTheme: String
         val saved = request.cookies[THEME_COOKIE]
         return config.themes.firstOrNull { it == saved }
             ?: config.defaultTheme
-            ?: error("DaisyUI is not configured. Add svelte { libraries { daisyUi { } } } to your build.")
+            ?: error("DaisyUI is not configured. Add svelte { libraries { daisyUi { } } } to your build." + DocLink.DAISYUI.see())
     }

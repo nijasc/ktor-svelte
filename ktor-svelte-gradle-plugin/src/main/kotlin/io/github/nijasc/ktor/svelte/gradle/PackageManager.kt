@@ -51,7 +51,7 @@ internal fun resolveFrontendTool(
             ?: throw GradleException(
                 "ktor-svelte found no lockfile in $frontendDir. " +
                     "Expected one of ${LOCKFILES.joinToString { it.first }}. " +
-                    "Install the frontend dependencies once, or set svelte.packageManager.",
+                    "Install the frontend dependencies once, or set svelte.packageManager." + DocLink.GRADLE.see(),
             )
     return FrontendTool(detected.second)
 }
@@ -76,5 +76,5 @@ internal fun requireExecutable(tool: FrontendTool): File =
     locateExecutable(tool.executableName)
         ?: throw GradleException(
             "ktor-svelte could not find ${tool.executableName} on PATH. " +
-                "Install ${tool.executableName}, or set svelte.packageManager to a tool you have installed.",
+                "Install ${tool.executableName}, or set svelte.packageManager to a tool you have installed." + DocLink.GRADLE.see(),
         )

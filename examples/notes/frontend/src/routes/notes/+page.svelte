@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { api, isValidationError, IsoDateTime, NoteInput, Status, type Note, type NoteStats } from '#api';
+    import { api, field, isValidationError, IsoDateTime, NoteInput, Status, type Note, type NoteStats } from '#api';
     import Icon from '#icon';
     import { localizeHref, m } from '#i18n';
     import type { PageProps } from './$types';
@@ -70,11 +70,17 @@
 <p id="stats" class="mb-6 opacity-70">{m.notesStats({ total: stats.total, archived: stats.archived })}</p>
 
 <form class="mb-6 grid gap-2" onsubmit={create}>
-    <input class="input w-full" placeholder={m.fieldTitle()} aria-label="Title" bind:value={title} oninput={() => (errors = NoteInput.validate(draft))} {...NoteInput.bounds.title} />
+    <input
+        class="input w-full"
+        placeholder={m.fieldTitle()}
+        aria-label="Title"
+        bind:value={title}
+        oninput={() => (errors = NoteInput.validate(draft))}
+        use:field={{ bounds: NoteInput.bounds.title, errors: errors.title, errorClass: 'text-error' }}
+    />
     <textarea class="textarea w-full" placeholder={m.fieldBody()} aria-label="Body" bind:value={body}></textarea>
     <input class="input w-full" placeholder={m.fieldTags()} aria-label="Tags" bind:value={tags} />
     <button class="btn btn-primary" type="submit"><Icon name="Plus" size={16} /> {m.notesAdd()}</button>
-    {#if errors.title}<p class="text-error" role="alert">{errors.title.join(' ')}</p>{/if}
 </form>
 
 <div class="mb-4 flex flex-wrap items-center gap-2">

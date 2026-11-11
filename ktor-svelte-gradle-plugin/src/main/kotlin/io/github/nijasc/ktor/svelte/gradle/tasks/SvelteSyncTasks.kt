@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import io.github.nijasc.ktor.svelte.gradle.DocLink
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_MARKER
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
@@ -135,7 +136,8 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
         if (blocked.isEmpty()) return
         throw GradleException(
             "ktor-svelte generates ${blocked.joinToString()}, but found your own version. " +
-                "Move custom Vite settings to $USER_VITE_CONFIG, and merge any custom hooks by hand, then delete those files.",
+                "Move custom Vite settings to $USER_VITE_CONFIG, and merge any custom hooks by hand, then delete those files." +
+                DocLink.FRONTEND_LIBRARIES.see(),
         )
     }
 
@@ -196,7 +198,10 @@ public abstract class SvelteVerifySyncTask : SvelteLibraryTask() {
         val packageJson = readPackageJson(frontend)
         if (updatedPackageJson(packageJson, current) != packageJson) problems += "package.json"
         if (problems.isNotEmpty()) {
-            throw GradleException("Frontend libraries are out of sync: ${problems.joinToString()}. Run svelteSync and commit the result.")
+            throw GradleException(
+                "Frontend libraries are out of sync: ${problems.joinToString()}. Run svelteSync and commit the result." +
+                    DocLink.FRONTEND_LIBRARIES.see(),
+            )
         }
     }
 }
@@ -234,7 +239,10 @@ public abstract class SvelteGenerateSourcesTask : DefaultTask() {
             if (current.lucide) {
                 val file =
                     iconsFile.files.firstOrNull { it.isFile }
-                        ?: throw GradleException("Lucide is enabled, but $ICONS_JSON is missing. Run svelteSync and commit the result.")
+                        ?: throw GradleException(
+                            "Lucide is enabled, but $ICONS_JSON is missing. Run svelteSync and commit the result." +
+                                DocLink.FRONTEND_LIBRARIES.see(),
+                        )
                 @Suppress("UNCHECKED_CAST")
                 JsonSlurper().parse(file) as List<String>
             } else {

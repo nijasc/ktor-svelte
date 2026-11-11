@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal.dev
 
+import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
@@ -83,7 +84,8 @@ internal fun requireAllowedTarget(
 ) {
     val host = URI.create(url).host.orEmpty()
     check(allowRemote || isLoopbackHost(host)) {
-        "ktor-svelte will not proxy to $url because it is not on this machine. Set dev { allowRemote = true } if you trust it."
+        "ktor-svelte will not proxy to $url because it is not on this machine. Set dev { allowRemote = true } if you trust it." +
+            DocLink.DEV_WORKFLOW.see()
     }
 }
 

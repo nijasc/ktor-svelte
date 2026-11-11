@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
 import io.github.nijasc.ktor.svelte.gradle.DaisyCustomTheme
+import io.github.nijasc.ktor.svelte.gradle.DocLink
 import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
 import org.gradle.api.GradleException
 import java.io.Serializable
@@ -67,27 +68,35 @@ public data class LibrarySpec(
 
     public fun validate() {
         if (daisy != null) {
-            if (daisy.allThemes.isEmpty()) throw GradleException("daisyUi needs at least one theme.")
+            if (daisy.allThemes.isEmpty()) throw GradleException("daisyUi needs at least one theme." + DocLink.DAISYUI.see())
             if (daisy.defaultTheme !in daisy.allThemes) {
-                throw GradleException("daisyUi defaultTheme '${daisy.defaultTheme}' is not one of ${daisy.allThemes}.")
+                throw GradleException(
+                    "daisyUi defaultTheme '${daisy.defaultTheme}' is not one of ${daisy.allThemes}." + DocLink.DAISYUI.see(),
+                )
             }
             if (daisy.prefersDark != null && daisy.prefersDark !in daisy.allThemes) {
-                throw GradleException("daisyUi prefersDark '${daisy.prefersDark}' is not one of ${daisy.allThemes}.")
+                throw GradleException(
+                    "daisyUi prefersDark '${daisy.prefersDark}' is not one of ${daisy.allThemes}." + DocLink.DAISYUI.see(),
+                )
             }
             val invalid = daisy.customThemes.map { it.name }.filterNot { THEME_NAME.matches(it) }
             if (invalid.isNotEmpty()) {
                 throw GradleException(
-                    "Invalid daisyUi theme names: $invalid. Use lowercase letters, digits and dashes.",
+                    "Invalid daisyUi theme names: $invalid. Use lowercase letters, digits and dashes." + DocLink.DAISYUI.see(),
                 )
             }
         }
         if (i18n != null) {
-            if (i18n.locales.isEmpty()) throw GradleException("i18n needs at least one locale.")
+            if (i18n.locales.isEmpty()) throw GradleException("i18n needs at least one locale." + DocLink.I18N.see())
             if (i18n.defaultLocale !in i18n.locales) {
-                throw GradleException("i18n defaultLocale '${i18n.defaultLocale}' is not one of ${i18n.locales}.")
+                throw GradleException("i18n defaultLocale '${i18n.defaultLocale}' is not one of ${i18n.locales}." + DocLink.I18N.see())
             }
             val invalid = i18n.locales.filterNot { LOCALE_NAME.matches(it) }
-            if (invalid.isNotEmpty()) throw GradleException("Invalid i18n locales: $invalid. Use tags such as en or pt-BR.")
+            if (invalid.isNotEmpty()) {
+                throw GradleException(
+                    "Invalid i18n locales: $invalid. Use tags such as en or pt-BR." + DocLink.I18N.see(),
+                )
+            }
         }
     }
 
