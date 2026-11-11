@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import { writeLlmsFiles } from './llms';
+import { socialHead, writeSocialImages } from './socialImages';
 
 const repository = 'https://github.com/nijasc/ktor-svelte';
 const siteRoot = '/ktor-svelte/';
@@ -17,11 +18,13 @@ export default defineConfig({
     lastUpdated: true,
     srcExclude: ['api-reference.md', 'node_modules/**'],
     head: [
-        ['meta', { name: 'theme-color', content: '#ff3e00' }],
-        ['meta', { property: 'og:title', content: 'ktor-svelte' }],
-        ['meta', { property: 'og:description', content: 'One app. One JAR. One port. Ktor and SvelteKit together.' }]
+        ['meta', { name: 'theme-color', content: '#ff3e00' }]
     ],
+    transformHead({ pageData, siteConfig }) {
+        return socialHead(pageData, siteConfig.srcDir, `https://nijasc.github.io${base}`, 'ktor-svelte', description);
+    },
     buildEnd(siteConfig) {
+        writeSocialImages(siteConfig.outDir, version === 'main' ? 'ktor-svelte' : `ktor-svelte ${version}`);
         writeLlmsFiles({
             srcDir: siteConfig.srcDir,
             outDir: siteConfig.outDir,
