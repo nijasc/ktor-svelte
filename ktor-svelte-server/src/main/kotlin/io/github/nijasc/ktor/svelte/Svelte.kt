@@ -1,5 +1,8 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
+import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
+import io.github.nijasc.ktor.svelte.internal.HealthReport
 import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
@@ -55,6 +58,7 @@ import io.ktor.util.AttributeKey
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
 private const val STATUS_PATH = "/_ktor-svelte/status"
+private const val HEALTH_PATH = "/_ktor-svelte/health"
 private const val STATUS_REFUSED_MESSAGE = "The ktor-svelte status endpoint only answers requests from this machine."
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
@@ -147,6 +151,17 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     }
                     call.response.header(HttpHeaders.CacheControl, "no-store")
                     call.respondText(statusJson(store.manifest(), devProxy, devUrl), ContentType.Application.Json)
+                }.hide()
+            }
+            if (pluginConfig.healthEndpoint) {
+                val health = HealthReport(pluginConfig.healthCheckList.toList())
+                get(HEALTH_PATH) {
+                    call.response.header(HttpHeaders.CacheControl, "no-store")
+                    if (health.isUp(call, frontendReady = store.manifest() != null || devProxy != null)) {
+                        call.respondText(HEALTH_UP_JSON, ContentType.Application.Json)
+                    } else {
+                        call.respondText(HEALTH_DOWN_JSON, ContentType.Application.Json, HttpStatusCode.ServiceUnavailable)
+                    }
                 }.hide()
             }
             if (docsPath != null) {

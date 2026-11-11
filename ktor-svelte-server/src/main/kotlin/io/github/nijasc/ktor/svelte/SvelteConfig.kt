@@ -22,6 +22,7 @@ public class SvelteConfig {
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
     internal val securityHeadersConfig: SvelteSecurityHeadersConfig = SvelteSecurityHeadersConfig()
+    internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
     internal var publicConfigJson: String? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -36,6 +37,7 @@ public class SvelteConfig {
     public var apiDocsPath: String = "/api/docs"
     public var routing: SvelteRouting = SvelteRouting.Automatic
     public var statusEndpoint: Boolean = false
+    public var healthEndpoint: Boolean = false
     public var originCheck: Boolean = true
     public var hideErrorDetails: Boolean = true
     public var maxApiBodySize: Long? = 1024L * 1024L
@@ -50,6 +52,10 @@ public class SvelteConfig {
 
     public fun paramRoutes(vararg routes: String) {
         paramRouteList = routes.toList()
+    }
+
+    public fun healthCheck(check: suspend () -> Boolean) {
+        healthCheckList += check
     }
 
     public fun cache(configure: SvelteCacheConfig.() -> Unit) {
