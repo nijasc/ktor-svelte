@@ -113,6 +113,11 @@ public abstract class TailwindSettings {
     public fun forms() {
         formsPlugin.set(true)
     }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(TailwindSettings::class.java, "tailwind", name)
 }
 
 public abstract class DaisySettings {
@@ -151,6 +156,11 @@ public abstract class DaisySettings {
         action.execute(builder)
         customThemes.add(DaisyCustomTheme(name, colorScheme, builder.colors()))
     }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(DaisySettings::class.java, "daisyUi", name)
 }
 
 public abstract class I18nSettings {
@@ -163,6 +173,11 @@ public abstract class I18nSettings {
     public fun locales(vararg locales: String) {
         localeNames.addAll(locales.toList())
     }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(I18nSettings::class.java, "i18n", name)
 }
 
 public abstract class SvelteLibraries {
@@ -199,4 +214,9 @@ public abstract class SvelteLibraries {
         i18nSettings.enabled.set(true)
         action.execute(i18nSettings)
     }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(SvelteLibraries::class.java, "libraries", name)
 }
