@@ -185,6 +185,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client pages through cursor endpoints`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "export async function* pages<Q extends { cursor?: string }, T>(")
+        assertContains(client, "cursor = page.next ?? undefined;")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")
