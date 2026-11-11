@@ -9,10 +9,13 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 private val HTTP_METHODS = listOf("get", "post", "put", "patch", "delete", "head", "options")
 private val IDENTIFIER = Regex("[A-Za-z_$][A-Za-z0-9_$]*")
@@ -24,6 +27,7 @@ internal class TypeScriptGenerator(
     private val excludedPaths: List<String> = emptyList(),
     private val publicConfigSchema: String? = null,
     iconNames: List<String> = emptyList(),
+    private val declaredErrors: List<DeclaredError> = emptyList(),
 ) {
     private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
@@ -33,7 +37,7 @@ internal class TypeScriptGenerator(
 
     fun generate(openApiJson: String): Map<String, String> {
         val document = Json.parseToJsonElement(openApiJson).jsonObject
-        val filtered = withApiPathsOnly(document)
+        val filtered = withDeclaredErrors(withApiPathsOnly(document))
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
         enumTypes = nameEnums(filtered, schemas)
         usesDates = hasDateFormat(filtered) || publicConfigSchema?.let { hasDateFormat(Json.parseToJsonElement(it)) } == true
@@ -61,6 +65,41 @@ internal class TypeScriptGenerator(
                 .filterKeys(::isApiPath)
                 .toSortedMap()
         return JsonObject(document + ("paths" to JsonObject(paths)))
+    }
+
+    private fun withDeclaredErrors(document: JsonObject): JsonObject {
+        if (declaredErrors.isEmpty()) return document
+        val components = document.objectAt("components") ?: JsonObject(emptyMap())
+        val schemas = components.objectAt("schemas").orEmpty().toMutableMap()
+        declaredErrors.forEach { error -> schemas.putIfAbsent(error.name, Json.parseToJsonElement(error.schema)) }
+        val paths =
+            document.objectAt("paths").orEmpty().mapValues { (_, item) ->
+                JsonObject(
+                    item.jsonObject.mapValues { (key, operation) ->
+                        if (key in HTTP_METHODS && operation is JsonObject) withErrorResponses(operation) else operation
+                    },
+                )
+            }
+        return JsonObject(
+            document + ("paths" to JsonObject(paths)) + ("components" to JsonObject(components + ("schemas" to JsonObject(schemas)))),
+        )
+    }
+
+    private fun withErrorResponses(operation: JsonObject): JsonObject {
+        val responses = operation.objectAt("responses").orEmpty().toMutableMap()
+        declaredErrors.forEach { error ->
+            val response =
+                buildJsonObject {
+                    put("description", "")
+                    putJsonObject("content") {
+                        putJsonObject("application/json") {
+                            putJsonObject("schema") { put("\$ref", "#/components/schemas/${error.name}") }
+                        }
+                    }
+                }
+            error.statuses.forEach { status -> responses.putIfAbsent(status.toString(), response) }
+        }
+        return JsonObject(operation + ("responses" to JsonObject(responses)))
     }
 
     private fun publicConfigDeclaration(schemas: Map<String, JsonElement>): String {
@@ -949,3 +988,9 @@ private enum class ValidationHelper(
 }
 
 private const val EVENT_STREAM = "text/event-stream"
+
+internal data class DeclaredError(
+    val name: String,
+    val schema: String,
+    val statuses: List<Int>,
+)

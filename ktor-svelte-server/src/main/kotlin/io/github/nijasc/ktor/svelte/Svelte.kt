@@ -99,6 +99,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.apiPrefixList,
             listOfNotNull(docsPath),
             pluginConfig.publicConfigSchema,
+            pluginConfig.declaredErrorList.toList(),
         )
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
 

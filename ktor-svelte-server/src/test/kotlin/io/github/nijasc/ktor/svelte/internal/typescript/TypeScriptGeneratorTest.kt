@@ -202,6 +202,21 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `an error a route declares itself wins over a declared one`() {
+        val problem = """{"type":"object","required":["message"],"properties":{"message":{"type":"string"}}}"""
+        val failure = """{"type":"object","required":["reason"],"properties":{"reason":{"type":"string"}}}"""
+        val source =
+            TypeScriptGenerator(listOf("/api"), declaredErrors = listOf(DeclaredError("Failure", failure, listOf(404, 500))))
+                .generate(
+                    """{"openapi":"3.1.1","info":{"title":"t","version":"1"},"paths":{"/api/a":{"get":{"responses":{
+                    "404":{"description":"","content":{"application/json":{"schema":{"${'$'}ref":"#/components/schemas/Problem"}}}}}}}},
+                    "components":{"schemas":{"Problem":$problem}}}""",
+                ).getValue("services.ts")
+        assertContains(source, "    'a.list': Problem | Failure;")
+        assertContains(source, "    'a.list': [404, 500],")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")
