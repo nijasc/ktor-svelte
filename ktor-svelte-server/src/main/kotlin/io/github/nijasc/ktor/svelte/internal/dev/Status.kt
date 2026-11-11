@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal.dev
 
+import io.github.nijasc.ktor.svelte.SvelteMetrics
 import io.github.nijasc.ktor.svelte.internal.assets.MANIFEST_FORMAT_VERSION
 import io.github.nijasc.ktor.svelte.internal.assets.Manifest
 import kotlinx.serialization.json.buildJsonObject
@@ -16,6 +17,7 @@ internal suspend fun statusJson(
     manifest: Manifest?,
     devProxy: DevProxy?,
     devUrl: String,
+    metrics: SvelteMetrics,
 ): String =
     buildJsonObject {
         put(
@@ -37,6 +39,14 @@ internal suspend fun statusJson(
                     put("url", devUrl)
                     put("reachable", devProxy.isReachable())
                 }
+            },
+        )
+        put(
+            "refusals",
+            buildJsonObject {
+                put("crossOrigin", metrics.crossOriginRefusals)
+                put("bodyTooLarge", metrics.bodyTooLargeRefusals)
+                put("rateLimit", metrics.rateLimitRefusals)
             },
         )
     }.toString()
