@@ -6,7 +6,7 @@ How to use this file: read the suggestions, and move the ones you want into **Ap
 
 ## Approved
 
-None yet.
+SEC-04, SEC-10, SEC-09, SEC-12, COR-01, COR-03, COR-07, DX-02, DX-06, DX-08, DX-09, DX-14, DX-19, DX-28, DX-30, TS-03, TS-09, TS-10, TS-13, TS-18, GP-03, GP-04, GP-07, GP-09, PERF-01, PERF-02, PERF-16, FEAT-06, FEAT-10, FEAT-20, SITE-01, SITE-02, SITE-03, SITE-04, SITE-05, SITE-06, SITE-08, SITE-11, SITE-12, SITE-13, SITE-14, REL-01, REL-02, REL-04, OBS-03, OBS-05, OBS-08, OBS-09, OBS-10
 
 ## Suggestions
 
