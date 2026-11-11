@@ -133,3 +133,21 @@ try {
 ```
 
 The ID is available in routes as `call.callId`, and with Ktor's `CallLogging` you can put it into every log line with `callIdMdc("requestId")`. The client only sends the header to its own origin, so it never causes CORS preflights. If you install Ktor's `CallId` yourself, your setup is used. `requestIds = false` turns it off.
+
+## Timeouts
+
+A request that hangs blocks the UI until the browser gives up, which can take minutes. Set a timeout for every call, or for one:
+
+```ts
+import { api, apiConfig, isTimeoutError } from '#api';
+
+apiConfig.timeout = 10_000;
+
+try {
+    const report = await api.reports.create(input, { timeout: 60_000 });
+} catch (error) {
+    if (isTimeoutError(error)) showError('The server took too long. Please try again.');
+}
+```
+
+A per-call `timeout` wins over `apiConfig.timeout`, and your own `signal` still works next to it. Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
