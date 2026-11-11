@@ -479,6 +479,29 @@ Routes that declare a `text/event-stream` response, for example through `describ
 for await (const tick of api.ticks.watch()) console.log(tick);
 ```
 
+Uploads work with `FormData`. Ktor cannot infer a multipart body from `receiveMultipart`, so describe it once, and the generated function takes `body: FormData`:
+
+```kotlin
+post("/api/notes/{id}/attachments") {
+    call.receiveMultipart().forEachPart { part -> part.dispose() }
+    call.respond(HttpStatusCode.NoContent)
+}.describe {
+    requestBody { ContentType.MultiPart.FormData() }
+}
+```
+
+Pass `onUploadProgress` to follow the upload. `fetch` cannot report upload progress, so such a call uses `XMLHttpRequest` instead, with the same headers, errors and `signal` support:
+
+```ts
+const form = new FormData();
+form.append('file', file);
+await api.notes.attachments(id, form, {
+    onUploadProgress: ({ loaded, total }) => (progress = total ? loaded / total : 0)
+});
+```
+
+Uploads count towards `maxApiBodySize`, which is 1 MiB by default, so raise it for routes that accept files.
+
 Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, pass its `fetch`:
 
 ```ts
