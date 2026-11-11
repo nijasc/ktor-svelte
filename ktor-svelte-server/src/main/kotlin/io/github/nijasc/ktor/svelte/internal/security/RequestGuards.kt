@@ -21,11 +21,12 @@ import java.net.URISyntaxException
 
 private val SAFE_METHODS = setOf(HttpMethod.Get, HttpMethod.Head, HttpMethod.Options, HttpMethod("TRACE"))
 private const val SEC_FETCH_SITE = "Sec-Fetch-Site"
-private const val CROSS_ORIGIN_MESSAGE =
-    "Cross-origin API request refused. Add the origin with allowedOrigins(...) in install(Svelte) to allow it."
+private const val CROSS_ORIGIN_MESSAGE = "Cross-origin API request refused."
+private const val CROSS_ORIGIN_HINT = " Add the origin with allowedOrigins(...) in install(Svelte) to allow it."
 
 internal class OriginCheck(
     allowedOrigins: List<String>,
+    private val developmentMode: Boolean = false,
 ) {
     private val allowed = allowedOrigins.map(::normalizeOrigin).toSet()
 
@@ -52,7 +53,11 @@ internal class OriginCheck(
                 call.request.origin.serverHost,
             )
         if (allowedCall) return false
-        respondJsonMessage(call, HttpStatusCode.Forbidden, CROSS_ORIGIN_MESSAGE)
+        respondJsonMessage(
+            call,
+            HttpStatusCode.Forbidden,
+            if (developmentMode) CROSS_ORIGIN_MESSAGE + CROSS_ORIGIN_HINT else CROSS_ORIGIN_MESSAGE,
+        )
         return true
     }
 }

@@ -74,7 +74,7 @@ install(Svelte) {
 
 **Body size limit.** Request bodies on API paths are limited to 1 MiB. Larger bodies get 413, whether they send `Content-Length` or are chunked. It uses Ktor's `RequestBodyLimit` plugin, so do not install that plugin yourself unless you set `maxApiBodySize = null`.
 
-Refused requests get a JSON body such as `{"message":"Request body is larger than the limit of 1048576 bytes."}`.
+A refused cross-origin write gets `{"message":"Cross-origin API request refused."}`. In development mode the message also says how to allow the origin, which production leaves out so it does not tell attackers which setting to look for. Other refused requests get a JSON body such as `{"message":"Request body is larger than the limit of 1048576 bytes."}`.
 
 **Error details.** In production, an exception that no route handles answers with its status and a generic message, such as `{"message":"Internal Server Error."}` on API paths, instead of the exception message, which Ktor sends by default and which can reveal internals. Malformed or unreadable bodies keep their 400 or 415 without naming your classes. The exception is still logged. In development mode, or when you install `StatusPages`, nothing changes. Set `hideErrorDetails = false` to send the messages again.
 

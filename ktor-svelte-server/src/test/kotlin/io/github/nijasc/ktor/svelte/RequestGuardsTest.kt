@@ -94,6 +94,29 @@ class RequestGuardsTest {
         }
 
     @Test
+    fun `production leaves out the hint and development mode keeps it`() =
+        testApplication {
+            serverConfig { developmentMode = false }
+            val build = fixtureBuild()
+            application {
+                install(Svelte) {
+                    source = SvelteSource.Directory(build)
+                    dev { mode = DevMode.NEVER }
+                }
+                routing { post("/api/notes") { call.respondText("created") } }
+            }
+            val response = client.post("/api/notes") { header(HttpHeaders.Origin, "https://evil.example") }
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+            assertEquals("{\"message\":\"Cross-origin API request refused.\"}", response.bodyAsText())
+        }
+
+    @Test
+    fun `development mode explains how to allow an origin`() =
+        guardTest {
+            assertContains(postNote(HttpHeaders.Origin to "https://evil.example").bodyAsText(), "allowedOrigins(...)")
+        }
+
+    @Test
     fun `every unsafe method is checked`() =
         guardTest {
             val put = client.put("/api/notes") { header(HttpHeaders.Origin, "https://evil.example") }
