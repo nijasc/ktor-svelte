@@ -165,3 +165,23 @@ try {
 ```
 
 A per-call `timeout` wins over `apiConfig.timeout`, and your own `signal` still works next to it. Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
+
+## Search as you type
+
+When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:
+
+```ts
+import { api, isAbortError, latest } from '#api';
+
+const search = latest(api.notes.list);
+
+async function onInput(term: string) {
+    try {
+        notes = await search({ search: term });
+    } catch (error) {
+        if (!isAbortError(error)) throw error;
+    }
+}
+```
+
+A superseded call always rejects with an `AbortError`, even when it was cancelled while its body was being read. Your own `signal` still works alongside it.

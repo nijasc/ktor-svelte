@@ -286,6 +286,17 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `latest cancels the previous call`() {
+        val client = generate().getValue("client.ts")
+        assertContains(
+            client,
+            "export function latest<A extends unknown[], R>(call: (...args: A) => Promise<R>): (...args: A) => Promise<R> {",
+        )
+        assertContains(client, "previous?.abort();")
+        assertContains(client, "throw new DOMException('The request was superseded.', 'AbortError');")
+    }
+
+    @Test
     fun `the client supports timeouts without cutting off event streams`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "const limit = timeout ?? (streaming ? undefined : apiConfig.timeout);")
