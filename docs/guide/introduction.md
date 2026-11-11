@@ -55,3 +55,4 @@ The frontend is plain files, so there is no Node process in production. SvelteKi
 - Existing Ktor or SvelteKit app: [Add to an existing project](existing-project.md)
 - See it working first: [Examples](../examples.md)
 - Deciding between setups: [Compared with other setups](comparison.md)
+- Asking an AI assistant: give it [llms-full.txt](https://nijasc.github.io/ktor-svelte/llms-full.txt), the whole documentation as one Markdown file, or the index at [llms.txt](https://nijasc.github.io/ktor-svelte/llms.txt)
