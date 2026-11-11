@@ -23,7 +23,8 @@ export class ApiError<E = unknown> extends Error {
         readonly status: number,
         readonly body: E,
         readonly url: string,
-        readonly operation?: string
+        readonly operation?: string,
+        readonly requestId?: string
     ) {
         super(`Request to ${url} failed with status ${status}`);
         this.name = 'ApiError';
@@ -104,12 +105,23 @@ function sendWithProgress(onProgress: (progress: UploadProgress) => void): typeo
         });
 }
 
+function isSameOrigin(url: string): boolean {
+    if (typeof location === 'undefined') return !/^[a-z][a-z0-9+.-]*:/i.test(url);
+    return new URL(url, location.href).origin === location.origin;
+}
+
+function newRequestId(): string {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 function prepare(method: string, path: string, options: InternalOptions, accept: string) {
     const { query, body, operation, fetch: customFetch, headers, onUploadProgress, ...init } = options;
     const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
     merged.set('Accept', accept);
+    if (!merged.has('X-Request-Id') && isSameOrigin(url)) merged.set('X-Request-Id', newRequestId());
     new Headers(headers).forEach((value, key) => merged.set(key, value));
     let payload: BodyInit | undefined;
     if (body !== undefined) {
@@ -121,7 +133,10 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
 
 async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
-    if (!response.ok) throw new ApiError(response.status, await parseResponse(response), url, operation);
+    if (!response.ok) {
+        const requestId = response.headers.get('x-request-id') ?? undefined;
+        throw new ApiError(response.status, await parseResponse(response), url, operation, requestId);
+    }
     return response;
 }
 
