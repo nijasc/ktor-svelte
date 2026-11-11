@@ -20,10 +20,13 @@ private val TEMPLATE_FILES =
         "vite.config.ts",
         "tsconfig.json",
         "gitignore",
+        "editorconfig",
         "src/app.html",
         "src/routes/+layout.ts",
         "src/routes/+page.svelte",
     )
+
+private val DOTFILES = setOf("gitignore", "editorconfig")
 
 private val PREFERRED_TOOLS = listOf(PackageManager.BUN, PackageManager.PNPM, PackageManager.NPM, PackageManager.YARN)
 
@@ -73,7 +76,7 @@ public abstract class SvelteInitTask : SvelteToolTask() {
         val stream =
             javaClass.getResourceAsStream("$TEMPLATE_ROOT/$path")
                 ?: error("ktor-svelte template is missing $path")
-        val file = target.resolve(if (path == "gitignore") ".gitignore" else path)
+        val file = target.resolve(if (path in DOTFILES) ".$path" else path)
         file.parentFile.mkdirs()
         stream.use { input -> file.outputStream().use { output -> input.copyTo(output) } }
     }

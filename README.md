@@ -109,7 +109,7 @@ plugins {
 ```
 <!-- x-release-please-end -->
 
-Create the frontend. This writes a working SvelteKit 3 project to `frontend/` and installs it with the first package manager on your `PATH`:
+Create the frontend. This writes a working SvelteKit 3 project to `frontend/`, with a `.gitignore` and an `.editorconfig` that matches the Kotlin side, and installs it with the first package manager on your `PATH`:
 
 ```bash
 ./gradlew svelteInit
