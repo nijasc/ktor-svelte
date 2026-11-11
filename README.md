@@ -923,6 +923,17 @@ One command runs everything. Then open Ktor's port, not Vite's:
 
 It starts Vite, keeps Kotlin compiling and runs your app. Save a Svelte file and the page hot reloads. Save a Kotlin file and the app restarts, and with `generateTs` on your TypeScript updates a moment later, so type errors show up in the editor right away. A restart loses anything your app keeps in memory. Stopping the task stops all three. In IntelliJ, this is the `Dev` run configuration, and each line of output is labelled `[vite]`, `[kotlin]` or `[app]`.
 
+Once the app is listening, it prints the links you need, so they do not get lost in the output:
+
+```
+ktor-svelte is ready. Open the app URL, not the Vite one:
+  App:      http://localhost:8080
+  API docs: http://localhost:8080/api/docs
+  Vite:     http://localhost:5173
+```
+
+The API docs line appears when `apiDocs = true`. After a restart it prints one line with the app URL instead. The URL comes from Ktor's `Responding at` log line, so keep Ktor's INFO logging on for the application logger.
+
 To debug your Kotlin code, start `Dev` as usual and then start the `Debug app` run configuration in debug mode. IntelliJ debugs Gradle tasks only when they run a JVM through Gradle, and `svelteDevAll` starts the app itself, so the app instead listens for a debugger on `127.0.0.1:5005` (see `dev.debugPort`). `Debug app` has auto restart on, so it reconnects after each restart. Outside IntelliJ, attach any JDWP debugger to that port. Two apps running `svelteDevAll` at once need different debug ports.
 
 Prefer separate terminals? Run these instead:
