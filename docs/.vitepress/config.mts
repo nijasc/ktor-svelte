@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import { writeLlmsFiles } from './llms';
 
@@ -43,7 +45,22 @@ export default defineConfig({
         }
     },
     vite: {
-        server: { fs: { allow: ['..'] } },
+        plugins: [
+            {
+                name: 'notes-client',
+                resolveId: (id) => (id === 'virtual:notes-client' ? '\0virtual:notes-client' : undefined),
+                load(id) {
+                    if (id !== '\0virtual:notes-client') return undefined;
+                    const directory = fileURLToPath(new URL('../../examples/notes/frontend/src/lib/api/', import.meta.url));
+                    const files = Object.fromEntries(
+                        readdirSync(directory)
+                            .filter((name) => name.endsWith('.ts'))
+                            .map((name) => [name, readFileSync(directory + name, 'utf8')])
+                    );
+                    return `export default ${JSON.stringify(files)};`;
+                }
+            }
+        ],
         define: {
             __DOCS_VERSION__: JSON.stringify(version),
             __DOCS_SITE_ROOT__: JSON.stringify(siteRoot)

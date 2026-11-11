@@ -150,13 +150,8 @@ export function templateFiles(snippet: string): Record<string, string> {
 }
 
 export async function snippetProject(snippet: string): Promise<Record<string, string>> {
-    const clientFiles = import.meta.glob('../../../examples/notes/frontend/src/lib/api/*.ts', {
-        query: '?raw',
-        import: 'default'
-    }) as Record<string, () => Promise<string>>;
+    const { default: clientFiles } = (await import('virtual:notes-client')) as { default: Record<string, string> };
     const files = templateFiles(snippet);
-    for (const [path, load] of Object.entries(clientFiles)) {
-        files[`src/lib/api/${path.split('/').pop()}`] = await load();
-    }
+    for (const [name, content] of Object.entries(clientFiles)) files[`src/lib/api/${name}`] = content;
     return files;
 }
