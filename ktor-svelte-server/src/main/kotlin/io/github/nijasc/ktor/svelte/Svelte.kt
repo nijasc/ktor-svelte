@@ -12,6 +12,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
+import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
@@ -42,6 +43,7 @@ import io.ktor.server.application.ApplicationPlugin
 import io.ktor.server.application.PluginBuilder
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
+import io.ktor.server.application.hooks.ResponseSent
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.application.pluginOrNull
@@ -130,6 +132,14 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             onCall { call ->
                 if (resolver.isApiPath(decodedPathOrRaw(call))) originCheck.refuseIfCrossOrigin(call)
             }
+        }
+
+        val slowApiCall = pluginConfig.devConfig.slowApiCall
+        if (slowApiCall != null && application.developmentMode) {
+            val slowCalls = SlowCallLog(slowApiCall, resolver)
+            slowCalls.install(application)
+            onCall { call -> slowCalls.started(call) }
+            on(ResponseSent) { call -> slowCalls.finished(call) }
         }
 
         val hideErrorDetails = pluginConfig.hideErrorDetails

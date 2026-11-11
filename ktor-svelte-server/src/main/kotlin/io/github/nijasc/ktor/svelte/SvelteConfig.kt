@@ -8,6 +8,8 @@ import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import kotlin.reflect.typeOf
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 @KtorDsl
 public class SvelteConfig {
@@ -126,6 +128,7 @@ public class SvelteDevConfig {
     public var url: String = "http://localhost:5173"
     public var mode: DevMode = DevMode.AUTO
     public var allowRemote: Boolean = false
+    public var slowApiCall: Duration? = 500.milliseconds
 }
 
 @KtorDsl
