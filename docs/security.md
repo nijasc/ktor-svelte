@@ -110,6 +110,21 @@ routing {
 }
 ```
 
+Limits use a fixed window by default: the budget refills completely at the end of each period, so a client can send a full budget just before the edge and another just after it. Pick another algorithm when that matters:
+
+| Algorithm | Behaviour |
+|---|---|
+| `RateLimitAlgorithm.FixedWindow` | The default. Cheapest, but allows a burst of twice the limit around the window edge |
+| `RateLimitAlgorithm.SlidingWindow` | Never more than the limit in any period, wherever it starts |
+| `RateLimitAlgorithm.TokenBucket` | Allows a burst up to the limit, then refills steadily over the period |
+
+```kotlin
+rateLimit {
+    algorithm = RateLimitAlgorithm.SlidingWindow
+    limit("login", requests = 5, per = 1.minutes, algorithm = RateLimitAlgorithm.TokenBucket)
+}
+```
+
 By default every client address gets its own budget. Choose another key when that is wrong, for example many users behind one office address. `key` applies to every limit, and a named limit can take its own:
 
 ```kotlin

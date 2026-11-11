@@ -6,9 +6,16 @@ import io.ktor.utils.io.KtorDsl
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
+public enum class RateLimitAlgorithm {
+    FixedWindow,
+    SlidingWindow,
+    TokenBucket,
+}
+
 internal class NamedRateLimit(
     val requests: Int,
     val period: Duration,
+    val algorithm: RateLimitAlgorithm,
     val key: (suspend (ApplicationCall) -> Any)?,
 )
 
@@ -21,6 +28,7 @@ public class SvelteRateLimitConfig {
     public var enabled: Boolean = true
     public var apiWrites: Int = 120
     public var period: Duration = 1.minutes
+    public var algorithm: RateLimitAlgorithm = RateLimitAlgorithm.FixedWindow
 
     public fun key(key: suspend (ApplicationCall) -> Any) {
         clientKey = key
@@ -30,10 +38,11 @@ public class SvelteRateLimitConfig {
         name: String,
         requests: Int,
         per: Duration,
+        algorithm: RateLimitAlgorithm = RateLimitAlgorithm.FixedWindow,
         key: (suspend (ApplicationCall) -> Any)? = null,
     ) {
         require(requests > 0) { "A rate limit needs at least one request per period." }
         require(per.isPositive()) { "A rate limit needs a positive period." }
-        namedLimits[name] = NamedRateLimit(requests, per, key)
+        namedLimits[name] = NamedRateLimit(requests, per, algorithm, key)
     }
 }

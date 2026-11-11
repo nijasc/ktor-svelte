@@ -42,6 +42,15 @@ public final class io/github/nijasc/ktor/svelte/Page$Companion {
 	public final fun serializer (Lkotlinx/serialization/KSerializer;)Lkotlinx/serialization/KSerializer;
 }
 
+public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/Enum {
+	public static final field FixedWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
+	public static final field SlidingWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
+	public static final field TokenBucket Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
+}
+
 public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
 	public fun <init> ()V
 	public final fun getHtml ()Ljava/lang/String;
@@ -114,12 +123,14 @@ public final class io/github/nijasc/ktor/svelte/SvelteKt {
 
 public final class io/github/nijasc/ktor/svelte/SvelteRateLimitConfig {
 	public fun <init> ()V
+	public final fun getAlgorithm ()Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 	public final fun getApiWrites ()I
 	public final fun getEnabled ()Z
 	public final fun getPeriod-UwyO8pc ()J
 	public final fun key (Lkotlin/jvm/functions/Function2;)V
-	public final fun limit-exY8QGI (Ljava/lang/String;IJLkotlin/jvm/functions/Function2;)V
-	public static synthetic fun limit-exY8QGI$default (Lio/github/nijasc/ktor/svelte/SvelteRateLimitConfig;Ljava/lang/String;IJLkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public final fun limit-1Y68eR8 (Ljava/lang/String;IJLio/github/nijasc/ktor/svelte/RateLimitAlgorithm;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun limit-1Y68eR8$default (Lio/github/nijasc/ktor/svelte/SvelteRateLimitConfig;Ljava/lang/String;IJLio/github/nijasc/ktor/svelte/RateLimitAlgorithm;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public final fun setAlgorithm (Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;)V
 	public final fun setApiWrites (I)V
 	public final fun setEnabled (Z)V
 	public final fun setPeriod-LRDsOJo (J)V
