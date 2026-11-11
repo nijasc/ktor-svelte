@@ -297,6 +297,14 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client supports timeouts without cutting off event streams`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "const limit = timeout ?? (streaming ? undefined : apiConfig.timeout);")
+        assertContains(client, "prepare(method, path, options, 'text/event-stream', true)")
+        assertContains(client, "export function isTimeoutError(error: unknown): boolean {")
+    }
+
+    @Test
     fun `the client reports a new frontend build`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    onNewBuild?: (build: string) => void;")

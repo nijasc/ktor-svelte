@@ -6,6 +6,7 @@ export interface UploadProgress {
 export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
     fetch?: typeof fetch;
     onUploadProgress?: (progress: UploadProgress) => void;
+    timeout?: number;
 }
 
 export interface ApiConfig {
@@ -14,7 +15,12 @@ export interface ApiConfig {
     fetch?: typeof fetch;
     onUnauthorized?: (response: Response) => void;
     dedupeGets?: boolean;
+    timeout?: number;
     onNewBuild?: (build: string) => void;
+}
+
+export function isTimeoutError(error: unknown): boolean {
+    return error instanceof DOMException && error.name === 'TimeoutError';
 }
 
 export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
@@ -116,8 +122,15 @@ function newRequestId(): string {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
-function prepare(method: string, path: string, options: InternalOptions, accept: string) {
-    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, ...init } = options;
+function withTimeout(signal: AbortSignal | null | undefined, timeout: number | undefined): AbortSignal | undefined {
+    if (!timeout || timeout <= 0) return signal ?? undefined;
+    const timer = AbortSignal.timeout(timeout);
+    return signal ? AbortSignal.any([signal, timer]) : timer;
+}
+
+function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
+    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, ...init } = options;
+    const limit = timeout ?? (streaming ? undefined : apiConfig.timeout);
     const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
@@ -129,7 +142,7 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
         payload = isRawBody(body) ? body : JSON.stringify(body);
         if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
     }
-    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload }) };
+    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) }) };
 }
 
 let knownBuild: string | undefined;
@@ -175,7 +188,7 @@ function eventData<T>(data: string): T {
 }
 
 export async function* stream<T>(method: string, path: string, options: InternalOptions = {}): AsyncGenerator<T, void, undefined> {
-    const { url, operation, send } = prepare(method, path, options, 'text/event-stream');
+    const { url, operation, send } = prepare(method, path, options, 'text/event-stream', true);
     const response = await checked(await send(), url, operation);
     if (!response.body) return;
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();

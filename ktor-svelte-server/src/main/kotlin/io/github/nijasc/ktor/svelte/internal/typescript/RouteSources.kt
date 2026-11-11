@@ -16,8 +16,11 @@ internal fun handlerSource(node: RoutingNode): SourceLocation? {
     return sourceOf(handler)
 }
 
-internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> {
-    val locations = mutableMapOf<String, SourceLocation>()
+internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> =
+    routeEntries(root).mapNotNull { (key, source) -> source?.let { key to it } }.toMap()
+
+internal fun routeEntries(root: RoutingNode): Map<String, SourceLocation?> {
+    val locations = linkedMapOf<String, SourceLocation?>()
 
     fun walk(
         node: RoutingNode,
@@ -34,8 +37,9 @@ internal fun routeSources(root: RoutingNode): Map<String, SourceLocation> {
                 else -> path
             }
         val nodeMethod = (selector as? HttpMethodRouteSelector)?.method?.value ?: method
-        if (nodeMethod != null) {
-            handlerSource(node)?.let { locations.putIfAbsent("$nodeMethod ${nodePath.ifEmpty { "/" }}", it) }
+        if (nodeMethod != null && node.hasHandler()) {
+            val key = "$nodeMethod ${nodePath.ifEmpty { "/" }}"
+            if (key !in locations) locations[key] = handlerSource(node)
         }
         node.children.forEach { walk(it, nodePath, nodeMethod) }
     }
