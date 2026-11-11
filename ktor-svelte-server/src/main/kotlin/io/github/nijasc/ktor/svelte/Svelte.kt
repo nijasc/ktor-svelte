@@ -24,11 +24,14 @@ import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HE
 import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
 import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
+import io.github.nijasc.ktor.svelte.internal.security.findJsonShapeException
 import io.github.nijasc.ktor.svelte.internal.security.findPayloadTooLarge
+import io.github.nijasc.ktor.svelte.internal.security.installJsonShapeLimits
 import io.github.nijasc.ktor.svelte.internal.security.installRateLimits
 import io.github.nijasc.ktor.svelte.internal.security.mayHideErrorDetails
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
+import io.github.nijasc.ktor.svelte.internal.security.respondJsonShape
 import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
 import io.github.nijasc.ktor.svelte.internal.startupLine
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
@@ -43,6 +46,7 @@ import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.PluginBuilder
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
+import io.ktor.server.application.hooks.ResponseSent
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.application.pluginOrNull
@@ -98,6 +102,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
+        val metrics = SvelteMetrics()
+        application.attributes.put(SvelteMetricsKey, metrics)
 
         installTransport(application, pluginConfig.transportConfig)
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
@@ -133,11 +139,22 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         val maxApiBodySize = pluginConfig.maxApiBodySize
         if (maxApiBodySize != null) installBodyLimit(resolver, maxApiBodySize)
+        installJsonShapeLimits(application, resolver, pluginConfig.maxJsonDepth, pluginConfig.maxJsonStringLength)
         installRateLimits(application, pluginConfig.rateLimitConfig, resolver)
         if (pluginConfig.originCheck) {
             val originCheck = OriginCheck(pluginConfig.allowedOriginList, application.developmentMode)
             onCall { call ->
-                if (resolver.isApiPath(decodedPathOrRaw(call))) originCheck.refuseIfCrossOrigin(call)
+                if (resolver.isApiPath(decodedPathOrRaw(call)) &&
+                    originCheck.refuseIfCrossOrigin(call)
+                ) {
+                    metrics.crossOrigin.incrementAndGet()
+                }
+            }
+        }
+
+        on(ResponseSent) { call ->
+            if (call.response.status() == HttpStatusCode.TooManyRequests && resolver.isApiPath(decodedPathOrRaw(call))) {
+                metrics.rateLimited.incrementAndGet()
             }
         }
 
@@ -147,7 +164,12 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
                 return@on
             }
+            cause.findJsonShapeException()?.let { shape ->
+                respondJsonShape(call, shape)
+                return@on
+            }
             if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) {
+                metrics.bodyTooLarge.incrementAndGet()
                 respondBodyTooLarge(call, maxApiBodySize)
                 return@on
             }
@@ -175,7 +197,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                         return@get
                     }
                     call.response.header(HttpHeaders.CacheControl, "no-store")
-                    call.respondText(statusJson(store.manifest(), devProxy, devUrl), ContentType.Application.Json)
+                    call.respondText(statusJson(store.manifest(), devProxy, devUrl, metrics), ContentType.Application.Json)
                 }.hide()
             }
             if (pluginConfig.healthEndpoint) {

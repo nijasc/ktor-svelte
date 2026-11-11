@@ -47,6 +47,8 @@ public class SvelteConfig {
     public var apiCompression: Boolean = true
     public var buildHeader: Boolean = true
     public var maxApiBodySize: Long? = 1024L * 1024L
+    public var maxJsonDepth: Int? = 64
+    public var maxJsonStringLength: Int? = null
 
     public fun apiPrefixes(vararg prefixes: String) {
         apiPrefixList = prefixes.toList()

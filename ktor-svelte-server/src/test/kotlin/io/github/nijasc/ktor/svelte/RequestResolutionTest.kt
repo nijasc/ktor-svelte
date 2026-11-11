@@ -156,9 +156,9 @@ class RequestResolutionTest {
         }
 
     @Test
-    fun `post to a frontend path is not handled`() =
+    fun `post to a frontend page is not allowed`() =
         svelteTest {
-            assertEquals(HttpStatusCode.NotFound, client.post("/about").status)
+            assertEquals(HttpStatusCode.MethodNotAllowed, client.post("/about").status)
         }
 
     @Test

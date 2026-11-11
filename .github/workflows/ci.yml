@@ -30,7 +30,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-        run: .github/scripts/changed-areas.sh "$EVENT" "$BASE" "$HEAD"
+        run: bash .github/scripts/changed-areas.sh "$EVENT" "$BASE" "$HEAD"
 
   build:
     needs: changes

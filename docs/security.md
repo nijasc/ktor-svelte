@@ -91,6 +91,26 @@ Set `maxApiBodySize = null` to remove the limit.
 
 Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
 
+**Counting refusals.** ktor-svelte counts every refused request, so attacks and misconfigurations show up as numbers, not only as log lines. Read the counters from `application.svelteMetrics`, or from the `refusals` object of the status endpoint. To export them, bind them to your metrics library, for example Micrometer:
+
+```kotlin
+val metrics = svelteMetrics
+registry.gauge("svelte.refusals", listOf(Tag.of("reason", "cross_origin")), metrics) { it.crossOriginRefusals.toDouble() }
+registry.gauge("svelte.refusals", listOf(Tag.of("reason", "body_too_large")), metrics) { it.bodyTooLargeRefusals.toDouble() }
+registry.gauge("svelte.refusals", listOf(Tag.of("reason", "rate_limit")), metrics) { it.rateLimitRefusals.toDouble() }
+```
+
+**JSON shape.** A small body can still be expensive to parse when it nests thousands of arrays. JSON bodies on API paths are checked while they stream in, before any parsing: more than 64 levels of nesting answers 400 with `{"message":"Request JSON is nested deeper than 64 levels."}`. Set `maxJsonStringLength` to also refuse long strings, which is off by default because the body limit already caps them:
+
+```kotlin
+install(Svelte) {
+    maxJsonDepth = 32
+    maxJsonStringLength = 10_000
+}
+```
+
+Set `maxJsonDepth = null` to turn the depth check off.
+
 **Rate limit.** Each client may send 120 writes per minute to your API paths, meaning every method except GET, HEAD, OPTIONS and TRACE. More get 429 with a `Retry-After` header. Reads and frontend files are never limited. Clients are told apart by `call.request.origin.remoteHost`, so behind a reverse proxy install `XForwardedHeaders` or `ForwardedHeaders`, or every user shares one limit.
 
 Routes such as login need a much tighter limit. Name one, and wrap the routes in Ktor's own `rateLimit`:
@@ -107,6 +127,21 @@ routing {
     rateLimit(RateLimitName("login")) {
         post("/api/login") { /* ... */ }
     }
+}
+```
+
+Limits use a fixed window by default: the budget refills completely at the end of each period, so a client can send a full budget just before the edge and another just after it. Pick another algorithm when that matters:
+
+| Algorithm | Behaviour |
+|---|---|
+| `RateLimitAlgorithm.FixedWindow` | The default. Cheapest, but allows a burst of twice the limit around the window edge |
+| `RateLimitAlgorithm.SlidingWindow` | Never more than the limit in any period, wherever it starts |
+| `RateLimitAlgorithm.TokenBucket` | Allows a burst up to the limit, then refills steadily over the period |
+
+```kotlin
+rateLimit {
+    algorithm = RateLimitAlgorithm.SlidingWindow
+    limit("login", requests = 5, per = 1.minutes, algorithm = RateLimitAlgorithm.TokenBucket)
 }
 ```
 
