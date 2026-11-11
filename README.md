@@ -703,6 +703,10 @@ Set `maxApiBodySize = null` to remove the limit.
 
 Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
 
+## Reporting a vulnerability
+
+See [SECURITY.md](SECURITY.md) for how to report a vulnerability privately, and for a table of every secure default.
+
 ## API docs
 
 `apiDocs = true` serves Swagger UI at `/api/docs` in development mode only, using the same OpenAPI document as `generateTs`. Change the path with `apiDocsPath`. The page loads its scripts from a public CDN, so it needs internet access.
