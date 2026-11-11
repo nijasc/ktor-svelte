@@ -190,6 +190,25 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteLiveTemplates writes the templates and installs them into each IDE`() {
+        val project = project()
+        val config = dir.resolve("jetbrains").apply { mkdirs() }
+        listOf("IntelliJIdea2026.2", "WebStorm2026.1", "DataSpell2026.1").forEach { config.resolve(it).mkdirs() }
+
+        project.run("svelteLiveTemplates")
+        val written = dir.resolve("build/ktor-svelte/live-templates/ktor-svelte.xml")
+        assertContains(written.readText(), "<template name=\"ksget\"")
+        assertFalse(config.resolve("IntelliJIdea2026.2/templates").exists())
+
+        val output = project.run("svelteLiveTemplates", "--install", "--config-dir=${config.path}").output
+
+        assertEquals(written.readText(), config.resolve("IntelliJIdea2026.2/templates/ktor-svelte.xml").readText())
+        assertTrue(config.resolve("WebStorm2026.1/templates/ktor-svelte.xml").isFile)
+        assertFalse(config.resolve("DataSpell2026.1/templates").exists())
+        assertContains(output, "installed live templates for IntelliJIdea2026.2")
+    }
+
+    @Test
     fun `svelteInit creates a project and installs dependencies`() {
         val project = project()
         project.frontend

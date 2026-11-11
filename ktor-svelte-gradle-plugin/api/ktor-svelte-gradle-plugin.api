@@ -342,6 +342,14 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteLibraryTas
 	public abstract fun getSpec ()Lorg/gradle/api/provider/Property;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteLiveTemplatesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getConfigDirectory ()Lorg/gradle/api/provider/Property;
+	public abstract fun getInstall ()Lorg/gradle/api/provider/Property;
+	public abstract fun getTemplateFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public final fun write ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteOutdatedTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public final fun outdated ()V
