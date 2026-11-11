@@ -1,5 +1,11 @@
+export interface UploadProgress {
+    loaded: number;
+    total?: number;
+}
+
 export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
     fetch?: typeof fetch;
+    onUploadProgress?: (progress: UploadProgress) => void;
 }
 
 export interface ApiConfig {
@@ -67,9 +73,39 @@ async function parseResponse(response: Response): Promise<unknown> {
     return text === '' ? undefined : text;
 }
 
+function responseHeaders(raw: string): Headers {
+    const headers = new Headers();
+    for (const line of raw.trim().split(/[\r\n]+/)) {
+        const separator = line.indexOf(':');
+        if (separator > 0) headers.append(line.slice(0, separator).trim(), line.slice(separator + 1).trim());
+    }
+    return headers;
+}
+
+function sendWithProgress(onProgress: (progress: UploadProgress) => void): typeof fetch {
+    return (input, init = {}) =>
+        new Promise<Response>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(init.method ?? 'GET', String(input));
+            new Headers(init.headers).forEach((value, key) => xhr.setRequestHeader(key, value));
+            xhr.withCredentials = init.credentials === 'include';
+            xhr.responseType = 'blob';
+            xhr.upload.onprogress = (event) => onProgress({ loaded: event.loaded, total: event.lengthComputable ? event.total : undefined });
+            xhr.onload = () => {
+                const empty = [101, 204, 205, 304].includes(xhr.status);
+                const headers = responseHeaders(xhr.getAllResponseHeaders());
+                resolve(new Response(empty ? null : xhr.response, { status: xhr.status, statusText: xhr.statusText, headers }));
+            };
+            xhr.onerror = () => reject(new TypeError('Network request failed'));
+            xhr.onabort = () => reject(new DOMException('The upload was aborted.', 'AbortError'));
+            init.signal?.addEventListener('abort', () => xhr.abort());
+            xhr.send((init.body ?? null) as XMLHttpRequestBodyInit | null);
+        });
+}
+
 function prepare(method: string, path: string, options: InternalOptions, accept: string) {
-    const { query, body, operation, fetch: customFetch, headers, ...init } = options;
-    const send = customFetch ?? apiConfig.fetch ?? fetch;
+    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, ...init } = options;
+    const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);
     const url = apiConfig.baseUrl + path + queryString(query);
     const merged = new Headers(apiConfig.headers);
     merged.set('Accept', accept);

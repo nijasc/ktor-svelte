@@ -658,7 +658,13 @@ internal class TypeScriptGenerator(
         }
 
         val requestBody = operation.objectAt("requestBody")
-        val bodyType = requestBody?.objectAt("content")?.let { preferredSchema(it) }?.let { tsType(it, references) }
+        val bodyContent = requestBody?.objectAt("content")
+        val bodyType =
+            if (bodyContent?.keys?.any { it.startsWith(MULTIPART_PREFIX) } == true) {
+                "FormData"
+            } else {
+                bodyContent?.let { preferredSchema(it) }?.let { tsType(it, references) }
+            }
         if (requestBody != null) signature += "body: ${bodyType ?: "unknown"}"
 
         val queryParameters = declared.filter { it.stringAt("in") == "query" }
@@ -948,3 +954,4 @@ private enum class ValidationHelper(
 }
 
 private const val EVENT_STREAM = "text/event-stream"
+private const val MULTIPART_PREFIX = "multipart/"
