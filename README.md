@@ -4,11 +4,12 @@
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.nijasc/ktor-svelte-server?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.nijasc/ktor-svelte-server)
 [![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.nijasc.ktor-svelte?label=Gradle%20Plugin%20Portal)](https://plugins.gradle.org/plugin/io.github.nijasc.ktor-svelte)
 [![CI](https://img.shields.io/github/actions/workflow/status/nijasc/ktor-svelte/ci.yml?branch=main&label=CI)](https://github.com/nijasc/ktor-svelte/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-nijasc.github.io%2Fktor--svelte-FF3E00?logo=readthedocs&logoColor=white)](https://nijasc.github.io/ktor-svelte/)
 [![License](https://img.shields.io/github/license/nijasc/ktor-svelte)](LICENSE)
 [![Ktor](https://img.shields.io/badge/Ktor-3.x-087CFA?logo=ktor&logoColor=white)](https://ktor.io)
 [![Svelte](https://img.shields.io/badge/Svelte-5.57.3%2B-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev)
 
-**Latest release:** [Maven Central](https://central.sonatype.com/artifact/io.github.nijasc/ktor-svelte-server) | [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.nijasc.ktor-svelte) | [Release notes](https://github.com/nijasc/ktor-svelte/releases/latest) | [API reference](https://nijasc.github.io/ktor-svelte/)
+**Latest release:** [Maven Central](https://central.sonatype.com/artifact/io.github.nijasc/ktor-svelte-server) | [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.nijasc.ktor-svelte) | [Release notes](https://github.com/nijasc/ktor-svelte/releases/latest) | [Docs](https://nijasc.github.io/ktor-svelte/) | [API reference](https://nijasc.github.io/ktor-svelte/api/)
 
 Ship your Ktor API and your SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that always matches your routes.
 
@@ -166,17 +167,18 @@ implementation("io.github.nijasc:ktor-svelte-server:0.8.0")
 
 ## Documentation
 
-| Page | Covers |
+The full documentation lives at **[nijasc.github.io/ktor-svelte](https://nijasc.github.io/ktor-svelte/)**, with search, guides, recipes, a troubleshooting page, the changelog of every release, and docs for each released version.
+
+| Start here | |
 |---|---|
-| [Frontend libraries](docs/frontend-libraries.md) | Tailwind, DaisyUI, Lucide and i18n, configured in Gradle with typed helpers on both sides. |
-| [Generated TypeScript](docs/typescript.md) | Types and a client generated from your Ktor routes, and how to call the API from Svelte. |
-| [Server features](docs/server.md) | Validation, transport, auth, runtime config and the endpoints ktor-svelte can add. |
-| [Security](docs/security.md) | The protections that are on by default, and how to change them. |
-| [Configuration](docs/configuration.md) | Every setting of `install(Svelte)` and `svelte { }`, and every Gradle task and property. |
-| [Dev workflow](docs/dev-workflow.md) | Hot reload for Svelte and Kotlin, debugging and the dev proxy. |
-| [How it works](docs/how-it-works.md) | Build tasks, request resolution, limits and the FAQ. |
-| [Recipes](docs/recipes.md) | Sessions, uploads, live updates, paging and an admin area, end to end. |
-| [API reference](https://nijasc.github.io/ktor-svelte/) | Every public class and setting, generated from the code. |
+| [What is ktor-svelte?](https://nijasc.github.io/ktor-svelte/guide/introduction) | How the pieces fit together |
+| [Getting started](https://nijasc.github.io/ktor-svelte/guide/getting-started) | A new project in one command |
+| [Generated TypeScript](https://nijasc.github.io/ktor-svelte/features/typescript) | The typed client and how to call your API |
+| [Deployment](https://nijasc.github.io/ktor-svelte/guide/deployment) | JAR, Docker, reverse proxies and health checks |
+| [Recipes](https://nijasc.github.io/ktor-svelte/recipes/) | Sessions, uploads, live updates, paging, admin areas |
+| [Troubleshooting](https://nijasc.github.io/ktor-svelte/reference/troubleshooting) | Every error message, its cause and its fix |
+| [Changelog](https://nijasc.github.io/ktor-svelte/changelog) | What changed in each release |
+| [API reference](https://nijasc.github.io/ktor-svelte/api/) | Every public class and setting |
 
 ## Examples
 

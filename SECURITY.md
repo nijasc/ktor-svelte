@@ -26,7 +26,7 @@ Out of scope are vulnerabilities in Ktor, SvelteKit, Vite or other dependencies 
 
 ## Secure defaults
 
-ktor-svelte turns these protections on without any configuration. The [security docs](docs/security.md) explain each one and how to change it.
+ktor-svelte turns these protections on without any configuration. The [security docs](https://nijasc.github.io/ktor-svelte/security) explain each one and how to change it.
 
 | Protection | Default | Setting |
 | --- | --- | --- |
