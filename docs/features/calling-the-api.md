@@ -119,3 +119,17 @@ To refresh the files without your dev server, for example in CI, run the task be
 ```bash
 ./gradlew svelteGenerateTs
 ```
+
+## Request IDs
+
+Every call from the generated client sends a fresh `X-Request-Id`. The server keeps it when it is well formed, letters, digits, dots, dashes and underscores up to 128 characters, or generates one, and sends it back in the response. Unhandled errors are logged with it, and `ApiError.requestId` carries it, so a user can quote one ID that support finds in the logs:
+
+```ts
+try {
+    await api.notes.create(draft);
+} catch (error) {
+    if (error instanceof ApiError) showError(`Something went wrong. Reference: ${error.requestId}`);
+}
+```
+
+The ID is available in routes as `call.callId`, and with Ktor's `CallLogging` you can put it into every log line with `callIdMdc("requestId")`. The client only sends the header to its own origin, so it never causes CORS preflights. If you install Ktor's `CallId` yourself, your setup is used. `requestIds = false` turns it off.

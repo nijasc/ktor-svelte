@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.ktor.server.swagger)
     implementation(libs.ktor.server.body.limit)
     implementation(libs.ktor.server.rate.limit)
+    implementation(libs.ktor.server.call.id)
     api(libs.serialization.json)
     compileOnly(libs.ktor.serialization.xml)
     compileOnly(libs.ktor.server.compression.zstd)
