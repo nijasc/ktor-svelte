@@ -185,6 +185,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client can share GET requests in flight when asked to`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    dedupeGets?: boolean;")
+        assertContains(client, "apiConfig.dedupeGets === true && method === 'GET' && !options.signal && !options.fetch && !options.headers")
+    }
+
+    @Test
     fun `undescribed routes still get a service with unknown result`() {
         val source = services("""{"/api/users/{userId}/posts/{postId}":{"get":{}}}""")
         assertContains(source, "export const users = {")
