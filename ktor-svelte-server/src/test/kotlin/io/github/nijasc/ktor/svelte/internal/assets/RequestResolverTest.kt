@@ -50,6 +50,16 @@ class RequestResolverTest {
     }
 
     @Test
+    fun `missing well-known paths never get the fallback`() {
+        val spa = RequestResolver(listOf("/api"), spaFallback = "200.html", notFoundPage = "404.html", paramRoutes = listOf("/[slug]"))
+        val manifest = manifestOf("200.html", "404.html", ".well-known/security.txt")
+        assertEquals(Resolution.Serve(".well-known/security.txt"), spa.resolve("/.well-known/security.txt", acceptsHtml = true, manifest))
+        assertEquals(Resolution.Unhandled, spa.resolve("/.well-known/assetlinks", acceptsHtml = true, manifest))
+        assertEquals(Resolution.Unhandled, spa.resolve("/.well-known/acme-challenge/token", acceptsHtml = true, manifest))
+        assertEquals(Resolution.Serve("200.html"), spa.resolve("/notes", acceptsHtml = true, manifest))
+    }
+
+    @Test
     fun `root api prefix claims every path`() {
         val rootResolver = RequestResolver(listOf("/"), spaFallback = null, notFoundPage = null)
         assertEquals(Resolution.Unhandled, rootResolver.resolve("/about", acceptsHtml = true, manifestOf("about.html")))
