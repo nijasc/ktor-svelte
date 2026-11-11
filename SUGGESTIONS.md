@@ -203,3 +203,102 @@ None yet.
 | SITE-12 | Compile the Kotlin and type-check the TypeScript in every docs code block in CI | Snippets break silently when the API changes | M |
 | SITE-13 | Add social preview images per page | Shared links look empty in chat apps | S |
 | SITE-14 | Publish a "main" version of the docs on every push to `main` | Contributors want to read the docs for unreleased changes | S |
+
+### Testing
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| TEST-01 | Add property-based tests for `RequestResolver` with random paths | Path resolution is security critical, and example tests only cover cases someone thought of | S |
+| TEST-02 | Fuzz `SchemaConstraints` and the TypeScript generator with random schemas | Both walk arbitrary user types, where earlier bugs were found | M |
+| TEST-03 | Add Playwright tests to the notes example for HMR, themes, locales and forms | e2e tests check HTTP responses but never run the frontend in a browser | M |
+| TEST-04 | Test the Gradle plugin against the newest Gradle nightly weekly | Configuration-cache rules change often and break plugins silently | S |
+| TEST-05 | Test the published POM and Gradle module metadata for expected dependencies and scopes | A wrong scope only shows up for users | S |
+| TEST-06 | Ship a `ktor-svelte-testing` artifact with `svelteTestApplication { }` and a fixture build | Users who test routes with the plugin installed copy fixture code from this repository | M |
+| TEST-07 | Type-check the generated client of every generator test case with `tsc` | Generator tests compare strings but never prove the output compiles | M |
+| TEST-08 | Run the generated client's runtime helpers under bun in CI | `apiWith`, `pages`, dedupe and uploads are only checked by hand | S |
+| TEST-09 | Add mutation testing for the security guards | Shows which guard conditions no test actually checks | M |
+| TEST-10 | Run the e2e suites on Windows and macOS runners | Windows-only bugs such as the `deepClean` lock were found by accident | S |
+| TEST-11 | Add a load test for the static file path and API compression | Throughput regressions only show up under concurrency | M |
+| TEST-12 | Test against the oldest supported Ktor, Kotlin and SvelteKit versions in CI | The compatibility table claims versions that are never tested | M |
+
+### Release and distribution
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| REL-01 | Sign release artifacts with Sigstore and publish SLSA provenance | Lets users verify that a JAR was built from this repository | M |
+| REL-02 | Publish a CycloneDX SBOM with every release | Companies need it to approve dependencies | S |
+| REL-03 | Publish snapshot builds from `main` | Users can try fixes before a release without building from source | S |
+| REL-04 | Add a compatibility matrix per release to the docs site | Users upgrading Ktor or Kotlin need to know which version supports it | S |
+| REL-05 | Generate the migration notes section of a release from commits marked `BREAKING CHANGE` | Breaking changes deserve more than one line in the notes | S |
+| REL-06 | Announce releases in GitHub Discussions automatically | Watchers of the repository see new versions without a mailing list | S |
+| REL-07 | Run the setup script against the release before it is announced | A release that breaks new projects should never reach users | M |
+| REL-08 | Publish a Docker image with a sample app for quick evaluation | Some people want to click around before installing anything | S |
+| REL-09 | Keep a security advisory process with CVE requests through GitHub | Fixes for vulnerabilities need a public, trackable record | S |
+| REL-10 | Plan a 1.0 with a written API stability promise | Teams wait for 1.0 before using a library in production | M |
+
+### Observability
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| OBS-01 | Expose Micrometer metrics for served files, cache hits, 304s, compression and proxy errors | Operators cannot see how the frontend is served today | M |
+| OBS-02 | Add OpenTelemetry spans for request resolution and the dev proxy | Traces stop at the Ktor route and miss the frontend path | M |
+| OBS-03 | Log the build fingerprint and version at startup in production | Support needs to know which frontend build a server runs | S |
+| OBS-04 | Add structured JSON logging for the plugin's own messages, opt-in | Log pipelines parse JSON better than free text | S |
+| OBS-05 | Count rate-limit refusals, origin-check refusals and body-limit refusals as metrics | Attacks and misconfigurations look the same in logs without numbers | S |
+| OBS-06 | Add a browser error reporter that posts uncaught errors to a Ktor route, opt-in | Frontend errors in production are invisible without a third-party service | M |
+| OBS-07 | Report Web Vitals from the browser to a Ktor route, opt-in | Performance in the field is invisible without a third-party service | M |
+| OBS-08 | Add a request ID that flows from the generated client to Ktor logs | Matching a browser error to a server log line is guesswork today | S |
+| OBS-09 | Include the frontend build fingerprint in API responses as a header | Clients can detect that a new frontend was deployed and reload | S |
+| OBS-10 | Add a dev-only log of slow API calls with the route source from `routes.json` | Slow endpoints are easier to fix when the log points at the code | S |
+
+### Accessibility and internationalisation
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| A11Y-01 | Run axe accessibility checks on the example apps in CI | Accessibility regressions in examples teach bad patterns | M |
+| A11Y-02 | Make the generated `Icon` component require a label or `aria-hidden` | Icons without labels are announced as nothing or as noise | S |
+| A11Y-03 | Add right-to-left locale support to the i18n helpers, including `dir` on `<html>` | Arabic and Hebrew users get a broken layout today | M |
+| A11Y-04 | Add pluralisation and number, date and currency formatting to the generated messages | Messages with counts and amounts need locale rules | M |
+| A11Y-05 | Respect `prefers-reduced-motion` in the theme helpers and examples | Animations can make some users sick | S |
+| A11Y-06 | Return localised validation messages from the server based on `Accept-Language` | Server errors appear in English in a German UI | M |
+| A11Y-07 | Check message files for missing and unused keys in `svelteSync` | Missing translations show raw keys to users | S |
+| A11Y-08 | Add focus management after client-side navigation to the layout template | Screen reader users lose their place after SPA navigation | S |
+| A11Y-09 | Add a skip link and landmark roles to the generated layout | Keyboard users have to tab through the whole navigation | S |
+| A11Y-10 | Support locale-specific prerendered pages for SEO | Search engines only see the default language today | M |
+
+### Examples
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| EX-01 | Add an example with sign in, sessions and an admin area | The recipes describe it, but nothing runs it end to end | M |
+| EX-02 | Add an example with Postgres, Exposed and Flyway | Most real apps have a database, and the setup script already writes one | M |
+| EX-03 | Add an example with live updates over SSE | Streaming is a headline feature without a runnable example | S |
+| EX-04 | Add an example deployed to a free host with a live demo link | People want to see the result before cloning anything | M |
+| EX-05 | Add an example with two frontends: public site and admin | Shows how far one JAR can go and tests multi-frontend support | L |
+| EX-06 | Add an example that uses npm instead of bun | Most users have npm, and the examples only show bun | S |
+| EX-07 | Add a minimal example without the Ktor Gradle plugin, only `jar` and `application` | Shows the smallest setup that works without extra plugins | S |
+| EX-08 | Keep a screenshot of each example in the docs, updated by CI | A picture tells readers what they are about to build | S |
+
+### Architecture
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| ARC-01 | Split the TypeScript generator into its own module with no Ktor dependency | It could be reused by other OpenAPI sources and tested faster | M |
+| ARC-02 | Move the dev proxy into its own small module | Production apps carry code they never use | M |
+| ARC-03 | Replace the hand-written manifest JSON writer with kotlinx.serialization in the Gradle plugin | Two hand-written JSON formats are easy to get out of step | S |
+| ARC-04 | Share the manifest model between the plugin and the runtime in a tiny common module | The format is defined twice today | M |
+| ARC-05 | Define a small extension API so third parties can add library integrations like DaisyUI | New libraries need changes in this repository today | L |
+| ARC-06 | Replace reflection on Ktor internals in `routes.json` with a supported hook, and ask Ktor for one | Internal APIs can change in any Ktor release | M |
+| ARC-07 | Generate the TypeScript templates' type definitions from one source of truth | Template files and generator code can disagree about names | M |
+| ARC-08 | Write architecture decision records for the big choices: adapter-static, manifest, generated client | New contributors re-open settled questions | S |
+
+### Community and governance
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| COM-01 | Turn on GitHub Discussions with categories for questions, ideas and show and tell | Questions in issues get lost among bugs | S |
+| COM-02 | Add issue templates for questions and docs problems next to bugs and features | Better templates mean fewer back-and-forth comments | S |
+| COM-03 | Label good first issues and help-wanted issues | New contributors need an obvious place to start | S |
+| COM-04 | Add a public roadmap as a GitHub project board | Users want to know what is coming before they commit to the library | S |
+| COM-05 | Add a showcase page on the docs site for apps built with ktor-svelte | Real users are the best argument for trying it | S |
+| COM-06 | Add a `CITATION.cff` and funding links | Makes the project easy to cite and support | S |
