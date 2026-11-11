@@ -45,6 +45,8 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 
 The examples are separate Gradle builds that pull in the root build with `includeBuild`, so they use the plugin the way a real project does. They are also the end-to-end test fixtures.
 
+The [architecture page](https://nijasc.github.io/ktor-svelte/main/reference/architecture) shows how the build output reaches the JAR and how a request reaches a file, with the source file for each step.
+
 ## Frontend libraries
 
 Package versions for `svelteSync` are in `libraries/LibrarySpec.kt`, and the DaisyUI theme list is in `SvelteLibraries.kt`. The fixed parts of generated files are templates in `ktor-svelte-gradle-plugin/src/main/resources/.../gradle/templates/`, and the static TypeScript of `generateTs` sits in `ktor-svelte-server/src/main/resources/.../internal/typescript/`. Templates use `{{name}}` placeholders, and rendering fails when a value is missing or unused, so edit a template like the file it produces. When you change a generator, run `./gradlew -p examples/notes svelteSync` and commit the result. CI fails if the notes app is out of sync.
