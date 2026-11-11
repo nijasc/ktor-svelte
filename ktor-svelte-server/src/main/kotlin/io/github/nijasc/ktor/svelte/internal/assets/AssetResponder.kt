@@ -16,9 +16,11 @@ import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.util.cio.readChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import java.io.InputStream
+import java.nio.file.Path
 
 private const val IMMUTABLE_PREFIX = "_app/immutable/"
 private const val VERSION_FILE = "_app/version.json"
@@ -68,8 +70,14 @@ internal class AssetResponder(
             return
         }
 
+        val servedPath = path + encoding?.fileSuffix.orEmpty()
+        val localFile = store.localFile(servedPath)
+        if (localFile != null) {
+            call.respond(FileContent(status, contentType, length, localFile))
+            return
+        }
         val stream =
-            store.open(path + encoding?.fileSuffix.orEmpty())
+            store.open(servedPath)
                 ?: error("ktor-svelte manifest lists '$path', but the file could not be opened.")
         call.respond(StreamContent(status, contentType, length, stream))
     }
@@ -118,4 +126,13 @@ private class StreamContent(
     private val stream: InputStream,
 ) : OutgoingContent.ReadChannelContent() {
     override fun readFrom(): ByteReadChannel = stream.toByteReadChannel()
+}
+
+private class FileContent(
+    override val status: HttpStatusCode,
+    override val contentType: ContentType,
+    override val contentLength: Long,
+    private val file: Path,
+) : OutgoingContent.ReadChannelContent() {
+    override fun readFrom(): ByteReadChannel = file.readChannel()
 }

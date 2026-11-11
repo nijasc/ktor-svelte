@@ -732,7 +732,7 @@ At build time, three tasks run before `processResources`:
 2. `svelteBuild` runs your build script.
 3. `svelteBundle` copies the output to `ktor-svelte/public/` in your resources, and writes `ktor-svelte/manifest.json` with a hash of every file.
 
-`svelteBundle` leaves out hidden files such as `.env` (but keeps `.well-known`), source maps and symlinks, and warns about any hidden files it skipped. `SvelteSource.Directory` also ignores hidden files and symlinks, but serves source maps.
+`svelteBundle` leaves out hidden files such as `.env` (but keeps `.well-known`), source maps and symlinks, and warns about any hidden files it skipped. `SvelteSource.Directory` also ignores hidden files and symlinks, but serves source maps. It streams each file through a non-blocking file channel with its exact `Content-Length`, which makes it a good fit for large builds served from a volume.
 
 At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more specific routes, so yours win. GET and HEAD requests that reach the catch-all are resolved in this order:
 
@@ -824,7 +824,7 @@ install(Svelte) {
 
 A route of yours such as `get("/{slug}")` beats the frontend. That is intended, but it can hide pages.
 
-ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. `.zst` files next to them, for example from a Vite compression plugin, are bundled too and preferred for browsers that accept `zstd`, since they decompress faster.
+ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`. `.zst` files next to them, for example from a Vite compression plugin, are bundled too and preferred for browsers that accept `zstd`, since they decompress faster.
 
 If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
 
@@ -841,6 +841,7 @@ svelte {
     buildEnv = emptySet()
     addRuntimeDependency = true
     includeSourceMaps = false
+    precompress = true
     dev {
         port = 5173
         script = "dev"
@@ -859,6 +860,7 @@ svelte {
 | `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](#frontend-libraries) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
+| `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
 | `dev.script` | `package.json` script that starts Vite |
 | `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |

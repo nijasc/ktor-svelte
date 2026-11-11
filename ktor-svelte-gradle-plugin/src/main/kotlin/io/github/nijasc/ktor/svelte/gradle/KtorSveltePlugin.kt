@@ -362,6 +362,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.buildScript.convention("build")
         extension.addRuntimeDependency.convention(true)
         extension.includeSourceMaps.convention(false)
+        extension.precompress.convention(true)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
         extension.dev.debugPort.convention(5005)
@@ -462,6 +463,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.buildOutput.set(build.flatMap { it.outputDirectory })
             task.outputDirName.set(extension.outputDir)
             task.includeSourceMaps.set(extension.includeSourceMaps)
+            task.precompress.set(extension.precompress)
             task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
             task.onlyIf("$SKIP_PROPERTY and $DEV_PROPERTY are not set") { !skipFrontend }
         }

@@ -14,9 +14,18 @@ import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
+import java.util.zip.Deflater
+import java.util.zip.GZIPOutputStream
 
 private const val MANIFEST_FORMAT_VERSION = 1
 private val ENCODINGS = listOf("zstd" to ".zst", "br" to ".br", "gzip" to ".gz")
+private const val MIN_COMPRESSIBLE_SIZE = 1024L
+private const val MAX_USEFUL_RATIO = 0.9
+private val COMPRESSIBLE_EXTENSIONS =
+    setOf("html", "js", "mjs", "css", "svg", "json", "webmanifest", "xml", "txt", "csv", "map", "wasm", "ico", "ttf", "otf", "eot")
+
+internal fun isCompressible(path: String): Boolean =
+    path.substringAfterLast('/').substringAfterLast('.', "").lowercase() in COMPRESSIBLE_EXTENSIONS
 
 internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
 
@@ -34,6 +43,9 @@ public abstract class SvelteBundleTask : DefaultTask() {
 
     @get:Input
     public abstract val includeSourceMaps: Property<Boolean>
+
+    @get:Input
+    public abstract val precompress: Property<Boolean>
 
     @get:OutputDirectory
     public abstract val bundleDirectory: DirectoryProperty
@@ -63,7 +75,42 @@ public abstract class SvelteBundleTask : DefaultTask() {
         target.deleteRecursively()
         val publicRoot = target.resolve("ktor-svelte/public")
         files.forEach { (path, file) -> file.copyTo(publicRoot.resolve(path), overwrite = true) }
-        target.resolve("ktor-svelte/manifest.json").writeText(manifestJson(files))
+        val compressed = if (precompress.get()) gzipUncompressed(files, publicRoot) else emptyMap()
+        target.resolve("ktor-svelte/manifest.json").writeText(manifestJson(files + compressed))
+    }
+
+    private fun gzipUncompressed(
+        files: Map<String, File>,
+        publicRoot: File,
+    ): Map<String, File> =
+        files
+            .filter { (path, file) ->
+                isCompressible(path) &&
+                    file.length() >= MIN_COMPRESSIBLE_SIZE &&
+                    !isEncodedVariant(path, files.keys) &&
+                    ENCODINGS.none { (_, suffix) -> (path + suffix) in files }
+            }.mapNotNull { (path, file) ->
+                val variant = publicRoot.resolve("$path.gz")
+                gzip(file, variant)
+                if (variant.length() <= file.length() * MAX_USEFUL_RATIO) {
+                    "$path.gz" to variant
+                } else {
+                    variant.delete()
+                    null
+                }
+            }.toMap()
+
+    private fun gzip(
+        source: File,
+        target: File,
+    ) {
+        target.outputStream().use { output ->
+            object : GZIPOutputStream(output) {
+                init {
+                    def.setLevel(Deflater.BEST_COMPRESSION)
+                }
+            }.use { gzip -> source.inputStream().use { it.copyTo(gzip) } }
+        }
     }
 
     private fun manifestJson(files: Map<String, File>): String {
