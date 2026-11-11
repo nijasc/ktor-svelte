@@ -511,7 +511,9 @@ public class KtorSveltePlugin : Plugin<Project> {
     private fun frontendOutput(extension: SvelteExtension) =
         extension.frontendDir.zip(extension.outputDir) { dir, output ->
             if (!isFolderInsideFrontend(output)) {
-                throw GradleException("svelte.outputDir must be a path inside svelte.frontendDir, but was '$output'.")
+                throw GradleException(
+                    "svelte.outputDir must be a path inside svelte.frontendDir, but was '$output'." + DocLink.GRADLE.see(),
+                )
             }
             dir.dir(output)
         }

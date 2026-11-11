@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import io.github.nijasc.ktor.svelte.gradle.DocLink
 import io.github.nijasc.ktor.svelte.gradle.FrontendTool
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
 import io.github.nijasc.ktor.svelte.gradle.locateExecutable
@@ -41,7 +42,7 @@ public abstract class SvelteInitTask : SvelteToolTask() {
     public fun init() {
         val target = frontendDir.get().asFile
         if (target.list().orEmpty().any { it != "messages" }) {
-            throw GradleException("ktor-svelte will not overwrite $target because it is not empty.")
+            throw GradleException("ktor-svelte will not overwrite $target because it is not empty." + DocLink.CREATE_A_PROJECT.see())
         }
         val tool = FrontendTool(chooseTool())
         requireToolOnPath(tool)
