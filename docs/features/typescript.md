@@ -98,6 +98,26 @@ const input = { due: IsoDate.today(), remindAt: IsoDateTime.now() };
 }
 ```
 
+## Documentation in the editor
+
+A `summary` and `description` set in `describe { }` end up as JSDoc on the generated function, so the editor shows them when you hover over a call:
+
+```kotlin
+post("/api/notes/{id}/attachments") { /* ... */ }.describe {
+    summary = "Uploads files to a note."
+    description = "Send the files as multipart form data."
+}
+```
+
+```ts
+/**
+ * Uploads files to a note.
+ *
+ * Send the files as multipart form data.
+ */
+export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
+```
+
 ## Getting exact types
 
 Ktor's compiler plugin reads `call.receive<T>()`, `call.respond()` and `call.queryParameters` for you, so plain routes get full types. Add the Ktor Gradle plugin:
