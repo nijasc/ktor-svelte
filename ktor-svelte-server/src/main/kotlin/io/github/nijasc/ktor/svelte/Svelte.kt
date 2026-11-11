@@ -51,6 +51,8 @@ import io.ktor.server.routing.openapi.hide
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.util.AttributeKey
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
@@ -76,8 +78,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 null
             }
         val securityHeaders = pluginConfig.securityHeadersConfig
-        val responder =
-            AssetResponder(store, pluginConfig.cacheConfig, pageContentSecurityPolicy(store, securityHeaders, devProxy != null))
+        val contentSecurityPolicy = pageContentSecurityPolicy(store, securityHeaders, devProxy != null)
+        if (contentSecurityPolicy != null && !application.developmentMode) {
+            application.launch(Dispatchers.IO) { contentSecurityPolicy.precomputeAll() }
+        }
+        val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy)
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
         application.attributes.put(SvelteHandlerKey, handler)
