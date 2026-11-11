@@ -13,6 +13,7 @@ internal enum class AssetEncoding(
     val manifestKey: String,
     val fileSuffix: String,
 ) {
+    ZSTD("zstd", ".zst"),
     BROTLI("br", ".br"),
     GZIP("gzip", ".gz"),
 }

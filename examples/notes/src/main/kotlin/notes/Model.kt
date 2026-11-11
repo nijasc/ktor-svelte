@@ -1,5 +1,6 @@
 package notes
 
+import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
 import io.ktor.openapi.JsonSchema
@@ -99,6 +100,16 @@ class NoteStore {
             .filter { tag == null || tag in it.tags }
             .filter { search == null || it.title.contains(search, ignoreCase = true) || it.body.contains(search, ignoreCase = true) }
             .sortedBy { it.id }
+
+    fun page(
+        cursor: String?,
+        limit: Int,
+    ): Page<Note> {
+        val after = cursor?.toIntOrNull() ?: 0
+        val next = notes.values.filter { it.id > after }.sortedBy { it.id }.take(limit.coerceIn(1, 100) + 1)
+        val items = next.take(limit.coerceIn(1, 100))
+        return Page(items, items.lastOrNull()?.id?.toString()?.takeIf { next.size > items.size })
+    }
 
     fun find(id: Int): Note? = notes[id]
 

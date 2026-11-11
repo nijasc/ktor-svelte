@@ -375,6 +375,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask :
 	protected abstract fun getExecOperations ()Lorg/gradle/process/ExecOperations;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
+	public abstract fun getVerbose ()Lorg/gradle/api/provider/Property;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDependenciesTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {

@@ -473,10 +473,39 @@ try {
 }
 ```
 
+Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
+
+```kotlin
+install(StatusPages) {
+    exception<NotFoundException> { call, cause -> call.respond(HttpStatusCode.NotFound, Problem(cause.message.orEmpty())) }
+}
+install(Svelte) {
+    errorResponse<Problem>(HttpStatusCode.NotFound, HttpStatusCode.Conflict)
+}
+```
+
 Routes that declare a `text/event-stream` response, for example through `describe`, become async generators. Each event's `data` is parsed as JSON when possible, and the stream ends when the connection closes or you stop iterating:
 
 ```ts
 for await (const tick of api.ticks.watch()) console.log(tick);
+```
+
+For paged lists, return `Page<T>` from `io.github.nijasc.ktor.svelte` and read a `cursor` query parameter. `next` is the cursor of the following page, or `null` on the last one:
+
+```kotlin
+get("/api/notes/feed") {
+    val cursor = call.queryParameters["cursor"]
+    val page: Page<Note> = store.page(cursor, limit = 20)
+    call.respond(page)
+}
+```
+
+`pages` turns any such endpoint into an async iterator that fetches one page at a time, typed from the endpoint:
+
+```ts
+import { api, pages } from '#api';
+
+for await (const notes of pages(api.notes.getFeed, { limit: '50' })) render(notes);
 ```
 
 Uploads work with `FormData`. Ktor cannot infer a multipart body from `receiveMultipart`, so describe it once, and the generated function takes `body: FormData`:
@@ -847,7 +876,7 @@ install(Svelte) {
 
 A route of yours such as `get("/{slug}")` beats the frontend. That is intended, but it can hide pages.
 
-ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`.
+ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`. `.zst` files next to them, for example from a Vite compression plugin, are bundled too and preferred for browsers that accept `zstd`, since they decompress faster.
 
 If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
 
@@ -908,7 +937,7 @@ The package manager must already be installed. The plugin does not download Node
 | `svelteOutdated` | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
 | `svelteClean` | Deletes `node_modules`, `.svelte-kit` and the build output |
-| `deepClean` | Runs `clean`, then also deletes the project's `.gradle` and `.kotlin` directories, `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept |
+| `deepClean` | Runs `clean`, then also deletes the project's `.gradle` and `.kotlin` directories, `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept. Files a running Gradle daemon or IDE still holds, which happens on Windows, are skipped with a warning |
 | `svelteGenerateRunConfigurations` | Writes IntelliJ run configurations to `.run/`, keeping any that exist |
 
 | Property | Effect |
@@ -916,6 +945,7 @@ The package manager must already be installed. The plugin does not download Node
 | `-Psvelte.skip=true` | Skips the frontend build, and warns if a JAR is being built |
 | `-Psvelte.dev=true` | Same as skip, and also sets `-Dio.ktor.development=true` on `run` |
 | `-Psvelte.verifyTs=false` | Leaves `svelteVerifyTs` out of `check` |
+| `-Psvelte.verbose=true` | Shows the package manager and Vite output of `svelteInstall`, `svelteBuild`, `svelteSync` and `svelteInit`. Without it, that output is hidden when the command succeeds and printed in full when it fails. `--info` also shows it |
 
 ## Dev workflow
 
@@ -926,6 +956,17 @@ One command runs everything. Then open Ktor's port, not Vite's:
 ```
 
 It starts Vite, keeps Kotlin compiling and runs your app. Save a Svelte file and the page hot reloads. Save a Kotlin file and the app restarts, and with `generateTs` on your TypeScript updates a moment later, so type errors show up in the editor right away. A restart loses anything your app keeps in memory. Stopping the task stops all three. In IntelliJ, this is the `Dev` run configuration, and each line of output is labelled `[vite]`, `[kotlin]` or `[app]`.
+
+Once the app is listening, it prints the links you need, so they do not get lost in the output:
+
+```
+ktor-svelte is ready. Open the app URL, not the Vite one:
+  App:      http://localhost:8080
+  API docs: http://localhost:8080/api/docs
+  Vite:     http://localhost:5173
+```
+
+The API docs line appears when `apiDocs = true`. After a restart it prints one line with the app URL instead. The URL comes from Ktor's `Responding at` log line, so keep Ktor's INFO logging on for the application logger.
 
 To debug your Kotlin code, start `Dev` as usual and then start the `Debug app` run configuration in debug mode. IntelliJ debugs Gradle tasks only when they run a JVM through Gradle, and `svelteDevAll` starts the app itself, so the app instead listens for a debugger on `127.0.0.1:5005` (see `dev.debugPort`). `Debug app` has auto restart on, so it reconnects after each restart. Outside IntelliJ, attach any JDWP debugger to that port. Two apps running `svelteDevAll` at once need different debug ports.
 
