@@ -20,7 +20,8 @@ private val ENCODINGS = listOf("zstd" to ".zst", "br" to ".br", "gzip" to ".gz")
 
 internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
 
-internal fun isSourceMap(path: String): Boolean = ENCODINGS.fold(path) { stripped, (_, suffix) -> stripped.removeSuffix(suffix) }.endsWith(".map")
+internal fun isSourceMap(path: String): Boolean =
+    ENCODINGS.fold(path) { stripped, (_, suffix) -> stripped.removeSuffix(suffix) }.endsWith(".map")
 
 @CacheableTask
 public abstract class SvelteBundleTask : DefaultTask() {

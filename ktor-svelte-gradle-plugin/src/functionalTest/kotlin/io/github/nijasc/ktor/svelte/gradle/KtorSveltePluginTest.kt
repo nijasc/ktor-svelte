@@ -319,12 +319,14 @@ class KtorSveltePluginTest {
         project.run("jar")
         project.frontend.resolve("build/index.html.br").writeText("compressed")
         project.frontend.resolve("build/index.html.gz").writeText("compressed!")
+        project.frontend.resolve("build/index.html.zst").writeText("zstd")
 
         project.run("svelteBundle", "-x", "svelteBuild")
 
         val manifest = dir.resolve("build/generated/ktor-svelte/resources/ktor-svelte/manifest.json").readText()
-        assertContains(manifest, "\"encodings\":{\"br\":{\"size\":10},\"gzip\":{\"size\":11}}")
+        assertContains(manifest, "\"encodings\":{\"zstd\":{\"size\":4},\"br\":{\"size\":10},\"gzip\":{\"size\":11}}")
         assertFalse(manifest.contains("\"index.html.br\":"))
+        assertFalse(manifest.contains("\"index.html.zst\":"))
     }
 
     @Test
