@@ -5,14 +5,16 @@ declare const __DOCS_VERSION__: string;
 declare const __DOCS_SITE_ROOT__: string;
 
 export interface VersionList {
-    latest: string;
+    latest: string | null;
     versions: string[];
+    main?: boolean;
 }
 
 export const currentVersion = __DOCS_VERSION__;
 export const siteRoot = __DOCS_SITE_ROOT__;
 
-export function baseFor(version: string, latest: string): string {
+export function baseFor(version: string, latest: string | null): string {
+    if (version === 'main') return `${siteRoot}main/`;
     return version === latest ? siteRoot : `${siteRoot}v${version}/`;
 }
 

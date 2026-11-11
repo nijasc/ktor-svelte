@@ -10,7 +10,8 @@ const options = computed(() => {
         value: version,
         label: version === list.value?.latest ? `${version} (latest)` : version
     }));
-    if (!versions.includes(currentVersion)) named.unshift({ value: currentVersion, label: currentVersion });
+    if (list.value?.main || currentVersion === 'main') named.unshift({ value: 'main', label: 'main (unreleased)' });
+    else if (!versions.includes(currentVersion)) named.unshift({ value: currentVersion, label: currentVersion });
     return named;
 });
 

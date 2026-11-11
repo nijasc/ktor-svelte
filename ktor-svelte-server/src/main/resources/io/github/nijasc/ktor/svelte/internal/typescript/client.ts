@@ -231,3 +231,26 @@ export async function* pages<Q extends { cursor?: string }, T>(
         cursor = page.next ?? undefined;
     } while (cursor !== undefined);
 }
+
+export function isAbortError(error: unknown): boolean {
+    return error instanceof DOMException && error.name === 'AbortError';
+}
+
+export function latest<A extends unknown[], R>(call: (...args: A) => Promise<R>): (...args: A) => Promise<R> {
+    let previous: AbortController | undefined;
+    return (...args: A) => {
+        previous?.abort();
+        const current = new AbortController();
+        previous = current;
+        const arity = call.length;
+        const padded = args.slice(0, arity);
+        padded.length = arity;
+        const options = (padded[arity - 1] ?? {}) as RequestOptions;
+        const signal = options.signal ? AbortSignal.any([options.signal, current.signal]) : current.signal;
+        padded[arity - 1] = { ...options, signal };
+        return call(...(padded as A)).catch((error: unknown) => {
+            if (signal.aborted && !isAbortError(error)) throw new DOMException('The request was superseded.', 'AbortError');
+            throw error;
+        });
+    };
+}
