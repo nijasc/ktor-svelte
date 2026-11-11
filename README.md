@@ -473,6 +473,17 @@ try {
 }
 ```
 
+Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
+
+```kotlin
+install(StatusPages) {
+    exception<NotFoundException> { call, cause -> call.respond(HttpStatusCode.NotFound, Problem(cause.message.orEmpty())) }
+}
+install(Svelte) {
+    errorResponse<Problem>(HttpStatusCode.NotFound, HttpStatusCode.Conflict)
+}
+```
+
 Routes that declare a `text/event-stream` response, for example through `describe`, become async generators. Each event's `data` is parsed as JSON when possible, and the stream ends when the connection closes or you stop iterating:
 
 ```ts
