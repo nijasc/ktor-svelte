@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class TypeScriptGeneratorTest {
     private fun generate(
@@ -182,6 +183,15 @@ class TypeScriptGeneratorTest {
     @Test
     fun `non identifier property names are quoted`() {
         assertContains(types("""{"A":{"type":"object","properties":{"content-type":{"type":"string"}}}}"""), "'content-type'?: string;")
+    }
+
+    @Test
+    fun `apiWith binds fetch for load functions after the api object`() {
+        val source = services("""{"/api/a":{"get":{"responses":{"200":{"description":"ok"}}}}}""")
+        val api = source.indexOf("export const api = { a };")
+        val apiWith = source.indexOf("export function apiWith(event: { fetch: typeof globalThis.fetch }): typeof api {")
+        assertTrue(api in 0 until apiWith)
+        assertContains(source, "padded[arity - 1] = { fetch, ...(padded[arity - 1] as RequestOptions | undefined) };")
     }
 
     @Test
