@@ -115,3 +115,91 @@ None yet.
 | TS-18 | Add cancellation of superseded requests, for example search-as-you-type | Out-of-order responses overwrite newer results | S |
 | TS-19 | Expose response headers such as `ETag` and support `If-None-Match` in the client | The client cannot use conditional requests for API data | M |
 | TS-20 | Generate typed SSE reconnection with `Last-Event-ID` | Live updates stop silently after a network blip | M |
+
+### Gradle plugin and tooling
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| GP-01 | Mark `svelteInstall` up to date from a hash of the lockfile instead of the presence of `node_modules` | A changed lockfile with an existing `node_modules` skips the install | S |
+| GP-02 | Make `svelteBuild` relocatable for the remote build cache | Teams with a shared Gradle cache rebuild the frontend on every machine | M |
+| GP-03 | Stop starting `bun --version` while Gradle configures the build | A process per configuration slows every build that includes frontend tasks | S |
+| GP-04 | Restart only the app classloader in `svelteDevAll` instead of the whole JVM | A full JVM restart per Kotlin change costs seconds | L |
+| GP-05 | Make `svelteVerifyTs` up to date when classes and resources did not change | `check` starts the app on every run today | S |
+| GP-06 | Support Gradle's isolated projects mode | Large builds are moving to it, and plugins that read other projects block them | M |
+| GP-07 | Offer an option to download a pinned Node or Bun when none is installed | CI images and new laptops fail at the first build | M |
+| GP-08 | Support multiple frontends in one project with `svelte("admin") { }` | Admin panels are often a second SvelteKit app | L |
+| GP-09 | Publish a version catalog (`io.github.nijasc:ktor-svelte-catalog`) with matching Ktor, Kotlin and plugin versions | Upgrades need several coordinated version bumps | S |
+| GP-10 | Add a `svelteBundleReport` task that lists the largest files, compression ratios and total JAR impact | Nobody notices when a 5 MB image lands in the JAR | S |
+| GP-11 | Warn when the frontend build output is larger than a configurable budget | Bundle size creeps up one dependency at a time | S |
+| GP-12 | Support Kotlin Multiplatform projects with a JVM target as the server | KMP projects cannot apply the plugin today | L |
+| GP-13 | Generate a GitHub Actions workflow from `svelteInit --ci` for existing projects | Only the setup script writes a workflow today | S |
+| GP-14 | Report plugin errors through Gradle's Problems API | IDEs show problems reported through the API next to the build script line | M |
+| GP-15 | Skip touching package.json in `svelteSync` when the settings did not change | Touching package.json invalidates the install and the build | S |
+| GP-16 | Support Maven builds with a small Maven plugin | Some Ktor teams use Maven and cannot use the Gradle plugin | L |
+
+### Performance
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| PERF-01 | Compute the CSP script hashes in `svelteBundle` and store them in the manifest | The runtime reads and hashes every page again after each deploy | S |
+| PERF-02 | Build ETag, Cache-Control and content-type strings once per manifest entry | They are formatted again on every request | S |
+| PERF-03 | Keep a bounded cache from request path to resolution result | Popular paths resolve the same way every time | S |
+| PERF-04 | Read classpath assets on `Dispatchers.IO` or through a non-blocking channel | Classpath streams block the request coroutine | S |
+| PERF-05 | Stream dev proxy responses with `BodyHandlers.ofPublisher` | Each proxied Vite response holds a thread while it is copied | S |
+| PERF-06 | Recompress with Brotli quality 11 and zopfli in `svelteBundle`, opt-in | The build runs once and maximum compression saves bytes on every download | M |
+| PERF-07 | Let apps list extra immutable path prefixes, for example hashed fonts in `static/` | Only `_app/immutable/` gets a one-year cache | S |
+| PERF-08 | Send `103 Early Hints` or `Link: rel=preload` for each page's entry chunks | Browsers can start fetching the app before the HTML is parsed | M |
+| PERF-09 | Document and test HTTP/2 and HTTP/3 with Netty | A SvelteKit page loads many small chunks, which multiplexing handles better | S |
+| PERF-10 | Split i18n message tables into one lazily loaded module per locale | Every visitor downloads all locales today | M |
+| PERF-11 | Offer a setting to leave gzip variants out of the JAR when Brotli or zstd exist | Duplicate variants make the JAR noticeably larger | S |
+| PERF-12 | Benchmark request handling with JMH in CI and fail on large regressions | Resolver, CSP and validation run on every request and nothing measures them | M |
+| PERF-13 | Add ETags generated from the response body for API GET routes, opt-in per route | Repeated reads of unchanged data still cost a full transfer | M |
+| PERF-14 | Keep the compressed body of identical API GET responses in memory for a short time, opt-in | Popular endpoints are compressed again for every request | M |
+| PERF-15 | Use zstd dictionaries trained on the app's own JSON for API compression | Small JSON responses compress poorly without a dictionary | L |
+| PERF-16 | Prefetch data for the next page on link hover through the generated client | SvelteKit prefetches code but not API data | M |
+| PERF-17 | Measure and document cold-start time of the JAR, and offer CDS archives | Short-lived containers pay JVM startup on every scale-up | M |
+| PERF-18 | Offer a GraalVM native image path with the frontend in resources | Native images start in milliseconds and use less memory | L |
+
+### Features
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| FEAT-01 | Add a `serverData` hook that inlines JSON for the first page load into the HTML | Saves the first API round trip on pages without server rendering | M |
+| FEAT-02 | Add first-class OAuth and OpenID Connect sign in on top of the session recipe | Social and company sign in is the next thing most apps need | L |
+| FEAT-03 | Add CSRF tokens as an option for apps that must support old browsers without `Origin` | The origin check relies on modern browsers sending `Origin` or `Sec-Fetch-Site` | M |
+| FEAT-04 | Add a feature-flag helper shared between Ktor and Svelte through `publicConfig` | Flags are needed on both sides and should be typed once | M |
+| FEAT-05 | Add a maintenance mode that serves a static page and 503 on API paths | Deploys and migrations need a clean way to pause the app | S |
+| FEAT-06 | Serve a generated `sitemap.xml` and `robots.txt` from prerendered pages | SEO needs both, and the manifest knows every page | S |
+| FEAT-07 | Add Open Graph and meta tag helpers that read `publicConfig` | Social previews need per-environment URLs | S |
+| FEAT-08 | Add server-side page view counting without third-party scripts | Many apps add a tracker only to count page views | M |
+| FEAT-09 | Add a PWA option that generates a web manifest and service worker from the build | Installable apps and offline caching are common requests | M |
+| FEAT-10 | Resize images and add modern formats for files in `static/` at build time | Unoptimised images are the largest files in most builds | M |
+| FEAT-11 | Support Ktor's resources plugin (type-safe routes) in the TypeScript generator | Teams using type-safe routes lose some route information today | M |
+| FEAT-12 | Add a background job helper with progress reported over SSE | Long tasks need progress in the UI, and the pieces exist already | M |
+| FEAT-13 | Add email templates written in Svelte and rendered at build time | Apps need branded emails and already have Svelte and Tailwind | L |
+| FEAT-14 | Add a typed notifications channel over SSE for server-to-browser messages | Many apps build the same toast-from-server pattern | M |
+| FEAT-15 | Add a multi-tenant mode that serves different builds per host name | White-label apps want one JAR with several frontends | L |
+| FEAT-16 | Support GraphQL in the generator for apps that use a Kotlin GraphQL server | Some Ktor apps expose GraphQL instead of REST | L |
+| FEAT-17 | Add a `ktor-svelte-admin` module that generates CRUD screens from DTOs | Internal tools need list and edit pages for every entity | L |
+| FEAT-18 | Map SvelteKit remote functions to Ktor routes once they are stable | They could replace hand-written client calls entirely | L |
+| FEAT-19 | Share DTOs through Kotlin/JS or Kotlin/Wasm as an alternative to generated TypeScript | Teams that use Kotlin on the frontend want the same classes | L |
+| FEAT-20 | Add a browser panel in development with requests, timings and validation errors | Debugging the API from the page is faster than switching to DevTools | M |
+
+### Docs site
+
+| ID | Suggestion | Why | Effort |
+|---|---|---|---|
+| SITE-01 | Add an interactive page that builds the setup command from checkboxes | The setup flags table is long, and a form is faster | M |
+| SITE-02 | Add a playground that runs the generator on pasted OpenAPI and shows the TypeScript | People want to see the client before they install anything | M |
+| SITE-03 | Add a migration guide for every breaking release, linked from the changelog | Release notes list changes but not the steps to adopt them | S |
+| SITE-04 | Add an architecture page with a diagram of build, bundle, manifest and request flow | Contributors read four files to see how a request reaches a file | S |
+| SITE-05 | Add a comparison page with adapter-node, Ktor plus a separate frontend, and other full-stack setups | Helps people decide whether ktor-svelte fits | S |
+| SITE-06 | Add a tutorial that builds the notes app step by step | The examples show the result but not the path to it | M |
+| SITE-07 | Generate each setting's default value in the reference from the code | Hand-written defaults drift from the code | M |
+| SITE-08 | Add "open in StackBlitz" buttons to frontend snippets | Readers try snippets faster | S |
+| SITE-09 | Add a feedback link per page that opens a prefilled GitHub issue | Feedback on unclear pages is otherwise lost | S |
+| SITE-10 | Translate the docs into German as a second locale | Part of the audience prefers German | L |
+| SITE-11 | Add an `llms.txt` and a single-page Markdown export of the docs | AI assistants answer questions better with one clean file | S |
+| SITE-12 | Compile the Kotlin and type-check the TypeScript in every docs code block in CI | Snippets break silently when the API changes | M |
+| SITE-13 | Add social preview images per page | Shared links look empty in chat apps | S |
+| SITE-14 | Publish a "main" version of the docs on every push to `main` | Contributors want to read the docs for unreleased changes | S |
