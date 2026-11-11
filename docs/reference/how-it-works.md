@@ -18,9 +18,11 @@ At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more 
 | 2 | Exact file in the manifest | Serve the file |
 | 3 | `/about` when `about.html` exists, or `/about/` when `about/index.html` exists | Serve the page |
 | 4 | `/about/` when only `about.html` exists, or `/about` when only `about/index.html` exists | 308 redirect to the form that exists, keeping the query string |
-| 5 | Missing path under `/_app/` or `/.well-known/`, or any path with a file extension | 404, never the fallback |
+| 5 | Missing path under `/_app/`, `/.well-known/` or `/_ktor-svelte/`, or any path with a file extension | 404, never the fallback |
 | 6 | Other path, with a fallback page and a request that accepts HTML, or a path matching `paramRoutes` | Serve the fallback with status 200 |
 | 7 | Anything else | `404.html` with status 404 if it exists, otherwise a plain 404 |
+
+Because your routes always win, a Ktor `GET /about` hides a prerendered `about.html`. The app warns about every such route at startup, for example `ktor-svelte: the Ktor route GET /about hides the frontend page about.html.` Routes under your API prefixes and routes with parameters are not checked.
 
 Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Every file from the build answers `Range: bytes=...` requests with 206 and `Content-Range`, so videos can seek and downloads can resume. Ranges are always served without `Content-Encoding`, `If-Range` is honoured, and a range past the end of the file answers 416. Other methods on a path that resolves to a page or file, such as a POST to `/about`, answer 405 with `Allow: GET, HEAD, OPTIONS`, and OPTIONS answers 204 with the same header. Paths that resolve to nothing stay 404. In development, POST, PUT, PATCH and DELETE still go to Vite first.
 

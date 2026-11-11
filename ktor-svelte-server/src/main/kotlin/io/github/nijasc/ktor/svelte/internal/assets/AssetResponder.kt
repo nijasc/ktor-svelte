@@ -37,6 +37,7 @@ internal class AssetResponder(
     private val store: AssetStore,
     private val cache: SvelteCacheConfig,
     private val contentSecurityPolicy: PageContentSecurityPolicy? = null,
+    private val configInjector: ConfigInjector? = null,
 ) {
     private val prepared = ConcurrentHashMap<String, PreparedHeaders>()
 
@@ -54,12 +55,18 @@ internal class AssetResponder(
         val status = if (notFound) HttpStatusCode.NotFound else HttpStatusCode.OK
 
         call.response.header(HttpHeaders.CacheControl, if (privateResponse) headers.privateCacheControl else headers.cacheControl)
-        call.response.header(HttpHeaders.ETag, eTag)
-        if (entry.encodings.isNotEmpty()) call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
         val contentType = headers.contentType
         if (contentSecurityPolicy != null && headers.isHtml) {
             call.response.header(CONTENT_SECURITY_POLICY_HEADER, contentSecurityPolicy.forPage(path, entry))
         }
+        if (configInjector != null && headers.isHtml) {
+            configInjector.pageFor(path, entry)?.let { page ->
+                respondInjected(call, page, status, notFound, contentType)
+                return
+            }
+        }
+        call.response.header(HttpHeaders.ETag, eTag)
+        if (entry.encodings.isNotEmpty()) call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
 
         if (!notFound && matchesIfNoneMatch(call.request.header(HttpHeaders.IfNoneMatch), eTag)) {
             call.respond(HttpStatusCode.NotModified)
@@ -96,6 +103,35 @@ internal class AssetResponder(
                 ?: error("ktor-svelte manifest lists '$path', but the file could not be opened.")
         call.respond(StreamContent(status, contentType, length, stream))
     }
+
+    private suspend fun respondInjected(
+        call: ApplicationCall,
+        page: InjectedPage,
+        status: HttpStatusCode,
+        notFound: Boolean,
+        contentType: ContentType,
+    ) {
+        val gzip = acceptsGzip(call)
+        val eTag = if (gzip) "\"${page.eTag}-gzip\"" else "\"${page.eTag}\""
+        call.response.header(HttpHeaders.ETag, eTag)
+        call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
+        if (!notFound && matchesIfNoneMatch(call.request.header(HttpHeaders.IfNoneMatch), eTag)) {
+            call.respond(HttpStatusCode.NotModified)
+            return
+        }
+        if (gzip) call.response.header(HttpHeaders.ContentEncoding, "gzip")
+        val bytes = if (gzip) page.gzip else page.plain
+        if (call.request.httpMethod == HttpMethod.Head) {
+            call.respond(HeadContent(status, contentType, bytes.size.toLong()))
+            return
+        }
+        call.respond(BytesContent(status, contentType, bytes))
+    }
+
+    private fun acceptsGzip(call: ApplicationCall): Boolean =
+        call.request
+            .acceptEncodingItems()
+            .any { it.quality > 0.0 && (it.value.equals("gzip", ignoreCase = true) || it.value == "*") }
 
     private suspend fun respondRange(
         call: ApplicationCall,
@@ -196,6 +232,16 @@ private class PreparedHeaders(
     val privateCacheControl: String,
     val eTags: Map<AssetEncoding?, String>,
 )
+
+private class BytesContent(
+    override val status: HttpStatusCode,
+    override val contentType: ContentType,
+    private val bytes: ByteArray,
+) : OutgoingContent.ByteArrayContent() {
+    override val contentLength: Long get() = bytes.size.toLong()
+
+    override fun bytes(): ByteArray = bytes
+}
 
 private class HeadContent(
     override val status: HttpStatusCode,
