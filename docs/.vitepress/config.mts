@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress';
+import { writeLlmsFiles } from './llms';
 import { socialHead, writeSocialImages } from './socialImages';
 
 const repository = 'https://github.com/nijasc/ktor-svelte';
@@ -22,6 +23,14 @@ export default defineConfig({
     },
     buildEnd(siteConfig) {
         writeSocialImages(siteConfig.outDir, version === 'main' ? 'ktor-svelte' : `ktor-svelte ${version}`);
+        writeLlmsFiles({
+            srcDir: siteConfig.srcDir,
+            outDir: siteConfig.outDir,
+            siteUrl: `https://nijasc.github.io${base}`,
+            title: `ktor-svelte ${version}`,
+            description,
+            sidebar: siteConfig.site.themeConfig.sidebar
+        });
     },
     vite: {
         define: {
@@ -54,6 +63,7 @@ export default defineConfig({
                     { text: 'What is ktor-svelte?', link: '/guide/introduction' },
                     { text: 'Compared with other setups', link: '/guide/comparison' },
                     { text: 'Getting started', link: '/guide/getting-started' },
+                    { text: 'Tutorial: a notes app', link: '/guide/tutorial' },
                     { text: 'Add to an existing project', link: '/guide/existing-project' },
                     { text: 'Project structure', link: '/guide/project-structure' },
                     { text: 'Dev workflow', link: '/guide/dev-workflow' },
