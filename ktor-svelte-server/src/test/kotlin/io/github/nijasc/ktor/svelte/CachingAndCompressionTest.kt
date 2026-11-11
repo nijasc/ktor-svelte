@@ -216,10 +216,13 @@ class CachingAndCompressionTest {
                     dev { mode = DevMode.NEVER }
                 }
             }
-            assertEquals("one", client.get("/").bodyAsText())
+            val first = client.get("/")
+            assertEquals("one", first.bodyAsText())
             build.resolve("index.html").toFile().writeText("two!")
             val response = client.get("/")
             assertEquals("two!", response.bodyAsText())
             assertFalse(response.headers[HttpHeaders.ETag].isNullOrEmpty())
+            assertNotEquals(first.headers[HttpHeaders.ETag], response.headers[HttpHeaders.ETag])
+            assertEquals(first.headers[HttpHeaders.ContentType], response.headers[HttpHeaders.ContentType])
         }
 }
