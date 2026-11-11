@@ -30,7 +30,9 @@ internal class TestProject(
         dir.resolve("build.gradle.kts").writeText(content)
     }
 
-    fun calls(): List<String> = if (callLog.isFile) callLog.readLines().map { it.trim() }.filter { it != "--version" } else emptyList()
+    fun calls(): List<String> = allCalls().filter { it != "--version" }
+
+    fun allCalls(): List<String> = if (callLog.isFile) callLog.readLines().map { it.trim() } else emptyList()
 
     fun clearCalls() {
         callLog.delete()

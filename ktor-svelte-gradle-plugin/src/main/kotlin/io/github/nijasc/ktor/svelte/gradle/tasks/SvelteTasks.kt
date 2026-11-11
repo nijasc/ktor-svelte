@@ -160,20 +160,11 @@ public abstract class ToolVersionSource : ValueSource<String, ToolVersionSource.
         public val packageManager: Property<PackageManager>
     }
 
-    @get:Inject
-    protected abstract val execOperations: ExecOperations
-
     override fun obtain(): String =
         runCatching {
             val tool = resolveFrontendTool(parameters.frontendDir.get().asFile, parameters.packageManager.get())
             val executable = locateExecutable(tool.executableName) ?: return UNAVAILABLE
-            val output = ByteArrayOutputStream()
-            execOperations.exec { spec ->
-                spec.commandLine(executable.absolutePath, "--version")
-                spec.standardOutput = output
-                spec.isIgnoreExitValue = true
-            }
-            "${tool.executableName} ${output.toString(Charsets.UTF_8).trim()}"
+            "${tool.executableName} ${toolFingerprint(executable, tool.executableName)}"
         }.getOrDefault(UNAVAILABLE)
 
     private companion object {
