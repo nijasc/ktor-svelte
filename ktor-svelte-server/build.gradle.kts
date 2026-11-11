@@ -34,7 +34,7 @@ dependencies {
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(platform(libs.junit.bom))
     testRuntimeOnly(libs.junit.platform.launcher)
-    testRuntimeOnly(libs.logback)
+    testImplementation(libs.logback)
 }
 
 mavenPublishing {
