@@ -91,6 +91,8 @@ HMR is not covered by automated tests. Check it before changing the dev proxy:
 
 **Keep the README up to date, in the same commit.** It uses plain ASCII: no em dashes, arrows, box drawing or emoji.
 
+**Error messages link to README sections.** Each module has a `DocLink` enum with the anchors it uses, and `DocLinkTest` fails when a heading they point at is renamed or removed. Rename the anchor in `DocLink` together with the heading.
+
 **Format Kotlin before you commit:**
 
 ```bash
