@@ -47,8 +47,8 @@ internal class PageContentSecurityPolicy(
         entry: ManifestEntry,
     ): String {
         cache[path]?.takeIf { it.contentHash == entry.hash }?.let { return it.policy }
-        val html = store.open(path)?.use { it.readBytes().decodeToString() }.orEmpty()
-        val policy = render(inlineScriptHashes(html))
+        val hashes = entry.scriptHashes ?: inlineScriptHashes(store.open(path)?.use { it.readBytes().decodeToString() }.orEmpty())
+        val policy = render(hashes)
         cache[path] = CachedPolicy(entry.hash, policy)
         return policy
     }

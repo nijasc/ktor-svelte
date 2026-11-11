@@ -401,6 +401,25 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `pages list the hashes of their inline scripts in the manifest`() {
+        val project = project()
+        project.run("jar")
+        project.frontend.resolve("build/index.html").writeText("<script>start()</script><script src=\"/a.js\"></script>")
+
+        project.run("svelteBundle", "-x", "svelteBuild")
+
+        val manifest = dir.resolve("build/generated/ktor-svelte/resources/ktor-svelte/manifest.json").readText()
+        val hash =
+            java.util.Base64.getEncoder().encodeToString(
+                java.security.MessageDigest
+                    .getInstance("SHA-256")
+                    .digest("start()".toByteArray()),
+            )
+        assertContains(manifest, "\"scripts\":[\"'sha256-$hash'\"]")
+        assertFalse(Regex("\"_app/immutable/app\\.js\":\\{[^}]*scripts").containsMatchIn(manifest))
+    }
+
+    @Test
     fun `hidden files and source maps stay out of the bundle`() {
         val project = project()
         project.run("jar")

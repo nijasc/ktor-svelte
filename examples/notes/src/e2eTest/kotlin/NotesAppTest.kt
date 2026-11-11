@@ -205,6 +205,13 @@ class NotesAppTest {
     }
 
     @Test
+    fun `activity is a list of typed events`() {
+        val body = send("GET", "/api/notes/1/activity").body()
+        assertContains(body, "\"type\":\"created\"")
+        assertEquals(404, send("GET", "/api/notes/999/activity").statusCode())
+    }
+
+    @Test
     fun `validation errors come back as json`() {
         val response = send("POST", "/api/notes", """{"title":" "}""")
         assertEquals(422, response.statusCode())

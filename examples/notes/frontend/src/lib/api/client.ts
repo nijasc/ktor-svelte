@@ -16,6 +16,7 @@ export interface ApiConfig {
     onUnauthorized?: (response: Response) => void;
     dedupeGets?: boolean;
     timeout?: number;
+    onNewBuild?: (build: string) => void;
 }
 
 export function isTimeoutError(error: unknown): boolean {
@@ -144,7 +145,17 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
     return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) }) };
 }
 
+let knownBuild: string | undefined;
+
+function noticeBuild(response: Response) {
+    const build = response.headers.get('x-ktor-svelte-build');
+    if (!build) return;
+    if (knownBuild !== undefined && build !== knownBuild) apiConfig.onNewBuild?.(build);
+    knownBuild = build;
+}
+
 async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
+    noticeBuild(response);
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
     if (!response.ok) {
         const requestId = response.headers.get('x-request-id') ?? undefined;

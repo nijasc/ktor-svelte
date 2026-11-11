@@ -46,6 +46,17 @@ class PageContentSecurityPolicyTest {
     }
 
     @Test
+    fun `hashes from the manifest are used without reading the page`() {
+        val store = CountingStore(mapOf("index.html" to "<script>start()</script>"))
+        val policy = PageContentSecurityPolicy(store, null, emptyMap())
+
+        val result = policy.forPage("index.html", ManifestEntry(1, "h", scriptHashes = listOf("'sha256-fromManifest'")))
+
+        assertContains(result, "script-src 'self' 'sha256-fromManifest'")
+        assertEquals(emptyList(), store.opened)
+    }
+
+    @Test
     fun `a changed page is read again`() {
         val store = CountingStore(mapOf("index.html" to "<script>a()</script>"))
         val policy = PageContentSecurityPolicy(store, null, emptyMap())
