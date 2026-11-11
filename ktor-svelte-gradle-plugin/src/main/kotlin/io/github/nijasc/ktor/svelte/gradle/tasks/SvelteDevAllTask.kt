@@ -93,13 +93,14 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     @TaskAction
     public fun runAll() {
         val running = mutableListOf<Process>()
+        val banner = ReadyBanner(port.get())
         val stopAll = Thread { running.forEach(::stopProcessTree) }
         Runtime.getRuntime().addShutdownHook(stopAll)
         try {
             val vite = startVite()
             running += vite
             running += startCompiler()
-            var app = startApp()
+            var app = startApp(banner)
             running += app
             logger.lifecycle("ktor-svelte: Vite, the Kotlin compiler and the app are running. Stop this task to stop them all.")
             if (debugPort.get() > 0) {
@@ -116,7 +117,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                     logger.lifecycle("ktor-svelte: Kotlin changed, restarting the app.")
                     stopProcessTree(app)
                     running -= app
-                    app = startApp()
+                    app = startApp(banner)
                     running += app
                 }
             }
@@ -152,7 +153,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         return start("kotlin", command, projectDirectory.get().asFile)
     }
 
-    private fun startApp(): Process {
+    private fun startApp(banner: ReadyBanner): Process {
         val command =
             listOf(
                 javaLauncher
@@ -166,20 +167,24 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                     appClasspath.asPath,
                     mainClass.get(),
                 )
-        return start("app", command, projectDirectory.get().asFile)
+        return start("app", command, projectDirectory.get().asFile) { line -> banner.onAppLine(line)?.let(logger::lifecycle) }
     }
 
     private fun start(
         label: String,
         command: List<String>,
         directory: File,
+        onLine: (String) -> Unit = {},
     ): Process {
         val builder = ProcessBuilder(command).directory(directory).redirectErrorStream(true)
         builder.environment().putAll(System.getenv())
         val process = builder.start()
         thread(isDaemon = true, name = "ktor-svelte-$label") {
             process.inputStream.bufferedReader().useLines { lines ->
-                lines.forEach { line -> logger.lifecycle("[$label] $line") }
+                lines.forEach { line ->
+                    logger.lifecycle("[$label] $line")
+                    onLine(line)
+                }
             }
         }
         return process
