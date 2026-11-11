@@ -24,9 +24,11 @@ dependencies {
     implementation(libs.ktor.server.rate.limit)
     api(libs.serialization.json)
     compileOnly(libs.ktor.serialization.xml)
+    compileOnly(libs.ktor.server.compression.zstd)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.serialization.xml)
+    testImplementation(libs.ktor.server.compression.zstd)
     testImplementation(libs.ktor.server.auth)
     testImplementation(libs.ktor.server.forwarded.header)
     testImplementation(libs.kotlin.test.junit5)

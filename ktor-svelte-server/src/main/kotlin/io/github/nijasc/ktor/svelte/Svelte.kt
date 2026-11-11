@@ -16,6 +16,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.dev.statusJson
+import io.github.nijasc.ktor.svelte.internal.installApiCompression
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
 import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
@@ -95,6 +96,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         application.attributes.put(SvelteHandlerKey, handler)
 
         installTransport(application, pluginConfig.transportConfig)
+        if (pluginConfig.apiCompression) installApiCompression(application, resolver)
         installTypeScriptGeneration(
             application,
             pluginConfig.generateTs,

@@ -44,7 +44,7 @@ No CORS setup, no second server in production, no hand-written API types driftin
 - **Generated TypeScript.** Types and services come from your Ktor routes through OpenAPI, with no npm dependencies.
 - **Real hot reload.** One command runs everything. You open Ktor's port and get Vite's HMR, with the same origin as production. Change a route and your TypeScript follows.
 - **Transport in one place.** JSON, XML and compression are configured inside `install(Svelte)`.
-- **Sensible production defaults.** Immutable caching for hashed assets, ETags, precompressed files, SPA fallback and real 404s for stale chunks.
+- **Sensible production defaults.** Immutable caching for hashed assets, ETags, precompressed files, compressed API responses, SPA fallback and real 404s for stale chunks.
 - **Frontend libraries from Kotlin.** Turn on Tailwind, DaisyUI, Lucide and i18n in Gradle, with typed icons, themes and messages on both sides.
 - **Bring your package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
 - **Run configurations for IntelliJ.** One click starts Vite and Ktor together.

@@ -59,6 +59,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun apiPrefixes ([Ljava/lang/String;)V
 	public final fun cache (Lkotlin/jvm/functions/Function1;)V
 	public final fun dev (Lkotlin/jvm/functions/Function1;)V
+	public final fun getApiCompression ()Z
 	public final fun getApiDocs ()Z
 	public final fun getApiDocsPath ()Ljava/lang/String;
 	public final fun getGenerateTs ()Z
@@ -77,6 +78,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun rateLimit (Lkotlin/jvm/functions/Function1;)V
 	public final fun securityHeaders (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun securityHeaders$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final fun setApiCompression (Z)V
 	public final fun setApiDocs (Z)V
 	public final fun setApiDocsPath (Ljava/lang/String;)V
 	public final fun setGenerateTs (Z)V
