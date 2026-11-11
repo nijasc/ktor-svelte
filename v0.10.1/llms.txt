@@ -1,0 +1,62 @@
+# ktor-svelte 0.10.1
+
+> Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.
+
+The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svelte/v0.10.1/llms-full.txt
+
+## Guide
+
+- [What is ktor-svelte?](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/introduction)
+- [Compared with other setups](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/comparison)
+- [Getting started](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/getting-started)
+- [Tutorial: a notes app](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/tutorial)
+- [Add to an existing project](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/existing-project)
+- [Project structure](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/project-structure)
+- [Dev workflow](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/dev-workflow)
+- [Deployment](https://nijasc.github.io/ktor-svelte/v0.10.1/guide/deployment)
+- [Examples](https://nijasc.github.io/ktor-svelte/v0.10.1/examples)
+
+## Features
+
+- [Generated TypeScript](https://nijasc.github.io/ktor-svelte/v0.10.1/features/typescript)
+- [Calling the API](https://nijasc.github.io/ktor-svelte/v0.10.1/features/calling-the-api)
+- [Validation](https://nijasc.github.io/ktor-svelte/v0.10.1/features/validation)
+- [Transport and compression](https://nijasc.github.io/ktor-svelte/v0.10.1/features/transport)
+- [Auth](https://nijasc.github.io/ktor-svelte/v0.10.1/features/auth)
+- [Runtime config](https://nijasc.github.io/ktor-svelte/v0.10.1/features/runtime-config)
+- [Built-in endpoints](https://nijasc.github.io/ktor-svelte/v0.10.1/features/endpoints)
+- [Frontend libraries](https://nijasc.github.io/ktor-svelte/v0.10.1/features/frontend-libraries)
+- [Security](https://nijasc.github.io/ktor-svelte/v0.10.1/security)
+
+## Recipes
+
+- [Overview](https://nijasc.github.io/ktor-svelte/v0.10.1/recipes/)
+- [Sign in with a session cookie](https://nijasc.github.io/ktor-svelte/v0.10.1/recipes/sessions)
+- [Upload files](https://nijasc.github.io/ktor-svelte/v0.10.1/recipes/uploads)
+- [Stream live updates](https://nijasc.github.io/ktor-svelte/v0.10.1/recipes/live-updates)
+- [Page through long lists](https://nijasc.github.io/ktor-svelte/v0.10.1/recipes/pagination)
+- [Add an admin area](https://nijasc.github.io/ktor-svelte/v0.10.1/recipes/admin-area)
+
+## Reference
+
+- [Ktor settings](https://nijasc.github.io/ktor-svelte/v0.10.1/reference/ktor)
+- [Gradle settings and tasks](https://nijasc.github.io/ktor-svelte/v0.10.1/reference/gradle)
+- [How it works](https://nijasc.github.io/ktor-svelte/v0.10.1/reference/how-it-works)
+- [Architecture](https://nijasc.github.io/ktor-svelte/v0.10.1/reference/architecture)
+- [Troubleshooting](https://nijasc.github.io/ktor-svelte/v0.10.1/reference/troubleshooting)
+- [FAQ](https://nijasc.github.io/ktor-svelte/v0.10.1/reference/faq)
+- [Compatibility](https://nijasc.github.io/ktor-svelte/v0.10.1/reference/compatibility)
+
+## Upgrading
+
+- [Overview](https://nijasc.github.io/ktor-svelte/v0.10.1/migrations/)
+- [To 0.10](https://nijasc.github.io/ktor-svelte/v0.10.1/migrations/0.10)
+- [To 0.9](https://nijasc.github.io/ktor-svelte/v0.10.1/migrations/0.9)
+- [To 0.8](https://nijasc.github.io/ktor-svelte/v0.10.1/migrations/0.8)
+- [To 0.7](https://nijasc.github.io/ktor-svelte/v0.10.1/migrations/0.7)
+- [To 0.6](https://nijasc.github.io/ktor-svelte/v0.10.1/migrations/0.6)
+
+## Optional
+
+- [Changelog](https://nijasc.github.io/ktor-svelte/v0.10.1/changelog)
+- [API reference](https://nijasc.github.io/ktor-svelte/v0.10.1/api/)
