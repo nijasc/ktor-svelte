@@ -119,3 +119,17 @@ To refresh the files without your dev server, for example in CI, run the task be
 ```bash
 ./gradlew svelteGenerateTs
 ```
+
+## Reload after a deploy
+
+Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API:
+
+```ts
+import { apiConfig } from '#api';
+
+apiConfig.onNewBuild = () => {
+    showToast('A new version is available.', { action: 'Reload', onAction: () => location.reload() });
+};
+```
+
+Set `buildHeader = false` in `install(Svelte)` to leave the header out.
