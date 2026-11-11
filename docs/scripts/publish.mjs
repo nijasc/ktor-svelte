@@ -6,8 +6,8 @@ if (!version || !latestBuild || !versionedBuild || !site) {
     console.error('Usage: bun scripts/publish.mjs <version> <latest build> <versioned build> <gh-pages checkout>');
     process.exit(1);
 }
-if (!/^\d+\.\d+\.\d+$/.test(version)) {
-    console.error(`"${version}" is not a release version such as 1.2.3.`);
+if (version !== 'main' && !/^\d+\.\d+\.\d+$/.test(version)) {
+    console.error(`"${version}" is neither main nor a release version such as 1.2.3.`);
     process.exit(1);
 }
 
@@ -20,16 +20,18 @@ const newestFirst = (a, b) => {
 };
 
 const listFile = join(site, 'versions.json');
-const previous = existsSync(listFile) ? JSON.parse(readFileSync(listFile, 'utf8')).versions ?? [] : [];
-const versions = [...new Set([...previous, version])].sort(newestFirst);
-const latest = versions[0];
+const list = existsSync(listFile) ? JSON.parse(readFileSync(listFile, 'utf8')) : {};
+const previous = list.versions ?? [];
+const versions = version === 'main' ? previous : [...new Set([...previous, version])].sort(newestFirst);
+const latest = versions[0] ?? null;
+const main = version === 'main' || list.main === true;
 
-const versionedTarget = join(site, `v${version}`);
+const versionedTarget = join(site, version === 'main' ? 'main' : `v${version}`);
 rmSync(versionedTarget, { recursive: true, force: true });
 cpSync(versionedBuild, versionedTarget, { recursive: true });
 
 if (version === latest) {
-    const kept = new Set(['.git', '.nojekyll', 'versions.json']);
+    const kept = new Set(['.git', '.nojekyll', 'versions.json', 'main']);
     for (const entry of readdirSync(site)) {
         if (kept.has(entry) || /^v\d+\.\d+\.\d+$/.test(entry)) continue;
         rmSync(join(site, entry), { recursive: true, force: true });
@@ -37,6 +39,6 @@ if (version === latest) {
     cpSync(latestBuild, site, { recursive: true });
 }
 
-writeFileSync(listFile, `${JSON.stringify({ latest, versions }, null, 2)}\n`);
+writeFileSync(listFile, `${JSON.stringify({ latest, versions, main }, null, 2)}\n`);
 writeFileSync(join(site, '.nojekyll'), '');
 console.log(`Published ${version}. Latest is ${latest}. Versions: ${versions.join(', ')}.`);
