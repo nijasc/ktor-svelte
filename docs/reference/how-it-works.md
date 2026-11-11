@@ -22,11 +22,13 @@ At run time, `install(Svelte)` adds a catch-all route. Ktor always prefers more 
 | 6 | Other path, with a fallback page and a request that accepts HTML, or a path matching `paramRoutes` | Serve the fallback with status 200 |
 | 7 | Anything else | `404.html` with status 404 if it exists, otherwise a plain 404 |
 
-Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Step 5 lets SvelteKit recover from stale chunks after a deploy by doing a full page reload.
+Step 4 exists because prerendered pages load assets with relative paths, so serving `about.html` at `/about/` would break them. Every file from the build answers `Range: bytes=...` requests with 206 and `Content-Range`, so videos can seek and downloads can resume. Ranges are always served without `Content-Encoding`, `If-Range` is honoured, and a range past the end of the file answers 416.
+
+Step 5 lets SvelteKit recover from stale chunks after a deploy by doing a full page reload.
 
 ## Limits
 
 - `adapter-static` only. There is no Node process in production, so `+page.server.ts`, `+server.ts` and form actions are not supported. Ktor is the backend. The [FAQ](faq.md) explains why and what to use instead.
 - The app is mounted at the root. `paths.base` is not supported yet.
-- No range requests, so large media does not belong in the SvelteKit build.
+- Files are served whole or as one byte range. Requests for several ranges at once get the whole file. Very large media still makes the JAR large, so a CDN or object storage is often the better home for it.
 - `generateTs` builds on Ktor's OpenAPI support, which Ktor still marks as experimental.
