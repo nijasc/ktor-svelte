@@ -25,6 +25,22 @@ For the edits you make most, install the live templates once with `./gradlew sve
 
 To debug your Kotlin code, start `Dev` as usual and then start the `Debug app` run configuration in debug mode. IntelliJ debugs Gradle tasks only when they run a JVM through Gradle, and `svelteDevAll` starts the app itself, so the app instead listens for a debugger on `127.0.0.1:5005` (see `dev.debugPort`). `Debug app` has auto restart on, so it reconnects after each restart. Outside IntelliJ, attach any JDWP debugger to that port. Two apps running `svelteDevAll` at once need different debug ports.
 
+At startup in development, the app logs which protections and settings are active, so a 403, 413 or 429 does not come as a surprise:
+
+```
+ktor-svelte settings:
+  API prefixes: /api
+  Dev proxy: http://localhost:5173
+  Origin check: on (same host only)
+  Body limit: 1 MiB, JSON depth: 64
+  Rate limit: 120 writes per 1m per client, FixedWindow
+  Content-Security-Policy: off while proxying to Vite
+  Error details: hidden in production, shown now
+  API compression: on, request IDs: on
+```
+
+Production logs only the version and the build fingerprint.
+
 In development, API calls that take 500 ms or longer are logged with the route that served them, so you can jump straight to the code:
 
 ```

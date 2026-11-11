@@ -35,6 +35,7 @@ import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonShape
 import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
+import io.github.nijasc.ktor.svelte.internal.settingsSummary
 import io.github.nijasc.ktor.svelte.internal.startupLine
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -127,7 +128,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
         }
 
+        val summary = if (application.developmentMode) settingsSummary(pluginConfig, devUrl.takeIf { devProxy != null }) else emptyList()
         application.monitor.subscribe(ApplicationStarted) {
+            if (summary.isNotEmpty()) application.log.info("ktor-svelte settings:\n" + summary.joinToString("\n") { "  $it" })
             application.log.info(startupLine(store.manifest(), devUrl.takeIf { devProxy != null }))
         }
         if (store.manifest() == null) {
