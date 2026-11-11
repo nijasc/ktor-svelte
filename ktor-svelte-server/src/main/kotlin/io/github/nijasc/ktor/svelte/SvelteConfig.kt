@@ -44,6 +44,7 @@ public class SvelteConfig {
     public var healthEndpoint: Boolean = false
     public var originCheck: Boolean = true
     public var hideErrorDetails: Boolean = true
+    public var apiCompression: Boolean = true
     public var maxApiBodySize: Long? = 1024L * 1024L
 
     public fun apiPrefixes(vararg prefixes: String) {
