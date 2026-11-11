@@ -123,6 +123,13 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteRun passes extra arguments to the script`() {
+        val project = project()
+        project.run("svelteRun", "--script=lint", "--args=--fix --quiet")
+        assertEquals("run lint --fix --quiet", project.calls().last())
+    }
+
+    @Test
     fun `svelteRun without a script explains what to do`() {
         val project = project()
         assertContains(project.runAndFail("svelteRun").output, "Name a package.json script")
