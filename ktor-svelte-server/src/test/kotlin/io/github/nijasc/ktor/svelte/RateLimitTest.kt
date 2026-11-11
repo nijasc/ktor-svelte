@@ -163,6 +163,21 @@ class RateLimitTest {
         }
 
     @Test
+    fun `the default limit can use a sliding window`() =
+        rateLimited({
+            rateLimit {
+                apiWrites = 2
+                algorithm = RateLimitAlgorithm.SlidingWindow
+                limit("login", 1, 1.minutes, RateLimitAlgorithm.TokenBucket)
+            }
+        }) {
+            repeat(2) { assertEquals(HttpStatusCode.OK, postFrom("/api/notes", "192.0.2.9").status) }
+            assertEquals(HttpStatusCode.TooManyRequests, postFrom("/api/notes", "192.0.2.9").status)
+            assertEquals(HttpStatusCode.OK, postFrom("/api/login", "192.0.2.10").status)
+            assertEquals(HttpStatusCode.TooManyRequests, postFrom("/api/login", "192.0.2.10").status)
+        }
+
+    @Test
     fun `invalid named limits are rejected`() {
         assertFailsWith<IllegalArgumentException> { SvelteRateLimitConfig().limit("login", 0, 1.minutes) }
         assertFailsWith<IllegalArgumentException> { SvelteRateLimitConfig().limit("login", 1, 0.minutes) }
