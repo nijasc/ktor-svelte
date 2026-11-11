@@ -86,6 +86,7 @@ export default defineConfig({
                     { text: 'Ktor settings', link: '/reference/ktor' },
                     { text: 'Gradle settings and tasks', link: '/reference/gradle' },
                     { text: 'How it works', link: '/reference/how-it-works' },
+                    { text: 'Architecture', link: '/reference/architecture' },
                     { text: 'Troubleshooting', link: '/reference/troubleshooting' },
                     { text: 'FAQ', link: '/reference/faq' },
                     { text: 'Compatibility', link: '/reference/compatibility' },
