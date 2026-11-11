@@ -920,7 +920,7 @@ Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localh
 
 ## Limits
 
-- `adapter-static` only. There is no Node process in production, so `+page.server.ts`, `+server.ts` and form actions are not supported. Ktor is the backend.
+- `adapter-static` only. There is no Node process in production, so `+page.server.ts`, `+server.ts` and form actions are not supported. Ktor is the backend. The [FAQ](#faq) explains why and what to use instead.
 - The app is mounted at the root. `paths.base` is not supported yet.
 - No range requests, so large media does not belong in the SvelteKit build.
 - `generateTs` builds on Ktor's OpenAPI support, which Ktor still marks as experimental.
