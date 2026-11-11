@@ -20,6 +20,7 @@ install(Svelte) {
     routing = SvelteRouting.Automatic
     originCheck = true
     hideErrorDetails = true
+    apiCompression = true
     allowedOrigins()
     maxApiBodySize = 1048576
 
@@ -62,6 +63,7 @@ install(Svelte) {
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](server.md#auth) |
 | `originCheck` | Refuses cross-site requests to API paths for every method except GET, HEAD, OPTIONS and TRACE. See [API request guards](security.md#api-request-guards) |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](security.md#api-request-guards) |
+| `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](server.md#api-compression) |
 | `allowedOrigins` | Extra origins, such as `https://admin.example.com`, that may write to the API |
 | `maxApiBodySize` | Largest request body on API paths, in bytes. `null` disables it |
 | `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](security.md#security-headers) |
