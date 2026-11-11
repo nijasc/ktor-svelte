@@ -1,22 +1,28 @@
 import { defineConfig } from 'vitepress';
+import { socialHead, writeSocialImages } from './socialImages';
 
 const repository = 'https://github.com/nijasc/ktor-svelte';
 const siteRoot = '/ktor-svelte/';
 const base = process.env.DOCS_BASE ?? siteRoot;
 const version = process.env.DOCS_VERSION ?? 'main';
+const description = 'Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.';
 
 export default defineConfig({
     title: 'ktor-svelte',
-    description: 'Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.',
+    description,
     base,
     cleanUrls: true,
     lastUpdated: true,
     srcExclude: ['api-reference.md', 'node_modules/**'],
     head: [
-        ['meta', { name: 'theme-color', content: '#ff3e00' }],
-        ['meta', { property: 'og:title', content: 'ktor-svelte' }],
-        ['meta', { property: 'og:description', content: 'One app. One JAR. One port. Ktor and SvelteKit together.' }]
+        ['meta', { name: 'theme-color', content: '#ff3e00' }]
     ],
+    transformHead({ pageData, siteConfig }) {
+        return socialHead(pageData, siteConfig.srcDir, `https://nijasc.github.io${base}`, 'ktor-svelte', description);
+    },
+    buildEnd(siteConfig) {
+        writeSocialImages(siteConfig.outDir, version === 'main' ? 'ktor-svelte' : `ktor-svelte ${version}`);
+    },
     vite: {
         define: {
             __DOCS_VERSION__: JSON.stringify(version),
