@@ -1,15 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    `java-gradle-plugin`
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.ktlint)
-    alias(libs.plugins.plugin.publish)
+    id("ktor-svelte.kotlin-conventions")
+    id("ktor-svelte.plugin-publishing")
 }
 
 kotlin {
-    explicitApi()
-    jvmToolchain(17)
     coreLibrariesVersion = "2.1.21"
     compilerOptions {
         apiVersion = KotlinVersion.KOTLIN_2_1
@@ -19,8 +15,6 @@ kotlin {
 }
 
 gradlePlugin {
-    website = "https://github.com/nijasc/ktor-svelte"
-    vcsUrl = "https://github.com/nijasc/ktor-svelte.git"
     plugins {
         create("ktorSvelte") {
             id = "io.github.nijasc.ktor-svelte"

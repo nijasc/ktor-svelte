@@ -1,15 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ktlint)
-    alias(libs.plugins.maven.publish)
+    id("ktor-svelte.serialization-conventions")
+    id("ktor-svelte.library-publishing")
 }
 
 kotlin {
-    explicitApi()
-    jvmToolchain(17)
     coreLibrariesVersion = "2.3.21"
     compilerOptions {
         apiVersion = KotlinVersion.KOTLIN_2_3
@@ -39,33 +35,9 @@ dependencies {
     testRuntimeOnly(libs.logback)
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
-
 mavenPublishing {
-    publishToMavenCentral()
-    signAllPublications()
     pom {
         name = "ktor-svelte-server"
         description = "Ktor plugin that serves a SvelteKit build on the same port as the API."
-        url = "https://github.com/nijasc/ktor-svelte"
-        licenses {
-            license {
-                name = "Apache-2.0"
-                url = "https://www.apache.org/licenses/LICENSE-2.0"
-            }
-        }
-        developers {
-            developer {
-                id = "nijasc"
-                name = "nijasc"
-                url = "https://github.com/nijasc"
-            }
-        }
-        scm {
-            url = "https://github.com/nijasc/ktor-svelte"
-            connection = "scm:git:https://github.com/nijasc/ktor-svelte.git"
-        }
     }
 }
