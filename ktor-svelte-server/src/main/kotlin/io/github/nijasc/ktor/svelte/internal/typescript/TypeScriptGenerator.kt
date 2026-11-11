@@ -48,6 +48,7 @@ internal class TypeScriptGenerator(
         val types = typesSource(schemas) + publicConfigDeclaration(schemas)
         return mapOf(
             "client.ts" to typeScriptTemplate("client.ts"),
+            "form.ts" to typeScriptTemplate("form.ts"),
             "types.ts" to types + validationHelpers.joinToString("") { "\n" + it.source },
             "services.ts" to
                 servicesSource(

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { api, NoteInput } from '#api';
+    import { api, field, isValidationError, NoteInput } from '#api';
     import Icon from '#icon';
     import { localizeHref, m } from '#i18n';
     import type { PageProps } from './$types';
@@ -10,6 +10,7 @@
     let title = $state('');
     let body = $state('');
     let saved = $state(false);
+    let errors = $state<Record<string, string[]>>({});
 
     $effect(() => {
         title = data.note.title;
@@ -18,8 +19,15 @@
 
     async function save(event: SubmitEvent) {
         event.preventDefault();
-        await api.notes.update(data.note.id, { title, body, tags: data.note.tags, icon: data.note.icon });
-        saved = true;
+        saved = false;
+        try {
+            await api.notes.update(data.note.id, { title, body, tags: data.note.tags, icon: data.note.icon });
+            errors = {};
+            saved = true;
+        } catch (error) {
+            if (!isValidationError(error)) throw error;
+            errors = error.body.fields;
+        }
     }
 
     async function remove() {
@@ -32,7 +40,7 @@
 <h1 class="my-4 flex items-center gap-2 text-3xl font-bold"><Icon name={data.note.icon} /> {title}</h1>
 
 <form class="grid gap-2" onsubmit={save}>
-    <input class="input w-full" aria-label="Title" bind:value={title} {...NoteInput.bounds.title} />
+    <input class="input w-full" aria-label="Title" bind:value={title} use:field={{ bounds: NoteInput.bounds.title, errors: errors.title, errorClass: 'text-error' }} />
     <textarea class="textarea w-full" aria-label="Body" rows="6" bind:value={body}></textarea>
     <div class="flex gap-2">
         <button class="btn btn-primary" type="submit">{m.actionSave()}</button>

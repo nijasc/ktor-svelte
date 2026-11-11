@@ -585,6 +585,14 @@ With `generateTs`, the same annotations end up in OpenAPI and in the generated T
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
 
+`use:field` puts the bounds on an input and shows its errors right after it, with `aria-invalid` and `aria-describedby` set for screen readers. Pass the same errors whether they come from `validate()` or from a 422:
+
+```svelte
+<input bind:value={draft.title} use:field={{ bounds: NoteInput.bounds.title, errors: errors.title, errorClass: 'text-error' }} />
+```
+
+The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty.
+
 ## Transport
 
 Choose how your API talks inside `install(Svelte)`. Without a `transport` block, nothing is installed and you stay in control.
