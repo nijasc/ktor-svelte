@@ -170,6 +170,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 }.hide()
             }
             if (docsPath != null) {
+                application.log.info("ktor-svelte serves API docs at $docsPath")
                 swaggerUI(docsPath) {
                     info = OpenApiInfo(title = "API", version = "dev")
                     source = OpenApiDocSource.Routing(ContentType.Application.Json)
