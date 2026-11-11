@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.gradle.locateExecutable
 import io.github.nijasc.ktor.svelte.gradle.requireExecutable
 import io.github.nijasc.ktor.svelte.gradle.resolveFrontendTool
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -14,6 +15,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.ValueSource
 import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Console
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
@@ -36,6 +38,9 @@ public abstract class SvelteToolTask : DefaultTask() {
     @get:Input
     public abstract val packageManager: Property<PackageManager>
 
+    @get:Console
+    public abstract val verbose: Property<Boolean>
+
     @get:Inject
     protected abstract val execOperations: ExecOperations
 
@@ -52,6 +57,33 @@ public abstract class SvelteToolTask : DefaultTask() {
             spec.commandLine(listOf(executable.absolutePath) + arguments)
             spec.isIgnoreExitValue = ignoreExitValue
         }
+    }
+
+    internal fun runToolQuietly(
+        tool: FrontendTool,
+        arguments: List<String>,
+    ) {
+        if (verbose.getOrElse(false)) return runTool(tool, arguments)
+        val executable = requireExecutable(tool)
+        val output = ByteArrayOutputStream()
+        val result =
+            execOperations.exec { spec ->
+                spec.workingDir = frontendDir.get().asFile
+                spec.commandLine(listOf(executable.absolutePath) + arguments)
+                spec.standardOutput = output
+                spec.errorOutput = output
+                spec.isIgnoreExitValue = true
+            }
+        val text = output.toString(Charsets.UTF_8).trimEnd()
+        if (result.exitValue == 0) {
+            if (text.isNotEmpty()) logger.info(text)
+            return
+        }
+        if (text.isNotEmpty()) logger.error(text)
+        throw GradleException(
+            "ktor-svelte: '${(listOf(tool.executableName) + arguments).joinToString(" ")}' failed with exit code ${result.exitValue}. " +
+                "Its output is printed above. Run with -Psvelte.verbose=true to always see the frontend output.",
+        )
     }
 }
 
@@ -77,7 +109,7 @@ public abstract class SvelteInstallTask : SvelteToolTask() {
     @TaskAction
     public fun install() {
         val tool = tool()
-        runTool(tool, tool.installArguments)
+        runToolQuietly(tool, tool.installArguments)
         stampFile.get().asFile.writeText(tool.executableName)
     }
 }
@@ -103,7 +135,7 @@ public abstract class SvelteBuildTask : SvelteToolTask() {
     @TaskAction
     public fun build() {
         val tool = tool()
-        runTool(tool, tool.runArguments(script.get()))
+        runToolQuietly(tool, tool.runArguments(script.get()))
     }
 }
 

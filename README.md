@@ -911,6 +911,7 @@ The package manager must already be installed. The plugin does not download Node
 | `-Psvelte.skip=true` | Skips the frontend build, and warns if a JAR is being built |
 | `-Psvelte.dev=true` | Same as skip, and also sets `-Dio.ktor.development=true` on `run` |
 | `-Psvelte.verifyTs=false` | Leaves `svelteVerifyTs` out of `check` |
+| `-Psvelte.verbose=true` | Shows the package manager and Vite output of `svelteInstall`, `svelteBuild`, `svelteSync` and `svelteInit`. Without it, that output is hidden when the command succeeds and printed in full when it fails. `--info` also shows it |
 
 ## Dev workflow
 

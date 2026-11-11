@@ -101,7 +101,7 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
         }
         if (packagesChanged || !frontend.resolve("node_modules").isDirectory) {
             val tool = tool()
-            runTool(tool, listOf("install"))
+            runToolQuietly(tool, listOf("install"))
         }
 
         val icons = if (current.lucide) iconSources(installedIcons(frontend)) else emptyMap()

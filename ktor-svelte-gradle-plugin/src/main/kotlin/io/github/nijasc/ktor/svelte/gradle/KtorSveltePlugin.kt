@@ -47,6 +47,7 @@ private val DEEP_CLEAN_FRONTEND_PATHS = listOf("node_modules", ".svelte-kit", ".
 private val DEEP_CLEAN_PROJECT_PATHS = listOf(".gradle", ".kotlin")
 private const val SKIP_PROPERTY = "svelte.skip"
 private const val DEV_PROPERTY = "svelte.dev"
+private const val VERBOSE_PROPERTY = "svelte.verbose"
 private const val VERIFY_TS_PROPERTY = "svelte.verifyTs"
 private const val SKIP_WARNING =
     "ktor-svelte: building a JAR with the frontend build skipped. The JAR may hold a stale frontend, or none."
@@ -385,6 +386,12 @@ public class KtorSveltePlugin : Plugin<Project> {
         task.group = TASK_GROUP
         task.frontendDir.set(extension.frontendDir)
         task.packageManager.set(extension.packageManager)
+        task.verbose.set(
+            task.project.providers
+                .gradleProperty(VERBOSE_PROPERTY)
+                .map { it.toBoolean() }
+                .orElse(false),
+        )
     }
 
     private fun registerInstall(
