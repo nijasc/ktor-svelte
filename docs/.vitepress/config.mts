@@ -29,7 +29,21 @@ export default defineConfig({
             sidebar: siteConfig.site.themeConfig.sidebar
         });
     },
+    markdown: {
+        config(md) {
+            const fence = md.renderer.rules.fence!;
+            md.renderer.rules.fence = (tokens, index, options, env, self) => {
+                const token = tokens[index];
+                const words = token.info.trim().split(/\s+/);
+                if (!words.includes('stackblitz')) return fence(tokens, index, options, env, self);
+                token.info = words.filter((word) => word !== 'stackblitz').join(' ');
+                const code = Buffer.from(token.content, 'utf8').toString('base64');
+                return fence(tokens, index, options, env, self) + `<StackBlitzButton code="${code}" />`;
+            };
+        }
+    },
     vite: {
+        server: { fs: { allow: ['..'] } },
         define: {
             __DOCS_VERSION__: JSON.stringify(version),
             __DOCS_SITE_ROOT__: JSON.stringify(siteRoot)

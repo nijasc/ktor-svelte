@@ -106,6 +106,8 @@ The API reference is built with Dokka from the public API of both modules:
 
 Each build also writes `llms.txt`, an index of every page in sidebar order, and `llms-full.txt`, all pages as one Markdown file with absolute links. Both come from `docs/.vitepress/llms.ts` and follow the sidebar, so a new page only needs a sidebar entry.
 
+Mark a Svelte snippet with ` ```svelte stackblitz ` to give it an "Open in StackBlitz" button. The button opens a Vite project with the snippet as `App.svelte`, the generated client of `examples/notes` behind `#api`, and an in-memory mock of the notes API in `src/mock.ts`. Use it for complete components that only call the notes routes. The project template is `docs/.vitepress/theme/stackblitzProject.ts`.
+
 Every release runs the `Docs` workflow, which builds the site and the API reference for that version and publishes them to the `gh-pages` branch: under `/v<version>/`, and also at the root when it is the newest release. The version switcher in the site reads `versions.json` from there. The same workflow then deploys the whole `gh-pages` branch to GitHub Pages, so the repository's Pages source stays set to GitHub Actions. To publish a release again, run the `Docs` workflow by hand with its version. Every push to `main` that changes the docs or the public sources also publishes them under `/main/`, listed as "main (unreleased)" in the version switcher. Runs that overlap retry their push to `gh-pages` on a fresh clone, and each deployment serves the newest state of the branch.
 
 ## CI
