@@ -1,0 +1,73 @@
+name: Docs
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Released version to publish, such as 0.9.0
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: docs-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v${{ inputs.version }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: ./gradlew dokkaGenerate -PreleaseVersion="$VERSION"
+      - name: Build the docs for this version and for the site root
+        working-directory: docs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DOCS_VERSION: ${{ inputs.version }}
+        run: |
+          bun install --frozen-lockfile
+          DOCS_BASE="/ktor-svelte/v$VERSION/" bun run build
+          mv .vitepress/dist "$RUNNER_TEMP/versioned"
+          cp -r ../build/dokka/html "$RUNNER_TEMP/versioned/api"
+          DOCS_BASE="/ktor-svelte/" bun run build
+          mv .vitepress/dist "$RUNNER_TEMP/latest"
+          cp -r ../build/dokka/html "$RUNNER_TEMP/latest/api"
+      - name: Publish to gh-pages
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          remote="https://x-access-token:$TOKEN@github.com/$REPOSITORY.git"
+          if git ls-remote --exit-code --heads "$remote" gh-pages > /dev/null; then
+            git clone --depth 1 --branch gh-pages "$remote" "$RUNNER_TEMP/site"
+          else
+            git init --initial-branch gh-pages "$RUNNER_TEMP/site"
+            git -C "$RUNNER_TEMP/site" remote add origin "$remote"
+          fi
+          bun docs/scripts/publish.mjs "$VERSION" "$RUNNER_TEMP/latest" "$RUNNER_TEMP/versioned" "$RUNNER_TEMP/site"
+          cd "$RUNNER_TEMP/site"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit --quiet -m "docs: publish $VERSION"
+          git push origin gh-pages
