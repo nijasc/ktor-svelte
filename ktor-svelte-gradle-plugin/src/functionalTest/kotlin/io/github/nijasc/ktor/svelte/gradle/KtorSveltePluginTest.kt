@@ -53,6 +53,25 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `frontend output is hidden on success and shown on failure`() {
+        val project = project()
+        assertFalse(project.run("jar").output.contains("fake build output"))
+
+        project.frontend.resolve("fail-run").writeText("")
+        val failed = project.runAndFail("jar").output
+
+        assertContains(failed, "fake build error")
+        assertContains(failed, "'bun run build' failed with exit code 3")
+        assertContains(failed, "-Psvelte.verbose=true")
+    }
+
+    @Test
+    fun `verbose property shows frontend output`() {
+        val project = project()
+        assertContains(project.run("jar", "-Psvelte.verbose=true").output, "fake build output")
+    }
+
+    @Test
     fun `second run is up to date and does not call the tool`() {
         val project = project()
         project.run("jar")
