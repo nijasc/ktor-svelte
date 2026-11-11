@@ -1,0 +1,159 @@
+# Frontend libraries
+
+Tailwind, DaisyUI, Lucide and i18n, configured in Gradle with typed helpers on both sides.
+
+Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
+
+```kotlin
+import io.github.nijasc.ktor.svelte.gradle.DaisyTheme
+import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
+
+svelte {
+    libraries {
+        tailwind {
+            typography()
+            forms()
+        }
+        daisyUi {
+            themes(DaisyTheme.Light, DaisyTheme.Dark, DaisyTheme.Cupcake)
+            customTheme("brand") {
+                primary = "#6b57ff"
+                base100 = "#fdfcff"
+            }
+            defaultTheme(DaisyTheme.Light)
+            prefersDark(DaisyTheme.Dark)
+        }
+        lucide()
+        i18n {
+            locales("en", "de")
+            defaultLocale = "en"
+            strategy = LocaleStrategy.Cookie
+        }
+    }
+}
+```
+
+Then apply it:
+
+```bash
+./gradlew svelteSync
+```
+
+`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
+
+**ktor-svelte owns `vite.config.ts`** once any library is on. Put your own Vite settings in `vite.user.ts`, and they are merged in:
+
+```ts
+export default {
+    server: { port: 3000 }
+};
+```
+
+It also generates `src/hooks.server.ts`, and `src/hooks.ts` for URL prefixes. If you already have your own versions of these files, sync stops rather than overwriting them. It tells you to move your settings and delete the file. To combine your own `handle` with ours, use `sequence` from `@sveltejs/kit/hooks` with `ktorSvelteHandle` from `#lib/ktor-svelte/server-hooks.js`, after removing the generated hook file and any use of a library that needs it.
+
+If you already have `src/routes/+layout.svelte`, add this line once. Without a layout, one is created for you.
+
+```ts
+import '#lib/ktor-svelte/app.css';
+```
+
+Generated Kotlin lands in the `ktorsvelte` package. Change it with `generatedPackage = "com.example.ui"`.
+
+## Tailwind
+
+`tailwind()` installs Tailwind 4 and wires Vite and the CSS. `typography()` and `forms()` add the official plugins. Everything else is normal Tailwind CSS.
+
+## DaisyUI
+
+`daisyUi()` turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme.
+
+```svelte
+<script lang="ts">
+    import { setTheme, themes } from '#theme';
+</script>
+
+{#each themes as theme}
+    <button class="btn" onclick={() => setTheme(theme)}>{theme}</button>
+{/each}
+```
+
+```kotlin
+import ktorsvelte.AppTheme
+import ktorsvelte.theme
+
+get("/api/report") {
+    val isDark = call.theme == AppTheme.Dark
+}
+```
+
+`customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
+
+The saved theme is applied by a small inline script. The automatic [Content-Security-Policy](../security.md#security-headers) allows it by its hash. If you set your own `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
+
+## Lucide
+
+`lucide()` generates a `LucideIcon` enum from the installed version, so a misspelled icon is a compile error. Use it in your DTOs and it reaches the frontend as the same type:
+
+```kotlin
+import ktorsvelte.LucideIcon
+
+@Serializable
+data class Note(val title: String, val icon: LucideIcon)
+```
+
+```svelte
+<script lang="ts">
+    import Icon from '#icon';
+</script>
+
+<Icon name="ArrowRight" size={20} />
+<Icon name={note.icon} class="text-primary" />
+```
+
+Each icon loads on demand, so you only download the ones a page uses. An icon's enum name is its Lucide name in PascalCase, such as `arrow-right` to `ArrowRight`. Names starting with a digit get an `Icon` prefix. A misspelled icon name from a client gets a 400 from Ktor.
+
+## i18n
+
+Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. Files are flat, and `{name}` is a parameter:
+
+```json
+{
+  "note-created": "Created {title}",
+  "app-title": "Notes"
+}
+```
+
+Both sides get typed functions from the same files. A missing key or a mismatched parameter in any language fails the build, so translations can't drift.
+
+```svelte
+<script lang="ts">
+    import { getLocale, localizeHref, locales, m, setLocale } from '#i18n';
+</script>
+
+<h1>{m.appTitle()}</h1>
+<p>{m.noteCreated({ title: 'Milk' })}</p>
+<a href={localizeHref('/about')}>About</a>
+<button onclick={() => setLocale('de')}>Deutsch</button>
+```
+
+```kotlin
+import ktorsvelte.Messages
+import ktorsvelte.messages
+
+get("/api/hello") {
+    call.respondText(call.messages.noteCreated("Milk"))
+}
+
+val german = Messages.forLocale("de").appTitle()
+```
+
+Choose how the language is picked with `strategy`:
+
+| Strategy | URLs | Best for | Trade-off |
+|---|---|---|---|
+| `Cookie` (default) | `/about` | Apps behind a login | Prerendered pages hold the default language and switch on load, so others can flash briefly, and search engines mostly see one language |
+| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or pages won't be prerendered per language |
+
+On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy.
+
+Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
