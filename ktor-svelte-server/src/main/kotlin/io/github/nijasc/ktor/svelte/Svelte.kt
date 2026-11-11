@@ -21,6 +21,7 @@ import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
 import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
 import io.github.nijasc.ktor.svelte.internal.security.findPayloadTooLarge
+import io.github.nijasc.ktor.svelte.internal.security.installRateLimits
 import io.github.nijasc.ktor.svelte.internal.security.mayHideErrorDetails
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
@@ -115,6 +116,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         val maxApiBodySize = pluginConfig.maxApiBodySize
         if (maxApiBodySize != null) installBodyLimit(resolver, maxApiBodySize)
+        installRateLimits(application, pluginConfig.rateLimitConfig, resolver)
         if (pluginConfig.originCheck) {
             val originCheck = OriginCheck(pluginConfig.allowedOriginList)
             onCall { call ->
