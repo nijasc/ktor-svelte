@@ -347,6 +347,59 @@
                 }
             }
         },
+        "/api/notes/{id}/activity": {
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            },
+                            "application/xml": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Activity"
+                                    }
+                                }
+                            },
+                            "application/xml": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Activity"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/notes/{id}/archive": {
             "post": {
                 "summary": "",
@@ -4646,6 +4699,69 @@
                     },
                     "bytes": {
                         "type": "integer"
+                    }
+                }
+            },
+            "Archived": {
+                "type": "object",
+                "title": "Archived",
+                "required": [
+                    "type",
+                    "at",
+                    "title"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "archived"
+                        ]
+                    },
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "title": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Created": {
+                "type": "object",
+                "title": "Created",
+                "required": [
+                    "type",
+                    "at"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "created"
+                        ]
+                    },
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "Activity": {
+                "type": "object",
+                "title": "Activity",
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/Archived"
+                    },
+                    {
+                        "$ref": "#/components/schemas/Created"
+                    }
+                ],
+                "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                        "archived": "#/components/schemas/Archived",
+                        "created": "#/components/schemas/Created"
                     }
                 }
             },
