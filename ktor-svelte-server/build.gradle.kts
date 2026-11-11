@@ -43,3 +43,11 @@ mavenPublishing {
         description = "Ktor plugin that serves a SvelteKit build on the same port as the API."
     }
 }
+
+tasks.processResources {
+    val runtimeVersion = version.toString()
+    inputs.property("version", runtimeVersion)
+    filesMatching("ktor-svelte-server.properties") {
+        expand("version" to runtimeVersion)
+    }
+}

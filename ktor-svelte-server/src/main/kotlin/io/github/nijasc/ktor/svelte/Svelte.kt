@@ -28,6 +28,7 @@ import io.github.nijasc.ktor.svelte.internal.security.mayHideErrorDetails
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
+import io.github.nijasc.ktor.svelte.internal.startupLine
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.ktor.http.ContentType
@@ -36,6 +37,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationPlugin
+import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.PluginBuilder
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
@@ -108,6 +110,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         )
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
 
+        application.monitor.subscribe(ApplicationStarted) {
+            application.log.info(startupLine(store.manifest(), devUrl.takeIf { devProxy != null }))
+        }
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
             if (devProxy == null) application.log.warn(MISSING_BUILD_MESSAGE)
