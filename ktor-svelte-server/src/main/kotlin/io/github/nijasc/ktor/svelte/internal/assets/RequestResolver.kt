@@ -108,6 +108,7 @@ internal class RequestResolver(
     private fun isAssetPath(relative: String): Boolean {
         if (relative == "_app" || relative.startsWith("_app/")) return true
         if (relative == ".well-known" || relative.startsWith(".well-known/")) return true
+        if (relative == "_ktor-svelte" || relative.startsWith("_ktor-svelte/")) return true
         return '.' in relative.removeSuffix("/").substringAfterLast('/')
     }
 }
