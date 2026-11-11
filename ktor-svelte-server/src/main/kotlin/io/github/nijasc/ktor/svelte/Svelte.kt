@@ -122,7 +122,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (maxApiBodySize != null) installBodyLimit(resolver, maxApiBodySize)
         installRateLimits(application, pluginConfig.rateLimitConfig, resolver)
         if (pluginConfig.originCheck) {
-            val originCheck = OriginCheck(pluginConfig.allowedOriginList)
+            val originCheck = OriginCheck(pluginConfig.allowedOriginList, application.developmentMode)
             onCall { call ->
                 if (resolver.isApiPath(decodedPathOrRaw(call))) originCheck.refuseIfCrossOrigin(call)
             }
