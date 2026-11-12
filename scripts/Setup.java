@@ -149,6 +149,7 @@ public class Setup {
         if (auth) writeAuthPages(directory, daisy, tailwind, i18n);
         installPackages(directory, manager);
         gradle(directory, "svelteRun", "--script=format");
+        gradle(directory, "svelteSync");
         if (generateTs) gradle(directory, "svelteGenerateTs");
         if (git) initGit(directory);
 
