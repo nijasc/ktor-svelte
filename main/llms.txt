@@ -9,6 +9,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 - [What is ktor-svelte?](https://nijasc.github.io/ktor-svelte/main/guide/introduction)
 - [Compared with other setups](https://nijasc.github.io/ktor-svelte/main/guide/comparison)
 - [Getting started](https://nijasc.github.io/ktor-svelte/main/guide/getting-started)
+- [Configurator](https://nijasc.github.io/ktor-svelte/main/guide/configurator)
 - [Tutorial: a notes app](https://nijasc.github.io/ktor-svelte/main/guide/tutorial)
 - [Add to an existing project](https://nijasc.github.io/ktor-svelte/main/guide/existing-project)
 - [Project structure](https://nijasc.github.io/ktor-svelte/main/guide/project-structure)
