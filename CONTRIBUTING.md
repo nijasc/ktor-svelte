@@ -194,7 +194,7 @@ A change that makes existing apps behave differently, such as a new default, a n
 
 Scopes are `server`, `gradle-plugin`, `example` and `repo`. Write `feat` and `fix` summaries for users, since they appear in the release notes as they are.
 
-There is no changelog file and you never bump a version by hand. [release-please](https://github.com/googleapis/release-please) keeps a release pull request open on `main`. Merging it creates the tag and GitHub release, then publishes both artifacts, attaches a CycloneDX SBOM for each, and records signed build provenance for every published JAR with `actions/attest-build-provenance`. Run `./gradlew cyclonedxDirectBom` to see the SBOMs locally in `build/reports/cyclonedx-direct/` of each module.
+There is no changelog file and you never bump a version by hand. [release-please](https://github.com/googleapis/release-please) keeps a release pull request open on `main`. Merging it creates the tag and GitHub release, removes entries that release-please lists twice from the release notes, then publishes both artifacts, attaches a CycloneDX SBOM for each, and records signed build provenance for every published JAR with `actions/attest-build-provenance`. Run `./gradlew cyclonedxDirectBom` to see the SBOMs locally in `build/reports/cyclonedx-direct/` of each module.
 
 The release workflow needs these repository secrets:
 

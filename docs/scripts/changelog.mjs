@@ -46,7 +46,15 @@ function highlights(name) {
 function notes(body) {
     const lines = (body ?? '').replace(/\r\n/g, '\n').split('\n');
     if (lines[0]?.startsWith('## ')) lines.shift();
+    const seen = new Set();
     const text = lines
+        .filter((line) => {
+            if (!line.startsWith('* ')) return true;
+            const entry = line.replace(/ \(\[[0-9a-f]+\]\(.*$/, '');
+            if (seen.has(entry)) return false;
+            seen.add(entry);
+            return true;
+        })
         .join('\n')
         .replace(/^#{1,3} /gm, '### ')
         .trim();
