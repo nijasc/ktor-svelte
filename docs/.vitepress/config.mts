@@ -18,7 +18,8 @@ export default defineConfig({
     lastUpdated: true,
     srcExclude: ['api-reference.md', 'reference/compatibility-matrix.md', 'node_modules/**'],
     head: [
-        ['meta', { name: 'theme-color', content: '#ff3e00' }]
+        ['meta', { name: 'theme-color', content: '#ff3e00' }],
+        ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }]
     ],
     transformHead({ pageData, siteConfig }) {
         return socialHead(pageData, siteConfig.srcDir, `https://nijasc.github.io${base}`, 'ktor-svelte', description);
@@ -85,6 +86,7 @@ export default defineConfig({
         }
     },
     themeConfig: {
+        logo: '/logo.svg',
         search: { provider: 'local' },
         nav: [
             { text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' },
