@@ -37,6 +37,7 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 | `ktor-svelte-server/.../internal/validation/` | `SchemaConstraints`, which checks received values against `JsonSchema` annotations and `Validated` rules |
 | `ktor-svelte-server/.../internal/dev/` | The Vite dev proxy and the status endpoint |
 | `ktor-svelte-server/.../internal/typescript/` | OpenAPI to TypeScript. `TypeScriptGenerator` takes OpenAPI JSON and returns files, so it is easy to test |
+| `ktor-svelte-catalog/` | The published version catalog. It takes the Kotlin, Ktor and serialization versions from `gradle/libs.versions.toml`, so bumping them there updates the catalog too |
 | `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/`, and `libraries/` generates the files for configured frontend libraries |
 | `build-logic/` | Convention plugins shared by both modules: Kotlin, ktlint and toolchain setup, and the publishing metadata |
 | `examples/basic/` | The smallest possible app |
@@ -124,7 +125,7 @@ Pull requests only run the jobs their changes can affect. `.github/scripts/chang
 
 | Area | Changed paths | Jobs |
 |---|---|---|
-| code | `ktor-svelte-server/`, `ktor-svelte-gradle-plugin/`, `build-logic/`, `gradle/`, root build files, `version.txt` | everything |
+| code | `ktor-svelte-server/`, `ktor-svelte-gradle-plugin/`, `ktor-svelte-catalog/`, `build-logic/`, `gradle/`, root build files, `version.txt` | everything |
 | examples | `examples/` | example builds, generated client check |
 | setup | `scripts/` | setup script builds |
 | docs | `docs/` | docs site build |
