@@ -269,6 +269,16 @@ class LibrariesTest {
     }
 
     @Test
+    fun `sync runs before source generation, whatever the order on the command line`() {
+        val project = project("lucide()")
+        addLucide(project)
+        val result = project.run("classes", "svelteSync")
+        assertEquals(TaskOutcome.SUCCESS, result.task(":svelteGenerateSources")?.outcome)
+        val tasks = result.tasks.map { it.path }
+        assertTrue(tasks.indexOf(":svelteSync") < tasks.indexOf(":svelteGenerateSources"))
+    }
+
+    @Test
     fun `configuration cache works with libraries`() {
         val project = project("tailwind()")
         project.run("svelteSync", "--configuration-cache")
