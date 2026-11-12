@@ -14,6 +14,24 @@ apiConfig.headers['Authorization'] = 'Bearer token';
 
 When several components load the same data at the same time, set `apiConfig.dedupeGets = true`. Identical GET requests that are still in flight then share one network request and get the same parsed result, so do not mutate it. Calls with their own `headers`, `fetch` or `signal` are never shared, and nothing is cached after a response arrives. It is off by default.
 
+## Prefetch on hover
+
+Projects created by ktor-svelte set `data-sveltekit-preload-data="hover"` on `<body>`, so SvelteKit runs a page's `load` function when the pointer rests on a link to it. A `load` that calls the API through `apiWith(event)` therefore fetches its data before the click, and the page opens without waiting. Add the attribute to `src/app.html` in older projects.
+
+For data a component fetches itself, prefetch the call. The next identical GET within 10 seconds gets that response instead of a new request, once:
+
+```svelte
+<script lang="ts">
+    import { api, prefetchOnHover } from '#api';
+</script>
+
+{#each notes as note (note.id)}
+    <a href="/notes/{note.id}" use:prefetchOnHover={() => api.notes.get(note.id)}>{note.title}</a>
+{/each}
+```
+
+`prefetchOnHover` starts after the pointer rests for 50 ms, or at once on focus or touch. Call `prefetch(() => api.notes.get(id))` yourself for other triggers, and pass a second argument to change how long the result is kept, in milliseconds. Only GET requests made synchronously inside the callback are prefetched, without their own `headers` or `signal`, and a failed prefetch is simply forgotten.
+
 Errors are typed too. Ktor's compiler plugin finds error responses such as `call.respond(HttpStatusCode.NotFound, Problem(...))`, and `isApiError` narrows the body:
 
 ```ts
