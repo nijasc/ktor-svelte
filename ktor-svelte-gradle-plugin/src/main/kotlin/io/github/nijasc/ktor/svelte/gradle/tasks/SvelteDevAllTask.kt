@@ -2,7 +2,6 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 
 import io.github.nijasc.ktor.svelte.gradle.DEVELOPMENT_SYSTEM_PROPERTY
 import io.github.nijasc.ktor.svelte.gradle.FRONTEND_DIR_SYSTEM_PROPERTY
-import io.github.nijasc.ktor.svelte.gradle.requireExecutable
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
@@ -143,7 +142,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     private fun startVite(): Process {
         val tool = tool()
         val command =
-            listOf(requireExecutable(tool).absolutePath) +
+            listOf(executable(tool).absolutePath) +
                 tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort"))
         return start("vite", command, frontendDir.get().asFile)
     }

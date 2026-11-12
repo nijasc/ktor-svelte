@@ -263,6 +263,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.description = "Checks the frontend setup and says what to fix."
             task.frontendDir.set(extension.frontendDir)
             task.packageManager.set(extension.packageManager)
+            task.bunVersion.set(extension.bunVersion)
             task.devPort.set(extension.dev.port)
             task.outputDir.set(extension.outputDir)
             task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
@@ -405,6 +406,8 @@ public class KtorSveltePlugin : Plugin<Project> {
         task.group = TASK_GROUP
         task.frontendDir.set(extension.frontendDir)
         task.packageManager.set(extension.packageManager)
+        task.bunVersion.set(extension.bunVersion)
+        task.toolCacheDirectory.set(File(task.project.gradle.gradleUserHomeDir, "ktor-svelte/bun"))
         task.verbose.set(
             task.project.providers
                 .gradleProperty(VERBOSE_PROPERTY)
@@ -471,6 +474,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                     project.providers.of(ToolVersionSource::class.java) { source ->
                         source.parameters.frontendDir.set(extension.frontendDir)
                         source.parameters.packageManager.set(extension.packageManager)
+                        source.parameters.bunVersion.set(extension.bunVersion)
                     }
                 },
             )

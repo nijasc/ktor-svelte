@@ -10,6 +10,7 @@ public abstract class SvelteExtension {
     public abstract val frontendDir: DirectoryProperty
     public abstract val outputDir: Property<String>
     public abstract val packageManager: Property<PackageManager>
+    public abstract val bunVersion: Property<String>
     public abstract val buildScript: Property<String>
     public abstract val buildEnv: SetProperty<String>
     public abstract val addRuntimeDependency: Property<Boolean>

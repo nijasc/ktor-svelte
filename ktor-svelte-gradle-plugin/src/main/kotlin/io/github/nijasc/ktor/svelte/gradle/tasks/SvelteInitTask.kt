@@ -45,7 +45,7 @@ public abstract class SvelteInitTask : SvelteToolTask() {
             throw GradleException("ktor-svelte will not overwrite $target because it is not empty." + DocLink.CREATE_A_PROJECT.see())
         }
         val tool = FrontendTool(chooseTool())
-        requireToolOnPath(tool)
+        if (!(bunVersion.isPresent && tool.packageManager == PackageManager.BUN)) requireToolOnPath(tool)
         TEMPLATE_FILES.forEach { path -> copyTemplate(path, target) }
         runToolQuietly(tool, listOf("install"))
         logger.lifecycle("ktor-svelte: created a SvelteKit project in $target using ${tool.executableName}.")
@@ -60,6 +60,7 @@ public abstract class SvelteInitTask : SvelteToolTask() {
         }
         val configured = packageManager.get()
         if (configured != PackageManager.AUTO) return configured
+        if (bunVersion.isPresent) return PackageManager.BUN
         return PREFERRED_TOOLS.firstOrNull { locateExecutable(FrontendTool(it).executableName) != null }
             ?: throw GradleException("ktor-svelte found no package manager on PATH. Install bun, pnpm, npm or yarn.")
     }
