@@ -125,11 +125,11 @@ function svgFor(page: SocialPage, siteLabel: string): string {
         .join('');
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 <defs>
-<linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0.3" stop-color="#ff3e00"/><stop offset="1" stop-color="#7f52ff"/></linearGradient>
+<linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7f52ff"/><stop offset="0.5" stop-color="#c711e1"/><stop offset="1" stop-color="#ff3e00"/></linearGradient>
 <style>
 text { font-family: Arial, 'DejaVu Sans', sans-serif; }
 .site { font-size: 34px; font-weight: 700; fill: #ffffff; }
-.section { font-size: 30px; font-weight: 700; fill: #ff7a52; letter-spacing: 2px; }
+.section { font-size: 30px; font-weight: 700; fill: #f472b6; letter-spacing: 2px; }
 .title { font-size: 72px; font-weight: 700; fill: #ffffff; }
 .summary { font-size: 32px; fill: #b8b8c4; }
 .url { font-size: 26px; fill: #8a8a99; }

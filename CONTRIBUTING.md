@@ -89,6 +89,10 @@ HMR is not covered by automated tests. Check it before changing the dev proxy:
 5. Remove `server.hmr` from `vite.config.ts`, restart, and repeat step 3. The console should show one WebSocket error and then Vite's direct connection fallback.
 6. Stop the task, and check that nothing is still listening on ports 5173 and 8080. Also try closing the terminal instead of stopping it.
 
+## Brand
+
+The ktor-svelte colors mix Kotlin and SvelteKit: Kotlin violet `#7f52ff`, Kotlin magenta `#c711e1` and Svelte orange `#ff3e00`, as one gradient in that order. The favicon the runtime serves (`ktor-svelte-server/src/main/resources/.../internal/assets/favicon/`), the docs logo (`docs/public/logo.svg`), the docs colors in `docs/.vitepress/theme/custom.css` and the social preview images all use it. Links and buttons use darker or lighter magentas from the middle of the gradient, so text keeps a contrast of at least 4.5:1. When you change the icon, edit `favicon.svg` and render the PNG and ICO files from it.
+
 ## Docs site
 
 The docs in `docs/` are a [VitePress](https://vitepress.dev) site with search. Run it locally with hot reload:

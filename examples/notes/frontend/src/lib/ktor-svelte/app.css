@@ -77,8 +77,8 @@
     default: false;
     prefersdark: false;
     color-scheme: light;
-    --color-primary: #6b57ff;
-    --color-secondary: #f97316;
+    --color-primary: #7f52ff;
+    --color-secondary: #ff3e00;
     --color-base-100: #fdfcff;
     --color-base-content: #1f1b3a;
 }

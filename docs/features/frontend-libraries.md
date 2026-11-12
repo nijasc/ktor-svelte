@@ -17,7 +17,7 @@ svelte {
         daisyUi {
             themes(DaisyTheme.ShadcnLight, DaisyTheme.ShadcnDark, DaisyTheme.Cupcake)
             customTheme("brand") {
-                primary = "#6b57ff"
+                primary = "#7f52ff"
                 base100 = "#fdfcff"
             }
             defaultTheme(DaisyTheme.ShadcnLight)
