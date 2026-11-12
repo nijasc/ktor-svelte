@@ -1580,7 +1580,7 @@ If you already have `src/routes/+layout.svelte`, add this line once. Without a l
 import '#lib/ktor-svelte/app.css';
 ```
 
-Generated Kotlin lands in the `ktorsvelte` package. Change it with `generatedPackage = "com.example.ui"`.
+Generated Kotlin lands in the `io.github.nijasc.ktorsvelte` package. Change it with `generatedPackage = "com.example.ui"`.
 
 ## Tailwind
 
@@ -1601,8 +1601,8 @@ Generated Kotlin lands in the `ktorsvelte` package. Change it with `generatedPac
 ```
 
 ```kotlin
-import ktorsvelte.AppTheme
-import ktorsvelte.theme
+import io.github.nijasc.ktorsvelte.AppTheme
+import io.github.nijasc.ktorsvelte.theme
 
 get("/api/report") {
     val isDark = call.theme == AppTheme.Dark
@@ -1618,7 +1618,7 @@ The saved theme is applied by a small inline script. The automatic [Content-Secu
 `lucide()` generates a `LucideIcon` enum from the installed version, so a misspelled icon is a compile error. Use it in your DTOs and it reaches the frontend as the same type:
 
 ```kotlin
-import ktorsvelte.LucideIcon
+import io.github.nijasc.ktorsvelte.LucideIcon
 
 @Serializable
 data class Note(val title: String, val icon: LucideIcon)
@@ -1674,8 +1674,8 @@ While `svelteDevAll` or `svelteDev` runs, saving a message file updates the fron
 ```
 
 ```kotlin
-import ktorsvelte.Messages
-import ktorsvelte.messages
+import io.github.nijasc.ktorsvelte.Messages
+import io.github.nijasc.ktorsvelte.messages
 
 get("/api/hello") {
     call.respondText(call.messages.serverGreeting("Ada"))
@@ -2593,6 +2593,7 @@ To upgrade across several releases, follow the guides in order.
 
 | Release | What changes for you |
 |---|---|
+| [0.11](https://nijasc.github.io/ktor-svelte/main/migrations/0.11) | Generated Kotlin moves to `io.github.nijasc.ktorsvelte`, and apps serve a generated `sitemap.xml` and `robots.txt` |
 | [0.10](https://nijasc.github.io/ktor-svelte/main/migrations/0.10) | `publicConfig` is inlined into pages, API responses carry a build header, and `svelteDevAll` opens the browser |
 | [0.9](https://nijasc.github.io/ktor-svelte/main/migrations/0.9) | Wrong methods on pages answer 405, JSON request bodies have a nesting limit, and every request gets an `X-Request-Id` |
 | [0.8](https://nijasc.github.io/ktor-svelte/main/migrations/0.8) | API responses of 1 KiB or more are compressed |
@@ -2614,6 +2615,36 @@ plugins {
 If you set `addRuntimeDependency = false` and declare `ktor-svelte-server` yourself, bump it to the same version. Then run `./gradlew svelteSync` once, because generated files and frontend library setup can change between releases.
 
 Afterwards, `./gradlew svelteConfig` shows every setting with its new default and suggests what to turn on, so you notice new options. See [Review your configuration](https://nijasc.github.io/ktor-svelte/main/reference/gradle#review-your-configuration).
+
+Source: https://nijasc.github.io/ktor-svelte/main/migrations/0.11
+
+# Upgrading to 0.11
+
+0.11 renames the package of generated Kotlin and adds two files to production apps. Most apps only need to update imports.
+
+## Generated Kotlin moved to io.github.nijasc.ktorsvelte
+
+With frontend libraries on, ktor-svelte generates Kotlin such as `AppTheme`, `LucideIcon`, `Messages` and the `call.theme` and `call.messages` extensions. They now live in `io.github.nijasc.ktorsvelte` instead of `ktorsvelte`, so they no longer sit in a top-level package of their own. Update your imports:
+
+```kotlin
+import io.github.nijasc.ktorsvelte.AppTheme
+import io.github.nijasc.ktorsvelte.LucideIcon
+import io.github.nijasc.ktorsvelte.messages
+```
+
+In IntelliJ, replace `import ktorsvelte.` with `import io.github.nijasc.ktorsvelte.` across the project. To keep the old package instead, set it in `build.gradle.kts`:
+
+```kotlin
+svelte {
+    libraries {
+        generatedPackage = "ktorsvelte"
+    }
+}
+```
+
+## sitemap.xml and robots.txt
+
+When your build has no `sitemap.xml` or `robots.txt`, ktor-svelte now serves generated ones: a sitemap of your prerendered pages, and a `robots.txt` that keeps crawlers out of your API. Set `siteUrl` to your public address, put your own files in `frontend/static/`, or turn both off with `sitemap = false`. See [Sitemap and robots.txt](https://nijasc.github.io/ktor-svelte/main/features/endpoints#sitemap-and-robots-txt).
 
 Source: https://nijasc.github.io/ktor-svelte/main/migrations/0.10
 
