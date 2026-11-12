@@ -558,8 +558,8 @@ public class Setup {
         if (tailwind && !daisy) libraries.append("        tailwind {\n            typography()\n        }\n");
         if (daisy) {
             libraries.append("        tailwind {\n            typography()\n        }\n");
-            libraries.append("        daisyUi {\n            themes(DaisyTheme.Light, DaisyTheme.Dark)\n");
-            libraries.append("            defaultTheme(DaisyTheme.Light)\n            prefersDark(DaisyTheme.Dark)\n        }\n");
+            libraries.append("        daisyUi {\n            themes(DaisyTheme.ShadcnLight, DaisyTheme.ShadcnDark)\n");
+            libraries.append("            defaultTheme(DaisyTheme.ShadcnLight)\n            prefersDark(DaisyTheme.ShadcnDark)\n        }\n");
         }
         if (lucide) libraries.append("        lucide()\n");
         if (i18n) {
