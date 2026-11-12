@@ -30,6 +30,7 @@ svelte {
 | `frontendDir` | Directory of the SvelteKit project |
 | `outputDir` | Adapter output, a folder inside `frontendDir` given relative to it. Must match the adapter's `pages` option |
 | `packageManager` | `AUTO`, `BUN`, `PNPM`, `NPM` or `YARN`. `AUTO` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
+| `bunVersion` | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. Unset by default. See [Pin Bun](#pin-bun) |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
 | `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](../features/frontend-libraries.md) |
@@ -44,6 +45,18 @@ svelte {
 The package manager must already be installed. The plugin does not download Node or Bun.
 
 In a Groovy `build.gradle`, a misspelled setting such as `fronendDir = file('web')` fails with the closest name and the list of settings, instead of Gradle's generic missing property error. The Kotlin DSL catches the same mistake when it compiles the script.
+
+## Pin Bun
+
+A fresh CI image or laptop often has no package manager, so the first build fails. Set `bunVersion` and the plugin downloads that exact Bun from Bun's GitHub releases the first time a task needs it:
+
+```kotlin
+svelte {
+    bunVersion = "1.3.14"
+}
+```
+
+The archive is checked against the release's `SHASUMS256.txt` before it is unpacked into `~/.gradle/ktor-svelte/bun/<version>/`, and every later build reuses it. Every task then uses this Bun, even when another one is on `PATH`, so all machines build with the same version. With `packageManager = AUTO`, Bun becomes the package manager. Bun runs Vite itself, so Node is not needed. It works on Windows, macOS and Linux, including Alpine, on x64 and arm64. Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
 
 ## Gradle tasks
 
