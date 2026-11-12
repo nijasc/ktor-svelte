@@ -37,6 +37,7 @@ import io.github.nijasc.ktor.svelte.internal.installConfigReport
 import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.onOwn
+import io.github.nijasc.ktor.svelte.internal.security.BodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
 import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
@@ -240,11 +241,12 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
                 return@on
             }
-            cause.findJsonShapeException()?.let { shape ->
+            val bodyTooLarge = cause.findPayloadTooLarge() != null || call.attributes.contains(BodyTooLarge)
+            cause.findJsonShapeException()?.takeUnless { bodyTooLarge }?.let { shape ->
                 respondJsonShape(call, shape)
                 return@on
             }
-            if (maxApiBodySize != null && cause.findPayloadTooLarge() != null) {
+            if (maxApiBodySize != null && bodyTooLarge) {
                 metrics.bodyTooLarge.incrementAndGet()
                 respondBodyTooLarge(call, maxApiBodySize)
                 return@on
