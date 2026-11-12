@@ -153,6 +153,8 @@ Pull requests only run the jobs their changes can affect. `.github/scripts/chang
 
 A pull request that only changes Markdown outside `docs/` runs no build at all. Pushes to `main`, and pull requests that change `ci.yml` or the script itself, run every job. A new push to a pull request cancels its previous run. When you add a folder that a job depends on, add it to the script.
 
+Two more workflows run on every pull request. `CodeQL` scans the Kotlin, the TypeScript and JavaScript, and the workflows themselves, and also runs weekly so that new queries reach unchanged code. Its findings appear under the Security tab. `Dependency review` fails a pull request that adds a dependency with a known vulnerability of moderate severity or higher.
+
 ## Rules
 
 **No code comments of any kind.** No `//`, no KDoc, no `#` in YAML or properties files, no HTML comments in Svelte. Explain behaviour through names, tests and the docs. Generated files and the `x-release-please` markers in the README are the only exceptions.
