@@ -182,6 +182,19 @@ public abstract class I18nSettings {
     ): Nothing = throw unknownSetting(I18nSettings::class.java, "i18n", name)
 }
 
+public abstract class LucideSettings {
+    public abstract val allIconsEnabled: Property<Boolean>
+
+    public fun allIcons() {
+        allIconsEnabled.set(true)
+    }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(LucideSettings::class.java, "lucide", name)
+}
+
 public abstract class SvelteLibraries {
     public abstract val lucideEnabled: Property<Boolean>
     public abstract val imagesEnabled: Property<Boolean>
@@ -196,10 +209,18 @@ public abstract class SvelteLibraries {
     @get:Nested
     public abstract val i18nSettings: I18nSettings
 
+    @get:Nested
+    public abstract val lucideSettings: LucideSettings
+
     public abstract val overrides: MapProperty<String, String>
 
     public fun lucide() {
         lucideEnabled.set(true)
+    }
+
+    public fun lucide(action: Action<LucideSettings>) {
+        lucideEnabled.set(true)
+        action.execute(lucideSettings)
     }
 
     public fun images() {

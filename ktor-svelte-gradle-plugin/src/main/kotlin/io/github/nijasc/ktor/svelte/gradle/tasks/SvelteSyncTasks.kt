@@ -8,11 +8,13 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_MARKER
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.PACKAGE_VERSIONS
 import io.github.nijasc.ktor.svelte.gradle.libraries.frontendFiles
+import io.github.nijasc.ktor.svelte.gradle.libraries.iconConstant
 import io.github.nijasc.ktor.svelte.gradle.libraries.iconSources
 import io.github.nijasc.ktor.svelte.gradle.libraries.kotlinFiles
 import io.github.nijasc.ktor.svelte.gradle.libraries.readMessages
 import io.github.nijasc.ktor.svelte.gradle.libraries.rootLayout
 import io.github.nijasc.ktor.svelte.gradle.libraries.runtimeProperties
+import io.github.nijasc.ktor.svelte.gradle.libraries.usedIcons
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
@@ -90,6 +92,37 @@ public abstract class SvelteLibraryTask : SvelteToolTask() {
     @get:Internal
     public abstract val messagesDirectory: DirectoryProperty
 
+    @get:Internal
+    public abstract val kotlinSources: ConfigurableFileCollection
+
+    internal fun iconFiles(frontend: File): Map<String, String> {
+        val installed = installedIcons(frontend)
+        val used =
+            if (spec.get().allIcons) {
+                null
+            } else {
+                usedIcons(
+                    installed.map(::iconConstant).toSet(),
+                    kotlinSources.files,
+                    frontend.resolve("src"),
+                    setOf(frontend.resolve("src/lib/api"), frontend.resolve(GENERATED_DIR)),
+                )
+            }
+        return iconSources(installed, used)
+    }
+
+    internal fun installedIcons(frontend: File): List<String> {
+        val directory = frontend.resolve("node_modules/@lucide/svelte/dist/icons")
+        val icons =
+            directory
+                .list()
+                .orEmpty()
+                .filter { it.endsWith(".svelte") }
+                .map { it.removeSuffix(".svelte") }
+        if (icons.isEmpty()) throw GradleException("No Lucide icons found in $directory. Check that @lucide/svelte installed correctly.")
+        return icons
+    }
+
     internal fun expectedFiles(): Map<String, String> {
         val frontend = frontendDir.get().asFile
         val current = spec.get()
@@ -119,7 +152,7 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
             runToolQuietly(tool, listOf("install"))
         }
 
-        val icons = if (current.lucide) iconSources(installedIcons(frontend)) else emptyMap()
+        val icons = if (current.lucide) iconFiles(frontend) else emptyMap()
         val all = expected + icons
         val changed =
             all.filter { (path, content) ->
@@ -153,18 +186,6 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
                 "Move custom Vite settings to $USER_VITE_CONFIG, and merge any custom hooks by hand, then delete those files." +
                 DocLink.FRONTEND_LIBRARIES.see(),
         )
-    }
-
-    private fun installedIcons(frontend: File): List<String> {
-        val directory = frontend.resolve("node_modules/@lucide/svelte/dist/icons")
-        val icons =
-            directory
-                .list()
-                .orEmpty()
-                .filter { it.endsWith(".svelte") }
-                .map { it.removeSuffix(".svelte") }
-        if (icons.isEmpty()) throw GradleException("No Lucide icons found in $directory. Check that @lucide/svelte installed correctly.")
-        return icons
     }
 
     private fun removeStaleFiles(
@@ -209,6 +230,12 @@ public abstract class SvelteVerifySyncTask : SvelteLibraryTask() {
             if (!file.isFile || file.readText() != content) problems += path
         }
         if (current.lucide && !frontend.resolve(ICONS_JSON).isFile) problems += ICONS_JSON
+        if (current.lucide && frontend.resolve("node_modules/@lucide/svelte").isDirectory) {
+            iconFiles(frontend).forEach { (path, content) ->
+                val file = frontend.resolve(path)
+                if (path !in problems && (!file.isFile || file.readText() != content)) problems += path
+            }
+        }
         val packageJson = readPackageJson(frontend)
         if (updatedPackageJson(packageJson, current) != packageJson) problems += "package.json"
         if (problems.isNotEmpty()) {

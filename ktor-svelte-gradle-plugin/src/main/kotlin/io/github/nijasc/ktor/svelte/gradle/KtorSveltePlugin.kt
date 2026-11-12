@@ -166,6 +166,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                     },
                 lucide = libraries.lucideEnabled.getOrElse(false),
                 images = libraries.imagesEnabled.getOrElse(false),
+                allIcons = libraries.lucideSettings.allIconsEnabled.getOrElse(false),
                 i18n =
                     libraries.i18nSettings.takeIf { it.enabled.getOrElse(false) }?.let { i18n ->
                         I18nSpec(
@@ -201,6 +202,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.description = "Installs configured frontend libraries and writes their generated files."
                 task.spec.set(librarySpec)
                 task.messagesDirectory.set(messages)
+                task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
                 task.onlyIf("libraries are configured") { hasLibraries.get() }
             }
         val verify =
@@ -209,6 +211,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.description = "Fails if frontend libraries do not match the Gradle configuration."
                 task.spec.set(librarySpec)
                 task.messagesDirectory.set(messages)
+                task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
                 task.mustRunAfter(sync)
                 task.onlyIf("libraries are configured") { hasLibraries.get() && !skipFrontend }
             }
@@ -220,6 +223,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.dependsOn(sync)
             task.spec.set(librarySpec)
             task.messagesDirectory.set(messages)
+            task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
         }
         project.tasks.matching { it.name == "svelteDevAll" }.configureEach { it.dependsOn(sync) }
     }
