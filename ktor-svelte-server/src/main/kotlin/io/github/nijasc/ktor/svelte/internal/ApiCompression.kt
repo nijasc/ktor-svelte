@@ -32,8 +32,8 @@ internal fun installApiCompression(
     application: Application,
     resolver: RequestResolver,
 ) {
-    application.monitor.subscribe(ApplicationModulesLoaded) {
-        if (application.pluginOrNull(Compression) != null) return@subscribe
+    application.onOwn(ApplicationModulesLoaded) {
+        if (application.pluginOrNull(Compression) != null) return@onOwn
         val zstd = isZstdAvailable(application.environment.classLoader)
         application.install(Compression) { configureApiCompression(resolver, zstd) }
         application.log.debug("ktor-svelte compresses API responses with ${if (zstd) "zstd, gzip and deflate" else "gzip and deflate"}")
