@@ -106,6 +106,12 @@ The API reference is built with Dokka from the public API of both modules:
 
 Each build also writes `llms.txt`, an index of every page in sidebar order, and `llms-full.txt`, all pages as one Markdown file with absolute links. Both come from `docs/.vitepress/llms.ts` and follow the sidebar, so a new page only needs a sidebar entry.
 
+The generator playground runs `TypeScriptGenerator.kt` in the browser. `docs/playground` is a small Kotlin/JS build that compiles that file and `ConstraintMessages.kt` together with the TypeScript templates, so keep both files free of JVM-only APIs. Build it once before starting the docs, or the playground only shows how to build it:
+
+```bash
+./gradlew -p docs/playground compileProductionLibraryKotlinJs
+```
+
 Mark a Svelte snippet with ` ```svelte stackblitz ` to give it an "Open in StackBlitz" button. The button opens a Vite project with the snippet as `App.svelte`, the generated client of `examples/notes` behind `#api`, and an in-memory mock of the notes API in `src/mock.ts`. Use it for complete components that only call the notes routes. The project template is `docs/.vitepress/theme/stackblitzProject.ts`.
 
 Each build also renders a 1200x630 social preview image for every page into `og/`, from the page title, its section and its first paragraph, and adds Open Graph and Twitter tags that point to it. The template is in `docs/.vitepress/socialImages.ts`. It renders with `@resvg/resvg-js` and DejaVu Sans on Linux or Arial on Windows and macOS.

@@ -1,0 +1,60 @@
+{
+    "openapi": "3.1.0",
+    "info": { "title": "Notes", "version": "1.0.0" },
+    "paths": {
+        "/api/notes": {
+            "get": {
+                "summary": "Lists all notes, newest first.",
+                "parameters": [{ "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"] } }],
+                "responses": {
+                    "200": {
+                        "description": "The notes",
+                        "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Note" } } } }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Creates a note.",
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NoteInput" } } }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The new note",
+                        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" } } }
+                    }
+                }
+            }
+        },
+        "/api/notes/{id}": {
+            "delete": {
+                "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }],
+                "responses": { "204": { "description": "Deleted" } }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Note": {
+                "type": "object",
+                "required": ["id", "title", "status", "createdAt"],
+                "properties": {
+                    "id": { "type": "integer", "format": "int64" },
+                    "title": { "type": "string" },
+                    "body": { "type": ["string", "null"] },
+                    "status": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"] },
+                    "createdAt": { "type": "string", "format": "date-time" }
+                }
+            },
+            "NoteInput": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                    "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+                    "body": { "type": ["string", "null"], "maxLength": 2000 }
+                }
+            }
+        }
+    }
+}

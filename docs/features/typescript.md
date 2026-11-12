@@ -12,6 +12,8 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 | `index.ts` | Re-exports all of the above |
 | `openapi.json` | The OpenAPI document itself |
 
+To see the output for your own API before installing anything, paste its OpenAPI document into the [generator playground](./playground).
+
 Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
 
 With the `application` plugin, `check` runs `svelteVerifyTs`. It starts your app once, generates the TypeScript in memory and fails if the committed files differ, so a changed DTO or route can't drift away from the frontend unnoticed. Line endings are ignored. It passes when `generateTs` is off. To fix a failure, run `svelteGenerateTs`, or start the app in development mode, and commit the result. To leave it out of `check`, set `svelte.verifyTs=false` in `gradle.properties` or pass `-Psvelte.verifyTs=false`.

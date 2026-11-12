@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import { writeLlmsFiles } from './llms';
@@ -62,6 +62,21 @@ export default defineConfig({
                     );
                     return `export default ${JSON.stringify(files)};`;
                 }
+            },
+            {
+                name: 'typescript-generator',
+                resolveId(id) {
+                    if (id !== 'virtual:typescript-generator') return undefined;
+                    const built = fileURLToPath(new URL('../playground/build/compileSync/js/main/productionLibrary/kotlin/playground.mjs', import.meta.url));
+                    if (existsSync(built)) return built;
+                    if (process.env.CI) throw new Error('Build the generator first: ./gradlew -p docs/playground compileProductionLibraryKotlinJs');
+                    return '\0virtual:typescript-generator';
+                },
+                load(id) {
+                    if (id !== '\0virtual:typescript-generator') return undefined;
+                    const error = 'The generator is not built. Run ./gradlew -p docs/playground compileProductionLibraryKotlinJs and restart the docs server.';
+                    return `export function generateTypeScript() { return ${JSON.stringify(JSON.stringify({ error }))}; }`;
+                }
             }
         ],
         define: {
@@ -106,6 +121,7 @@ export default defineConfig({
                 text: 'Features',
                 items: [
                     { text: 'Generated TypeScript', link: '/features/typescript' },
+                    { text: 'Generator playground', link: '/features/playground' },
                     { text: 'Calling the API', link: '/features/calling-the-api' },
                     { text: 'Validation', link: '/features/validation' },
                     { text: 'Transport and compression', link: '/features/transport' },

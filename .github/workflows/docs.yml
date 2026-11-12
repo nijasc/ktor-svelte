@@ -49,6 +49,8 @@ jobs:
           else
             ./gradlew dokkaGenerate -PreleaseVersion="$VERSION"
           fi
+      - name: Build the generator playground
+        run: ./gradlew -p docs/playground compileProductionLibraryKotlinJs
       - name: Build the docs
         working-directory: docs
         env:

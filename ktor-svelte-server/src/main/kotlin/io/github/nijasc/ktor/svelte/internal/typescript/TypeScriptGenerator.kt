@@ -2,7 +2,6 @@ package io.github.nijasc.ktor.svelte.internal.typescript
 
 import io.github.nijasc.ktor.svelte.internal.validation.ConstraintMessages
 import io.github.nijasc.ktor.svelte.internal.validation.formatNumber
-import io.github.nijasc.ktor.svelte.svelte
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -19,7 +18,7 @@ import kotlinx.serialization.json.putJsonObject
 
 private val HTTP_METHODS = listOf("get", "post", "put", "patch", "delete", "head", "options")
 private val IDENTIFIER = Regex("[A-Za-z_$][A-Za-z0-9_$]*")
-private val PATH_PARAMETER = Regex("\\{([^}]+)}")
+private val PATH_PARAMETER = Regex("\\{([^}]+)\\}")
 private val prettyJson = Json { prettyPrint = true }
 
 internal class TypeScriptGenerator(
@@ -33,7 +32,7 @@ internal class TypeScriptGenerator(
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
     private var enumTypes: Map<Set<String>, EnumType> = emptyMap()
     private var usesDates = false
-    private val validationHelpers = sortedSetOf<ValidationHelper>()
+    private val validationHelpers = mutableSetOf<ValidationHelper>()
     val operations = mutableListOf<GeneratedOperation>()
 
     fun generate(openApiJson: String): Map<String, String> {
@@ -49,7 +48,7 @@ internal class TypeScriptGenerator(
         return mapOf(
             "client.ts" to typeScriptTemplate("client.ts"),
             "form.ts" to typeScriptTemplate("form.ts"),
-            "types.ts" to types + validationHelpers.joinToString("") { "\n" + it.source },
+            "types.ts" to types + validationHelpers.sorted().joinToString("") { "\n" + it.source },
             "services.ts" to
                 servicesSource(
                     filtered.objectAt("paths").orEmpty(),
@@ -66,7 +65,7 @@ internal class TypeScriptGenerator(
                 .objectAt("paths")
                 .orEmpty()
                 .filterKeys(::isApiPath)
-                .toSortedMap()
+                .sortedByKey()
         return JsonObject(document + ("paths" to JsonObject(paths)))
     }
 
@@ -74,7 +73,7 @@ internal class TypeScriptGenerator(
         if (declaredErrors.isEmpty()) return document
         val components = document.objectAt("components") ?: JsonObject(emptyMap())
         val schemas = components.objectAt("schemas").orEmpty().toMutableMap()
-        declaredErrors.forEach { error -> schemas.putIfAbsent(error.name, Json.parseToJsonElement(error.schema)) }
+        declaredErrors.forEach { error -> schemas.getOrPut(error.name) { Json.parseToJsonElement(error.schema) } }
         val paths =
             document.objectAt("paths").orEmpty().mapValues { (_, item) ->
                 JsonObject(
@@ -100,7 +99,7 @@ internal class TypeScriptGenerator(
                         }
                     }
                 }
-            error.statuses.forEach { status -> responses.putIfAbsent(status.toString(), response) }
+            error.statuses.forEach { status -> responses.getOrPut(status.toString()) { response } }
         }
         return JsonObject(operation + ("responses" to JsonObject(responses)))
     }
@@ -393,9 +392,9 @@ internal class TypeScriptGenerator(
         schemas: Map<String, JsonElement>,
     ): Map<Set<String>, EnumType> {
         val named = linkedMapOf<Set<String>, EnumType>()
-        schemas.toSortedMap().forEach { (name, schema) ->
+        schemas.sortedByKey().forEach { (name, schema) ->
             enumValues(schema.jsonObject)?.let { values ->
-                named.putIfAbsent(values.toSet(), EnumType(typeName(name), values, inline = false))
+                named.getOrPut(values.toSet()) { EnumType(typeName(name), values, inline = false) }
             }
         }
         val usages = linkedMapOf<Set<String>, MutableList<EnumUsage>>()
@@ -413,7 +412,7 @@ internal class TypeScriptGenerator(
                 is JsonObject -> {
                     enumValues(element)?.takeUnless { topLevel }?.let { enumValues ->
                         usages.getOrPut(enumValues.toSet()) { mutableListOf() } += EnumUsage(owner, property)
-                        values.putIfAbsent(enumValues.toSet(), enumValues)
+                        values.getOrPut(enumValues.toSet()) { enumValues }
                     }
                     val parameterName = if (element.stringAt("in") != null) element.stringAt("name") else null
                     element.forEach { (key, child) ->
@@ -662,7 +661,7 @@ internal class TypeScriptGenerator(
         paths: Map<String, JsonElement>,
         schemaNames: Set<String>,
     ): String {
-        val references = sortedSetOf<String>()
+        val references = mutableSetOf<String>()
         val groups = linkedMapOf<String, MutableList<Endpoint>>()
         val errors = mutableListOf<ErrorEntry>()
         paths.forEach { (path, item) ->
@@ -675,7 +674,7 @@ internal class TypeScriptGenerator(
         }
         val exportNames = SERVICES_MODULE_NAMES.toMutableSet().apply { addAll(groups.keys) }
         val serviceBlocks =
-            groups.toSortedMap().map { (group, endpoints) ->
+            groups.sortedByKey().map { (group, endpoints) ->
                 val taken = mutableSetOf<String>()
                 val exports = StringBuilder()
                 val members =
@@ -692,7 +691,7 @@ internal class TypeScriptGenerator(
                     }
                 "$exports\nexport const $group = {\n$members\n};\n"
             }
-        val typeImports = references.filter { name -> name in schemaNames.map(::typeName) }
+        val typeImports = references.sorted().filter { name -> name in schemaNames.map(::typeName) }
         val clientImports = if (groups.values.flatten().any { it.streaming }) "ApiError, request, stream" else "ApiError, request"
         return buildString {
             append("import { $clientImports, type RequestOptions } from './client.js';\n")
@@ -842,7 +841,7 @@ internal class TypeScriptGenerator(
                 val schema = preferredSchema(content) ?: return@mapNotNull null
                 code to tsType(schema, references)
             }.toMap()
-            .toSortedMap()
+            .sortedByKey()
 
     private fun responseType(
         operation: JsonObject,
@@ -977,7 +976,7 @@ private fun quoted(value: String): String =
                 character == '\'' -> append("\\'")
                 character == '\n' -> append("\\n")
                 character == '\r' -> append("\\r")
-                character < ' ' || character == ' ' || character == ' ' -> append("\\u%04x".format(character.code))
+                character < ' ' || character == ' ' || character == ' ' -> append("\\u" + character.code.toString(16).padStart(4, '0'))
                 else -> append(character)
             }
         }
@@ -985,6 +984,8 @@ private fun quoted(value: String): String =
     }
 
 private fun JsonObject.objectAt(key: String): JsonObject? = this[key] as? JsonObject
+
+private fun <K : Comparable<K>, V> Map<K, V>.sortedByKey(): Map<K, V> = entries.sortedBy { it.key }.associate { it.key to it.value }
 
 private fun JsonObject.arrayAt(key: String): JsonArray? = this[key] as? JsonArray
 
