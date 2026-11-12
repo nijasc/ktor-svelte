@@ -198,6 +198,7 @@ public abstract class LucideSettings {
 public abstract class SvelteLibraries {
     public abstract val lucideEnabled: Property<Boolean>
     public abstract val imagesEnabled: Property<Boolean>
+    public abstract val toastsEnabled: Property<Boolean>
     public abstract val generatedPackage: Property<String>
 
     @get:Nested
@@ -225,6 +226,10 @@ public abstract class SvelteLibraries {
 
     public fun images() {
         imagesEnabled.set(true)
+    }
+
+    public fun toasts() {
+        toastsEnabled.set(true)
     }
 
     public fun tailwind(action: Action<TailwindSettings> = Action { }) {

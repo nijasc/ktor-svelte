@@ -166,6 +166,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                     },
                 lucide = libraries.lucideEnabled.getOrElse(false),
                 images = libraries.imagesEnabled.getOrElse(false),
+                toasts = libraries.toastsEnabled.getOrElse(false),
                 allIcons = libraries.lucideSettings.allIconsEnabled.getOrElse(false),
                 i18n =
                     libraries.i18nSettings.takeIf { it.enabled.getOrElse(false) }?.let { i18n ->

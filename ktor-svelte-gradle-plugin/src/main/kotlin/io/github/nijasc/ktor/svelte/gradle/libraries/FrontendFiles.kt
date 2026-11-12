@@ -28,6 +28,10 @@ internal fun frontendFiles(
             put("src/hooks.server.ts", HOOKS_SERVER)
         }
         if (spec.i18n?.strategy == LocaleStrategy.UrlPrefix) put("src/hooks.ts", universalHooks(spec.i18n))
+        if (spec.toasts) {
+            put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
+            put("src/hooks.client.ts", renderTemplate("hooks.client.ts"))
+        }
     }
 
 internal fun iconSources(

@@ -22,7 +22,8 @@ class LibraryFilesTest {
         lucide: Boolean = false,
         i18n: I18nSpec? = null,
         images: Boolean = false,
-    ) = LibrarySpec(tailwind, daisy, lucide, i18n, 5173, "io.github.nijasc.ktorsvelte", images)
+        toasts: Boolean = false,
+    ) = LibrarySpec(tailwind, daisy, lucide, i18n, 5173, "io.github.nijasc.ktorsvelte", images, toasts)
 
     private val daisy = DaisySpec(listOf("light", "dark"), "light", "dark", emptyList())
     private val cookieI18n = I18nSpec(listOf("en", "de"), "en", LocaleStrategy.Cookie)
@@ -54,6 +55,18 @@ class LibraryFilesTest {
         assertEquals(setOf("tailwindcss", "@tailwindcss/vite", "@sveltejs/enhanced-img"), images.requiredPackages)
         assertFalse(spec(images = true).isEmpty)
         assertFalse(frontendFiles(spec(lucide = true), null, false).getValue("vite.config.ts").contains("enhanced"))
+    }
+
+    @Test
+    fun `toasts add a client hook and pick daisy alerts when daisy is on`() {
+        val plain = frontendFiles(spec(toasts = true), null, false)
+        assertContains(plain.getValue("src/hooks.client.ts"), "client.apiConfig.onError = toastApiError")
+        assertContains(plain.getValue("src/hooks.client.ts"), "import.meta.glob<GeneratedClient>('/src/lib/api/index.ts', { eager: true })")
+        assertContains(plain.getValue("$GENERATED_DIR/toasts.ts"), "const daisy = false;")
+        val styled = frontendFiles(spec(TailwindSpec(false, false), daisy, toasts = true), null, false)
+        assertContains(styled.getValue("$GENERATED_DIR/toasts.ts"), "const daisy = true;")
+        assertFalse("src/hooks.client.ts" in frontendFiles(spec(lucide = true), null, false))
+        assertFalse(spec(toasts = true).isEmpty)
     }
 
     @Test
