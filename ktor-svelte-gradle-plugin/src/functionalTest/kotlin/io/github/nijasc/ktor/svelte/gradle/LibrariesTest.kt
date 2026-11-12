@@ -278,6 +278,67 @@ class LibrariesTest {
         assertTrue(tasks.indexOf(":svelteSync") < tasks.indexOf(":svelteGenerateSources"))
     }
 
+    private fun emptyProjectWithTwoLocales(): TestProject {
+        val project = TestProject(dir)
+        project.buildScript(
+            """
+            import io.github.nijasc.ktor.svelte.gradle.PackageManager
+
+            plugins {
+                java
+                id("io.github.nijasc.ktor-svelte")
+            }
+
+            svelte {
+                addRuntimeDependency = false
+                packageManager = PackageManager.Bun
+                libraries {
+                    i18n { locales("en", "de") }
+                }
+            }
+            """.trimIndent(),
+        )
+        project.frontend
+            .listFiles()
+            .orEmpty()
+            .forEach { it.deleteRecursively() }
+        return project
+    }
+
+    @Test
+    fun `init creates empty message files, so a new project with i18n syncs right away`() {
+        val project = emptyProjectWithTwoLocales()
+
+        val result = project.run("svelteInit")
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":svelteSync")?.outcome)
+        assertEquals(
+            "{}",
+            project.frontend
+                .resolve("messages/en.json")
+                .readText()
+                .trim(),
+        )
+        assertEquals(
+            "{}",
+            project.frontend
+                .resolve("messages/de.json")
+                .readText()
+                .trim(),
+        )
+        assertTrue(project.frontend.resolve("src/lib/ktor-svelte/i18n.ts").isFile)
+    }
+
+    @Test
+    fun `init keeps message files that are already there`() {
+        val project = emptyProjectWithTwoLocales()
+        messages(project)
+
+        project.run("svelteInit")
+
+        assertContains(project.frontend.resolve("messages/en.json").readText(), "Hi {name}")
+    }
+
     @Test
     fun `configuration cache works with libraries`() {
         val project = project("tailwind()")

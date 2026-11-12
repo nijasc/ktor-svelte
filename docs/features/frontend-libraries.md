@@ -168,7 +168,7 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 
 ## i18n
 
-Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. Files are flat, and `{name}` is a parameter:
+Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. `svelteInit` creates an empty file for every locale you configured, and never touches one that is already there. Files are flat, and `{name}` is a parameter:
 
 ```json
 {

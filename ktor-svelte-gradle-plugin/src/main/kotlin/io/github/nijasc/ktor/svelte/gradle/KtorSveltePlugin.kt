@@ -326,6 +326,14 @@ public class KtorSveltePlugin : Plugin<Project> {
         project.tasks.register("svelteInit", SvelteInitTask::class.java) { task ->
             configureToolTask(task, extension)
             task.description = "Creates a working SvelteKit project in the frontend directory."
+            val i18n = extension.libraries.i18nSettings
+            task.locales.set(
+                i18n.enabled
+                    .orElse(
+                        false,
+                    ).zip(i18n.localeNames.orElse(emptyList())) { enabled, names -> if (enabled) names else emptyList() },
+            )
+            task.messagesDirectory.set(i18n.messagesDir)
         }
         project.tasks.register("svelteDoctor", SvelteDoctorTask::class.java) { task ->
             task.group = TASK_GROUP
