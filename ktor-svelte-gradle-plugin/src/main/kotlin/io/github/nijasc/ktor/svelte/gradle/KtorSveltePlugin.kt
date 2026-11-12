@@ -8,6 +8,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteConfigTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevAllTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
@@ -69,6 +70,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
         configureClean(project, extension)
         serializeFrontendTasks(project)
+        val config = registerConfigReport(project, extension)
 
         project.pluginManager.withPlugin("java") {
             wireResources(project, bundle)
@@ -82,8 +84,65 @@ public class KtorSveltePlugin : Plugin<Project> {
                 if (devMode) run.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
             }
             registerGenerateTs(project, extension)
+            config.configure { task ->
+                val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
+                val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
+                task.mainClass.set(project.extensions.getByType(JavaApplication::class.java).mainClass)
+                task.appClasspath.from(
+                    main.map { it.output.classesDirs },
+                    project.layout.projectDirectory.dir("src/main/resources"),
+                    project.configurations.named("runtimeClasspath"),
+                )
+                task.dependsOn(main.map { it.output.classesDirs })
+                task.javaLauncher.set(toolchains.launcherFor(project.extensions.getByType(JavaPluginExtension::class.java).toolchain))
+            }
         }
     }
+
+    private fun registerConfigReport(
+        project: Project,
+        extension: SvelteExtension,
+    ): TaskProvider<SvelteConfigTask> =
+        project.tasks.register("svelteConfig", SvelteConfigTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Prints every ktor-svelte setting of the build and the app, scores them and suggests what to change."
+            task.reportFile.set(project.layout.buildDirectory.file("ktor-svelte/config-report.json"))
+            val projectDirectory = project.layout.projectDirectory.asFile
+            val libraries = extension.libraries
+            val settings = task.gradleSettings
+            settings.put("frontendDir", extension.frontendDir.map { it.asFile.relativeToOrSelf(projectDirectory).invariantSeparatorsPath })
+            settings.put("outputDir", extension.outputDir)
+            settings.put("packageManager", extension.packageManager.map { it.name })
+            settings.put("buildScript", extension.buildScript)
+            settings.put("buildEnv", extension.buildEnv.map { it.sorted().joinToString(", ").ifEmpty { "none" } })
+            settings.put("addRuntimeDependency", extension.addRuntimeDependency.map { it.toString() })
+            settings.put("includeSourceMaps", extension.includeSourceMaps.map { it.toString() })
+            settings.put("precompress", extension.precompress.map { it.toString() })
+            settings.put("dev.port", extension.dev.port.map { it.toString() })
+            settings.put("dev.script", extension.dev.script)
+            settings.put("dev.debugPort", extension.dev.debugPort.map { it.toString() })
+            settings.put("dev.openBrowser", extension.dev.openBrowser.map { it.toString() })
+            settings.put(
+                "libraries.tailwind",
+                libraries.tailwindSettings.enabled
+                    .map { it.toString() }
+                    .orElse("false"),
+            )
+            settings.put(
+                "libraries.daisyUi",
+                libraries.daisySettings.enabled
+                    .map { it.toString() }
+                    .orElse("false"),
+            )
+            settings.put("libraries.lucide", libraries.lucideEnabled.map { it.toString() }.orElse("false"))
+            settings.put(
+                "libraries.i18n",
+                libraries.i18nSettings.enabled
+                    .map { it.toString() }
+                    .orElse("false"),
+            )
+            settings.put("verifyTs", project.providers.gradleProperty(VERIFY_TS_PROPERTY).orElse("true"))
+        }
 
     private fun librarySpecProvider(
         project: Project,
