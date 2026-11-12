@@ -11,6 +11,7 @@ import io.ktor.http.content.OutgoingContent
 import io.ktor.http.defaultForFilePath
 import io.ktor.http.withCharsetIfNeeded
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.http.content.suppressCompression
 import io.ktor.server.request.acceptEncodingItems
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
@@ -84,7 +85,10 @@ internal class AssetResponder(
             return
         }
 
-        if (encoding != null) call.response.header(HttpHeaders.ContentEncoding, encoding.manifestKey)
+        if (encoding != null) {
+            call.response.header(HttpHeaders.ContentEncoding, encoding.manifestKey)
+            call.suppressCompression()
+        }
         val length = encoding?.let { entry.encodings.getValue(it) } ?: entry.size
 
         if (call.request.httpMethod == HttpMethod.Head) {
@@ -119,7 +123,10 @@ internal class AssetResponder(
             call.respond(HttpStatusCode.NotModified)
             return
         }
-        if (gzip) call.response.header(HttpHeaders.ContentEncoding, "gzip")
+        if (gzip) {
+            call.response.header(HttpHeaders.ContentEncoding, "gzip")
+            call.suppressCompression()
+        }
         val bytes = if (gzip) page.gzip else page.plain
         if (call.request.httpMethod == HttpMethod.Head) {
             call.respond(HeadContent(status, contentType, bytes.size.toLong()))
@@ -141,6 +148,7 @@ internal class AssetResponder(
         range: RangeRequest.Satisfiable,
     ) {
         call.response.header(HttpHeaders.ContentRange, "bytes ${range.first}-${range.last}/${entry.size}")
+        call.suppressCompression()
         val status = HttpStatusCode.PartialContent
         if (call.request.httpMethod == HttpMethod.Head) {
             call.respond(HeadContent(status, contentType, range.length))

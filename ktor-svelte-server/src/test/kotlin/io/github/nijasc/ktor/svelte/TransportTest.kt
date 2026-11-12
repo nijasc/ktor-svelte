@@ -4,6 +4,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -21,6 +22,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.Serializable
+import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -111,6 +113,52 @@ class TransportTest {
             assertEquals("gzip", api.headers[HttpHeaders.ContentEncoding])
             val page = client.get("/about") { header(HttpHeaders.AcceptEncoding, "br") }
             assertEquals("brotli-bytes", page.bodyAsText())
+        }
+
+    @Test
+    fun `precompressed pages and assets are never compressed a second time`() =
+        testApplication {
+            val build =
+                fixtureBuild(
+                    files = mapOf("index.html" to "<html><head></head><body>home</body></html>", "app.js" to "go()", "app.css" to "a{}"),
+                    encoded = mapOf("app.js.br" to "brotli-bytes", "app.css.gz" to "gzip-bytes"),
+                )
+            application {
+                install(Svelte) {
+                    source = SvelteSource.Directory(build)
+                    dev { mode = DevMode.Never }
+                    publicConfig(Greeting("inlined"))
+                    transport {
+                        json()
+                        compression { gzip { minimumSize(1) } }
+                    }
+                }
+                greetingRoutes()
+            }
+            val browser = "gzip, deflate, br, zstd"
+
+            val script = client.get("/app.js") { header(HttpHeaders.AcceptEncoding, browser) }
+            assertEquals(listOf("br"), script.headers.getAll(HttpHeaders.ContentEncoding))
+            assertEquals("brotli-bytes", script.bodyAsText())
+
+            val styles = client.get("/app.css") { header(HttpHeaders.AcceptEncoding, "gzip") }
+            assertEquals(listOf("gzip"), styles.headers.getAll(HttpHeaders.ContentEncoding))
+            assertEquals("gzip-bytes", styles.bodyAsText())
+
+            val page = client.get("/") { header(HttpHeaders.AcceptEncoding, browser) }
+            assertEquals(listOf("gzip"), page.headers.getAll(HttpHeaders.ContentEncoding))
+            assertContains(GZIPInputStream(page.bodyAsBytes().inputStream()).readBytes().decodeToString(), "<body>home</body>")
+
+            val part =
+                client.get("/app.js") {
+                    header(HttpHeaders.AcceptEncoding, "gzip")
+                    header(HttpHeaders.Range, "bytes=0-1")
+                }
+            assertNull(part.headers[HttpHeaders.ContentEncoding])
+            assertEquals("go", part.bodyAsText())
+
+            val api = client.get("/api/greeting") { header(HttpHeaders.AcceptEncoding, browser) }
+            assertEquals(listOf("gzip"), api.headers.getAll(HttpHeaders.ContentEncoding))
         }
 
     @Test
