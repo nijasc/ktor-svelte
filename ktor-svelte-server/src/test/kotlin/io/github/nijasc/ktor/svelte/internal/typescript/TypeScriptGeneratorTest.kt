@@ -338,6 +338,15 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the field action puts back what was typed before the page became interactive`() {
+        val form = generate().getValue("form.ts")
+        assertContains(form, "document.addEventListener('input', rememberInput, true);")
+        assertContains(form, "node instanceof HTMLInputElement && node.type !== 'file'")
+        assertContains(form, "    apply(options);\n    restoreTypedValue(node);")
+        assertContains(form, "node.dispatchEvent(new Event('input', { bubbles: true }));")
+    }
+
+    @Test
     fun `summaries and descriptions become JSDoc`() {
         val source =
             services(
