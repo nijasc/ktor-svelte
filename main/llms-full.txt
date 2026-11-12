@@ -2720,7 +2720,7 @@ plugins {
 }
 ```
 
-If you set `addRuntimeDependency = false` and declare `ktor-svelte-server` yourself, bump it to the same version. Then run `./gradlew svelteSync` once, because generated files and frontend library setup can change between releases.
+If you set `addRuntimeDependency = false` and declare `ktor-svelte-server` yourself, bump it to the same version. Then run `./gradlew svelteSync` once, because generated files and frontend library setup can change between releases. If your app uses `generateTs`, also run `./gradlew svelteGenerateTs` and commit the result, because the generated client can change too. Until you do, `check` stops at `svelteVerifyTs` and names the files that are out of date.
 
 Afterwards, `./gradlew svelteConfig` shows every setting with its new default and suggests what to turn on, so you notice new options. See [Review your configuration](https://nijasc.github.io/ktor-svelte/main/reference/gradle#review-your-configuration).
 
