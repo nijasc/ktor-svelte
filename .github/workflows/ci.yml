@@ -129,6 +129,26 @@ jobs:
           cd small
           ./gradlew check buildFatJar svelteCheck
           ./gradlew svelteRun --script=lint
+      - name: Upgrade a project created by release 0.12.0
+        shell: bash
+        run: |
+          repository="$(cygpath -m "$PWD" 2>/dev/null || pwd)"
+          mkdir "$RUNNER_TEMP/release-0.12"
+          curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/v0.12.0/scripts/Setup.java -o "$RUNNER_TEMP/release-0.12/Setup.java"
+          cd "$RUNNER_TEMP"
+          java release-0.12/Setup.java --version=0.12.0 --yes --name=upgrade --i18n --locales=en,de --auth --no-database --no-live-templates --no-git
+          cd upgrade
+          {
+            echo "pluginManagement {"
+            echo "    includeBuild(\"$repository\")"
+            tail -n +2 settings.gradle.kts
+            echo
+            echo "includeBuild(\"$repository\")"
+          } > settings.upgraded
+          mv settings.upgraded settings.gradle.kts
+          ./gradlew svelteSync svelteGenerateTs
+          ./gradlew check buildFatJar svelteCheck
+          ./gradlew svelteRun --script=lint
 
   generated-client:
     needs: changes
