@@ -915,6 +915,8 @@ The first start creates two people, `ada@example.com` as admin and `grace@exampl
 | `frontend/src/lib/components/TaskForm.svelte` | One form for creating and editing, with `use:field` and errors from the browser and the server |
 | `frontend/messages/` | English and German texts that the pages and the API errors share |
 | `src/e2eTest/kotlin/ShowcaseAppTest.kt` | Sessions, roles, uploads, paging and rate limits tested against the production JAR |
+| `src/browserTest/kotlin/ShowcaseBrowserTest.kt` | The same JAR driven by Playwright in Chromium, Firefox and WebKit, with accessibility checks |
+| `src/devBrowserTest/kotlin/DevModeBrowserTest.kt` | `svelteDevAll` with a browser: hot reload, a restart after a Kotlin change, and browser errors in the dev log |
 
 Environment variables: `PORT`, `SESSION_SIGN_KEY` (64 hex characters, so sessions survive a restart), `SHOWCASE_DATA` (where the database and files go), `SHOWCASE_REGISTRATION=closed`, and `SHOWCASE_INSECURE_COOKIES=true` to test the JAR over plain HTTP in browsers that do not treat `localhost` as secure.
 
