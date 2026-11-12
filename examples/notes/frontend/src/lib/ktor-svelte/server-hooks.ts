@@ -6,6 +6,6 @@ export const ktorSvelteHandle: Handle = ({ event, resolve }) => {
     globalThis.__ktorSvelteLocale = defaultLocale;
     return resolve(event, {
         transformPageChunk: ({ html }) =>
-            html.replace(/<html[^>]*>/, () => `<html lang="${getLocale()}" data-theme="light">`).replace('</head>', () => `<script>var t=document.cookie.match(/(?:^|; )ktor_svelte_theme=([^;]+)/);if(t)document.documentElement.dataset.theme=t[1];var l=document.cookie.match(/(?:^|; )ktor_svelte_locale=([^;]+)/);if(l)document.documentElement.lang=l[1];</script></head>`)
+            html.replace(/<html[^>]*>/, () => `<html lang="${getLocale()}" data-theme="shadcn-light">`).replace('</head>', () => `<script>var t=document.cookie.match(/(?:^|; )ktor_svelte_theme=([^;]+)/);if(t)document.documentElement.dataset.theme=t[1];var l=document.cookie.match(/(?:^|; )ktor_svelte_locale=([^;]+)/);if(l)document.documentElement.lang=l[1];</script></head>`)
     });
 };
