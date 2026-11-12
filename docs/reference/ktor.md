@@ -1,6 +1,6 @@
 # Ktor settings
 
-Every setting of `install(Svelte) { }`.
+Every setting of `install(Svelte) { }`. To pick settings with checkboxes instead, use the [configurator](../guide/configurator.md).
 
 The values shown are the defaults.
 
