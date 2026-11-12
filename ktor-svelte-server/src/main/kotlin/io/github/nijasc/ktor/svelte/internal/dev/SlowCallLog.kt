@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte.internal.dev
 
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
+import io.github.nijasc.ktor.svelte.internal.subscribeWhileRunning
 import io.github.nijasc.ktor.svelte.internal.typescript.SourceLocation
 import io.github.nijasc.ktor.svelte.internal.typescript.handlerSource
 import io.ktor.server.application.Application
@@ -28,7 +29,7 @@ internal class SlowCallLog(
     private val unknown = Any()
 
     fun install(application: Application) {
-        application.monitor.subscribe(RoutingRoot.RoutingCallStarted) { call ->
+        application.subscribeWhileRunning(RoutingRoot.RoutingCallStarted, { it.application === application }) { call ->
             call.attributes.put(MatchedRoute, call.route)
         }
     }

@@ -33,6 +33,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.toJson
 import io.github.nijasc.ktor.svelte.internal.installApiCompression
 import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
+import io.github.nijasc.ktor.svelte.internal.onOwn
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
 import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
@@ -157,7 +158,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         }
 
         val summary = if (application.developmentMode) settingsSummary(pluginConfig, devUrl.takeIf { devProxy != null }) else emptyList()
-        application.monitor.subscribe(ApplicationStarted) {
+        application.onOwn(ApplicationStarted) {
             if (summary.isNotEmpty()) application.log.info("ktor-svelte settings:\n" + summary.joinToString("\n") { "  $it" })
             val manifest = store.manifest()
             val root = application.pluginOrNull(RoutingRoot)
