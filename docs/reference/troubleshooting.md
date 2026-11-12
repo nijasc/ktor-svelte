@@ -10,7 +10,7 @@ The frontend has no `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.l
 
 ### ktor-svelte could not find bun on PATH
 
-The package manager the lockfile asks for is not installed, or Gradle cannot see it. Install it, restart the Gradle daemon with `./gradlew --stop` so it picks up the new `PATH`, or set `packageManager` to one you have.
+The package manager the lockfile asks for is not installed, or Gradle cannot see it. Install it, restart the Gradle daemon with `./gradlew --stop` so it picks up the new `PATH`, or set `packageManager` to one you have. To have the plugin download Bun for you, set `svelte { bunVersion = "1.3.14" }`.
 
 ### ktor-svelte found no HTML files
 
