@@ -5,6 +5,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.Manifest
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.Resolution
+import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.ktor.http.HttpHeaders
@@ -35,6 +36,7 @@ internal class SvelteHandler(
     private val devProxy: DevProxy?,
     private val devUrl: String,
     private val allowRemote: Boolean,
+    private val siteFiles: SiteFiles? = null,
 ) {
     val proxiesToVite: Boolean get() = devProxy != null
 
@@ -58,7 +60,7 @@ internal class SvelteHandler(
         if (mayProxy && devProxy?.forward(call) == true) return
         val manifest = store.manifest()
         when {
-            manifest != null -> respondFromManifest(call, path, manifest, resolver, responder, privateResponses)
+            manifest != null -> respondFromManifest(call, path, manifest, resolver, responder, privateResponses, siteFiles)
             devProxy != null && !mayProxy -> call.respondText(REMOTE_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
             else -> respondMissingBuild(call, devProxy, devUrl)
         }
@@ -112,6 +114,7 @@ private suspend fun respondFromManifest(
     resolver: RequestResolver,
     responder: AssetResponder,
     privateResponses: Boolean,
+    siteFiles: SiteFiles?,
 ) {
     when (val resolution = resolver.resolve(path, acceptsHtml(call), manifest)) {
         is Resolution.Serve -> {
@@ -126,7 +129,7 @@ private suspend fun respondFromManifest(
             call.respond(HttpStatusCode.PermanentRedirect)
         }
 
-        Resolution.Unhandled -> {}
+        Resolution.Unhandled -> if (siteFiles?.serves(path) == true) siteFiles.respond(call, path, manifest)
     }
 }
 

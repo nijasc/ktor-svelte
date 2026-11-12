@@ -50,6 +50,8 @@ public class SvelteConfig {
     public var inlinePublicConfig: Boolean = true
     public var buildHeader: Boolean = true
     public var requestIds: Boolean = true
+    public var sitemap: Boolean = true
+    public var siteUrl: String? = null
     public var maxApiBodySize: Long? = 1024L * 1024L
     public var maxJsonDepth: Int? = 64
     public var maxJsonStringLength: Int? = null
