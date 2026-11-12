@@ -3,9 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "changelog": "bun scripts/changelog.mjs",
-        "dev": "bun scripts/changelog.mjs && vitepress dev",
-        "build": "bun scripts/changelog.mjs && vitepress build",
+        "generate": "bun scripts/changelog.mjs && bun scripts/compatibility.mjs",
+        "dev": "bun run generate && vitepress dev",
+        "build": "bun run generate && vitepress build",
         "preview": "vitepress preview",
         "check-snippets": "bun scripts/check-snippets.mjs"
     },

@@ -50,3 +50,4 @@ pnpm-debug.log*
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 docs/changelog.md
+docs/reference/compatibility-matrix.md
