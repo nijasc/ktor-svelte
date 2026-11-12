@@ -35,6 +35,41 @@ class DevLogTest {
     }
 
     @Test
+    fun `browser stack frames link to the source file`() {
+        val frontend =
+            kotlin.io.path
+                .createTempDirectory("frontend")
+                .toFile()
+        val page =
+            File(frontend, "src/routes/+page.svelte").apply {
+                parentFile.mkdirs()
+                writeText("<h1>x</h1>")
+            }
+        val linked = DevLogFormatter(color = false, now = { LocalTime.of(9, 5, 7) }, frontendDirectory = frontend)
+        assertEquals(
+            "10:00:01  browser  ERROR  Error: boom",
+            linked.format(LogSource.APP, "10:00:01.000 ERROR ktor-svelte.browser Error: boom"),
+        )
+        assertEquals(
+            "09:05:07  browser             at go (${fileUrl(page)}:12:5) [/notes]",
+            linked.format(LogSource.APP, "    at go (http://localhost:8080/src/routes/+page.svelte?t=123:12:5) [/notes]"),
+        )
+        assertEquals(
+            "10:00:02  app      INFO   back to the app",
+            linked.format(LogSource.APP, "10:00:02.000 INFO  i.k.s.Application back to the app"),
+        )
+        assertEquals(
+            "09:05:07  vite     ERROR  error at http://localhost:5173/src/missing.ts:1:1",
+            linked.format(LogSource.VITE, "error at http://localhost:5173/src/missing.ts:1:1"),
+        )
+    }
+
+    @Test
+    fun `file urls always start with three slashes`() {
+        assertTrue(fileUrl(File("/work/shop/A.kt").absoluteFile).startsWith("file:///"))
+    }
+
+    @Test
     fun `vite loses its colors, banner and duplicate timestamps`() {
         assertNull(log.format(LogSource.VITE, "$ vite dev --port \"5173\" --strictPort"))
         assertNull(log.format(LogSource.VITE, "  \u001B[32m➜\u001B[39m  \u001B[1mLocal\u001B[22m:   http://localhost:5173/"))
@@ -61,7 +96,7 @@ class DevLogTest {
         assertEquals("09:05:07  kotlin   INFO   compiling", log.format(LogSource.KOTLIN, "Change detected, executing build..."))
         assertNull(log.format(LogSource.KOTLIN, "modified: /work/shop/src/main/kotlin/shop/Routes.kt"))
         assertEquals(
-            "09:05:07  kotlin   ERROR  src/main/kotlin/shop/Routes.kt:24:23 Unresolved reference 'x'.",
+            "09:05:07  kotlin   ERROR  ${fileUrl(File(project, "src/main/kotlin/shop/Routes.kt"))}:24:23 Unresolved reference 'x'.",
             log.format(LogSource.KOTLIN, "e: ${File(project, "src/main/kotlin/shop/Routes.kt").toURI()}:24:23 Unresolved reference 'x'."),
         )
         assertNull(log.format(LogSource.KOTLIN, "FAILURE: Build failed with an exception."))

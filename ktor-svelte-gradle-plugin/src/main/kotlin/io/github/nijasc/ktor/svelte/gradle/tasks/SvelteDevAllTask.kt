@@ -102,7 +102,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
 
     @TaskAction
     public fun runAll() {
-        devLog = DevLogFormatter(useColor(System.getenv()), projectDirectory.get().asFile)
+        devLog = DevLogFormatter(useColor(System.getenv()), projectDirectory.get().asFile, frontendDirectory = frontendDir.get().asFile)
         val running = mutableListOf<Process>()
         val banner = ReadyBanner(port.get())
         if (openBrowser.get()) banner.onFirstReady = ::openInBrowser
