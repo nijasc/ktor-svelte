@@ -2332,7 +2332,7 @@ Suggestions
   - [Operations] Set healthEndpoint = true and point your orchestrator at /_ktor-svelte/health.
 ```
 
-The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, health and request IDs, generated TypeScript and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
+The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
 
 ## Pin Bun
 
