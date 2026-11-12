@@ -1758,7 +1758,7 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 
 ## i18n
 
-Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. Files are flat, and `{name}` is a parameter:
+Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. `svelteInit` creates an empty file for every locale you configured, and never touches one that is already there. Files are flat, and `{name}` is a parameter:
 
 ```json
 {
@@ -2823,7 +2823,7 @@ The promise covers the Kotlin API outside packages named `internal`, and the set
 - **Every package manager.** Bun, npm, pnpm and Yarn each install, build and test an example in CI.
 - **Upgrades.** A project created by release 0.12.0 is switched to the current code and has to build, on every change.
 - **A pentest.** About 150 hand-written requests against the showcase JAR: path traversal, redirects, the Host header, the origin check, request bodies, injection, access control, session cookies and sign in. The three weaknesses it found are in the list above. The [security page](https://nijasc.github.io/ktor-svelte/main/security) says what ktor-svelte protects and what it leaves to you.
-- **Static analysis.** CodeQL scans the Kotlin, the TypeScript and the workflows, and new dependencies are checked for known vulnerabilities on every pull request.
+- **Static analysis.** CodeQL scans the Kotlin, the TypeScript and the workflows on every pull request.
 
 ## If you skipped 0.12
 
