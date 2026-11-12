@@ -32,6 +32,7 @@ val LOGIN: Pattern = Pattern.compile(".*/login$")
 
 class ShowcaseServer(
     dataDirectory: Path,
+    appName: String = "Showcase under test",
 ) : AutoCloseable {
     val port: Int = ServerSocket(0).use { it.localPort }
     val url: String = "http://localhost:$port"
@@ -43,7 +44,7 @@ class ShowcaseServer(
             ProcessBuilder(java, "-jar", System.getProperty("example.jar"))
                 .apply {
                     environment()["PORT"] = port.toString()
-                    environment()["APP_NAME"] = "Showcase under test"
+                    environment()["APP_NAME"] = appName
                     environment()["SHOWCASE_DATA"] = dataDirectory.toString()
                     environment()["SHOWCASE_ADMIN_PASSWORD"] = ADMIN_PASSWORD
                     environment()["SHOWCASE_MEMBER_PASSWORD"] = MEMBER_PASSWORD

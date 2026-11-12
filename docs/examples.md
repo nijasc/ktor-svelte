@@ -61,6 +61,8 @@ Things to try while `svelteDevAll` runs:
 
 [`examples/showcase`](https://github.com/nijasc/ktor-svelte/tree/main/examples/showcase) is a team board that people sign in to. Where notes shows each feature on its own, the showcase shows them working together the way a real app needs them: pages behind a login, an admin area, a database and uploads.
 
+![The board of the showcase, with counters, a search box, filters and a list of tasks](/showcase/board.png)
+
 ```bash
 ./gradlew -p examples/showcase svelteDevAll
 ```
