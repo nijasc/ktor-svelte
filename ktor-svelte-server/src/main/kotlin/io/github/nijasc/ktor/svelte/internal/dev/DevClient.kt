@@ -17,7 +17,6 @@ import kotlin.io.path.readText
 internal const val DEV_CLIENT_PATH = "/_ktor-svelte/dev/client.js"
 internal const val COMPILE_ERRORS_PATH = "/_ktor-svelte/dev/compile-errors"
 internal const val COMPILE_ERRORS_PROPERTY = "ktor.svelte.compileErrors"
-private const val DEV_CLIENT_TAG = "<script type=\"module\" src=\"$DEV_CLIENT_PATH\"></script>"
 private const val POLL_MILLIS = 300L
 private const val NO_ERRORS = "[]"
 
@@ -26,10 +25,15 @@ private val devClientScript: String by lazy {
         ?: error("ktor-svelte is missing its dev client script. The JAR may be damaged.")
 }
 
-internal fun injectDevClient(html: String): String {
+internal fun injectDevClient(
+    html: String,
+    panel: Boolean,
+): String {
     if (DEV_CLIENT_PATH in html) return html
     val head = html.indexOf("</head>", ignoreCase = true)
-    return if (head < 0) html else html.substring(0, head) + DEV_CLIENT_TAG + html.substring(head)
+    val source = if (panel) "$DEV_CLIENT_PATH?panel" else DEV_CLIENT_PATH
+    val tag = "<script type=\"module\" src=\"$source\"></script>"
+    return if (head < 0) html else html.substring(0, head) + tag + html.substring(head)
 }
 
 internal fun compileErrorsFile(): Path? = System.getProperty(COMPILE_ERRORS_PROPERTY)?.takeIf { it.isNotBlank() }?.let(::Path)

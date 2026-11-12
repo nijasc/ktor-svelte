@@ -18,9 +18,11 @@ import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
 import io.github.nijasc.ktor.svelte.internal.constantGetPaths
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
+import io.github.nijasc.ktor.svelte.internal.dev.DevRequestLog
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
@@ -105,7 +107,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val devProxy =
             if (isDevProxyActive(pluginConfig.devConfig.mode, application)) {
                 requireAllowedTarget(devUrl, allowRemote)
-                DevProxy(devUrl)
+                DevProxy(devUrl, pluginConfig.devConfig.panel)
             } else {
                 null
             }
@@ -128,6 +130,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             } else {
                 null
             }
+        val devRequests = if (devProxy != null && pluginConfig.devConfig.panel) DevRequestLog(resolver) else null
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles)
         application.attributes.put(SvelteHandlerKey, handler)
         val metrics = SvelteMetrics()
@@ -198,6 +201,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
         }
 
+        if (devRequests != null) {
+            onCall { call -> devRequests.started(call) }
+            on(ResponseSent) { call -> devRequests.finished(call) }
+        }
+
         val slowApiCall = pluginConfig.devConfig.slowApiCall
         if (slowApiCall != null && application.developmentMode) {
             val slowCalls = SlowCallLog(slowApiCall, resolver)
@@ -209,6 +217,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val hideErrorDetails = pluginConfig.hideErrorDetails
         on(CallFailed) { call, cause ->
             if (cause is ValidationException) {
+                devRequests?.validationFailed(call, cause.fields)
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
                 return@on
             }
@@ -232,6 +241,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 catchAll(handler)
             }
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
+            if (devRequests != null) devRequestRoutes(devRequests, allowRemote)
             if (publicConfig != null) {
                 get(PUBLIC_CONFIG_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")
