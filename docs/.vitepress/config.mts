@@ -111,6 +111,7 @@ export default defineConfig({
                     { text: 'What is ktor-svelte?', link: '/guide/introduction' },
                     { text: 'Compared with other setups', link: '/guide/comparison' },
                     { text: 'Getting started', link: '/guide/getting-started' },
+                    { text: 'Configurator', link: '/guide/configurator' },
                     { text: 'Tutorial: a notes app', link: '/guide/tutorial' },
                     { text: 'Add to an existing project', link: '/guide/existing-project' },
                     { text: 'Project structure', link: '/guide/project-structure' },
