@@ -58,7 +58,7 @@ If you already have `src/routes/+layout.svelte`, add this line once. Without a l
 import '#lib/ktor-svelte/app.css';
 ```
 
-Generated Kotlin lands in the `ktorsvelte` package. Change it with `generatedPackage = "com.example.ui"`.
+Generated Kotlin lands in the `io.github.nijasc.ktorsvelte` package. Change it with `generatedPackage = "com.example.ui"`.
 
 ## Tailwind
 
@@ -79,8 +79,8 @@ Generated Kotlin lands in the `ktorsvelte` package. Change it with `generatedPac
 ```
 
 ```kotlin
-import ktorsvelte.AppTheme
-import ktorsvelte.theme
+import io.github.nijasc.ktorsvelte.AppTheme
+import io.github.nijasc.ktorsvelte.theme
 
 get("/api/report") {
     val isDark = call.theme == AppTheme.Dark
@@ -96,7 +96,7 @@ The saved theme is applied by a small inline script. The automatic [Content-Secu
 `lucide()` generates a `LucideIcon` enum from the installed version, so a misspelled icon is a compile error. Use it in your DTOs and it reaches the frontend as the same type:
 
 ```kotlin
-import ktorsvelte.LucideIcon
+import io.github.nijasc.ktorsvelte.LucideIcon
 
 @Serializable
 data class Note(val title: String, val icon: LucideIcon)
@@ -152,8 +152,8 @@ While `svelteDevAll` or `svelteDev` runs, saving a message file updates the fron
 ```
 
 ```kotlin
-import ktorsvelte.Messages
-import ktorsvelte.messages
+import io.github.nijasc.ktorsvelte.Messages
+import io.github.nijasc.ktorsvelte.messages
 
 get("/api/hello") {
     call.respondText(call.messages.serverGreeting("Ada"))

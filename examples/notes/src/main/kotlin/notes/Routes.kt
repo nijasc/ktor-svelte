@@ -17,8 +17,8 @@ import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
-import ktorsvelte.messages
-import ktorsvelte.theme
+import io.github.nijasc.ktorsvelte.messages
+import io.github.nijasc.ktorsvelte.theme
 
 fun Route.noteRoutes(store: NoteStore) {
     route("/api/notes") {

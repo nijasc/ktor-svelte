@@ -22,7 +22,7 @@ class LibraryFilesTest {
         lucide: Boolean = false,
         i18n: I18nSpec? = null,
         images: Boolean = false,
-    ) = LibrarySpec(tailwind, daisy, lucide, i18n, 5173, "ktorsvelte", images)
+    ) = LibrarySpec(tailwind, daisy, lucide, i18n, 5173, "io.github.nijasc.ktorsvelte", images)
 
     private val daisy = DaisySpec(listOf("light", "dark"), "light", "dark", emptyList())
     private val cookieI18n = I18nSpec(listOf("en", "de"), "en", LocaleStrategy.Cookie)

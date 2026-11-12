@@ -6,6 +6,7 @@ To upgrade across several releases, follow the guides in order.
 
 | Release | What changes for you |
 |---|---|
+| [0.11](0.11.md) | Generated Kotlin moves to `io.github.nijasc.ktorsvelte`, and apps serve a generated `sitemap.xml` and `robots.txt` |
 | [0.10](0.10.md) | `publicConfig` is inlined into pages, API responses carry a build header, and `svelteDevAll` opens the browser |
 | [0.9](0.9.md) | Wrong methods on pages answer 405, JSON request bodies have a nesting limit, and every request gets an `X-Request-Id` |
 | [0.8](0.8.md) | API responses of 1 KiB or more are compressed |
