@@ -14,16 +14,20 @@ public class SvelteTransportConfig {
     internal val negotiation: MutableList<ContentNegotiationConfig.() -> Unit> = mutableListOf()
     internal var compressionConfig: (CompressionConfig.() -> Unit)? = null
         private set
+    internal val formatNames: MutableList<String> = mutableListOf()
 
     public fun json(configure: JsonBuilder.() -> Unit = {}) {
+        formatNames += "json"
         negotiation += { json(Json(DefaultJson, configure)) }
     }
 
     public fun xml() {
+        formatNames += "xml"
         negotiation += { registerXml() }
     }
 
     public fun negotiation(configure: ContentNegotiationConfig.() -> Unit) {
+        formatNames += "custom"
         negotiation += configure
     }
 
