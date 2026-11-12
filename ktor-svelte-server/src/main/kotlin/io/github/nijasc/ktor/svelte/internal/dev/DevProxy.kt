@@ -16,7 +16,9 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
@@ -232,9 +234,16 @@ internal class DevProxy(
                 }
             }
         val hasNoBody = call.request.httpMethod == HttpMethod.Head || status == HttpStatusCode.NotModified
+        val injectable =
+            status == HttpStatusCode.OK &&
+                contentType?.match(ContentType.Text.Html) == true &&
+                response.headers().firstValue(HttpHeaders.ContentEncoding).isEmpty
         if (hasNoBody) {
             response.body().close()
             call.respond(ProxiedHeaders(status, contentType, contentLength, headers))
+        } else if (injectable) {
+            val html = withContext(Dispatchers.IO) { response.body().use { it.readBytes() } }.toString(Charsets.UTF_8)
+            call.respond(ProxiedBytes(status, contentType, headers, injectDevClient(html).toByteArray()))
         } else {
             call.respond(ProxiedBody(status, contentType, contentLength, headers, response.body()))
         }
@@ -252,6 +261,17 @@ private class ProxiedHeaders(
     override val contentLength: Long?,
     override val headers: Headers,
 ) : OutgoingContent.NoContent()
+
+private class ProxiedBytes(
+    override val status: HttpStatusCode,
+    override val contentType: ContentType?,
+    override val headers: Headers,
+    private val bytes: ByteArray,
+) : OutgoingContent.ByteArrayContent() {
+    override val contentLength: Long get() = bytes.size.toLong()
+
+    override fun bytes(): ByteArray = bytes
+}
 
 private class ProxiedBody(
     override val status: HttpStatusCode,

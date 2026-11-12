@@ -10,6 +10,8 @@ One command runs everything. Then open Ktor's port, not Vite's:
 
 It starts Vite, keeps Kotlin compiling and runs your app. Save a Svelte file and the page hot reloads. Save a Kotlin file and the app restarts, and with `generateTs` on your TypeScript updates a moment later, so type errors show up in the editor right away. A restart loses anything your app keeps in memory. Stopping the task stops all three. In IntelliJ, this is the `Dev` run configuration, and each line of output is labelled `[vite]`, `[kotlin]` or `[app]`.
 
+When Kotlin stops compiling, the app keeps running its last good version, and the compiler errors appear in the browser in Vite's error overlay, with the file and line of each. Click the file to open it in your editor, or press Esc to hide the overlay until the errors change. It disappears once the code compiles again.
+
 Once the app is listening, it prints the links you need, so they do not get lost in the output:
 
 ```
