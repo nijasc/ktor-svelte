@@ -75,7 +75,8 @@ tasks.register<JavaExec>("installBrowsers") {
     description = "Downloads the browser the browser tests use, with its system packages on Linux."
     classpath = sourceSets["browserTest"].runtimeClasspath
     mainClass = "com.microsoft.playwright.CLI"
-    args("install", "--with-deps", providers.gradleProperty("browser").orElse("chromium").get())
+    val systemPackages = if (System.getProperty("os.name").startsWith("Linux")) listOf("--with-deps") else emptyList()
+    args(listOf("install") + systemPackages + providers.gradleProperty("browser").orElse("chromium").get())
 }
 
 testing {
