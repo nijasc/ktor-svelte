@@ -138,7 +138,7 @@ class NotesAppTest {
     @Test
     fun `backend reads the saved theme`() {
         assertContains(send("GET", "/api/greeting", null, "Cookie" to "ktor_svelte_theme=ktor").body(), """"theme":"ktor"""")
-        assertContains(send("GET", "/api/greeting", null, "Cookie" to "ktor_svelte_theme=nope").body(), """"theme":"light"""")
+        assertContains(send("GET", "/api/greeting", null, "Cookie" to "ktor_svelte_theme=nope").body(), """"theme":"shadcn-light"""")
     }
 
     @Test
@@ -152,7 +152,7 @@ class NotesAppTest {
     fun `prerendered pages carry the default theme and language`() {
         val page = send("GET", "/", null, html).body()
         assertContains(page, """lang="en"""")
-        assertContains(page, """data-theme="light"""")
+        assertContains(page, """data-theme="shadcn-light"""")
         assertContains(page, "ktor_svelte_theme")
     }
 
