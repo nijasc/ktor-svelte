@@ -169,7 +169,11 @@ public class KtorSveltePlugin : Plugin<Project> {
         build.configure { it.dependsOn(verify) }
         project.tasks.named("svelteInit").configure { it.finalizedBy(sync) }
         sync.configure { it.mustRunAfter("svelteInit") }
-        project.tasks.named("svelteDev").configure { it.dependsOn(sync) }
+        project.tasks.named("svelteDev", SvelteDevTask::class.java).configure { task ->
+            task.dependsOn(sync)
+            task.spec.set(librarySpec)
+            task.messagesDirectory.set(messages)
+        }
         project.tasks.matching { it.name == "svelteDevAll" }.configureEach { it.dependsOn(sync) }
     }
 
