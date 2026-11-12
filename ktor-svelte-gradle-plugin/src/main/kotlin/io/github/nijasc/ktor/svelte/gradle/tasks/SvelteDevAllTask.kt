@@ -98,8 +98,12 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     @get:Internal
     public abstract val compileErrorsFile: RegularFileProperty
 
+    @Transient
+    private lateinit var devLog: DevLogFormatter
+
     @TaskAction
     public fun runAll() {
+        devLog = DevLogFormatter(useColor(System.getenv()), projectDirectory.get().asFile)
         val running = mutableListOf<Process>()
         val banner = ReadyBanner(port.get())
         if (openBrowser.get()) banner.onFirstReady = ::openInBrowser
@@ -151,7 +155,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         val command =
             listOf(requireExecutable(tool).absolutePath) +
                 tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort"))
-        return start("vite", command, frontendDir.get().asFile)
+        return start(LogSource.VITE, command, frontendDir.get().asFile)
     }
 
     private fun startCompiler(errors: CompileErrorReport): Process {
@@ -166,7 +170,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 "svelteSync",
                 "-Psvelte.dev=true",
             )
-        return start("kotlin", command, projectDirectory.get().asFile, errors::onLine)
+        return start(LogSource.KOTLIN, command, projectDirectory.get().asFile, errors::onLine)
     }
 
     private fun startApp(banner: ReadyBanner): Process {
@@ -184,11 +188,11 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                     appClasspath.asPath,
                     mainClass.get(),
                 )
-        return start("app", command, projectDirectory.get().asFile) { line -> banner.onAppLine(line)?.let(logger::lifecycle) }
+        return start(LogSource.APP, command, projectDirectory.get().asFile) { line -> banner.onAppLine(line)?.let(logger::lifecycle) }
     }
 
     private fun start(
-        label: String,
+        source: LogSource,
         command: List<String>,
         directory: File,
         onLine: (String) -> Unit = {},
@@ -196,10 +200,10 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         val builder = ProcessBuilder(command).directory(directory).redirectErrorStream(true)
         builder.environment().putAll(System.getenv())
         val process = builder.start()
-        thread(isDaemon = true, name = "ktor-svelte-$label") {
+        thread(isDaemon = true, name = "ktor-svelte-${source.label}") {
             process.inputStream.bufferedReader().useLines { lines ->
                 lines.forEach { line ->
-                    logger.lifecycle("[$label] $line")
+                    devLog.format(source, line)?.let(logger::lifecycle)
                     onLine(line)
                 }
             }
