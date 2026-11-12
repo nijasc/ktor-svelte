@@ -265,6 +265,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.kotlinDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/kotlin"))
                 task.resourcesDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/config"))
                 task.onlyIf("libraries are configured") { !librarySpec.get().isEmpty }
+                task.mustRunAfter("svelteSync")
             }
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         sourceSets.named("main") { main ->

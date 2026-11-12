@@ -269,6 +269,16 @@ class LibrariesTest {
     }
 
     @Test
+    fun `sync and compile can run in one command on a fresh project`() {
+        val project = project("lucide()")
+        addLucide(project)
+        val result = project.run("svelteSync", "classes")
+        assertEquals(TaskOutcome.SUCCESS, result.task(":svelteGenerateSources")?.outcome)
+        val tasks = result.tasks.map { it.path }
+        assertTrue(tasks.indexOf(":svelteSync") < tasks.indexOf(":svelteGenerateSources"))
+    }
+
+    @Test
     fun `configuration cache works with libraries`() {
         val project = project("tailwind()")
         project.run("svelteSync", "--configuration-cache")
