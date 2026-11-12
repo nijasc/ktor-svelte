@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
 import io.github.nijasc.ktor.svelte.internal.DocLink
+import io.github.nijasc.ktor.svelte.internal.onOwn
 import io.ktor.openapi.OpenApiDoc
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
@@ -98,7 +99,7 @@ internal fun installTypeScriptGeneration(
     val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
     val generateOnly = verifyReport != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
     if (generateOnly && !enabled) {
-        application.monitor.subscribe(ApplicationStarted) {
+        application.onOwn(ApplicationStarted) {
             if (verifyReport != null) {
                 application.log.info("ktor-svelte has nothing to verify: generateTs is off.")
                 Runtime.getRuntime().halt(0)
@@ -114,7 +115,7 @@ internal fun installTypeScriptGeneration(
     val output = Path(configuredOutput ?: "$frontendDir/src/lib/api")
     val generator = TypeScriptGenerator(apiPrefixes, excludedPaths, publicConfigSchema, readIconNames(output), declaredErrors)
 
-    application.monitor.subscribe(ApplicationStarted) {
+    application.onOwn(ApplicationStarted) {
         val succeeded = generate(application, output, generator, verifyReport)
         if (generateOnly) Runtime.getRuntime().halt(if (succeeded) 0 else 1)
     }

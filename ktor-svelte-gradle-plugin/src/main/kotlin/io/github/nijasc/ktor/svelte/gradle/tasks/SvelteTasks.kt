@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import io.github.nijasc.ktor.svelte.gradle.BunDownload
 import io.github.nijasc.ktor.svelte.gradle.FrontendTool
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
 import io.github.nijasc.ktor.svelte.gradle.locateExecutable
@@ -19,6 +20,7 @@ import org.gradle.api.tasks.Console
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
@@ -28,6 +30,7 @@ import org.gradle.api.tasks.UntrackedTask
 import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
 import java.io.ByteArrayOutputStream
+import java.io.File
 import javax.inject.Inject
 import kotlin.concurrent.thread
 
@@ -39,20 +42,37 @@ public abstract class SvelteToolTask : DefaultTask() {
     @get:Input
     public abstract val packageManager: Property<PackageManager>
 
+    @get:Input
+    @get:Optional
+    public abstract val bunVersion: Property<String>
+
+    @get:Internal
+    public abstract val toolCacheDirectory: DirectoryProperty
+
     @get:Console
     public abstract val verbose: Property<Boolean>
 
     @get:Inject
     protected abstract val execOperations: ExecOperations
 
-    internal fun tool(): FrontendTool = resolveFrontendTool(frontendDir.get().asFile, packageManager.get())
+    internal fun tool(): FrontendTool {
+        val configured = packageManager.get()
+        if (bunVersion.isPresent && configured == PackageManager.AUTO) return FrontendTool(PackageManager.BUN)
+        return resolveFrontendTool(frontendDir.get().asFile, configured)
+    }
+
+    internal fun executable(tool: FrontendTool): File {
+        val pinned = bunVersion.orNull
+        if (pinned == null || tool.packageManager != PackageManager.BUN) return requireExecutable(tool)
+        return BunDownload(toolCacheDirectory.get().asFile).executable(pinned)
+    }
 
     internal fun runTool(
         tool: FrontendTool,
         arguments: List<String>,
         ignoreExitValue: Boolean = false,
     ) {
-        val executable = requireExecutable(tool)
+        val executable = executable(tool)
         execOperations.exec { spec ->
             spec.workingDir = frontendDir.get().asFile
             spec.commandLine(listOf(executable.absolutePath) + arguments)
@@ -65,7 +85,7 @@ public abstract class SvelteToolTask : DefaultTask() {
         arguments: List<String>,
     ) {
         if (verbose.getOrElse(false)) return runTool(tool, arguments)
-        val executable = requireExecutable(tool)
+        val executable = executable(tool)
         val output = ByteArrayOutputStream()
         val result =
             execOperations.exec { spec ->
@@ -187,10 +207,14 @@ public abstract class ToolVersionSource : ValueSource<String, ToolVersionSource.
     public interface Parameters : ValueSourceParameters {
         public val frontendDir: DirectoryProperty
         public val packageManager: Property<PackageManager>
+        public val bunVersion: Property<String>
     }
 
     override fun obtain(): String =
         runCatching {
+            val pinned = parameters.bunVersion.orNull
+            val configured = parameters.packageManager.get()
+            if (pinned != null && (configured == PackageManager.AUTO || configured == PackageManager.BUN)) return "bun $pinned (pinned)"
             val tool = resolveFrontendTool(parameters.frontendDir.get().asFile, parameters.packageManager.get())
             val executable = locateExecutable(tool.executableName) ?: return UNAVAILABLE
             "${tool.executableName} ${toolFingerprint(executable, tool.executableName)}"

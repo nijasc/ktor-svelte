@@ -13,8 +13,8 @@ private val REQUEST_ID = Regex("[A-Za-z0-9._-]{1,128}")
 internal fun isValidRequestId(value: String): Boolean = REQUEST_ID.matches(value)
 
 internal fun installRequestIds(application: Application) {
-    application.monitor.subscribe(ApplicationModulesLoaded) {
-        if (application.pluginOrNull(CallId) != null) return@subscribe
+    application.onOwn(ApplicationModulesLoaded) {
+        if (application.pluginOrNull(CallId) != null) return@onOwn
         application.install(CallId) {
             retrieveFromHeader(REQUEST_ID_HEADER)
             generate { UUID.randomUUID().toString() }

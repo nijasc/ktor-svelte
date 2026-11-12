@@ -11,6 +11,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import java.io.File
@@ -36,7 +37,10 @@ internal class SetupDoctor(
     private val findExecutable: (String) -> File? = { locateExecutable(it) },
     private val isPortFree: (Int) -> Boolean = ::portIsFree,
     private val nodeVersion: () -> String? = ::installedNodeVersion,
+    private val bunVersion: String? = null,
 ) {
+    private val pinnedBun = bunVersion != null && (packageManager == PackageManager.AUTO || packageManager == PackageManager.BUN)
+
     fun examine(): List<Finding> {
         if (!frontend.isDirectory) return listOf(Finding(Severity.ERROR, "No frontend at $frontend. Run svelteInit to create one."))
         val packageJson = frontend.resolve("package.json")
@@ -59,6 +63,7 @@ internal class SetupDoctor(
     }
 
     private fun tool(): Finding {
+        if (pinnedBun) return Finding(Severity.OK, "Bun $bunVersion is pinned, and ktor-svelte downloads it when a task needs it")
         if (packageManager == PackageManager.AUTO && LOCKFILES.none { (name, _) -> frontend.resolve(name).isFile }) {
             return Finding(Severity.ERROR, "No lockfile found. Install dependencies once, or set svelte.packageManager.")
         }
@@ -73,7 +78,7 @@ internal class SetupDoctor(
     private fun node(): Finding {
         val version =
             nodeVersion() ?: run {
-                val usesBun = runCatching { resolveFrontendTool(frontend, packageManager).executableName }.getOrNull() == "bun"
+                val usesBun = pinnedBun || runCatching { resolveFrontendTool(frontend, packageManager).executableName }.getOrNull() == "bun"
                 return if (usesBun) {
                     Finding(Severity.OK, "Node is not installed, and bun runs Vite itself")
                 } else {
@@ -256,6 +261,10 @@ public abstract class SvelteDoctorTask : DefaultTask() {
     public abstract val packageManager: Property<PackageManager>
 
     @get:Input
+    @get:Optional
+    public abstract val bunVersion: Property<String>
+
+    @get:Input
     public abstract val devPort: Property<Int>
 
     @get:Input
@@ -273,6 +282,7 @@ public abstract class SvelteDoctorTask : DefaultTask() {
                 devPort.get(),
                 outputDir.get(),
                 bundleDirectory.orNull?.asFile,
+                bunVersion = bunVersion.orNull,
             ).examine()
         findings.forEach { finding -> logger.lifecycle("${finding.severity.name.padEnd(5)} ${finding.message}") }
         val errors = findings.count { it.severity == Severity.ERROR }
