@@ -302,7 +302,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask
 	public final fun runAll ()V
 }
 
-public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteLibraryTask {
 	public fun <init> ()V
 	public final fun dev ()V
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;

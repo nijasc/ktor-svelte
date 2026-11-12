@@ -29,6 +29,7 @@ import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
+import kotlin.concurrent.thread
 
 @DisableCachingByDefault(because = "Base type for tasks that run the frontend tool")
 public abstract class SvelteToolTask : DefaultTask() {
@@ -140,7 +141,7 @@ public abstract class SvelteBuildTask : SvelteToolTask() {
 }
 
 @UntrackedTask(because = "Starts the Vite dev server, which runs until it is stopped")
-public abstract class SvelteDevTask : SvelteToolTask() {
+public abstract class SvelteDevTask : SvelteLibraryTask() {
     @get:Input
     public abstract val script: Property<String>
 
@@ -150,9 +151,37 @@ public abstract class SvelteDevTask : SvelteToolTask() {
     @TaskAction
     public fun dev() {
         val tool = tool()
-        runTool(tool, tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort")))
+        val watcher = if (spec.orNull?.i18n != null) watchMessages() else null
+        try {
+            runTool(tool, tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort")))
+        } finally {
+            watcher?.interrupt()
+        }
+    }
+
+    private fun watchMessages(): Thread {
+        val directory = messagesDirectory.get().asFile
+        val frontend = frontendDir.get().asFile
+        return thread(isDaemon = true, name = "ktor-svelte-messages") {
+            val detector = ChangeDetector(fingerprintOf(listOf(directory)), MESSAGES_SETTLE_MILLIS)
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    Thread.sleep(MESSAGES_POLL_MILLIS)
+                } catch (_: InterruptedException) {
+                    return@thread
+                }
+                if (!detector.hasSettledChange(fingerprintOf(listOf(directory)), System.currentTimeMillis())) continue
+                runCatching { refreshGeneratedFiles(frontend, expectedFiles()) }
+                    .onSuccess { changed ->
+                        changed.forEach { logger.lifecycle("ktor-svelte: updated $it from the message files.") }
+                    }.onFailure { logger.warn("ktor-svelte: ${it.message}") }
+            }
+        }
     }
 }
+
+private const val MESSAGES_POLL_MILLIS = 300L
+private const val MESSAGES_SETTLE_MILLIS = 200L
 
 public abstract class ToolVersionSource : ValueSource<String, ToolVersionSource.Parameters> {
     public interface Parameters : ValueSourceParameters {

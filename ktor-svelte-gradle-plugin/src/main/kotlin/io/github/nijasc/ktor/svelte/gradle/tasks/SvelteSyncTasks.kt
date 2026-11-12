@@ -68,6 +68,20 @@ internal fun updatedPackageJson(
     return result
 }
 
+internal fun refreshGeneratedFiles(
+    frontend: File,
+    expected: Map<String, String>,
+): List<String> =
+    expected
+        .filter { (path, _) -> path.startsWith("$GENERATED_DIR/") }
+        .filter { (path, content) ->
+            val file = frontend.resolve(path)
+            val stale = file.isFile && file.readText() != content
+            if (stale) file.writeText(content)
+            stale
+        }.keys
+        .toList()
+
 @DisableCachingByDefault(because = "Base type for tasks that compare or write frontend library files")
 public abstract class SvelteLibraryTask : SvelteToolTask() {
     @get:Input
