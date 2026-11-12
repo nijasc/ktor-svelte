@@ -1616,6 +1616,8 @@ Keep one JSON file per language in `frontend/messages`. Change the folder with `
 
 Both sides get typed functions from the same files. A missing key or a mismatched parameter in any language fails the build, so translations can't drift.
 
+While `svelteDevAll` or `svelteDev` runs, saving a message file updates the frontend functions at once, and Vite reloads them, with no Gradle run. Under `svelteDevAll` the Kotlin `Messages` follow and the app restarts. With `svelteDev` alone, they update the next time Kotlin compiles. A file with a missing key or a mismatched parameter is reported in the console, and the last good version stays until you fix it.
+
 ```svelte
 <script lang="ts">
     import { getLocale, localizeHref, locales, m, setLocale } from '#i18n';
