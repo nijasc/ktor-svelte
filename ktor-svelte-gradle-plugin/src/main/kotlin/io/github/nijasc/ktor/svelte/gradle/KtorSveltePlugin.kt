@@ -133,7 +133,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                         )
                     },
                 devPort = extension.dev.port.get(),
-                generatedPackage = libraries.generatedPackage.getOrElse("ktorsvelte"),
+                generatedPackage = libraries.generatedPackage.getOrElse("io.github.nijasc.ktorsvelte"),
             )
         }
 

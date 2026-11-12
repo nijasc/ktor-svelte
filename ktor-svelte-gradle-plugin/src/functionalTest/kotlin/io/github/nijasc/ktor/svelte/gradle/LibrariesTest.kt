@@ -264,9 +264,9 @@ class LibrariesTest {
         source.parentFile.mkdirs()
         source.writeText(
             """
-            import ktorsvelte.AppTheme
-            import ktorsvelte.LucideIcon
-            import ktorsvelte.Messages
+            import io.github.nijasc.ktorsvelte.AppTheme
+            import io.github.nijasc.ktorsvelte.LucideIcon
+            import io.github.nijasc.ktorsvelte.Messages
 
             val icon = LucideIcon.ArrowRight
             val theme = AppTheme.Light
