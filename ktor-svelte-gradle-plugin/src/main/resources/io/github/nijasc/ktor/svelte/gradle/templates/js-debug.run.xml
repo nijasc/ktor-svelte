@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="{{name}}" type="JavascriptDebugType" uri="{{url}}">
+    <mapping url="{{url}}" local-file="{{frontend}}" />
+    <method v="2" />
+  </configuration>
+</component>
