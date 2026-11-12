@@ -1537,13 +1537,13 @@ svelte {
             forms()
         }
         daisyUi {
-            themes(DaisyTheme.Light, DaisyTheme.Dark, DaisyTheme.Cupcake)
+            themes(DaisyTheme.ShadcnLight, DaisyTheme.ShadcnDark, DaisyTheme.Cupcake)
             customTheme("brand") {
                 primary = "#6b57ff"
                 base100 = "#fdfcff"
             }
-            defaultTheme(DaisyTheme.Light)
-            prefersDark(DaisyTheme.Dark)
+            defaultTheme(DaisyTheme.ShadcnLight)
+            prefersDark(DaisyTheme.ShadcnDark)
         }
         lucide()
         images()
@@ -1608,6 +1608,26 @@ get("/api/report") {
     val isDark = call.theme == AppTheme.Dark
 }
 ```
+
+### shadcn themes
+
+`DaisyTheme.ShadcnLight` and `DaisyTheme.ShadcnDark` bring the look of [shadcn/ui](https://ui.shadcn.com) to every DaisyUI component: its neutral palette, `0.625rem` corners, thin borders and flat surfaces without shadows or noise. Use them like any other theme. Projects created by the setup script start with them:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.gradle.DaisyTheme
+
+svelte {
+    libraries {
+        daisyUi {
+            themes(DaisyTheme.ShadcnLight, DaisyTheme.ShadcnDark)
+            defaultTheme(DaisyTheme.ShadcnLight)
+            prefersDark(DaisyTheme.ShadcnDark)
+        }
+    }
+}
+```
+
+On the server they are `AppTheme.ShadcnLight` and `AppTheme.ShadcnDark`, and in the frontend `'shadcn-light'` and `'shadcn-dark'`. When you only pick these two, the dark one is used for visitors who prefer dark mode. Themes appear in `themes` in the order you list them.
 
 `customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
 
