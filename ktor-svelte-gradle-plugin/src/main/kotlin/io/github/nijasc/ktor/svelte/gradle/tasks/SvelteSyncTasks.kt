@@ -32,7 +32,7 @@ import java.io.File
 
 private const val ICONS_JSON = "$GENERATED_DIR/icons.json"
 private const val USER_VITE_CONFIG = "vite.user.ts"
-private val OWNED_ONLY_WITH_MARKER = setOf("vite.config.ts", "src/hooks.server.ts", "src/hooks.ts")
+private val OWNED_ONLY_WITH_MARKER = setOf("vite.config.ts", "src/hooks.server.ts", "src/hooks.ts", "src/hooks.client.ts")
 private val KNOWN_PACKAGES = PACKAGE_VERSIONS.keys
 
 internal fun File.isOwnedByPlugin(): Boolean = !isFile || GENERATED_MARKER in readText()
@@ -176,7 +176,7 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
             .walkBottomUp()
             .filter { it.isFile && it.relativeTo(frontend).invariantSeparatorsPath !in keep }
             .forEach { it.delete() }
-        listOf("src/hooks.server.ts", "src/hooks.ts").filter { it !in keep }.forEach { path ->
+        listOf("src/hooks.server.ts", "src/hooks.ts", "src/hooks.client.ts").filter { it !in keep }.forEach { path ->
             val file = frontend.resolve(path)
             if (file.isFile && GENERATED_MARKER in file.readText()) file.delete()
         }
