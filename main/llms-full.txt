@@ -842,6 +842,8 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 | `index.ts` | Re-exports all of the above |
 | `openapi.json` | The OpenAPI document itself |
 
+To see the output for your own API before installing anything, paste its OpenAPI document into the [generator playground](https://nijasc.github.io/ktor-svelte/main/features/playground).
+
 Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
 
 With the `application` plugin, `check` runs `svelteVerifyTs`. It starts your app once, generates the TypeScript in memory and fails if the committed files differ, so a changed DTO or route can't drift away from the frontend unnoticed. Line endings are ignored. It passes when `generateTs` is off. To fix a failure, run `svelteGenerateTs`, or start the app in development mode, and commit the result. To leave it out of `check`, set `svelte.verifyTs=false` in `gradle.properties` or pass `-Psvelte.verifyTs=false`.
@@ -1005,6 +1007,14 @@ get("/api/todos") { call.respond(todos) }.describe {
     }
 }
 ```
+
+Source: https://nijasc.github.io/ktor-svelte/main/features/playground
+
+# Generator playground
+
+Paste an OpenAPI document and see the TypeScript that `generateTs` writes for it. The playground runs the same generator as the Ktor plugin, compiled to JavaScript, so nothing leaves your browser.
+
+Only paths under the API prefix are kept, as in your app. The document must be JSON, which is what Ktor produces. In a real project the generator also adds the `LucideIcon` type when `lucide` is enabled and `readPublicConfig()` when you set `publicConfig`, so those are missing here. See [Generated TypeScript](https://nijasc.github.io/ktor-svelte/main/features/typescript) for what each file contains and how to use it.
 
 Source: https://nijasc.github.io/ktor-svelte/main/features/calling-the-api
 

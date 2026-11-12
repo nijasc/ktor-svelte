@@ -19,6 +19,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 ## Features
 
 - [Generated TypeScript](https://nijasc.github.io/ktor-svelte/main/features/typescript)
+- [Generator playground](https://nijasc.github.io/ktor-svelte/main/features/playground)
 - [Calling the API](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api)
 - [Validation](https://nijasc.github.io/ktor-svelte/main/features/validation)
 - [Transport and compression](https://nijasc.github.io/ktor-svelte/main/features/transport)
