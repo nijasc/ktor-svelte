@@ -21,6 +21,7 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
+import java.net.InetAddress
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -60,10 +61,17 @@ private val UNFORWARDED_RESPONSE_HEADERS =
     )
 
 private val IPV4_LOOPBACK = Regex("127(\\.\\d{1,3}){3}")
+private val IPV6_LITERAL = Regex("[0-9a-f:.]+")
 
 internal fun isLoopbackHost(host: String): Boolean {
-    val name = host.lowercase().removeSurrounding("[", "]").removePrefix("::ffff:")
-    return name == "localhost" || name.endsWith(".localhost") || name == "::1" || name == "0:0:0:0:0:0:0:1" || IPV4_LOOPBACK.matches(name)
+    val name = host.lowercase().removeSurrounding("[", "]")
+    return name == "localhost" || name.endsWith(".localhost") || isLoopbackIp(name)
+}
+
+private fun isLoopbackIp(address: String): Boolean {
+    val name = address.lowercase().removeSurrounding("[", "]").substringBefore('%')
+    if (IPV4_LOOPBACK.matches(name)) return true
+    return ':' in name && IPV6_LITERAL.matches(name) && runCatching { InetAddress.getByName(name).isLoopbackAddress }.getOrDefault(false)
 }
 
 internal fun hostWithoutPort(hostHeader: String): String =
@@ -72,7 +80,9 @@ internal fun hostWithoutPort(hostHeader: String): String =
 internal fun isLocalRequest(
     remoteAddress: String,
     hostHeader: String?,
-): Boolean = isLoopbackHost(remoteAddress) && (hostHeader == null || isLoopbackHost(hostWithoutPort(hostHeader)))
+): Boolean =
+    (remoteAddress == "localhost" || isLoopbackIp(remoteAddress)) &&
+        (hostHeader == null || isLoopbackHost(hostWithoutPort(hostHeader)))
 
 private val FORWARDING_HEADERS = listOf(HttpHeaders.Forwarded, HttpHeaders.XForwardedFor, HttpHeaders.XForwardedHost, "X-Real-IP")
 

@@ -525,11 +525,20 @@ class DevProxyTest {
             "127.0.0.1" to "localhost:8080",
             "::1" to "[::1]:8080",
             "0:0:0:0:0:0:0:1" to "127.0.0.1",
+            "0:0:0:0:0:ffff:7f00:1" to "127.0.0.1:8080",
+            "::ffff:127.0.0.1" to "127.0.0.1:8080",
+            "0:0:0:0:0:ffff:127.0.0.1" to "[::ffff:127.0.0.1]:8080",
             "localhost" to "app.localhost:1",
+            "127.0.0.1" to "app.localhost:8080",
         ).forEach { (remote, host) ->
             assertTrue(isLocalRequest(remote, host), "$remote $host")
         }
         assertFalse(isLocalRequest("192.168.1.20", "localhost:8080"))
+        assertFalse(isLocalRequest("0:0:0:0:0:ffff:c0a8:114", "localhost:8080"))
+        assertFalse(isLocalRequest("fe80::1", "localhost:8080"))
+        assertFalse(isLocalRequest("::1", "evil.example.com"))
+        assertFalse(isLocalRequest("kubernetes.docker.internal", "127.0.0.1:8080"))
+        assertFalse(isLocalRequest("evil.localhost", "localhost:8080"))
         assertFalse(isLocalRequest("127.0.0.1", "evil.example.com"))
         assertFalse(isLocalRequest("127.0.0.1", "127.evil.example.com"))
         assertTrue(isLocalRequest("127.0.0.1", null))
