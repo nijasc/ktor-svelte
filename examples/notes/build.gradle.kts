@@ -42,6 +42,7 @@ svelte {
             prefersDark(DaisyTheme.Dark)
         }
         lucide()
+        images()
         i18n {
             locales("en", "de")
             defaultLocale = "en"

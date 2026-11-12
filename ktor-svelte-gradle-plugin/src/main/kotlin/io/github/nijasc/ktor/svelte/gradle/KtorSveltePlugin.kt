@@ -119,6 +119,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                         )
                     },
                 lucide = libraries.lucideEnabled.getOrElse(false),
+                images = libraries.imagesEnabled.getOrElse(false),
                 i18n =
                     libraries.i18nSettings.takeIf { it.enabled.getOrElse(false) }?.let { i18n ->
                         I18nSpec(

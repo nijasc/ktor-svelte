@@ -45,7 +45,7 @@ The frontend is plain files, so there is no Node process in production. SvelteKi
 - **Real hot reload.** One command runs Vite, the Kotlin compiler and your app.
 - **Secure defaults.** CSP, security headers, origin check, body and rate limits, hidden error details.
 - **Fast defaults.** Immutable caching, ETags, precompressed files, compressed API responses, real 404s for stale chunks.
-- **Frontend libraries from Kotlin.** Tailwind, DaisyUI, Lucide and i18n, configured in Gradle.
+- **Frontend libraries from Kotlin.** Tailwind, DaisyUI, Lucide, i18n and image optimization, configured in Gradle.
 - **Any package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
 - **IntelliJ run configurations.** One click starts everything.
 
