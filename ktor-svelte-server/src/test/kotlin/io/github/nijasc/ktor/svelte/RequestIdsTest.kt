@@ -28,7 +28,7 @@ class RequestIdsTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 config()
             }
             routing { get("/api/id") { call.respondText(call.callId ?: "none") } }
@@ -67,7 +67,7 @@ class RequestIdsTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 install(CallId) {
                     generate { "mine" }

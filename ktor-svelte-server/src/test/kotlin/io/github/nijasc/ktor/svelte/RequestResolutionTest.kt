@@ -28,7 +28,7 @@ class RequestResolutionTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 config()
             }
         }
@@ -191,7 +191,7 @@ class RequestResolutionTest {
                 routing { get("/about") { call.respondText("route") } }
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals("route", client.get("/about").bodyAsText())
@@ -204,7 +204,7 @@ class RequestResolutionTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 routing {
                     get("/about") { call.respondText("route") }
@@ -231,7 +231,7 @@ class RequestResolutionTest {
                 classLoader = classLoaderWithManifest(manifest, mapOf("index.html" to "home".toByteArray()))
             }
             application {
-                install(Svelte) { dev { mode = DevMode.NEVER } }
+                install(Svelte) { dev { mode = DevMode.Never } }
             }
             val response = client.get("/")
             assertEquals("home", response.bodyAsText())
@@ -245,7 +245,7 @@ class RequestResolutionTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val noRedirects = createClient { followRedirects = false }

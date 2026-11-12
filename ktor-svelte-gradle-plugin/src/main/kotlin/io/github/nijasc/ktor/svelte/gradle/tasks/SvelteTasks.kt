@@ -57,13 +57,13 @@ public abstract class SvelteToolTask : DefaultTask() {
 
     internal fun tool(): FrontendTool {
         val configured = packageManager.get()
-        if (bunVersion.isPresent && configured == PackageManager.AUTO) return FrontendTool(PackageManager.BUN)
+        if (bunVersion.isPresent && configured == PackageManager.Auto) return FrontendTool(PackageManager.Bun)
         return resolveFrontendTool(frontendDir.get().asFile, configured)
     }
 
     internal fun executable(tool: FrontendTool): File {
         val pinned = bunVersion.orNull
-        if (pinned == null || tool.packageManager != PackageManager.BUN) return requireExecutable(tool)
+        if (pinned == null || tool.packageManager != PackageManager.Bun) return requireExecutable(tool)
         return BunDownload(toolCacheDirectory.get().asFile).executable(pinned)
     }
 
@@ -203,7 +203,7 @@ public abstract class SvelteDevTask : SvelteLibraryTask() {
 private const val MESSAGES_POLL_MILLIS = 300L
 private const val MESSAGES_SETTLE_MILLIS = 200L
 
-public abstract class ToolVersionSource : ValueSource<String, ToolVersionSource.Parameters> {
+internal abstract class ToolVersionSource : ValueSource<String, ToolVersionSource.Parameters> {
     public interface Parameters : ValueSourceParameters {
         public val frontendDir: DirectoryProperty
         public val packageManager: Property<PackageManager>
@@ -214,7 +214,7 @@ public abstract class ToolVersionSource : ValueSource<String, ToolVersionSource.
         runCatching {
             val pinned = parameters.bunVersion.orNull
             val configured = parameters.packageManager.get()
-            if (pinned != null && (configured == PackageManager.AUTO || configured == PackageManager.BUN)) return "bun $pinned (pinned)"
+            if (pinned != null && (configured == PackageManager.Auto || configured == PackageManager.Bun)) return "bun $pinned (pinned)"
             val tool = resolveFrontendTool(parameters.frontendDir.get().asFile, parameters.packageManager.get())
             val executable = locateExecutable(tool.executableName) ?: return UNAVAILABLE
             "${tool.executableName} ${toolFingerprint(executable, tool.executableName)}"

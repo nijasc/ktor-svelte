@@ -68,7 +68,7 @@ class GenerateTsTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 generateTs = generate
                 generateTsOutput = output.toString()
                 transport { json() }

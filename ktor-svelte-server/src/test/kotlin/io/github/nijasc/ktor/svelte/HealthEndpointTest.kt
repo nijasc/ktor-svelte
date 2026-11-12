@@ -20,7 +20,7 @@ class HealthEndpointTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     spaFallback = null
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.NotFound, client.get("/_ktor-svelte/health").status)
@@ -34,7 +34,7 @@ class HealthEndpointTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     healthEndpoint = true
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val response =
@@ -56,7 +56,7 @@ class HealthEndpointTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     healthEndpoint = true
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val response = client.get("/_ktor-svelte/health")
@@ -75,7 +75,7 @@ class HealthEndpointTest {
                         healthEndpoint = true
                         healthCheck { true }
                         healthCheck(check)
-                        dev { mode = DevMode.NEVER }
+                        dev { mode = DevMode.Never }
                     }
                 }
                 val response = client.get("/_ktor-svelte/health")
@@ -94,7 +94,7 @@ class HealthEndpointTest {
                     source = SvelteSource.Directory(build)
                     healthEndpoint = true
                     healthCheck { true }
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.OK, client.get("/_ktor-svelte/health").status)

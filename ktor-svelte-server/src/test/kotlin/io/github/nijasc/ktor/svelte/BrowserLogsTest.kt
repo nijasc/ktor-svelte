@@ -28,7 +28,7 @@ class BrowserLogsTest {
                     install(Svelte) {
                         dev {
                             url = "http://127.0.0.1:1"
-                            mode = DevMode.ALWAYS
+                            mode = DevMode.Always
                         }
                     }
                 }
@@ -64,7 +64,7 @@ class BrowserLogsTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(fixtureBuild())
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.NotFound, client.post("/_ktor-svelte/dev/log") { setBody("[]") }.status)

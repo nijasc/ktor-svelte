@@ -34,7 +34,7 @@ class RangeRequestsTest {
         application {
             install(Svelte) {
                 this.source = source(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
             }
         }
         block()
@@ -118,7 +118,7 @@ class RangeRequestsTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Classpath
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val response = client.get("/clip.mp4") { header(HttpHeaders.Range, "bytes=10-12") }

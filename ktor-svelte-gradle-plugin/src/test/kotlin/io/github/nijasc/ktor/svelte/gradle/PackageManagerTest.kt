@@ -17,45 +17,45 @@ class PackageManagerTest {
     fun `lockfiles select the matching tool`() {
         val expectations =
             mapOf(
-                "bun.lock" to PackageManager.BUN,
-                "bun.lockb" to PackageManager.BUN,
-                "pnpm-lock.yaml" to PackageManager.PNPM,
-                "package-lock.json" to PackageManager.NPM,
-                "yarn.lock" to PackageManager.YARN,
+                "bun.lock" to PackageManager.Bun,
+                "bun.lockb" to PackageManager.Bun,
+                "pnpm-lock.yaml" to PackageManager.Pnpm,
+                "package-lock.json" to PackageManager.Npm,
+                "yarn.lock" to PackageManager.Yarn,
             )
         expectations.forEach { (lockfile, expected) ->
             val project = dir.resolve(lockfile + "-project").apply { mkdirs() }
             project.resolve(lockfile).writeText("")
-            assertEquals(expected, resolveFrontendTool(project, PackageManager.AUTO).packageManager)
+            assertEquals(expected, resolveFrontendTool(project, PackageManager.Auto).packageManager)
         }
     }
 
     @Test
     fun `explicit package manager overrides the lockfile`() {
         dir.resolve("bun.lock").writeText("")
-        assertEquals(PackageManager.NPM, resolveFrontendTool(dir, PackageManager.NPM).packageManager)
+        assertEquals(PackageManager.Npm, resolveFrontendTool(dir, PackageManager.Npm).packageManager)
     }
 
     @Test
     fun `missing lockfile explains what to do`() {
-        val failure = assertFailsWith<GradleException> { resolveFrontendTool(dir, PackageManager.AUTO) }
+        val failure = assertFailsWith<GradleException> { resolveFrontendTool(dir, PackageManager.Auto) }
         assertTrue(failure.message.orEmpty().contains("found no lockfile"))
     }
 
     @Test
     fun `install uses the frozen lockfile for every tool`() {
-        assertEquals(listOf("ci"), FrontendTool(PackageManager.NPM).installArguments)
-        assertEquals(listOf("install", "--frozen-lockfile"), FrontendTool(PackageManager.BUN).installArguments)
-        assertEquals(listOf("install", "--frozen-lockfile"), FrontendTool(PackageManager.PNPM).installArguments)
-        assertEquals(listOf("install", "--frozen-lockfile"), FrontendTool(PackageManager.YARN).installArguments)
+        assertEquals(listOf("ci"), FrontendTool(PackageManager.Npm).installArguments)
+        assertEquals(listOf("install", "--frozen-lockfile"), FrontendTool(PackageManager.Bun).installArguments)
+        assertEquals(listOf("install", "--frozen-lockfile"), FrontendTool(PackageManager.Pnpm).installArguments)
+        assertEquals(listOf("install", "--frozen-lockfile"), FrontendTool(PackageManager.Yarn).installArguments)
     }
 
     @Test
     fun `only npm needs a separator before script arguments`() {
         val arguments = listOf("--port", "5173")
-        assertEquals(listOf("run", "dev", "--", "--port", "5173"), FrontendTool(PackageManager.NPM).runArguments("dev", arguments))
-        assertEquals(listOf("run", "dev", "--port", "5173"), FrontendTool(PackageManager.BUN).runArguments("dev", arguments))
-        assertEquals(listOf("run", "build"), FrontendTool(PackageManager.NPM).runArguments("build"))
+        assertEquals(listOf("run", "dev", "--", "--port", "5173"), FrontendTool(PackageManager.Npm).runArguments("dev", arguments))
+        assertEquals(listOf("run", "dev", "--port", "5173"), FrontendTool(PackageManager.Bun).runArguments("dev", arguments))
+        assertEquals(listOf("run", "build"), FrontendTool(PackageManager.Npm).runArguments("build"))
     }
 
     @Test

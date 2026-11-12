@@ -44,7 +44,7 @@ install(Svelte) {
 
     dev {
         url = "http://localhost:5173"
-        mode = DevMode.AUTO
+        mode = DevMode.Auto
         allowRemote = false
         panel = true
         browserLogs = true
@@ -84,7 +84,7 @@ install(Svelte) {
 | `publicConfig(value)` | Values for the frontend. `publicConfig { ... }` reads them again on every request in development. See [Runtime config](../features/runtime-config.md) |
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
-| `dev.mode` | `AUTO` follows Ktor's development mode. `ALWAYS` and `NEVER` force it |
+| `dev.mode` | `Auto` follows Ktor's development mode. `Always` and `Never` force it |
 | `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
 | `dev.browserLogs` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log. On by default |
 | `dev.panel` | Shows a panel of recent API calls, with status, timing and validation errors, on pages proxied from Vite. On by default. See [Dev workflow](../guide/dev-workflow.md) |

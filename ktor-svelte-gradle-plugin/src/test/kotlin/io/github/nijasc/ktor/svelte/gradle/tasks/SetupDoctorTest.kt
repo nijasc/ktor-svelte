@@ -38,7 +38,7 @@ class SetupDoctorTest {
     private fun examine(
         toolFound: Boolean = true,
         portFree: Boolean = true,
-        packageManager: PackageManager = PackageManager.AUTO,
+        packageManager: PackageManager = PackageManager.Auto,
         node: String? = "v22.12.0",
         outputDir: String = "build",
     ) = SetupDoctor(
@@ -144,7 +144,7 @@ class SetupDoctorTest {
         assertTrue(examine(node = "v18.20.1").messagesAt(Severity.WARN).single().contains("too old"))
         assertTrue(examine(node = "v22.11.0").messagesAt(Severity.WARN).single().contains("too old"))
         assertTrue(
-            examine(node = null, packageManager = PackageManager.PNPM).messagesAt(Severity.WARN).single().contains("Node is not on PATH"),
+            examine(node = null, packageManager = PackageManager.Pnpm).messagesAt(Severity.WARN).single().contains("Node is not on PATH"),
         )
         assertEquals(emptyList(), examine(node = null).filter { it.severity != Severity.OK })
         assertEquals(emptyList(), examine(node = "v20.19.0").filter { it.severity != Severity.OK })

@@ -381,9 +381,9 @@ private fun isDevProxyActive(
     application: Application,
 ): Boolean =
     when (mode) {
-        DevMode.AUTO -> application.developmentMode
-        DevMode.ALWAYS -> true
-        DevMode.NEVER -> false
+        DevMode.Auto -> application.developmentMode
+        DevMode.Always -> true
+        DevMode.Never -> false
     }
 
 private fun createStore(

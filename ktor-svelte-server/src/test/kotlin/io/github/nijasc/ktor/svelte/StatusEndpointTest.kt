@@ -34,7 +34,7 @@ class StatusEndpointTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     spaFallback = null
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.NotFound, client.get("/_ktor-svelte/status").status)
@@ -48,7 +48,7 @@ class StatusEndpointTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     statusEndpoint = true
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val response = client.get("/_ktor-svelte/status")
@@ -80,7 +80,7 @@ class StatusEndpointTest {
                     install(Svelte) {
                         source = SvelteSource.Directory(build)
                         statusEndpoint = true
-                        dev { mode = DevMode.NEVER }
+                        dev { mode = DevMode.Never }
                     }
                 }
                 val status = Json.parseToJsonElement(client.get("/_ktor-svelte/status").bodyAsText()).jsonObject
@@ -113,7 +113,7 @@ class StatusEndpointTest {
                         statusEndpoint = true
                         dev {
                             url = "http://${vite.address.address.hostAddress}:${vite.address.port}"
-                            mode = DevMode.ALWAYS
+                            mode = DevMode.Always
                         }
                     }
                 }
@@ -145,7 +145,7 @@ class StatusEndpointTest {
                     statusEndpoint = true
                     dev {
                         url = unusedUrl()
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -174,7 +174,7 @@ class StatusEndpointTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     statusEndpoint = true
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val response = client.get("/_ktor-svelte/status") { header(HttpHeaders.Host, "app.example.com") }

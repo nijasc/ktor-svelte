@@ -12,7 +12,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 @KtorDsl
-public class SvelteConfig {
+public class SvelteConfig internal constructor() {
     internal var apiPrefixList: List<String> = listOf("/api")
         private set
 
@@ -136,16 +136,16 @@ public class SvelteConfig {
 }
 
 @KtorDsl
-public class SvelteCacheConfig {
+public class SvelteCacheConfig internal constructor() {
     public var immutable: String = "public, max-age=31536000, immutable"
     public var html: String = "no-cache"
     public var other: String = "no-cache"
 }
 
 @KtorDsl
-public class SvelteDevConfig {
+public class SvelteDevConfig internal constructor() {
     public var url: String = "http://localhost:5173"
-    public var mode: DevMode = DevMode.AUTO
+    public var mode: DevMode = DevMode.Auto
     public var allowRemote: Boolean = false
     public var slowApiCall: Duration? = 500.milliseconds
     public var panel: Boolean = true
@@ -153,7 +153,7 @@ public class SvelteDevConfig {
 }
 
 @KtorDsl
-public class SvelteSecurityHeadersConfig {
+public class SvelteSecurityHeadersConfig internal constructor() {
     internal val extraCspSources: MutableMap<String, MutableList<String>> = linkedMapOf()
 
     public var enabled: Boolean = true
@@ -175,12 +175,6 @@ public class SvelteSecurityHeadersConfig {
     }
 }
 
-@Deprecated(
-    "Renamed to match the other configuration classes.",
-    ReplaceWith("SvelteSecurityHeadersConfig"),
-)
-public typealias SvelteSecurityHeaders = SvelteSecurityHeadersConfig
-
 private val CSP_DIRECTIVE = Regex("[a-z][a-z-]*")
 private val CSP_SOURCE = Regex("""[^\s;,]+""")
 
@@ -190,7 +184,7 @@ public enum class SvelteRouting {
 }
 
 public enum class DevMode {
-    AUTO,
-    ALWAYS,
-    NEVER,
+    Auto,
+    Always,
+    Never,
 }

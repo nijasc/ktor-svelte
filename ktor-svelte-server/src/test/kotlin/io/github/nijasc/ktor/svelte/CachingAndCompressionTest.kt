@@ -31,7 +31,7 @@ class CachingAndCompressionTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 config()
             }
         }
@@ -179,7 +179,7 @@ class CachingAndCompressionTest {
                 install(Compression)
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val response = client.get("/about") { header(HttpHeaders.AcceptEncoding, "br") }
@@ -196,7 +196,7 @@ class CachingAndCompressionTest {
                 install(Compression)
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val response = client.get("/") { header(HttpHeaders.AcceptEncoding, "gzip") }
@@ -213,7 +213,7 @@ class CachingAndCompressionTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             val first = client.get("/")

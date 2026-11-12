@@ -1,7 +1,7 @@
 public final class io/github/nijasc/ktor/svelte/DevMode : java/lang/Enum {
-	public static final field ALWAYS Lio/github/nijasc/ktor/svelte/DevMode;
-	public static final field AUTO Lio/github/nijasc/ktor/svelte/DevMode;
-	public static final field NEVER Lio/github/nijasc/ktor/svelte/DevMode;
+	public static final field Always Lio/github/nijasc/ktor/svelte/DevMode;
+	public static final field Auto Lio/github/nijasc/ktor/svelte/DevMode;
+	public static final field Never Lio/github/nijasc/ktor/svelte/DevMode;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/DevMode;
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/DevMode;
@@ -52,7 +52,6 @@ public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/E
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
-	public fun <init> ()V
 	public final fun getHtml ()Ljava/lang/String;
 	public final fun getImmutable ()Ljava/lang/String;
 	public final fun getOther ()Ljava/lang/String;
@@ -62,7 +61,6 @@ public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteConfig {
-	public fun <init> ()V
 	public final fun addErrorResponse (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;Ljava/util/List;)V
 	public final fun allowedOrigins ([Ljava/lang/String;)V
 	public final fun apiPrefixes ([Ljava/lang/String;)V
@@ -123,7 +121,6 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
-	public fun <init> ()V
 	public final fun getAllowRemote ()Z
 	public final fun getBrowserLogs ()Z
 	public final fun getMode ()Lio/github/nijasc/ktor/svelte/DevMode;
@@ -155,7 +152,6 @@ public final class io/github/nijasc/ktor/svelte/SvelteMetricsKt {
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteRateLimitConfig {
-	public fun <init> ()V
 	public final fun getAlgorithm ()Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 	public final fun getApiWrites ()I
 	public final fun getEnabled ()Z
@@ -178,7 +174,6 @@ public final class io/github/nijasc/ktor/svelte/SvelteRouting : java/lang/Enum {
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteSecurityHeadersConfig {
-	public fun <init> ()V
 	public final fun allowCspSources (Ljava/lang/String;[Ljava/lang/String;)V
 	public final fun getAutomaticContentSecurityPolicy ()Z
 	public final fun getContentSecurityPolicy ()Ljava/lang/String;
@@ -216,7 +211,6 @@ public final class io/github/nijasc/ktor/svelte/SvelteSource$Directory : io/gith
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteTransportConfig {
-	public fun <init> ()V
 	public final fun compression (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun compression$default (Lio/github/nijasc/ktor/svelte/SvelteTransportConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun json (Lkotlin/jvm/functions/Function1;)V
@@ -239,7 +233,6 @@ public final class io/github/nijasc/ktor/svelte/ValidationKt {
 }
 
 public final class io/github/nijasc/ktor/svelte/Validator {
-	public fun <init> ()V
 	public final fun check (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
 	public final fun check (Lkotlin/reflect/KProperty0;ZLkotlin/jvm/functions/Function0;)V
 }

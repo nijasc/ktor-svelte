@@ -22,7 +22,7 @@ class SiteFilesTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 configure()
             }
         }
@@ -96,7 +96,7 @@ class SiteFilesTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(fixtureBuild())
                     routing = SvelteRouting.Manual
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 routing {
                     svelte(public = listOf("/", "/about"))

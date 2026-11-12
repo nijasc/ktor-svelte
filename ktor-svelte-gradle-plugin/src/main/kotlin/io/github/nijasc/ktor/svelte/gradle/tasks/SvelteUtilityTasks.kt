@@ -18,7 +18,7 @@ public abstract class SvelteUpdateDependenciesTask : SvelteToolTask() {
     @TaskAction
     public fun update() {
         val tool = tool()
-        val command = if (tool.packageManager == PackageManager.YARN) "upgrade" else "update"
+        val command = if (tool.packageManager == PackageManager.Yarn) "upgrade" else "update"
         runTool(tool, listOf(command))
     }
 }
