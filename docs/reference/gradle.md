@@ -86,6 +86,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
+| `svelteInstall`, `svelteBuild`, `svelteBundle` | Install the frontend dependencies from the lockfile, build the frontend, and copy the build into the JAR's resources with its manifest. They run as part of `jar` and `processResources`, so you rarely call them yourself |
 | `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, and says what to fix |
 | `svelteConfig` | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores security, performance, operations and developer experience, and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |

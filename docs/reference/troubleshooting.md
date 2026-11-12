@@ -32,6 +32,10 @@ The plugin needs to own `vite.config.ts` and the hooks files once frontend libra
 
 `check` runs `svelteVerifyTs`, which found that a route or DTO changed but the committed client did not. Run `./gradlew svelteGenerateTs`, or start the app in development mode, and commit the files in `frontend/src/lib/api`.
 
+### undefined is not an object (evaluating 'ts.sys.readFile')
+
+The frontend uses TypeScript 7, which SvelteKit 3 cannot load yet. It usually arrives through an automatic dependency update. Set `"typescript": "^6.0.0"` in `frontend/package.json` and install again. To keep it from coming back, tell your update bot to ignore major versions of `typescript`.
+
 ### The frontend build failed with exit code 1
 
 ktor-svelte hides the package manager and Vite output while it succeeds and prints all of it when it fails, above this message. To see it every time, add `-Psvelte.verbose=true`.
