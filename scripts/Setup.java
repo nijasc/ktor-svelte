@@ -107,6 +107,7 @@ public class Setup {
         boolean conventions = confirm("conventions", "Add a convention plugin in build-logic, for multi-module projects?", false);
         boolean docker = confirm("docker", "Add a Dockerfile?", true);
         boolean actions = confirm("github-actions", "Add a GitHub Actions workflow?", true);
+        boolean liveTemplates = confirm("live-templates", "Install the ktor-svelte live templates into IntelliJ and WebStorm?", true);
         boolean git = isOnPath("git") && confirm("git", "Create a git repository?", true);
         Optional<List<String>> idea = findIntellij();
         boolean openIdea = flags.containsKey("open-idea") || (!acceptDefaults && idea.isPresent() && confirm("open-idea", "Open the project in IntelliJ when it is ready?", true));
@@ -144,6 +145,7 @@ public class Setup {
         if (actions) writeWorkflow(directory, manager);
 
         gradle(directory, "svelteInit", "--package-manager=" + manager, "svelteGenerateRunConfigurations");
+        if (liveTemplates) gradle(directory, "svelteLiveTemplates", "--install");
         writeFrontendLinting(directory);
         Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth));
         if (auth) writeAuthPages(directory, daisy, tailwind, i18n);

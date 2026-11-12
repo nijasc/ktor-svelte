@@ -43,6 +43,7 @@ const toggles: { key: keyof typeof form; flag: string; label: string; fallback: 
     { key: 'docker', flag: 'docker', label: 'Dockerfile', fallback: true, group: 'Project' },
     { key: 'githubActions', flag: 'github-actions', label: 'GitHub Actions workflow', fallback: true, group: 'Project' },
     { key: 'git', flag: 'git', label: 'Git repository', fallback: true, group: 'Project' },
+    { key: 'liveTemplates', flag: 'live-templates', label: 'IntelliJ live templates', fallback: true, group: 'Project' },
     { key: 'openIdea', flag: 'open-idea', label: 'Open in IntelliJ when ready', fallback: false, group: 'Project' }
 ];
 

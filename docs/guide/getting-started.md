@@ -36,6 +36,7 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 | Dockerfile | `--docker` | yes | A multi-stage build that runs the JAR as a non-root user |
 | GitHub Actions | `--github-actions` | yes | A CI workflow with Actions pinned to commit SHAs |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
+| IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |
 
 Every project also gets a Gradle version catalog, JSON and typed error responses, ktlint, ESLint and Prettier, a `README.md`, a `.env.example` and a `.gitignore`. With sign in or Postgres, it also gets a `.env` with random secrets, which is not committed.
