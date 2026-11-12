@@ -43,6 +43,7 @@ svelte {
         }
         lucide()
         images()
+        toasts()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
