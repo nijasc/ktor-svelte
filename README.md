@@ -106,7 +106,7 @@ Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `b
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    id("io.github.nijasc.ktor-svelte") version "0.12.0"
+    id("io.github.nijasc.ktor-svelte") version "1.0.0"
 }
 ```
 <!-- x-release-please-end -->
@@ -162,7 +162,7 @@ The Gradle plugin adds the runtime for you. If you only want the library, add it
 
 <!-- x-release-please-start-version -->
 ```kotlin
-implementation("io.github.nijasc:ktor-svelte-server:0.12.0")
+implementation("io.github.nijasc:ktor-svelte-server:1.0.0")
 ```
 <!-- x-release-please-end -->
 
@@ -173,7 +173,7 @@ To keep Kotlin, Ktor and ktor-svelte on versions that are tested together, impor
 dependencyResolutionManagement {
     versionCatalogs {
         create("ktorSvelte") {
-            from("io.github.nijasc:ktor-svelte-catalog:0.12.0")
+            from("io.github.nijasc:ktor-svelte-catalog:1.0.0")
         }
     }
 }
