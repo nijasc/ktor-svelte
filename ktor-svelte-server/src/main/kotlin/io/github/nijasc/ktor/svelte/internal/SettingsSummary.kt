@@ -43,5 +43,6 @@ internal fun settingsSummary(
         "Content-Security-Policy: $csp",
         "Error details: ${if (config.hideErrorDetails) "hidden in production, shown now" else "always shown"}",
         "API compression: ${onOff(config.apiCompression)}, request IDs: ${onOff(config.requestIds)}",
+        "Sitemap and robots.txt: ${if (config.sitemap) config.siteUrl ?: "on, URLs from the request" else "off"}",
     )
 }

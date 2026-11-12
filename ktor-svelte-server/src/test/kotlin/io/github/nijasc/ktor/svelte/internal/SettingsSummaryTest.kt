@@ -20,6 +20,7 @@ class SettingsSummaryTest {
                 "Content-Security-Policy: off while proxying to Vite",
                 "Error details: hidden in production, shown now",
                 "API compression: on, request IDs: on",
+                "Sitemap and robots.txt: on, URLs from the request",
             ),
             settingsSummary(SvelteConfig(), "http://localhost:5173"),
         )

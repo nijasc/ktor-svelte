@@ -2,6 +2,23 @@
 
 The status and health endpoints and Swagger UI, all off by default.
 
+## Sitemap and robots.txt
+
+Search engines find your pages through `/sitemap.xml` and read `/robots.txt` first. ktor-svelte serves both for you when your build has neither:
+
+- `/sitemap.xml` lists every prerendered page in the build, so `about.html` becomes `/about` and `docs/index.html` becomes `/docs/`. The SPA fallback and the 404 page are left out.
+- `/robots.txt` lets crawlers read all pages, keeps them out of your API prefixes and `/_ktor-svelte/`, and points to the sitemap.
+
+Pages that only exist at runtime, such as `/notes/42`, can't be listed, because there is no file for them. URLs in both files must be absolute, so set the public address of your site. Otherwise it is taken from the request, which behind a proxy needs Ktor's `ForwardedHeaders` or `XForwardedHeaders` plugin:
+
+```kotlin
+install(Svelte) {
+    siteUrl = "https://example.com"
+}
+```
+
+To write your own, put `sitemap.xml` or `robots.txt` in `frontend/static/`. Files from the build always win. `sitemap = false` turns both off. With `routing = SvelteRouting.Manual`, they are only served where you route `svelte()`.
+
 ## Status endpoint
 
 ```kotlin

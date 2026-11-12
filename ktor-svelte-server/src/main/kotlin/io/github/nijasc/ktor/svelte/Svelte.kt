@@ -15,6 +15,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.ConfigInjector
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
+import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
 import io.github.nijasc.ktor.svelte.internal.constantGetPaths
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
@@ -115,7 +116,17 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val configInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
         val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector)
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
-        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote)
+        val siteFiles =
+            if (pluginConfig.sitemap) {
+                SiteFiles(
+                    pluginConfig.siteUrl,
+                    pluginConfig.apiPrefixList,
+                    setOfNotNull(pluginConfig.spaFallback, pluginConfig.notFoundPage),
+                )
+            } else {
+                null
+            }
+        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles)
         application.attributes.put(SvelteHandlerKey, handler)
         val metrics = SvelteMetrics()
         application.attributes.put(SvelteMetricsKey, metrics)
