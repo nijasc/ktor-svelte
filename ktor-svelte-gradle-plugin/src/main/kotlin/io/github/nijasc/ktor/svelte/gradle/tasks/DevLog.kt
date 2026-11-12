@@ -31,6 +31,12 @@ private val VITE_TIME = Regex("""^\d{1,2}:\d{2}:\d{2}(?:\s?[AP]M)?\s+\[vite]\s+"
 private val KOTLIN_PROBLEM = Regex("""^([ew]): (.+?):(\d+):(\d+):? (.*)$""")
 private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
 private const val BROWSER_LOGGER = "ktor-svelte.browser"
+private val DEV_SOURCE_URL = Regex("""https?://(?:localhost|127\.0\.0\.1|\[::1]):\d+/(src/[^\s?:)'"]+)(?:\?[^\s:)'"]*)?:(\d+):(\d+)""")
+
+internal fun fileUrl(file: File): String {
+    val path = file.absoluteFile.invariantSeparatorsPath
+    return "file://" + if (path.startsWith("/")) path else "/$path"
+}
 
 private val VITE_NOISE =
     listOf(
@@ -70,9 +76,11 @@ internal class DevLogFormatter(
     private val color: Boolean,
     private val projectDirectory: File? = null,
     private val now: () -> LocalTime = LocalTime::now,
+    private val frontendDirectory: File? = null,
 ) {
     private var errorsThisBuild = 0
     private var compiling = false
+    private var lastAppSource = LogSource.APP
 
     @Synchronized
     fun format(
@@ -85,17 +93,20 @@ internal class DevLogFormatter(
             LogSource.APP -> app(line)
             LogSource.VITE -> vite(line)
             LogSource.KOTLIN -> kotlin(line)
-            LogSource.BROWSER -> render(LogSource.BROWSER, LogLevel.INFO, line, null)
+            LogSource.BROWSER -> render(LogSource.BROWSER, LogLevel.INFO, linkSources(line), null)
         }
     }
 
     private fun app(line: String): String? {
         if (line.startsWith("Listening for transport dt_socket")) return null
-        val match = APP_LINE.matchEntire(line) ?: return render(LogSource.APP, null, line, null)
+        val match =
+            APP_LINE.matchEntire(line)
+                ?: return render(lastAppSource, null, if (lastAppSource == LogSource.BROWSER) linkSources(line) else line, null)
         val (time, level, logger, message) = match.destructured
         val source = if (logger == BROWSER_LOGGER || logger.endsWith(".browser")) LogSource.BROWSER else LogSource.APP
+        lastAppSource = source
         val shown = logger.substringAfterLast('.').takeUnless { source == LogSource.BROWSER || it == "Application" }
-        return render(source, levelOf(level), message, shown, time)
+        return render(source, levelOf(level), if (source == LogSource.BROWSER) linkSources(message) else message, shown, time)
     }
 
     private fun vite(line: String): String? {
@@ -114,7 +125,7 @@ internal class DevLogFormatter(
                 "warn" in lower -> LogLevel.WARN
                 else -> LogLevel.INFO
             }
-        return render(LogSource.VITE, level, text, null)
+        return render(LogSource.VITE, level, linkSources(text), null)
     }
 
     private fun kotlin(line: String): String? {
@@ -123,7 +134,7 @@ internal class DevLogFormatter(
             val (kind, location, row, column, message) = match.destructured
             val level = if (kind == "e") LogLevel.ERROR else LogLevel.WARN
             if (level == LogLevel.ERROR) errorsThisBuild++
-            return render(LogSource.KOTLIN, level, "${shortPath(location)}:$row:$column $message", null)
+            return render(LogSource.KOTLIN, level, "${fileLink(location)}:$row:$column $message", null)
         }
         if (text.startsWith("Change detected")) {
             compiling = true
@@ -151,10 +162,20 @@ internal class DevLogFormatter(
         return render(LogSource.KOTLIN, LogLevel.INFO, text, null)
     }
 
-    private fun shortPath(location: String): String {
-        val file = runCatching { if (location.startsWith("file:")) File(URI(location)) else File(location) }.getOrNull() ?: return location
-        val base = projectDirectory ?: return file.name
-        return runCatching { file.absoluteFile.relativeTo(base.absoluteFile).invariantSeparatorsPath }.getOrDefault(file.name)
+    private fun fileLink(location: String): String {
+        val file =
+            runCatching { if (location.startsWith("file:")) File(URI(location)) else File(location) }.getOrNull() ?: return location
+        val absolute = if (file.isAbsolute || projectDirectory == null) file else projectDirectory.resolve(file.path)
+        return fileUrl(absolute)
+    }
+
+    private fun linkSources(text: String): String {
+        val frontend = frontendDirectory ?: return text
+        return DEV_SOURCE_URL.replace(text) { match ->
+            val (path, row, column) = match.destructured
+            val file = frontend.resolve(path)
+            if (file.isFile) "${fileUrl(file)}:$row:$column" else match.value
+        }
     }
 
     private fun levelOf(level: String): LogLevel =
