@@ -24,7 +24,7 @@ git clone https://github.com/nijasc/ktor-svelte.git
 
 If that passes, you are ready.
 
-In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts` and choose "Link Gradle Project". That build includes the root and both examples, so they all appear as one project. Link only `ide`, and not the root or an example as well, because the examples include the root and you would get duplicate modules. Use JDK 21 as the Gradle JVM. Then run `Notes: Dev` and open `http://localhost:8080` to see everything working together.
+In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts` and choose "Link Gradle Project". That build includes the root and the examples, so they all appear as one project. Link only `ide`, and not the root or an example as well, because the examples include the root and you would get duplicate modules. Use JDK 21 as the Gradle JVM. Then run `Notes: Dev` and open `http://localhost:8080` to see everything working together.
 
 ## How the project is laid out
 
@@ -42,6 +42,7 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 | `build-logic/` | Convention plugins shared by both modules: Kotlin, ktlint and toolchain setup, and the publishing metadata |
 | `examples/basic/` | The smallest possible app |
 | `examples/notes/` | The feature-rich app. New features should show up here |
+| `examples/showcase/` | A team board with sessions, roles, a database, uploads, search and two languages. It uses every feature together, the way a real app does |
 | `.run/` | Shared IntelliJ run configurations |
 
 The examples are separate Gradle builds that pull in the root build with `includeBuild`, so they use the plugin the way a real project does. They are also the end-to-end test fixtures.
@@ -67,15 +68,19 @@ java scripts/Setup.java --local-build=. --yes --name=demo
 | Runtime | `./gradlew :ktor-svelte-server:test` | Request resolution, caching, dev proxy, transport, TypeScript output |
 | Plugin | `./gradlew :ktor-svelte-gradle-plugin:functionalTest` | Task graph, up-to-date checks, configuration cache, packaging, with fake tools on `PATH` |
 | Plugin on Gradle 8 | `./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=8.14.6 -PtestShadowVersion=9.2.2` | The same, on the oldest supported Gradle |
-| End to end | `./gradlew -p examples/basic e2eTest` and `./gradlew -p examples/notes e2eTest` | A real SvelteKit build in a real JAR, over real HTTP |
+| End to end | `./gradlew -p examples/basic e2eTest`, `./gradlew -p examples/notes e2eTest` and `./gradlew -p examples/showcase e2eTest` | A real SvelteKit build in a real JAR, over real HTTP |
 | Frontend types | `./gradlew -p examples/notes svelteCheck` | Generated TypeScript compiles in a real SvelteKit project |
 
 Every behaviour change needs a test. Bug fixes should start with a failing one.
 
-If you change the notes API or the generator, refresh the generated client and commit it. CI fails when it is out of date:
+If you change the API of an example or the generator, refresh the generated clients and commit them. CI fails when they are out of date:
 
 ```bash
 ./gradlew -p examples/notes svelteGenerateTs
+```
+
+```bash
+./gradlew -p examples/showcase svelteGenerateTs
 ```
 
 ### Testing dev mode by hand

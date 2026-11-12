@@ -1,0 +1,34 @@
+{
+    "name": "ktor-svelte-example-showcase",
+    "private": true,
+    "type": "module",
+    "imports": {
+        "#api": "./src/lib/api/index.ts",
+        "#lib": "./src/lib/index.ts",
+        "#lib/*": "./src/lib/*",
+        "#i18n": "./src/lib/ktor-svelte/i18n.ts",
+        "#theme": "./src/lib/ktor-svelte/theme.ts",
+        "#icon": "./src/lib/ktor-svelte/Icon.svelte"
+    },
+    "scripts": {
+        "dev": "vite dev",
+        "build": "vite build",
+        "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+    },
+    "devDependencies": {
+        "@lucide/svelte": "^1.67.0",
+        "@sveltejs/adapter-static": "^4.0.1",
+        "@sveltejs/enhanced-img": "1.0.0",
+        "@sveltejs/kit": "^3.1.1",
+        "@sveltejs/vite-plugin-svelte": "^7.3.1",
+        "@tailwindcss/forms": "^0.5.11",
+        "@tailwindcss/typography": "^0.5.20",
+        "@tailwindcss/vite": "^4.3.4",
+        "daisyui": "^5.7.50",
+        "svelte": "^5.57.3",
+        "svelte-check": "^4.7.8",
+        "tailwindcss": "^4.3.4",
+        "typescript": "^6.0.0",
+        "vite": "^8.3.5"
+    }
+}

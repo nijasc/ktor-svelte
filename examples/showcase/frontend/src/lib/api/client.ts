@@ -1,0 +1,348 @@
+export interface UploadProgress {
+    loaded: number;
+    total?: number;
+}
+
+export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
+    fetch?: typeof fetch;
+    onUploadProgress?: (progress: UploadProgress) => void;
+    timeout?: number;
+    silent?: boolean;
+}
+
+export interface ApiConfig {
+    baseUrl: string;
+    headers: Record<string, string>;
+    fetch?: typeof fetch;
+    onUnauthorized?: (response: Response) => void;
+    dedupeGets?: boolean;
+    timeout?: number;
+    onNewBuild?: (build: string) => void;
+    onError?: (error: unknown) => void;
+}
+
+export function isTimeoutError(error: unknown): boolean {
+    return error instanceof DOMException && error.name === 'TimeoutError';
+}
+
+export const apiConfig: ApiConfig = { baseUrl: '', headers: {} };
+
+export class ApiError<E = unknown> extends Error {
+    constructor(
+        readonly status: number,
+        readonly body: E,
+        readonly url: string,
+        readonly operation?: string,
+        readonly requestId?: string
+    ) {
+        super(`Request to ${url} failed with status ${status}`);
+        this.name = 'ApiError';
+    }
+}
+
+export interface ValidationProblem {
+    message: string;
+    fields: Record<string, string[]>;
+}
+
+export function isValidationError(error: unknown): error is ApiError<ValidationProblem> {
+    return (
+        error instanceof ApiError &&
+        error.status === 422 &&
+        typeof error.body === 'object' &&
+        error.body !== null &&
+        'fields' in error.body
+    );
+}
+
+interface InternalOptions extends RequestOptions {
+    query?: Record<string, unknown>;
+    body?: unknown;
+    operation?: string;
+}
+
+function queryString(query: Record<string, unknown> | undefined): string {
+    if (!query) return '';
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+        if (value === undefined || value === null) continue;
+        for (const item of Array.isArray(value) ? value : [value]) params.append(key, String(item));
+    }
+    const text = params.toString();
+    return text ? `?${text}` : '';
+}
+
+function isRawBody(body: unknown): body is BodyInit {
+    return typeof body === 'string' || body instanceof FormData || body instanceof Blob || body instanceof URLSearchParams;
+}
+
+async function parseResponse(response: Response): Promise<unknown> {
+    if (response.status === 204 || response.status === 205) return undefined;
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('json')) return response.json();
+    const text = await response.text();
+    return text === '' ? undefined : text;
+}
+
+function responseHeaders(raw: string): Headers {
+    const headers = new Headers();
+    for (const line of raw.trim().split(/[\r\n]+/)) {
+        const separator = line.indexOf(':');
+        if (separator > 0) headers.append(line.slice(0, separator).trim(), line.slice(separator + 1).trim());
+    }
+    return headers;
+}
+
+function sendWithProgress(onProgress: (progress: UploadProgress) => void): typeof fetch {
+    return (input, init = {}) =>
+        new Promise<Response>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(init.method ?? 'GET', String(input));
+            new Headers(init.headers).forEach((value, key) => xhr.setRequestHeader(key, value));
+            xhr.withCredentials = init.credentials === 'include';
+            xhr.responseType = 'blob';
+            xhr.upload.onprogress = (event) => onProgress({ loaded: event.loaded, total: event.lengthComputable ? event.total : undefined });
+            xhr.onload = () => {
+                const empty = [101, 204, 205, 304].includes(xhr.status);
+                const headers = responseHeaders(xhr.getAllResponseHeaders());
+                resolve(new Response(empty ? null : xhr.response, { status: xhr.status, statusText: xhr.statusText, headers }));
+            };
+            xhr.onerror = () => reject(new TypeError('Network request failed'));
+            xhr.onabort = () => reject(new DOMException('The upload was aborted.', 'AbortError'));
+            init.signal?.addEventListener('abort', () => xhr.abort());
+            xhr.send((init.body ?? null) as XMLHttpRequestBodyInit | null);
+        });
+}
+
+function isSameOrigin(url: string): boolean {
+    if (typeof location === 'undefined') return !/^[a-z][a-z0-9+.-]*:/i.test(url);
+    return new URL(url, location.href).origin === location.origin;
+}
+
+function newRequestId(): string {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function withTimeout(signal: AbortSignal | null | undefined, timeout: number | undefined): AbortSignal | undefined {
+    if (!timeout || timeout <= 0) return signal ?? undefined;
+    const timer = AbortSignal.timeout(timeout);
+    return signal ? AbortSignal.any([signal, timer]) : timer;
+}
+
+function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
+    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, ...init } = options;
+    const limit = timeout ?? (streaming ? undefined : apiConfig.timeout);
+    const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);
+    const url = apiConfig.baseUrl + path + queryString(query);
+    const merged = new Headers(apiConfig.headers);
+    merged.set('Accept', accept);
+    if (!merged.has('X-Request-Id') && isSameOrigin(url)) merged.set('X-Request-Id', newRequestId());
+    new Headers(headers).forEach((value, key) => merged.set(key, value));
+    let payload: BodyInit | undefined;
+    if (body !== undefined) {
+        payload = isRawBody(body) ? body : JSON.stringify(body);
+        if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
+    }
+    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) }) };
+}
+
+let knownBuild: string | undefined;
+
+function noticeBuild(response: Response) {
+    const build = response.headers.get('x-ktor-svelte-build');
+    if (!build) return;
+    if (knownBuild !== undefined && build !== knownBuild) apiConfig.onNewBuild?.(build);
+    knownBuild = build;
+}
+
+async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
+    noticeBuild(response);
+    if (response.status === 401) apiConfig.onUnauthorized?.(response);
+    if (!response.ok) {
+        const requestId = response.headers.get('x-request-id') ?? undefined;
+        throw new ApiError(response.status, await parseResponse(response), url, operation, requestId);
+    }
+    return response;
+}
+
+function report(error: unknown, silent: boolean | undefined) {
+    if (silent || isAbortError(error)) return;
+    try {
+        apiConfig.onError?.(error);
+    } catch {
+        return;
+    }
+}
+
+const inFlight = new Map<string, Promise<unknown>>();
+
+function isShareable(method: string, options: InternalOptions): boolean {
+    return apiConfig.dedupeGets === true && method === 'GET' && !options.signal && !options.fetch && !options.headers;
+}
+
+const prefetched = new Map<string, { response: Promise<unknown>; expires: number }>();
+let prefetchUntil: number | undefined;
+
+function fromPrefetch<T>(url: string, run: (silent?: boolean) => Promise<T>): Promise<T> | undefined {
+    const until = prefetchUntil;
+    prefetchUntil = undefined;
+    const hit = prefetched.get(url);
+    const fresh = hit !== undefined && hit.expires > Date.now();
+    if (hit && !fresh) prefetched.delete(url);
+    if (until === undefined) {
+        if (!fresh) return undefined;
+        prefetched.delete(url);
+        return hit.response as Promise<T>;
+    }
+    if (fresh) return hit.response as Promise<T>;
+    const response = run(true);
+    prefetched.set(url, { response, expires: until });
+    response.catch(() => prefetched.delete(url));
+    return response;
+}
+
+export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+    const { url, operation, send } = prepare(method, path, options, 'application/json');
+    const run = async (silent = options.silent) => {
+        try {
+            return (await parseResponse(await checked(await send(), url, operation))) as T;
+        } catch (error) {
+            report(error, silent);
+            throw error;
+        }
+    };
+    if (method === 'GET' && !options.signal && !options.headers) {
+        const early = fromPrefetch(url, run);
+        if (early) return early;
+    } else {
+        prefetchUntil = undefined;
+    }
+    if (!isShareable(method, options)) return run();
+    const pending = inFlight.get(url) ?? run().finally(() => inFlight.delete(url));
+    inFlight.set(url, pending);
+    return pending as Promise<T>;
+}
+
+function eventData<T>(data: string): T {
+    try {
+        return JSON.parse(data) as T;
+    } catch {
+        return data as T;
+    }
+}
+
+export async function* stream<T>(method: string, path: string, options: InternalOptions = {}): AsyncGenerator<T, void, undefined> {
+    const { url, operation, send } = prepare(method, path, options, 'text/event-stream', true);
+    let response: Response;
+    try {
+        response = await checked(await send(), url, operation);
+    } catch (error) {
+        report(error, options.silent);
+        throw error;
+    }
+    if (!response.body) return;
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = '';
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += value;
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop() ?? '';
+            for (const frame of frames) {
+                const data = frame
+                    .split(/\r?\n/)
+                    .filter((line) => line.startsWith('data:'))
+                    .map((line) => line.slice(5).replace(/^ /, ''))
+                    .join('\n');
+                if (data !== '') yield eventData<T>(data);
+            }
+        }
+    } finally {
+        reader.cancel().catch(() => undefined);
+    }
+}
+
+export interface PageOf<T> {
+    items: T[];
+    next?: string | null;
+}
+
+export async function* pages<Q extends { cursor?: string }, T>(
+    load: (query: Q, options?: RequestOptions) => Promise<PageOf<T>>,
+    query?: Omit<Q, 'cursor'>,
+    options?: RequestOptions
+): AsyncGenerator<T[], void, undefined> {
+    let cursor: string | undefined;
+    do {
+        const page = await load({ ...query, cursor } as Q, options);
+        yield page.items;
+        cursor = page.next ?? undefined;
+    } while (cursor !== undefined);
+}
+
+export function isAbortError(error: unknown): boolean {
+    return error instanceof DOMException && error.name === 'AbortError';
+}
+
+export function latest<A extends unknown[], R>(call: (...args: A) => Promise<R>): (...args: A) => Promise<R> {
+    let previous: AbortController | undefined;
+    return (...args: A) => {
+        previous?.abort();
+        const current = new AbortController();
+        previous = current;
+        const arity = call.length;
+        const padded = args.slice(0, arity);
+        padded.length = arity;
+        const options = (padded[arity - 1] ?? {}) as RequestOptions;
+        const signal = options.signal ? AbortSignal.any([options.signal, current.signal]) : current.signal;
+        padded[arity - 1] = { ...options, signal };
+        return call(...(padded as A)).catch((error: unknown) => {
+            if (signal.aborted && !isAbortError(error)) throw new DOMException('The request was superseded.', 'AbortError');
+            throw error;
+        });
+    };
+}
+
+export async function prefetch(call: () => Promise<unknown>, ttl = 10_000): Promise<void> {
+    prefetchUntil = Date.now() + ttl;
+    let pending: Promise<unknown>;
+    try {
+        pending = call();
+    } finally {
+        prefetchUntil = undefined;
+    }
+    await pending.catch(() => undefined);
+}
+
+export function prefetchOnHover(node: HTMLElement, call: () => Promise<unknown>) {
+    let current = call;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const now = () => {
+        clearTimeout(timer);
+        void prefetch(current);
+    };
+    const soon = () => {
+        clearTimeout(timer);
+        timer = setTimeout(now, 50);
+    };
+    const cancel = () => clearTimeout(timer);
+    node.addEventListener('mouseenter', soon);
+    node.addEventListener('mouseleave', cancel);
+    node.addEventListener('focus', now);
+    node.addEventListener('touchstart', now, { passive: true });
+    return {
+        update: (next: () => Promise<unknown>) => {
+            current = next;
+        },
+        destroy: () => {
+            cancel();
+            node.removeEventListener('mouseenter', soon);
+            node.removeEventListener('mouseleave', cancel);
+            node.removeEventListener('focus', now);
+            node.removeEventListener('touchstart', now);
+        }
+    };
+}

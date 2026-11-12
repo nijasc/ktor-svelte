@@ -24,10 +24,11 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 - `build-logic/`: convention plugins included through `pluginManagement`. `ktor-svelte.kotlin-conventions` sets up Kotlin, ktlint, `explicitApi` and the toolchain, and the publishing conventions hold the shared Maven Central and Plugin Portal metadata. Modules apply plugins through these conventions, not by version from the catalog.
 - `examples/basic/`: smallest possible app.
 - `examples/notes/`: feature-rich app using `generateTs`, `transport` and real CRUD.
+- `examples/showcase/`: team board with sessions, roles, a database, uploads, search and i18n. It uses every feature and is the click-through target.
 - Examples are separate Gradle builds that consume the root build through `includeBuild`, and double as end-to-end test fixtures.
 - `.run/`: shared IntelliJ run configurations.
 - `scripts/`: project setup. `Setup.java` holds all logic, and the two scripts only find the latest release and run it.
-- `ide/`: workspace build that IntelliJ links. It includes the root and both examples. It must stay outside the root build, because Gradle rejects the include cycle otherwise.
+- `ide/`: workspace build that IntelliJ links. It includes the root and the examples. It must stay outside the root build, because Gradle rejects the include cycle otherwise.
 
 ## Commands
 
@@ -37,6 +38,7 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 ./gradlew apiDump
 ./gradlew -p examples/basic e2eTest
 ./gradlew -p examples/notes e2eTest
+./gradlew -p examples/showcase e2eTest
 ./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=8.14.6 -PtestShadowVersion=9.2.2
 ```
 

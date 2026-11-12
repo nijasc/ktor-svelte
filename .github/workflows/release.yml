@@ -45,6 +45,7 @@ jobs:
       - run: ./gradlew check apiCheck -PreleaseVersion="$RELEASE_VERSION"
       - run: ./gradlew -p examples/basic e2eTest
       - run: ./gradlew -p examples/notes e2eTest
+      - run: ./gradlew -p examples/showcase e2eTest
       - name: Publish the runtime and the version catalog to Maven Central
         run: ./gradlew :ktor-svelte-server:publishAndReleaseToMavenCentral :ktor-svelte-catalog:publishAndReleaseToMavenCentral -PreleaseVersion="$RELEASE_VERSION" --no-configuration-cache
         env:

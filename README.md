@@ -218,6 +218,7 @@ The full documentation lives at **[nijasc.github.io/ktor-svelte](https://nijasc.
 |---|---|
 | [`examples/basic`](examples/basic) | The smallest possible app: one API route, prerendered pages and an SPA route |
 | [`examples/notes`](examples/notes) | Full CRUD with `generateTs`, JSON, XML and compression, validation errors, runtime config, security headers, Swagger, dynamic routes and typed 404 pages |
+| [`examples/showcase`](examples/showcase) | A team board with sign in, roles, an admin area, a database with migrations, file uploads, search, paging, themes and two languages |
 
 Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localhost:8080`. Or from a terminal:
 
