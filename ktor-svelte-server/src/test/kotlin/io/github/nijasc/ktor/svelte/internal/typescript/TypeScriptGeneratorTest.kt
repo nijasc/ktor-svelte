@@ -248,6 +248,14 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client prefetches GET requests for a later identical call`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "export async function prefetch(call: () => Promise<unknown>, ttl = 10_000): Promise<void> {")
+        assertContains(client, "export function prefetchOnHover(node: HTMLElement, call: () => Promise<unknown>) {")
+        assertContains(client, "if (method === 'GET' && !options.signal && !options.headers) {")
+    }
+
+    @Test
     fun `apiWith binds fetch for load functions after the api object`() {
         val source = services("""{"/api/a":{"get":{"responses":{"200":{"description":"ok"}}}}}""")
         val api = source.indexOf("export const api = { a };")
