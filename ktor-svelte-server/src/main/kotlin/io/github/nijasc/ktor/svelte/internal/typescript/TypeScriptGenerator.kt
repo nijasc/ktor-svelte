@@ -8,12 +8,14 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 private val HTTP_METHODS = listOf("get", "post", "put", "patch", "delete", "head", "options")
@@ -37,7 +39,7 @@ internal class TypeScriptGenerator(
 
     fun generate(openApiJson: String): Map<String, String> {
         val document = Json.parseToJsonElement(openApiJson).jsonObject
-        val filtered = withDeclaredErrors(withApiPathsOnly(document))
+        val filtered = withNullableReferences(withDeclaredErrors(withApiPathsOnly(document)))
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
         enumTypes = nameEnums(filtered, schemas)
         usesDates = hasDateFormat(filtered) || publicConfigSchema?.let { hasDateFormat(Json.parseToJsonElement(it)) } == true
@@ -86,6 +88,51 @@ internal class TypeScriptGenerator(
             document + ("paths" to JsonObject(paths)) + ("components" to JsonObject(components + ("schemas" to JsonObject(schemas)))),
         )
     }
+
+    private fun withNullableReferences(document: JsonObject): JsonObject {
+        val components = document.objectAt("components") ?: return document
+        val schemas = components.objectAt("schemas").orEmpty()
+        val nullable =
+            schemas
+                .filterValues { it is JsonObject && it.isNullableObject() }
+                .mapValues { (_, schema) -> JsonObject(schema.jsonObject + ("type" to JsonPrimitive("object"))) }
+        if (nullable.isEmpty()) return document
+        val plainNames =
+            schemas
+                .filterKeys { it !in nullable }
+                .entries
+                .associate { (name, schema) -> (schema as? JsonObject)?.withoutTitle() to name }
+        val targets = nullable.mapValues { (name, schema) -> plainNames[schema.withoutTitle()] ?: name }
+        val kept =
+            schemas
+                .filterKeys { targets[it] == null || targets[it] == it }
+                .mapValues { (name, schema) -> nullable[name] ?: schema }
+
+        fun rewrite(element: JsonElement): JsonElement =
+            when (element) {
+                is JsonObject -> {
+                    val target = element.stringAt("\$ref")?.substringAfterLast('/')?.let(targets::get)
+                    if (target == null) JsonObject(element.mapValues { rewrite(it.value) }) else nullableReference(target)
+                }
+                is JsonArray -> JsonArray(element.map(::rewrite))
+                else -> element
+            }
+        val withKeptSchemas = JsonObject(components + ("schemas" to JsonObject(kept)))
+        return rewrite(JsonObject(document + ("components" to withKeptSchemas))).jsonObject
+    }
+
+    private fun JsonObject.isNullableObject(): Boolean =
+        typeNames().toSet() == setOf("object", "null") && objectAt("properties").orEmpty().isNotEmpty()
+
+    private fun JsonObject.withoutTitle(): JsonObject = JsonObject(this - "title")
+
+    private fun nullableReference(name: String): JsonObject =
+        buildJsonObject {
+            putJsonArray("oneOf") {
+                addJsonObject { put("\$ref", "#/components/schemas/$name") }
+                addJsonObject { put("type", "null") }
+            }
+        }
 
     private fun withErrorResponses(operation: JsonObject): JsonObject {
         val responses = operation.objectAt("responses").orEmpty().toMutableMap()
