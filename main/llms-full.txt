@@ -513,6 +513,37 @@ implementation("io.github.nijasc:ktor-svelte-server:0.10.1")
 ```
 <!-- x-release-please-end -->
 
+To keep Kotlin, Ktor and ktor-svelte on versions that are tested together, import the published version catalog in `settings.gradle.kts`:
+
+<!-- x-release-please-start-version -->
+```kotlin
+dependencyResolutionManagement {
+    versionCatalogs {
+        create("ktorSvelte") {
+            from("io.github.nijasc:ktor-svelte-catalog:0.10.1")
+        }
+    }
+}
+```
+<!-- x-release-please-end -->
+
+Then use its aliases in `build.gradle.kts`, and upgrade everything by changing that one version:
+
+```kotlin
+plugins {
+    alias(ktorSvelte.plugins.kotlin.jvm)
+    alias(ktorSvelte.plugins.kotlin.serialization)
+    alias(ktorSvelte.plugins.ktor)
+    alias(ktorSvelte.plugins.ktor.svelte)
+}
+
+dependencies {
+    implementation(ktorSvelte.ktor.server.netty)
+}
+```
+
+It has the `kotlin`, `ktor`, `serialization` and `ktor-svelte` versions, the plugins above, `ktor-svelte-server`, `ktor-bom`, the common Ktor server modules and `kotlinx-serialization-json`.
+
 Source: https://nijasc.github.io/ktor-svelte/main/guide/project-structure
 
 # Project structure
