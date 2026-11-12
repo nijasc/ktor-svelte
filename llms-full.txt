@@ -1,4 +1,4 @@
-# ktor-svelte 0.11.0
+# ktor-svelte 0.12.0
 
 > Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.
 
@@ -156,6 +156,7 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 | Dockerfile | `--docker` | yes | A multi-stage build that runs the JAR as a non-root user |
 | GitHub Actions | `--github-actions` | yes | A CI workflow with Actions pinned to commit SHAs |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
+| IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |
 
 Every project also gets a Gradle version catalog, JSON and typed error responses, ktlint, ESLint and Prettier, a `README.md`, a `.env.example` and a `.gitignore`. With sign in or Postgres, it also gets a `.env` with random secrets, which is not committed.
@@ -179,6 +180,14 @@ powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/n
 Next, build something real in the [tutorial](https://nijasc.github.io/ktor-svelte/guide/tutorial).
 
 Prefer to read scripts before running them? They are in [`scripts/`](https://github.com/nijasc/ktor-svelte/tree/main/scripts).
+
+Source: https://nijasc.github.io/ktor-svelte/guide/configurator
+
+# Configurator
+
+Tick what your app needs, and copy the two blocks into your project. Only settings that differ from the defaults appear, so the result stays short, and the panel on the right recommends what most apps should turn on. Click **Apply** to take a recommendation.
+
+Every option is explained in [Gradle settings and tasks](https://nijasc.github.io/ktor-svelte/reference/gradle) and [Ktor settings](https://nijasc.github.io/ktor-svelte/reference/ktor). For an existing project, `./gradlew svelteConfig` shows what is set now and scores it the same way.
 
 Source: https://nijasc.github.io/ktor-svelte/guide/tutorial
 
@@ -453,7 +462,7 @@ Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `b
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    id("io.github.nijasc.ktor-svelte") version "0.11.0"
+    id("io.github.nijasc.ktor-svelte") version "0.12.0"
 }
 ```
 <!-- x-release-please-end -->
@@ -509,7 +518,7 @@ The Gradle plugin adds the runtime for you. If you only want the library, add it
 
 <!-- x-release-please-start-version -->
 ```kotlin
-implementation("io.github.nijasc:ktor-svelte-server:0.11.0")
+implementation("io.github.nijasc:ktor-svelte-server:0.12.0")
 ```
 <!-- x-release-please-end -->
 
@@ -520,7 +529,7 @@ To keep Kotlin, Ktor and ktor-svelte on versions that are tested together, impor
 dependencyResolutionManagement {
     versionCatalogs {
         create("ktorSvelte") {
-            from("io.github.nijasc:ktor-svelte-catalog:0.11.0")
+            from("io.github.nijasc:ktor-svelte-catalog:0.12.0")
         }
     }
 }
@@ -623,12 +632,12 @@ All three write to one console in the same shape, so you can tell them apart at 
 ```text
 10:17:17  app      INFO   Application started in 0.959 seconds.
 10:17:17  vite     INFO   (ssr) connected.
-10:17:31  kotlin   ERROR  src/main/kotlin/shop/Routes.kt:24:16 Initializer type mismatch: expected 'Int', actual 'String'.
+10:17:31  kotlin   ERROR  file:///home/me/shop/src/main/kotlin/shop/Routes.kt:24:16 Initializer type mismatch: expected 'Int', actual 'String'.
 10:17:32  kotlin   ERROR  does not compile: 1 error
 10:17:34  kotlin   INFO   compiled
 ```
 
-Each source has its own color, and warnings and errors stand out. App lines keep the time and level your logging framework printed, and show the logger's class name when it isn't `Application`. Vite's start banner, its copies of browser console messages, which ktor-svelte forwards itself, and Gradle's build failure boilerplate are left out, because the ready message above already lists the URLs and the compiler errors say what failed. Colors are off when `CI` or `NO_COLOR` is set, or the terminal is `dumb`.
+Each source has its own color, and warnings and errors stand out. Compiler errors and browser stack traces point to your files as `file:///...:line:column` links, which IntelliJ opens at that line when you click them. Browser frames such as `http://localhost:8080/src/routes/+page.svelte:12:5` are turned into links to the file in `frontend/`. App lines keep the time and level your logging framework printed, and show the logger's class name when it isn't `Application`. Vite's start banner, its copies of browser console messages, which ktor-svelte forwards itself, and Gradle's build failure boilerplate are left out, because the ready message above already lists the URLs and the compiler errors say what failed. Colors are off when `CI` or `NO_COLOR` is set, or the terminal is `dumb`.
 
 When Kotlin stops compiling, the app keeps running its last good version, and the compiler errors appear in the browser in Vite's error overlay, with the file and line of each. Click the file to open it in your editor, or press Esc to hide the overlay until the errors change. It disappears once the code compiles again.
 
@@ -657,6 +666,10 @@ It also opens the app in your default browser, the first time only, so restarts 
 For the edits you make most, install the live templates once with `./gradlew svelteLiveTemplates --install` and restart the IDE. In Kotlin, `ksget`, `kspost` and `kspage` write routes, and `ksdto` and `ksinput` write DTOs with bounds and rules. In TypeScript, `ksapi` calls the generated client, `ksload` writes a `load` function with `apiWith`, and `kserror` wraps code in typed error handling.
 
 To debug your Kotlin code, start `Dev` as usual and then start the `Debug app` run configuration in debug mode. IntelliJ debugs Gradle tasks only when they run a JVM through Gradle, and `svelteDevAll` starts the app itself, so the app instead listens for a debugger on `127.0.0.1:5005` (see `dev.debugPort`). `Debug app` has auto restart on, so it reconnects after each restart. Outside IntelliJ, attach any JDWP debugger to that port. Two apps running `svelteDevAll` at once need different debug ports.
+
+To do both in one click, run `Dev and debug`. It starts `Dev` and attaches the Kotlin debugger, and stopping it stops both.
+
+To debug the frontend, run `Debug frontend` in debug mode while `Dev` runs. IntelliJ opens the app at `http://localhost:8080` in Chrome with its JavaScript debugger attached, and breakpoints in `.svelte` and `.ts` files under `frontend/` work through Vite's source maps. If your app runs on another port, change the URL in that run configuration.
 
 At startup in development, the app logs which protections and settings are active, so a 403, 413 or 429 does not come as a surprise:
 
@@ -1561,7 +1574,7 @@ svelte {
         daisyUi {
             themes(DaisyTheme.ShadcnLight, DaisyTheme.ShadcnDark, DaisyTheme.Cupcake)
             customTheme("brand") {
-                primary = "#6b57ff"
+                primary = "#7f52ff"
                 base100 = "#fdfcff"
             }
             defaultTheme(DaisyTheme.ShadcnLight)
@@ -1611,7 +1624,7 @@ Generated Kotlin lands in the `io.github.nijasc.ktorsvelte` package. Change it w
 
 ## DaisyUI
 
-`daisyUi()` turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme.
+Use the theme selector in the top bar of this site to see every theme ktor-svelte ships, the shadcn themes included, applied to these pages. `daisyUi()` turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme.
 
 ```svelte
 <script lang="ts">
@@ -2184,7 +2197,7 @@ Source: https://nijasc.github.io/ktor-svelte/reference/ktor
 
 # Ktor settings
 
-Every setting of `install(Svelte) { }`.
+Every setting of `install(Svelte) { }`. To pick settings with checkboxes instead, use the [configurator](https://nijasc.github.io/ktor-svelte/guide/configurator).
 
 The values shown are the defaults.
 
@@ -2383,7 +2396,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteClean` | Deletes `node_modules`, `.svelte-kit` and the build output |
 | `deepClean` | Runs `clean`, then also deletes the project's `.gradle` and `.kotlin` directories, `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept. Files a running Gradle daemon or IDE still holds, which happens on Windows, are skipped with a warning |
 | `svelteLiveTemplates` | Writes IntelliJ live templates to `build/ktor-svelte/live-templates/`. `--install` copies them into every IntelliJ IDEA and WebStorm configuration it finds, `--config-dir=...` picks another JetBrains folder |
-| `svelteGenerateRunConfigurations` | Writes IntelliJ run configurations to `.run/`, keeping any that exist |
+| `svelteGenerateRunConfigurations` | Writes IntelliJ run configurations to `.run/`, keeping any that exist: `Dev`, `Dev and debug`, `Debug app`, `Debug frontend`, `Ktor`, `Vite`, `Generate TypeScript`, `Build JAR`, `Type check frontend` and `Update frontend dependencies` |
 
 | Property | Effect |
 |---|---|
@@ -2630,6 +2643,7 @@ What each release was built and tested with, read from the release's tagged sour
 
 | ktor-svelte | Ktor | Kotlin | JVM | Gradle tested | SvelteKit |
 |---|---|---|---|---|---|
+| 0.12.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.11.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.10.1 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.10.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
