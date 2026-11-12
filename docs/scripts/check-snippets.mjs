@@ -33,6 +33,7 @@ const serverImports = [
     'io.micrometer.core.instrument.Tag',
     'kotlin.io.path.*',
     'kotlin.time.Duration.Companion.hours',
+    'kotlin.time.Duration.Companion.milliseconds',
     'kotlin.time.Duration.Companion.minutes',
     'kotlin.time.Instant',
     'kotlinx.coroutines.*',

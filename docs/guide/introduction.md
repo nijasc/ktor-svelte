@@ -20,7 +20,7 @@ const note = await api.notes.create({ title: 'Buy milk' });
 ```
 
 ::: warning Made with AI
-This project was made heavily with AI, and nothing is guaranteed. It has real tests, but read the code before you trust it with anything important. While the version starts with `0.`, expect breaking changes.
+This project was made heavily with AI, and nothing is guaranteed. It has real tests, but read the code before you trust it with anything important. Since 1.0, releases follow semantic versioning, so only a major release can break your build.
 :::
 
 ## How the pieces fit

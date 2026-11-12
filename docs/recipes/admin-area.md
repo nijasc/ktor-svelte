@@ -11,7 +11,7 @@ fun Route.admin(
         route("/api/admin") {
             install(
                 createRouteScopedPlugin("AdminOnly") {
-                    onCall { call ->
+                    on(AuthenticationChecked) { call ->
                         val user = call.principal<UserSession>()?.let { users.find(it.userId) }
                         if (user?.admin != true) call.respond(HttpStatusCode.Forbidden, Problem("Admins only."))
                     }
@@ -28,6 +28,8 @@ routing {
     }
 }
 ```
+
+The check has to run in `on(AuthenticationChecked)`. A plain `onCall` runs before Ktor has read the session, so `call.principal` is still empty there and the check would refuse everyone, admins included.
 
 In SvelteKit, put the admin pages under `src/routes/admin/` and check the user once in their layout:
 

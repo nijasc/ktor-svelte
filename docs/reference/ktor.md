@@ -16,9 +16,14 @@ install(Svelte) {
     apiDocs = false
     apiDocsPath = "/api/docs"
     routing = SvelteRouting.Automatic
+    statusEndpoint = false
+    healthEndpoint = false
     originCheck = true
     hideErrorDetails = true
     apiCompression = true
+    inlinePublicConfig = true
+    buildHeader = true
+    requestIds = true
     allowedOrigins()
     maxApiBodySize = 1048576
     maxJsonDepth = 64
@@ -46,8 +51,16 @@ install(Svelte) {
         url = "http://localhost:5173"
         mode = DevMode.Auto
         allowRemote = false
+        slowApiCall = 500.milliseconds
         panel = true
         browserLogs = true
+    }
+
+    rateLimit {
+        enabled = true
+        apiWrites = 120
+        period = 1.minutes
+        algorithm = RateLimitAlgorithm.FixedWindow
     }
 
     transport {
@@ -65,7 +78,10 @@ install(Svelte) {
 | `generateTs` | Generates TypeScript from your routes in development mode |
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
 | `apiDocs` | Serves Swagger UI in development mode. See [API docs](../features/endpoints.md#api-docs) |
+| `apiDocsPath` | Path of the Swagger UI page |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](../features/auth.md) |
+| `statusEndpoint` | Serves build and proxy details at `/_ktor-svelte/status`, to this machine only. Off by default. See [Status endpoint](../features/endpoints.md#status-endpoint) |
+| `healthEndpoint` | Serves `/_ktor-svelte/health` for load balancers and orchestrators. Off by default. `healthCheck { ... }` adds your own checks. See [Health endpoint](../features/endpoints.md#health-endpoint) |
 | `originCheck` | Refuses cross-site requests to API paths for every method except GET, HEAD, OPTIONS and TRACE. See [API request guards](../security.md#api-request-guards) |
 | `buildHeader` | Sends the frontend build fingerprint on API responses as `X-Ktor-Svelte-Build`, so the client can notice a deploy. On by default |
 | `maxJsonDepth` | Refuses JSON request bodies on API paths that nest deeper than this, with 400. `64` by default, `null` turns it off |
@@ -81,14 +97,19 @@ install(Svelte) {
 | `securityHeaders.enabled` | Sends security headers. `false` turns all of them off. See [Security headers](../security.md#security-headers) |
 | `securityHeaders.contentSecurityPolicy` | Your own policy, sent unchanged on every response. `null` uses the automatic policy |
 | `securityHeaders.automaticContentSecurityPolicy` | Sends a strict CSP built from the inline scripts of each HTML page. Extend it with `allowCspSources(directive, sources)` |
+| `securityHeaders.contentTypeOptions`, `frameOptions`, `referrerPolicy` | Values of `X-Content-Type-Options`, `X-Frame-Options` and `Referrer-Policy`. `null` leaves that header out |
+| `inlinePublicConfig` | Puts the public config into every page, so the frontend has it without a request. On by default |
 | `publicConfig(value)` | Values for the frontend. `publicConfig { ... }` reads them again on every request in development. See [Runtime config](../features/runtime-config.md) |
 | `cache` | `Cache-Control` values for `_app/immutable/**`, HTML pages and other files |
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
 | `dev.mode` | `Auto` follows Ktor's development mode. `Always` and `Never` force it |
 | `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
+| `dev.slowApiCall` | Logs API calls that take longer than this in development. `null` turns it off |
 | `dev.browserLogs` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log. On by default |
 | `dev.panel` | Shows a panel of recent API calls, with status, timing and validation errors, on pages proxied from Vite. On by default. See [Dev workflow](../guide/dev-workflow.md) |
 | `transport` | JSON, XML and compression. See [Transport](../features/transport.md) |
+| `rateLimit` | Limits API writes per client, and holds named limits for routes such as login. See [API request guards](../security.md#api-request-guards) |
+| `errorResponse<T>(statuses)` | Declares an error body that handlers outside your routes send, so the generated client types it. See [Calling the API](../features/calling-the-api.md) |
 
 A route of yours such as `get("/{slug}")` beats the frontend. That is intended, but it can hide pages.
 

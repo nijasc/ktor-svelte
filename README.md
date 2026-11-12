@@ -36,7 +36,7 @@ No CORS setup, no second server in production, no hand-written API types driftin
 > [!WARNING]
 > **This project was made heavily with AI, and nothing is guaranteed.** The author needed it for other projects and did not want to spend a lot of time on it. It has real tests, but read the code before you trust it with anything important.
 
-> **Status:** early. Expect breaking changes while the version starts with `0.`.
+> **Status:** stable since 1.0. Releases follow semantic versioning, so only a major release can break your build. Every release that changes what your app does has an [upgrade guide](https://nijasc.github.io/ktor-svelte/migrations/).
 
 ## What you get
 
@@ -236,7 +236,7 @@ Open this repository in IntelliJ and run `Notes: Dev`, then visit `http://localh
 | Gradle | Latest 8.x and 9.x | 8.14.6, 9.9.0 |
 | SvelteKit | 3.x | 3.1.1 |
 | Svelte | 5.57.3 and newer | 5.57.3 |
-| Package managers | Bun, pnpm, npm, Yarn | Bun end to end. The others use fake tools in tests, plus npm in CI |
+| Package managers | Bun, pnpm, npm, Yarn | All four build and test an example end to end in CI |
 
 On Gradle 8.x, use Shadow 9.2 or older if you use Shadow. Newer versions need a newer Gradle.
 
