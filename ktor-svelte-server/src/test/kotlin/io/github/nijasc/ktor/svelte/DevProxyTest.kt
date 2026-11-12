@@ -10,8 +10,10 @@ import io.ktor.client.request.head
 import io.ktor.client.request.header
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
+import io.ktor.client.request.prepareGet
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -20,6 +22,7 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
+import io.ktor.utils.io.readUTF8Line
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
@@ -28,6 +31,8 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.SocketException
+import kotlin.io.path.createTempFile
+import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -56,6 +61,11 @@ class DevProxyTest {
             if (path == "/moved") {
                 exchange.responseHeaders.add("Location", "/elsewhere")
                 exchange.sendResponseHeaders(302, -1)
+            } else if (path == "/html-page") {
+                val body = "<html><head><title>x</title></head><body>page</body></html>".toByteArray()
+                exchange.responseHeaders.add("Content-Type", "text/html; charset=utf-8")
+                exchange.sendResponseHeaders(200, body.size.toLong())
+                exchange.responseBody.use { it.write(body) }
             } else if (path == "/cached") {
                 exchange.responseHeaders.add("ETag", "\"vite\"")
                 exchange.sendResponseHeaders(304, -1)
@@ -97,6 +107,60 @@ class DevProxyTest {
             assertEquals("browser", response.headers["X-From-Vite"])
             assertContains(response.headers[HttpHeaders.ContentType].orEmpty(), "text/javascript")
         }
+
+    @Test
+    fun `html pages from Vite load the dev client and other files stay untouched`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.ALWAYS
+                    }
+                }
+            }
+            val page = client.get("/html-page")
+            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js\"></script>"
+            val html = "<html><head><title>x</title>$script</head><body>page</body></html>"
+            assertEquals(html, page.bodyAsText())
+            assertEquals(html.length.toString(), page.headers[HttpHeaders.ContentLength])
+            assertEquals("vite:/app.js", client.get("/app.js").bodyAsText())
+            val devClient = client.get("/_ktor-svelte/dev/client.js")
+            assertContains(devClient.headers[HttpHeaders.ContentType].orEmpty(), "javascript")
+            assertContains(devClient.bodyAsText(), "vite-error-overlay")
+        }
+
+    @Test
+    fun `compile errors stream from the file the dev task writes`() {
+        val errors = createTempFile("compile-errors", ".json")
+        errors.writeText("[{\"file\":\"Routes.kt\",\"line\":3,\"column\":5,\"message\":\"Unresolved reference 'x'.\"}]")
+        System.setProperty("ktor.svelte.compileErrors", errors.toString())
+        try {
+            testApplication {
+                application {
+                    install(Svelte) {
+                        dev {
+                            url = viteUrl
+                            mode = DevMode.ALWAYS
+                        }
+                    }
+                }
+                val first =
+                    client.prepareGet("/_ktor-svelte/dev/compile-errors").execute { response ->
+                        assertContains(response.headers[HttpHeaders.ContentType].orEmpty(), "text/event-stream")
+                        response.bodyAsChannel().readUTF8Line()
+                    }
+                assertEquals("data: [{\"file\":\"Routes.kt\",\"line\":3,\"column\":5,\"message\":\"Unresolved reference 'x'.\"}]", first)
+                val remote =
+                    client.get("/_ktor-svelte/dev/compile-errors") {
+                        header(HttpHeaders.Host, "example.com")
+                    }
+                assertEquals(HttpStatusCode.Forbidden, remote.status)
+            }
+        } finally {
+            System.clearProperty("ktor.svelte.compileErrors")
+        }
+    }
 
     @Test
     fun `head is forwarded without a body`() =

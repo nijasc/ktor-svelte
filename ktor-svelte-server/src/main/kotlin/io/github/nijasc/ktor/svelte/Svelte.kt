@@ -19,6 +19,8 @@ import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
 import io.github.nijasc.ktor.svelte.internal.constantGetPaths
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
+import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
+import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
@@ -229,6 +231,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (automaticRouting) {
                 catchAll(handler)
             }
+            if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (publicConfig != null) {
                 get(PUBLIC_CONFIG_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")
