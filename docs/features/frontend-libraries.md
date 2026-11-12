@@ -1,6 +1,6 @@
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide and i18n, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, Lucide, i18n and image optimization, configured in Gradle with typed helpers on both sides.
 
 Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
 
@@ -24,6 +24,7 @@ svelte {
             prefersDark(DaisyTheme.Dark)
         }
         lucide()
+        images()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -111,6 +112,18 @@ data class Note(val title: String, val icon: LucideIcon)
 ```
 
 Each icon loads on demand, so you only download the ones a page uses. An icon's enum name is its Lucide name in PascalCase, such as `arrow-right` to `ArrowRight`. Names starting with a digit get an `Icon` prefix. A misspelled icon name from a client gets a 400 from Ktor.
+
+## Images
+
+`images()` adds SvelteKit's [`@sveltejs/enhanced-img`](https://svelte.dev/docs/kit/images#sveltejs-enhanced-img). Keep pictures next to your code, for example in `frontend/src/lib/assets`, and use `enhanced:img` instead of `img`:
+
+```svelte
+<enhanced:img src="#lib/assets/hero.png" alt="Our team" sizes="(min-width: 768px) 65ch, 100vw" />
+```
+
+At build time, every image becomes AVIF and WebP in several widths, plus a fallback in the original format, inside a `<picture>` with `srcset`, `width` and `height`. Browsers download only the size and format they need, and the layout doesn't jump while the image loads. In the notes example, a 339 KB PNG becomes an 8 KB AVIF for a laptop screen. The files land in `_app/immutable/`, so browsers cache them for a year like any other hashed asset.
+
+Files in `frontend/static/` are copied as they are, because nothing in the build knows where they are used. Move images there to `src/lib/assets` to have them optimized. Processing uses `sharp`, which comes with prebuilt binaries for Windows, macOS and Linux. The first build with many large images takes longer, and later builds reuse Vite's cache.
 
 ## i18n
 
