@@ -36,6 +36,13 @@ function migrationGuide(name) {
     return existsSync(new URL(`../migrations/${guide}.md`, import.meta.url)) ? `, <a href="./migrations/${guide}">upgrade guide</a>` : '';
 }
 
+function highlights(name) {
+    const [major, minor, patch] = name.split('.');
+    if (patch !== '0') return '';
+    const page = `${major}.${minor}`;
+    return existsSync(new URL(`../releases/${page}.md`, import.meta.url)) ? `, <a href="./releases/${page}">highlights</a>` : '';
+}
+
 function notes(body) {
     const lines = (body ?? '').replace(/\r\n/g, '\n').split('\n');
     if (lines[0]?.startsWith('## ')) lines.shift();
@@ -58,7 +65,7 @@ try {
     const sections = list.map((release) => {
         const date = (release.published_at ?? release.created_at ?? '').slice(0, 10);
         const name = release.tag_name.replace(/^v/, '');
-        return `## ${name}\n\n<p class="changelog-meta">Released ${date}, <a href="${release.html_url}">GitHub release</a>${migrationGuide(name)}</p>\n\n::: v-pre\n${notes(release.body)}\n:::\n`;
+        return `## ${name}\n\n<p class="changelog-meta">Released ${date}, <a href="${release.html_url}">GitHub release</a>${highlights(name)}${migrationGuide(name)}</p>\n\n::: v-pre\n${notes(release.body)}\n:::\n`;
     });
     page = `# Changelog\n\n${intro}\n\n${sections.join('\n') || 'No releases yet.\n'}`;
 } catch (error) {
