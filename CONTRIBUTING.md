@@ -99,6 +99,14 @@ cd docs && bun install && bun run dev
 
 `bun run build` fails on any dead link, and CI runs it for every pull request. The changelog page is generated from the GitHub release notes when the site is built.
 
+CI also compiles every Kotlin block and type-checks every TypeScript and Svelte block in the docs, so a renamed setting or helper breaks the build instead of the docs. Run the same check locally:
+
+```bash
+bun docs/scripts/check-snippets.mjs
+```
+
+It needs Java and Bun. Kotlin blocks that configure Gradle (`svelte { }`, `plugins { }`, `dependencies`) are evaluated as build scripts. Other Kotlin blocks are compiled against the server module: statements are wrapped in a function on `Application`, `Route` or `SvelteConfig`, depending on how they start, and blocks on the same page share a package. TypeScript and Svelte blocks are type-checked inside a copy of the notes example frontend, so `#api` is its generated client. Missing imports from `#api` are added automatically. Loose names that a snippet takes for granted, such as `notes` or `showError`, are declared in `docs/snippets/globals.d.ts`, and server stubs such as `store` or `users` live in `docs/snippets/src/main/kotlin/snippets/prelude/Prelude.kt`. Mark a block that can't compile, such as one using routes the notes example lacks, with ` ```ts no-check `. Blocks with placeholders like `"<new version>"` are skipped. Failures name the generated file after the page and line, such as `features_typescript_L31.ts`.
+
 The API reference is built with Dokka from the public API of both modules:
 
 ```bash

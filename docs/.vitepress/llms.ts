@@ -41,6 +41,7 @@ function plainMarkdown(source: string, page: Page, siteUrl: string): string {
         .replace(/^::: (?:tip|warning|danger|info|details) ?(.*)$/gm, (_, title: string) => (title ? `**${title}**` : ''))
         .replace(/^::: ?v-pre$/gm, '')
         .replace(/^:::$/gm, '')
+        .replace(/^( *```\w+) (?:no-check|stackblitz)$/gm, '$1')
         .replace(/^<[A-Z][A-Za-z]* *\/>$/gm, '')
         .replace(/\]\((?!https?:|#|mailto:)([^)\s]+)\)/g, (_, target: string) => `](${absoluteLink(page, target, siteUrl)})`)
         .replace(/\n{3,}/g, '\n\n')

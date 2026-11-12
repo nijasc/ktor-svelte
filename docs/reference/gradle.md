@@ -2,9 +2,11 @@
 
 Every setting of `svelte { }`, every task and every Gradle property.
 
-The values shown are the defaults. `PackageManager` needs `import io.github.nijasc.ktor.svelte.gradle.PackageManager` at the top of the build script.
+The values shown are the defaults.
 
 ```kotlin
+import io.github.nijasc.ktor.svelte.gradle.PackageManager
+
 svelte {
     frontendDir = layout.projectDirectory.dir("frontend")
     outputDir = "build"

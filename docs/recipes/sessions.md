@@ -58,7 +58,7 @@ fun Application.sessionAuth(users: Users) {
 
 In the frontend, send users to the login page whenever the API says they are signed out:
 
-```ts
+```ts no-check
 import { goto } from '$app/navigation';
 import { api, apiConfig, isApiError } from '#api';
 

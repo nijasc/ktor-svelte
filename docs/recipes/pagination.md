@@ -11,7 +11,7 @@ get("/api/users") {
 }
 ```
 
-```ts
+```ts no-check
 import { api, pages } from '#api';
 
 for await (const users of pages(api.users.list, { limit: '100' })) table.push(...users);

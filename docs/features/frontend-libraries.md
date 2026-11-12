@@ -118,7 +118,7 @@ Keep one JSON file per language in `frontend/messages`. Change the folder with `
 
 ```json
 {
-  "note-created": "Created {title}",
+  "server-greeting": "Hello {name}, greetings from Ktor!",
   "app-title": "Notes"
 }
 ```
@@ -131,7 +131,7 @@ Both sides get typed functions from the same files. A missing key or a mismatche
 </script>
 
 <h1>{m.appTitle()}</h1>
-<p>{m.noteCreated({ title: 'Milk' })}</p>
+<p>{m.serverGreeting({ name: 'Ada' })}</p>
 <a href={localizeHref('/about')}>About</a>
 <button onclick={() => setLocale('de')}>Deutsch</button>
 ```
@@ -141,7 +141,7 @@ import ktorsvelte.Messages
 import ktorsvelte.messages
 
 get("/api/hello") {
-    call.respondText(call.messages.noteCreated("Milk"))
+    call.respondText(call.messages.serverGreeting("Ada"))
 }
 
 val german = Messages.forLocale("de").appTitle()
