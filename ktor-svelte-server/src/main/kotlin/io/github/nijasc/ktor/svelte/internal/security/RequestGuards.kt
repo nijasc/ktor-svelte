@@ -4,6 +4,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.URLDecodeException
 import io.ktor.http.decodeURLPart
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.PayloadTooLargeException
@@ -67,6 +68,8 @@ internal fun decodedPathOrRaw(call: ApplicationCall): String {
     return try {
         path.decodeURLPart()
     } catch (_: IllegalArgumentException) {
+        path
+    } catch (_: URLDecodeException) {
         path
     }
 }

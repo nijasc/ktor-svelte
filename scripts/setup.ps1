@@ -25,6 +25,9 @@ if ($content -notmatch '<release>([^<]+)</release>') {
     Stop-Setup 'Could not find the latest version on Maven Central.'
 }
 $version = $Matches[1]
+if ($version -notmatch '^[0-9A-Za-z.-]+$') {
+    Stop-Setup "Maven Central returned a version that does not look like one: $version"
+}
 
 $directory = Join-Path ([IO.Path]::GetTempPath()) ("ktor-svelte-" + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $directory | Out-Null

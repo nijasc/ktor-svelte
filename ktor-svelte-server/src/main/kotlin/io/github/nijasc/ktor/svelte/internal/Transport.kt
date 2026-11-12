@@ -23,6 +23,7 @@ internal fun ContentNegotiationConfig.registerXml() {
 internal fun installTransport(
     application: Application,
     transport: SvelteTransportConfig,
+    maxApiBodySize: Long?,
 ) {
     if (transport.negotiation.isNotEmpty()) {
         check(application.pluginOrNull(ContentNegotiation) == null) {
@@ -38,6 +39,9 @@ internal fun installTransport(
             "Compression is already installed. Remove it, or remove compression() from install(Svelte) { transport { } }." +
                 DocLink.TRANSPORT.see()
         }
-        application.install(Compression) { configure() }
+        application.install(Compression) {
+            if (maxApiBodySize != null) maxDecodedContentLength = maxApiBodySize
+            configure()
+        }
     }
 }

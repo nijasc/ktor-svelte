@@ -47,6 +47,7 @@ import io.github.nijasc.ktor.svelte.internal.security.findPayloadTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.installJsonShapeLimits
 import io.github.nijasc.ktor.svelte.internal.security.installRateLimits
 import io.github.nijasc.ktor.svelte.internal.security.mayHideErrorDetails
+import io.github.nijasc.ktor.svelte.internal.security.respondBadRequest
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonShape
@@ -60,6 +61,7 @@ import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.URLDecodeException
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationPlugin
@@ -155,7 +157,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val metrics = SvelteMetrics()
         application.attributes.put(SvelteMetricsKey, metrics)
 
-        installTransport(application, pluginConfig.transportConfig)
+        installTransport(application, pluginConfig.transportConfig, pluginConfig.maxApiBodySize)
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
         if (pluginConfig.requestIds) installRequestIds(application)
         installConfigReport(application, pluginConfig)
@@ -239,6 +241,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (cause is ValidationException) {
                 devRequests?.validationFailed(call, cause.fields)
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
+                return@on
+            }
+            if (cause is URLDecodeException && !call.response.isCommitted) {
+                respondBadRequest(call, resolver.isApiPath(decodedPathOrRaw(call)))
                 return@on
             }
             val bodyTooLarge = cause.findPayloadTooLarge() != null || call.attributes.contains(BodyTooLarge)

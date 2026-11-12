@@ -51,6 +51,16 @@ class SiteFilesTest {
         }
 
     @Test
+    fun `a host header that cannot be read is a bad request, not a server error`() =
+        testApplication {
+            serve()
+            listOf("/sitemap.xml", "/robots.txt").forEach { path ->
+                val response = client.get(path) { header(HttpHeaders.Host, "shop.example.com:80@evil.example") }
+                assertEquals(HttpStatusCode.BadRequest, response.status, path)
+            }
+        }
+
+    @Test
     fun `siteUrl replaces the request host and page paths are encoded`() =
         testApplication {
             serve(fixtureBuild(mapOf("index.html" to "home", "café & bar.html" to "bar"))) { siteUrl = "https://example.com/" }
