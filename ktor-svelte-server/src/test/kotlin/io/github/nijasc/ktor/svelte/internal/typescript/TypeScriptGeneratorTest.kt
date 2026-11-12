@@ -248,6 +248,14 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client reports failed requests to an error hook unless silent`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    onError?: (error: unknown) => void;")
+        assertContains(client, "    silent?: boolean;")
+        assertContains(client, "if (silent || isAbortError(error)) return;")
+    }
+
+    @Test
     fun `the client prefetches GET requests for a later identical call`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "export async function prefetch(call: () => Promise<unknown>, ttl = 10_000): Promise<void> {")
