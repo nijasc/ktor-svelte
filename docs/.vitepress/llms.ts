@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, posix } from 'node:path';
+import { dirname, join, posix } from 'node:path';
 import type { DefaultTheme } from 'vitepress';
 
 interface Page {
@@ -33,6 +33,13 @@ function absoluteLink(page: Page, target: string, siteUrl: string): string {
     const resolved = posix.resolve(posix.dirname(pagePath(page.link)), path.replace(/\.md$/, '')).replace(/^\//, '');
     const clean = resolved.endsWith('/index') ? resolved.slice(0, -'index'.length) : resolved === 'index' ? '' : resolved;
     return `${siteUrl}${clean}${anchor ? `#${anchor}` : ''}`;
+}
+
+function withIncludes(source: string, directory: string): string {
+    return source.replace(/^<!--@include: (.+?)-->$/gm, (_, path: string) => {
+        const included = join(directory, path.trim());
+        return existsSync(included) ? readFileSync(included, 'utf8') : '';
+    });
 }
 
 function plainMarkdown(source: string, page: Page, siteUrl: string): string {
@@ -83,7 +90,8 @@ export function writeLlmsFiles(options: {
         `> ${options.description}`,
         '',
         ...pages.map((page) => {
-            const body = plainMarkdown(readFileSync(sourceFile(options.srcDir, page.link)!, 'utf8'), page, options.siteUrl);
+            const file = sourceFile(options.srcDir, page.link)!;
+            const body = plainMarkdown(withIncludes(readFileSync(file, 'utf8'), dirname(file)), page, options.siteUrl);
             return `Source: ${url(page.link)}\n\n${body}\n`;
         })
     ].join('\n');

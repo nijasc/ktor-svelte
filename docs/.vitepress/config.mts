@@ -16,7 +16,7 @@ export default defineConfig({
     base,
     cleanUrls: true,
     lastUpdated: true,
-    srcExclude: ['api-reference.md', 'node_modules/**'],
+    srcExclude: ['api-reference.md', 'reference/compatibility-matrix.md', 'node_modules/**'],
     head: [
         ['meta', { name: 'theme-color', content: '#ff3e00' }]
     ],
