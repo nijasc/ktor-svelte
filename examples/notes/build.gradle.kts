@@ -33,8 +33,8 @@ svelte {
         daisyUi {
             themes(DaisyTheme.ShadcnLight, DaisyTheme.ShadcnDark, DaisyTheme.Cupcake)
             customTheme("ktor") {
-                primary = "#6b57ff"
-                secondary = "#f97316"
+                primary = "#7f52ff"
+                secondary = "#ff3e00"
                 base100 = "#fdfcff"
                 baseContent = "#1f1b3a"
             }

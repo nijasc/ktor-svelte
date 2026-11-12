@@ -20,7 +20,7 @@ export default defineConfig({
     lastUpdated: true,
     srcExclude: ['api-reference.md', 'reference/compatibility-matrix.md', 'node_modules/**'],
     head: [
-        ['meta', { name: 'theme-color', content: '#ff3e00' }],
+        ['meta', { name: 'theme-color', content: '#c711e1' }],
         ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
         ['script', {}, THEME_RESTORE_SCRIPT]
     ],
