@@ -12,6 +12,10 @@ updates:
     directory: /examples/notes/frontend
     schedule:
       interval: weekly
+  - package-ecosystem: bun
+    directory: /examples/showcase/frontend
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:

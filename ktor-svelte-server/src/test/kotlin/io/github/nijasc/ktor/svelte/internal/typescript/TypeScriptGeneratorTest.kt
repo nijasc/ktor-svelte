@@ -34,6 +34,42 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `a nullable object that also exists as a plain schema becomes a union with null`() {
+        val ref = """{"type":"object","title":"Ref","required":["id"],"properties":{"id":{"type":"integer"}}}"""
+        val nullableRef = """{"type":["object","null"],"title":"Ref2","required":["id"],"properties":{"id":{"type":"integer"}}}"""
+        val owner =
+            """{"type":"object","required":["creator"],"properties":{"creator":{"${'$'}ref":"#/components/schemas/Ref"},"assignee":{"${'$'}ref":"#/components/schemas/Ref2"}}}"""
+        val generated = generate(schemas = """{"Ref":$ref,"Ref2":$nullableRef,"Owner":$owner}""")
+        val source = generated.getValue("types.ts")
+        assertContains(source, "    creator: Ref;")
+        assertContains(source, "    assignee?: Ref | null;")
+        assertContains(source, "        assignee: null,")
+        assertFalse(source.contains("Ref2"))
+        assertFalse(generated.getValue("openapi.json").contains("Ref2"))
+    }
+
+    @Test
+    fun `an object that is only used as nullable keeps its type and gains null where it is used`() {
+        val nullableRef = """{"type":["object","null"],"title":"Ref","required":["id"],"properties":{"id":{"type":"integer"}}}"""
+        val owner = """{"type":"object","required":["assignee"],"properties":{"assignee":{"${'$'}ref":"#/components/schemas/Ref"}}}"""
+        val source = types("""{"Ref":$nullableRef,"Owner":$owner}""")
+        assertContains(source, "export interface Ref {\n    id: number;\n}")
+        assertContains(source, "    assignee: Ref | null;")
+        assertContains(source, "    empty: (): Ref => ({")
+    }
+
+    @Test
+    fun `nullable objects in responses and lists become unions with null`() {
+        val ref = """{"type":"object","title":"Ref","properties":{"id":{"type":"integer"}}}"""
+        val nullableRef = """{"type":["object","null"],"title":"Ref2","properties":{"id":{"type":"integer"}}}"""
+        val response =
+            """{"200":{"description":"","content":{"application/json":{"schema":{"type":"array","items":{"${'$'}ref":"#/components/schemas/Ref2"}}}}}}"""
+        val generated =
+            generate(paths = """{"/api/refs":{"get":{"responses":$response}}}""", schemas = """{"Ref":$ref,"Ref2":$nullableRef}""")
+        assertContains(generated.getValue("services.ts"), "request<(Ref | null)[]>('GET', '/api/refs',")
+    }
+
+    @Test
     fun `enums become const objects with a matching type`() {
         val source = types("""{"S":{"type":"string","enum":["A","it's"]}}""")
         assertContains(source, "export const S = {\n    A: 'A',\n    'it\\'s': 'it\\'s',\n} as const;")
