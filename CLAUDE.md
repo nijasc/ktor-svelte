@@ -39,6 +39,8 @@ Gradle plugin and Ktor library that serve a SvelteKit `adapter-static` build fro
 ./gradlew -p examples/basic e2eTest
 ./gradlew -p examples/notes e2eTest
 ./gradlew -p examples/showcase e2eTest
+./gradlew -p examples/showcase browserTest -Pbrowser=chromium
+./gradlew -p examples/showcase devBrowserTest
 ./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=8.14.6 -PtestShadowVersion=9.2.2
 ```
 

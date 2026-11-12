@@ -70,6 +70,15 @@ tasks.shadowJar {
     mergeServiceFiles()
 }
 
+tasks.register<JavaExec>("installBrowsers") {
+    group = "verification"
+    description = "Downloads the browser the browser tests use, with its system packages on Linux."
+    classpath = sourceSets["browserTest"].runtimeClasspath
+    mainClass = "com.microsoft.playwright.CLI"
+    val systemPackages = if (System.getProperty("os.name").startsWith("Linux")) listOf("--with-deps") else emptyList()
+    args(listOf("install") + systemPackages + providers.gradleProperty("browser").orElse("chromium").get())
+}
+
 testing {
     suites {
         register<JvmTestSuite>("e2eTest") {
@@ -84,6 +93,40 @@ testing {
                     jvmArgumentProviders.add(
                         CommandLineArgumentProvider { listOf("-Dexample.jar=${exampleJar.get().asFile.path}") },
                     )
+                }
+            }
+        }
+        register<JvmTestSuite>("browserTest") {
+            useJUnitJupiter(libs.versions.junit)
+            dependencies {
+                implementation(libs.kotlin.test.junit5)
+                implementation(libs.playwright)
+                implementation(libs.axe.playwright)
+            }
+            targets.configureEach {
+                testTask.configure {
+                    val exampleJar = tasks.named<Jar>("shadowJar").flatMap { it.archiveFile }
+                    val browser = providers.gradleProperty("browser").orElse("chromium")
+                    inputs.file(exampleJar).withPathSensitivity(PathSensitivity.NONE)
+                    inputs.property("browser", browser)
+                    systemProperty("browser", browser.get())
+                    jvmArgumentProviders.add(
+                        CommandLineArgumentProvider { listOf("-Dexample.jar=${exampleJar.get().asFile.path}") },
+                    )
+                }
+            }
+        }
+        register<JvmTestSuite>("devBrowserTest") {
+            useJUnitJupiter(libs.versions.junit)
+            dependencies {
+                implementation(libs.kotlin.test.junit5)
+                implementation(libs.playwright)
+            }
+            targets.configureEach {
+                testTask.configure {
+                    val projectDirectory = layout.projectDirectory.asFile.path
+                    outputs.upToDateWhen { false }
+                    systemProperty("example.dir", projectDirectory)
                 }
             }
         }
