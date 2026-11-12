@@ -17,7 +17,7 @@ h2 = "2.5.252"
 ideaExt = "1.4.1"
 dokka = "2.3.0"
 cyclonedx = "3.5.1"
-micrometer = "1.16.1"
+micrometer = "1.17.2"
 
 [libraries]
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
