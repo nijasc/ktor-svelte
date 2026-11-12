@@ -39,6 +39,8 @@ class DevLogTest {
         assertNull(log.format(LogSource.VITE, "$ vite dev --port \"5173\" --strictPort"))
         assertNull(log.format(LogSource.VITE, "  \u001B[32m➜\u001B[39m  \u001B[1mLocal\u001B[22m:   http://localhost:5173/"))
         assertNull(log.format(LogSource.VITE, "   "))
+        assertNull(log.format(LogSource.VITE, "10:21:19 [vite] (client) [console.warn] Probe warning { id: 7 }"))
+        assertNull(log.format(LogSource.VITE, "10:21:19 [vite] (client) [Unhandled error] Error: Probe crash"))
         assertEquals(
             "09:05:07  vite     INFO   ready in 1772 ms",
             log.format(LogSource.VITE, "  \u001B[32mVITE v8.3.6\u001B[39m  ready in 1772 ms"),

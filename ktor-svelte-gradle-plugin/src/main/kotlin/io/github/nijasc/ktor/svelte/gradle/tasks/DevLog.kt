@@ -35,6 +35,7 @@ private const val BROWSER_LOGGER = "ktor-svelte.browser"
 private val VITE_NOISE =
     listOf(
         Regex("""^[$>] .*vite"""),
+        Regex("""^\(client\) \[(console\.\w+|Unhandled \w+)]"""),
         Regex("""^➜\s+(Local|Network|press)"""),
         Regex("""^(?:->|➜)?\s*press h"""),
     )
