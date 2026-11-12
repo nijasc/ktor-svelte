@@ -269,10 +269,10 @@ class LibrariesTest {
     }
 
     @Test
-    fun `sync and compile can run in one command on a fresh project`() {
+    fun `sync runs before source generation, whatever the order on the command line`() {
         val project = project("lucide()")
         addLucide(project)
-        val result = project.run("svelteSync", "classes")
+        val result = project.run("classes", "svelteSync")
         assertEquals(TaskOutcome.SUCCESS, result.task(":svelteGenerateSources")?.outcome)
         val tasks = result.tasks.map { it.path }
         assertTrue(tasks.indexOf(":svelteSync") < tasks.indexOf(":svelteGenerateSources"))
