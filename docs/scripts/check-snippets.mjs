@@ -8,6 +8,7 @@ const root = join(docs, '..');
 const snippetsBuild = join(docs, 'snippets');
 const generated = join(snippetsBuild, 'build', 'snippets');
 const notesFrontend = join(root, 'examples', 'notes', 'frontend');
+const catalogPath = join(root, 'ktor-svelte-catalog', 'build', 'version-catalog', 'libs.versions.toml').replace(/\\/g, '/');
 const skippedDirectories = new Set(['node_modules', '.vitepress', 'snippets', 'playground', 'scripts']);
 
 const serverImports = [
@@ -75,8 +76,26 @@ function snippetId(block) {
     return `${block.page.replace(/\.md$/, '').replace(/[^A-Za-z0-9]+/g, '_')}_L${block.line}`;
 }
 
+function isSettings(body) {
+    return /^(dependencyResolutionManagement|pluginManagement) *\{/m.test(body);
+}
+
 function isGradle(body) {
-    return /^(svelte|plugins|ktor|dependencies) *\{/m.test(body) || /^implementation\(/m.test(body) || /^import io\.github\.nijasc\.ktor\.svelte\.gradle\./m.test(body);
+    return (
+        isSettings(body) ||
+        /^(svelte|plugins|ktor|dependencies) *\{/m.test(body) ||
+        /^implementation\(/m.test(body) ||
+        /^import io\.github\.nijasc\.ktor\.svelte\.gradle\./m.test(body)
+    );
+}
+
+function catalogPluginIds(toml) {
+    const section = toml.split(/^\[plugins\]$/m)[1]?.split(/^\[/m)[0] ?? '';
+    return new Map([...section.matchAll(/^([\w-]+) = \{\s*id = "([^"]+)"/gm)].map((match) => [match[1], match[2]]));
+}
+
+function settingsSource(block) {
+    return block.body.replace(/from\("io\.github\.nijasc:ktor-svelte-catalog:[^"]*"\)/g, `from(files("${catalogPath}"))`);
 }
 
 function topLevelChunks(lines) {
@@ -145,7 +164,17 @@ function gradleProject(block) {
         return '';
     });
     code = code.replace(/^(implementation\(.*\))$/gm, 'dependencies {\n    $1\n}');
-    const plugins = ['    java', '    id("io.github.nijasc.ktor-svelte")', ...pluginLines.map((line) => line.replace(/ version "[^"]*"/, ''))];
+    const pluginIds = catalogPluginIds(readFileSync(catalogPath, 'utf8'));
+    const requested = pluginLines
+        .map((line) =>
+            line.replace(/ version "[^"]*"/, '').replace(/alias\(ktorSvelte\.plugins\.([\w.]+)\)/, (_, alias) => {
+                const id = pluginIds.get(alias.replaceAll('.', '-'));
+                if (!id) throw new Error(`${block.page}:${block.line} uses ktorSvelte.plugins.${alias}, which the version catalog does not have.`);
+                return `id("${id}")`;
+            })
+        )
+        .filter((line) => !line.includes('io.github.nijasc.ktor-svelte'));
+    const plugins = ['    java', '    id("io.github.nijasc.ktor-svelte")', ...requested];
     return [...imports, '', 'plugins {', ...plugins, '}', '', code.trim(), ''].join('\n');
 }
 
@@ -220,7 +249,10 @@ if (existsSync(frontend)) {
 }
 
 const kotlin = checked.filter((block) => block.lang === 'kotlin');
-const gradle = kotlin.filter((block) => isGradle(block.body));
+const gradle = kotlin.filter((block) => isGradle(block.body) && !isSettings(block.body));
+const settings = kotlin.filter((block) => isSettings(block.body));
+
+if (!run(gradlew, [':ktor-svelte-catalog:generateCatalogAsToml', '--console=plain', '-q'], root)) process.exit(1);
 const server = kotlin.filter((block) => !isGradle(block.body));
 
 const packagesByPage = new Map();
@@ -253,6 +285,9 @@ writeFileSync(
         '        create("libs") {',
         `            from(files("${rootPath}/gradle/libs.versions.toml"))`,
         '        }',
+        '        create("ktorSvelte") {',
+        `            from(files("${catalogPath}"))`,
+        '        }',
         '    }',
         '}',
         '',
@@ -262,11 +297,17 @@ writeFileSync(
         ''
     ].join('\n')
 );
-writeFileSync(join(gradleRoot, 'build.gradle.kts'), 'plugins {\n    alias(libs.plugins.kotlin.jvm) apply false\n    alias(libs.plugins.ktor) apply false\n}\n');
+writeFileSync(join(gradleRoot, 'build.gradle.kts'), 'plugins {\n    alias(libs.plugins.kotlin.jvm) apply false\n    alias(libs.plugins.kotlin.serialization) apply false\n    alias(libs.plugins.ktor) apply false\n}\n');
 for (const block of gradle) {
     const directory = join(gradleRoot, snippetId(block));
     mkdirSync(directory, { recursive: true });
     writeFileSync(join(directory, 'build.gradle.kts'), gradleProject(block));
+}
+
+for (const block of settings) {
+    const directory = join(gradleRoot, 'settings', snippetId(block));
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, 'settings.gradle.kts'), `${settingsSource(block).trimEnd()}\n\nrootProject.name = "settings-snippet"\n`);
 }
 
 const frontendBlocks = checked.filter((block) => block.lang === 'ts' || block.lang === 'svelte');
@@ -281,12 +322,13 @@ for (const block of frontendBlocks) {
     writeFileSync(file, frontendSource(block, apiExports));
 }
 
-console.log(`Checking ${server.length} Kotlin, ${gradle.length} Gradle and ${frontendBlocks.length} TypeScript and Svelte snippets. Skipped ${skipped.length}:`);
+console.log(`Checking ${server.length} Kotlin, ${gradle.length + settings.length} Gradle and ${frontendBlocks.length} TypeScript and Svelte snippets. Skipped ${skipped.length}:`);
 for (const block of skipped) console.log(`  ${block.page}:${block.line} (${block.lang})`);
 
 const results = [
     run(gradlew, ['-p', relative(root, snippetsBuild), 'compileKotlin', '--console=plain', '-q'], root),
     run(gradlew, ['-p', relative(root, gradleRoot), 'help', '--console=plain', '-q'], root),
+    ...settings.map((block) => run(gradlew, ['-p', relative(root, join(gradleRoot, 'settings', snippetId(block))), 'help', '--console=plain', '-q'], root)),
     run('bun', ['install', '--frozen-lockfile'], frontend) &&
         run('bun', ['x', 'svelte-kit', 'sync'], frontend) && run('bun', ['x', 'svelte-check', '--tsconfig', './tsconfig.json', '--threshold', 'error'], frontend)
 ];
