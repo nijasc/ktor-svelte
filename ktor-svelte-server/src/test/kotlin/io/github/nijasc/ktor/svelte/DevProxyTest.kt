@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte
 
 import com.sun.net.httpserver.HttpServer
+import io.github.nijasc.ktor.svelte.internal.dev.asksForWebSocket
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalRequest
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
 import io.github.nijasc.ktor.svelte.internal.dev.upstreamUri
@@ -108,6 +109,16 @@ class DevProxyTest {
             assertEquals("browser", response.headers["X-From-Vite"])
             assertContains(response.headers[HttpHeaders.ContentType].orEmpty(), "text/javascript")
         }
+
+    @Test
+    fun `only web socket upgrades are refused, so clients that offer http2 still get their page`() {
+        assertTrue(asksForWebSocket("websocket"))
+        assertTrue(asksForWebSocket("WebSocket"))
+        assertTrue(asksForWebSocket("h2c, websocket"))
+        assertFalse(asksForWebSocket("h2c"))
+        assertFalse(asksForWebSocket(""))
+        assertFalse(asksForWebSocket(null))
+    }
 
     @Test
     fun `html pages from Vite load the dev client and other files stay untouched`() =
