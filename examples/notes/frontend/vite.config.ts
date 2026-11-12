@@ -2,10 +2,11 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import adapter from '@sveltejs/adapter-static';
 import tailwindcss from '@tailwindcss/vite';
+import { enhancedImages } from '@sveltejs/enhanced-img';
 import { defineConfig } from 'vite';
 
 const config = defineConfig({
-    plugins: [tailwindcss(), sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true }) })],
+    plugins: [tailwindcss(), enhancedImages(), sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true }) })],
     server: { hmr: { clientPort: 5173 } }
 });
 
