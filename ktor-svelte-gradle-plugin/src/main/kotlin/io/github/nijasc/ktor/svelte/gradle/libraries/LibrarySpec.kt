@@ -19,6 +19,7 @@ internal val PACKAGE_VERSIONS =
         "@tailwindcss/forms" to "^0.5.11",
         "daisyui" to "^5.7.50",
         "@lucide/svelte" to "^1.67.0",
+        "@sveltejs/enhanced-img" to "1.0.0",
     )
 
 public data class TailwindSpec(
@@ -48,8 +49,9 @@ public data class LibrarySpec(
     val i18n: I18nSpec?,
     val devPort: Int,
     val generatedPackage: String,
+    val images: Boolean = false,
 ) : Serializable {
-    val isEmpty: Boolean get() = tailwind == null && daisy == null && !lucide && i18n == null
+    val isEmpty: Boolean get() = tailwind == null && daisy == null && !lucide && i18n == null && !images
     val usesCss: Boolean get() = tailwind != null || daisy != null
     val usesHooks: Boolean get() = daisy != null || i18n != null
 
@@ -64,6 +66,7 @@ public data class LibrarySpec(
                 }
                 if (daisy != null) add("daisyui")
                 if (lucide) add("@lucide/svelte")
+                if (images) add("@sveltejs/enhanced-img")
             }
 
     public fun validate() {

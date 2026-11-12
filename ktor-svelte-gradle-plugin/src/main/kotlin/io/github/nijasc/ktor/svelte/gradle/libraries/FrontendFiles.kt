@@ -64,6 +64,7 @@ private fun viteConfig(
             add("import { sveltekit } from '@sveltejs/kit/vite';")
             add("import adapter from '@sveltejs/adapter-static';")
             if (spec.usesCss) add("import tailwindcss from '@tailwindcss/vite';")
+            if (spec.images) add("import { enhancedImages } from '@sveltejs/enhanced-img';")
             add("import { defineConfig${if (hasUserViteConfig) ", mergeConfig" else ""} } from 'vite';")
             if (hasUserViteConfig) add("import userConfig from './vite.user';")
         }
@@ -77,6 +78,7 @@ private fun viteConfig(
     val plugins =
         buildList {
             if (spec.usesCss) add("tailwindcss()")
+            if (spec.images) add("enhancedImages()")
             add("sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true })$prerender })")
         }
     val config =

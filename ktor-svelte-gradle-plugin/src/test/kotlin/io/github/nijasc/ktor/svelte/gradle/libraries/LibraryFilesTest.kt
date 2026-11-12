@@ -21,7 +21,8 @@ class LibraryFilesTest {
         daisy: DaisySpec? = null,
         lucide: Boolean = false,
         i18n: I18nSpec? = null,
-    ) = LibrarySpec(tailwind, daisy, lucide, i18n, 5173, "ktorsvelte")
+        images: Boolean = false,
+    ) = LibrarySpec(tailwind, daisy, lucide, i18n, 5173, "ktorsvelte", images)
 
     private val daisy = DaisySpec(listOf("light", "dark"), "light", "dark", emptyList())
     private val cookieI18n = I18nSpec(listOf("en", "de"), "en", LocaleStrategy.Cookie)
@@ -42,6 +43,17 @@ class LibraryFilesTest {
         assertContains(css, "@import 'tailwindcss';")
         assertContains(css, "@plugin '@tailwindcss/typography';")
         assertFalse(css.contains("forms"))
+    }
+
+    @Test
+    fun `images add enhanced-img to vite before sveltekit`() {
+        val images = spec(tailwind = TailwindSpec(false, false), images = true)
+        val vite = frontendFiles(images, null, false).getValue("vite.config.ts")
+        assertContains(vite, "import { enhancedImages } from '@sveltejs/enhanced-img';")
+        assertContains(vite, "plugins: [tailwindcss(), enhancedImages(), sveltekit(")
+        assertEquals(setOf("tailwindcss", "@tailwindcss/vite", "@sveltejs/enhanced-img"), images.requiredPackages)
+        assertFalse(spec(images = true).isEmpty)
+        assertFalse(frontendFiles(spec(lucide = true), null, false).getValue("vite.config.ts").contains("enhanced"))
     }
 
     @Test
