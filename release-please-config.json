@@ -6,7 +6,6 @@
   "packages": {
     ".": {
       "package-name": "ktor-svelte",
-      "release-as": "1.0.0",
       "extra-files": [
         "README.md",
         "docs/guide/existing-project.md"
