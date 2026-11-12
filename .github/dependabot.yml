@@ -8,14 +8,23 @@ updates:
     directory: /examples/basic/frontend
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: bun
     directory: /examples/notes/frontend
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: bun
     directory: /examples/showcase/frontend
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
