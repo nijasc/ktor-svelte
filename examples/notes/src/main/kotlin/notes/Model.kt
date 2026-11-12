@@ -6,7 +6,7 @@ import io.github.nijasc.ktor.svelte.Validator
 import io.ktor.openapi.JsonSchema
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import ktorsvelte.LucideIcon
+import io.github.nijasc.ktorsvelte.LucideIcon
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Clock
