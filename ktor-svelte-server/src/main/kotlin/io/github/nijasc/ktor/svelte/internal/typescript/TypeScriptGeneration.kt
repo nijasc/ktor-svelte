@@ -26,7 +26,7 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 private const val GENERATE_ONLY_PROPERTY = "ktor.svelte.generateTsOnly"
-private const val FRONTEND_DIR_PROPERTY = "ktor.svelte.frontendDir"
+internal const val FRONTEND_DIR_PROPERTY = "ktor.svelte.frontendDir"
 private const val VERIFY_REPORT_PROPERTY = "ktor.svelte.generateTsVerify"
 private val ROUTE_SOURCES = Path("build/ktor-svelte/routes.json")
 private val prettyJson = Json { prettyPrint = true }

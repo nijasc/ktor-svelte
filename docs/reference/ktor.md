@@ -24,6 +24,7 @@ install(Svelte) {
     maxJsonDepth = 64
     maxJsonStringLength = null
     sitemap = true
+    defaultFavicon = true
     siteUrl = null
 
     securityHeaders {
@@ -70,6 +71,7 @@ install(Svelte) {
 | `maxJsonStringLength` | Refuses JSON request bodies on API paths with a longer string, with 400. Off by default |
 | `sitemap` | Serves a generated `/sitemap.xml` and `/robots.txt` when the build has none. On by default. See [Sitemap and robots.txt](../features/endpoints.md#sitemap-and-robots-txt) |
 | `siteUrl` | Public address used in the sitemap, such as `https://example.com`. `null` takes it from the request |
+| `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](../features/endpoints.md#default-favicon) |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](../security.md#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](../features/transport.md#api-compression) |

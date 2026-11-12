@@ -19,6 +19,12 @@ install(Svelte) {
 
 To write your own, put `sitemap.xml` or `robots.txt` in `frontend/static/`. Files from the build always win. `sitemap = false` turns both off. With `routing = SvelteRouting.Manual`, they are only served where you route `svelte()`.
 
+## Default favicon
+
+Browsers ask every site for `/favicon.ico`. Until your app has its own icon, ktor-svelte answers with a ktor-svelte one, so tabs and bookmarks show something and the log has no 404s for it. It serves `/favicon.ico`, `/favicon.svg`, `/favicon.png` and `/apple-touch-icon.png`, cached for a day.
+
+As soon as your build has any of `favicon.ico`, `favicon.svg` or `favicon.png`, for example in `frontend/static/`, none of the defaults are served and yours are used. In development, ktor-svelte checks `frontend/static/` instead. Turn the default off with `defaultFavicon = false`.
+
 ## Status endpoint
 
 ```kotlin
