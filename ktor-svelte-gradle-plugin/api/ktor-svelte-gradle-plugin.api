@@ -177,12 +177,14 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public abstract fun getLucideEnabled ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOverrides ()Lorg/gradle/api/provider/MapProperty;
 	public abstract fun getTailwindSettings ()Lio/github/nijasc/ktor/svelte/gradle/TailwindSettings;
+	public abstract fun getToastsEnabled ()Lorg/gradle/api/provider/Property;
 	public final fun i18n (Lorg/gradle/api/Action;)V
 	public final fun images ()V
 	public final fun lucide ()V
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 	public final fun tailwind (Lorg/gradle/api/Action;)V
 	public static synthetic fun tailwind$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
+	public final fun toasts ()V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/TailwindSettings {
@@ -232,8 +234,8 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec : java
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : java/io/Serializable {
-	public fun <init> (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;Z)V
-	public synthetic fun <init> (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;ZZ)V
+	public synthetic fun <init> (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
 	public final fun component2 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun component3 ()Z
@@ -241,8 +243,9 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun component5 ()I
 	public final fun component6 ()Ljava/lang/String;
 	public final fun component7 ()Z
-	public final fun copy (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;Z)Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;
-	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;ZILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;
+	public final fun component8 ()Z
+	public final fun copy (Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;ZZ)Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;ZLio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;ILjava/lang/String;ZZILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDaisy ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun getDevPort ()I
@@ -252,6 +255,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun getLucide ()Z
 	public final fun getRequiredPackages ()Ljava/util/Set;
 	public final fun getTailwind ()Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
+	public final fun getToasts ()Z
 	public final fun getUsesCss ()Z
 	public final fun getUsesHooks ()Z
 	public fun hashCode ()I

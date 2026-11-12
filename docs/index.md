@@ -38,7 +38,7 @@ features:
     link: /features/transport
     linkText: Transport
   - title: Frontend libraries from Kotlin
-    details: Turn on Tailwind, DaisyUI, Lucide, i18n and image optimization in Gradle, with typed icons, themes and messages on both sides.
+    details: Turn on Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts in Gradle, with typed icons, themes and messages on both sides.
     link: /features/frontend-libraries
     linkText: Libraries
 ---
