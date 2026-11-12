@@ -616,7 +616,19 @@ One command runs everything. Then open Ktor's port, not Vite's:
 ./gradlew svelteDevAll
 ```
 
-It starts Vite, keeps Kotlin compiling and runs your app. Save a Svelte file and the page hot reloads. Save a Kotlin file and the app restarts, and with `generateTs` on your TypeScript updates a moment later, so type errors show up in the editor right away. A restart loses anything your app keeps in memory. Stopping the task stops all three. In IntelliJ, this is the `Dev` run configuration, and each line of output is labelled `[vite]`, `[kotlin]` or `[app]`.
+It starts Vite, keeps Kotlin compiling and runs your app. Save a Svelte file and the page hot reloads. Save a Kotlin file and the app restarts, and with `generateTs` on your TypeScript updates a moment later, so type errors show up in the editor right away. A restart loses anything your app keeps in memory. Stopping the task stops all three. In IntelliJ, this is the `Dev` run configuration.
+
+All three write to one console in the same shape, so you can tell them apart at a glance:
+
+```text
+10:17:17  app      INFO   Application started in 0.959 seconds.
+10:17:17  vite     INFO   (ssr) connected.
+10:17:31  kotlin   ERROR  src/main/kotlin/shop/Routes.kt:24:16 Initializer type mismatch: expected 'Int', actual 'String'.
+10:17:32  kotlin   ERROR  does not compile: 1 error
+10:17:34  kotlin   INFO   compiled
+```
+
+Each source has its own color, and warnings and errors stand out. App lines keep the time and level your logging framework printed, and show the logger's class name when it isn't `Application`. Vite's start banner, its copies of browser console messages, which ktor-svelte forwards itself, and Gradle's build failure boilerplate are left out, because the ready message above already lists the URLs and the compiler errors say what failed. Colors are off when `CI` or `NO_COLOR` is set, or the terminal is `dumb`.
 
 When Kotlin stops compiling, the app keeps running its last good version, and the compiler errors appear in the browser in Vite's error overlay, with the file and line of each. Click the file to open it in your editor, or press Esc to hide the overlay until the errors change. It disappears once the code compiles again.
 
@@ -1464,6 +1476,12 @@ install(Svelte) {
 
 To write your own, put `sitemap.xml` or `robots.txt` in `frontend/static/`. Files from the build always win. `sitemap = false` turns both off. With `routing = SvelteRouting.Manual`, they are only served where you route `svelte()`.
 
+## Default favicon
+
+Browsers ask every site for `/favicon.ico`. Until your app has its own icon, ktor-svelte answers with a ktor-svelte one, so tabs and bookmarks show something and the log has no 404s for it. It serves `/favicon.ico`, `/favicon.svg`, `/favicon.png` and `/apple-touch-icon.png`, cached for a day.
+
+As soon as your build has any of `favicon.ico`, `favicon.svg` or `favicon.png`, for example in `frontend/static/`, none of the defaults are served and yours are used. In development, ktor-svelte checks `frontend/static/` instead. Turn the default off with `defaultFavicon = false`.
+
 ## Status endpoint
 
 ```kotlin
@@ -2118,6 +2136,7 @@ install(Svelte) {
     maxJsonDepth = 64
     maxJsonStringLength = null
     sitemap = true
+    defaultFavicon = true
     siteUrl = null
 
     securityHeaders {
@@ -2164,6 +2183,7 @@ install(Svelte) {
 | `maxJsonStringLength` | Refuses JSON request bodies on API paths with a longer string, with 400. Off by default |
 | `sitemap` | Serves a generated `/sitemap.xml` and `/robots.txt` when the build has none. On by default. See [Sitemap and robots.txt](https://nijasc.github.io/ktor-svelte/main/features/endpoints#sitemap-and-robots-txt) |
 | `siteUrl` | Public address used in the sitemap, such as `https://example.com`. `null` takes it from the request |
+| `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](https://nijasc.github.io/ktor-svelte/main/features/endpoints#default-favicon) |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](https://nijasc.github.io/ktor-svelte/main/security#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](https://nijasc.github.io/ktor-svelte/main/features/transport#api-compression) |
