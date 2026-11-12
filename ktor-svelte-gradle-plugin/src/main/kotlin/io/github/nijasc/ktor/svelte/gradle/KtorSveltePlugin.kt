@@ -1,6 +1,5 @@
 package io.github.nijasc.ktor.svelte.gradle
 
-import io.github.nijasc.ktor.svelte.gradle.libraries.DaisySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
@@ -99,23 +98,11 @@ public class KtorSveltePlugin : Plugin<Project> {
                     ).takeIf { libraries.tailwindSettings.enabled.getOrElse(false) },
                 daisy =
                     libraries.daisySettings.takeIf { it.enabled.getOrElse(false) }?.let { daisy ->
-                        val themes =
-                            daisy.themeNames.get().ifEmpty {
-                                if (daisy.customThemes.get().isEmpty()) {
-                                    listOf(
-                                        "light",
-                                        "dark",
-                                    )
-                                } else {
-                                    emptyList()
-                                }
-                            }
-                        val all = themes + daisy.customThemes.get().map { it.name }
-                        DaisySpec(
-                            themes = themes,
-                            defaultTheme = daisy.defaultThemeName.getOrElse(all.first()),
-                            prefersDark = daisy.prefersDarkName.orNull ?: "dark".takeIf { it in all },
-                            customThemes = daisy.customThemes.get(),
+                        daisySpecOf(
+                            daisy.themeNames.get(),
+                            daisy.customThemes.get(),
+                            daisy.defaultThemeName.orNull,
+                            daisy.prefersDarkName.orNull,
                         )
                     },
                 lucide = libraries.lucideEnabled.getOrElse(false),
