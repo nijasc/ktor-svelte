@@ -17,6 +17,39 @@ type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
 let fieldCount = 0;
 
+const typedBeforeHydration = new WeakMap<EventTarget, string>();
+let remembering = false;
+
+function remember(node: EventTarget | null) {
+    const textInput = (node instanceof HTMLInputElement && node.type !== 'file') || node instanceof HTMLTextAreaElement;
+    if (!textInput) return;
+    if (node.value === node.defaultValue) typedBeforeHydration.delete(node);
+    else typedBeforeHydration.set(node, node.value);
+}
+
+function rememberInput(event: Event) {
+    remember(event.target);
+}
+
+if (typeof document !== 'undefined') {
+    document.querySelectorAll('input, textarea').forEach(remember);
+    document.addEventListener('input', rememberInput, true);
+    remembering = true;
+}
+
+function restoreTypedValue(node: FieldElement) {
+    if (remembering) {
+        remembering = false;
+        queueMicrotask(() => document.removeEventListener('input', rememberInput, true));
+    }
+    const typed = typedBeforeHydration.get(node);
+    if (typed === undefined) return;
+    typedBeforeHydration.delete(node);
+    if (node.value === typed) return;
+    node.value = typed;
+    node.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 export function field(node: FieldElement, options: FieldOptions = {}) {
     const message = document.createElement('p');
     message.id = `ktor-svelte-field-${++fieldCount}`;
@@ -46,5 +79,6 @@ export function field(node: FieldElement, options: FieldOptions = {}) {
     }
 
     apply(options);
+    restoreTypedValue(node);
     return { update: apply, destroy: () => message.remove() };
 }
