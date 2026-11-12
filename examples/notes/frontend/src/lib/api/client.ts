@@ -170,9 +170,36 @@ function isShareable(method: string, options: InternalOptions): boolean {
     return apiConfig.dedupeGets === true && method === 'GET' && !options.signal && !options.fetch && !options.headers;
 }
 
+const prefetched = new Map<string, { response: Promise<unknown>; expires: number }>();
+let prefetchUntil: number | undefined;
+
+function fromPrefetch<T>(url: string, run: () => Promise<T>): Promise<T> | undefined {
+    const until = prefetchUntil;
+    prefetchUntil = undefined;
+    const hit = prefetched.get(url);
+    const fresh = hit !== undefined && hit.expires > Date.now();
+    if (hit && !fresh) prefetched.delete(url);
+    if (until === undefined) {
+        if (!fresh) return undefined;
+        prefetched.delete(url);
+        return hit.response as Promise<T>;
+    }
+    if (fresh) return hit.response as Promise<T>;
+    const response = run();
+    prefetched.set(url, { response, expires: until });
+    response.catch(() => prefetched.delete(url));
+    return response;
+}
+
 export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
     const { url, operation, send } = prepare(method, path, options, 'application/json');
     const run = async () => (await parseResponse(await checked(await send(), url, operation))) as T;
+    if (method === 'GET' && !options.signal && !options.headers) {
+        const early = fromPrefetch(url, run);
+        if (early) return early;
+    } else {
+        prefetchUntil = undefined;
+    }
     if (!isShareable(method, options)) return run();
     const pending = inFlight.get(url) ?? run().finally(() => inFlight.delete(url));
     inFlight.set(url, pending);
@@ -252,5 +279,46 @@ export function latest<A extends unknown[], R>(call: (...args: A) => Promise<R>)
             if (signal.aborted && !isAbortError(error)) throw new DOMException('The request was superseded.', 'AbortError');
             throw error;
         });
+    };
+}
+
+export async function prefetch(call: () => Promise<unknown>, ttl = 10_000): Promise<void> {
+    prefetchUntil = Date.now() + ttl;
+    let pending: Promise<unknown>;
+    try {
+        pending = call();
+    } finally {
+        prefetchUntil = undefined;
+    }
+    await pending.catch(() => undefined);
+}
+
+export function prefetchOnHover(node: HTMLElement, call: () => Promise<unknown>) {
+    let current = call;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const now = () => {
+        clearTimeout(timer);
+        void prefetch(current);
+    };
+    const soon = () => {
+        clearTimeout(timer);
+        timer = setTimeout(now, 50);
+    };
+    const cancel = () => clearTimeout(timer);
+    node.addEventListener('mouseenter', soon);
+    node.addEventListener('mouseleave', cancel);
+    node.addEventListener('focus', now);
+    node.addEventListener('touchstart', now, { passive: true });
+    return {
+        update: (next: () => Promise<unknown>) => {
+            current = next;
+        },
+        destroy: () => {
+            cancel();
+            node.removeEventListener('mouseenter', soon);
+            node.removeEventListener('mouseleave', cancel);
+            node.removeEventListener('focus', now);
+            node.removeEventListener('touchstart', now);
+        }
     };
 }
