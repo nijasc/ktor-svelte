@@ -67,7 +67,7 @@ Generated Kotlin lands in the `io.github.nijasc.ktorsvelte` package. Change it w
 
 ## DaisyUI
 
-`daisyUi()` turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme.
+Use the theme selector in the top bar of this site to see every theme ktor-svelte ships, the shadcn themes included, applied to these pages. `daisyUi()` turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme.
 
 ```svelte
 <script lang="ts">

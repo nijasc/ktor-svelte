@@ -2,6 +2,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import { writeLlmsFiles } from './llms';
+import { THEME_RESTORE_SCRIPT } from './themeScript';
+import { siteThemes } from './themes';
 import { socialHead, writeSocialImages } from './socialImages';
 
 const repository = 'https://github.com/nijasc/ktor-svelte';
@@ -19,7 +21,8 @@ export default defineConfig({
     srcExclude: ['api-reference.md', 'reference/compatibility-matrix.md', 'node_modules/**'],
     head: [
         ['meta', { name: 'theme-color', content: '#ff3e00' }],
-        ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }]
+        ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
+        ['script', {}, THEME_RESTORE_SCRIPT]
     ],
     transformHead({ pageData, siteConfig }) {
         return socialHead(pageData, siteConfig.srcDir, `https://nijasc.github.io${base}`, 'ktor-svelte', description);
@@ -62,6 +65,14 @@ export default defineConfig({
                             .map((name) => [name, readFileSync(directory + name, 'utf8')])
                     );
                     return `export default ${JSON.stringify(files)};`;
+                }
+            },
+            {
+                name: 'site-themes',
+                resolveId: (id) => (id === 'virtual:site-themes' ? '\0virtual:site-themes' : undefined),
+                load(id) {
+                    if (id !== '\0virtual:site-themes') return undefined;
+                    return `export default ${JSON.stringify(siteThemes(new URL('../../', import.meta.url)))};`;
                 }
             },
             {
