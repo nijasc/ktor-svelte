@@ -1678,6 +1678,22 @@ data class Note(val title: String, val icon: LucideIcon)
 
 Each icon loads on demand, so you only download the ones a page uses. An icon's enum name is its Lucide name in PascalCase, such as `arrow-right` to `ArrowRight`. Names starting with a digit get an `Icon` prefix. A misspelled icon name from a client gets a 400 from Ktor.
 
+Only the icons your app uses are built into the frontend. `svelteSync` finds them in your Kotlin code (`LucideIcon.Flame`) and in your frontend (`name="ArrowRight"`, `Icon.Tags`, or a string such as `'Search'`), and writes just those into `src/lib/ktor-svelte/icons.ts`. Lucide has almost 2,000 icons, and each would otherwise become its own file in your JAR. In the notes example, this takes the frontend build from 6,180 files and 11 MB down to 120 files and 1.8 MB. The `LucideIcon` enum and the TypeScript type still list every icon, so anything stored or sent stays valid.
+
+In development, an icon that isn't in the list yet still shows, with a console hint to run `svelteSync`. A production build checks the list and fails with "Run svelteSync" when an icon is missing, so nothing silently disappears. `svelteDevAll` syncs on every Kotlin change.
+
+If icon names come from somewhere the scan can't see, such as a database your users fill or an icon picker, keep all icons:
+
+```kotlin
+svelte {
+    libraries {
+        lucide {
+            allIcons()
+        }
+    }
+}
+```
+
 ## Images
 
 `images()` adds SvelteKit's [`@sveltejs/enhanced-img`](https://svelte.dev/docs/kit/images#sveltejs-enhanced-img). Keep pictures next to your code, for example in `frontend/src/lib/assets`, and use `enhanced:img` instead of `img`:
