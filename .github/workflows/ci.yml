@@ -86,6 +86,40 @@ jobs:
       - run: ./gradlew -p examples/showcase e2eTest svelteCheck
         shell: bash
 
+  browser:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || needs.changes.outputs.examples == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: ./gradlew -p examples/showcase installBrowsers -Pbrowser=${{ matrix.browser }}
+      - run: ./gradlew -p examples/showcase browserTest -Pbrowser=${{ matrix.browser }}
+
+  dev-mode:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || needs.changes.outputs.examples == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: ./gradlew -p examples/showcase installBrowsers
+      - run: ./gradlew -p examples/showcase devBrowserTest
+
   setup:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' || needs.changes.outputs.setup == 'true' }}

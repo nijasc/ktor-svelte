@@ -69,6 +69,8 @@ java scripts/Setup.java --local-build=. --yes --name=demo
 | Plugin | `./gradlew :ktor-svelte-gradle-plugin:functionalTest` | Task graph, up-to-date checks, configuration cache, packaging, with fake tools on `PATH` |
 | Plugin on Gradle 8 | `./gradlew :ktor-svelte-gradle-plugin:functionalTest -PtestGradleVersion=8.14.6 -PtestShadowVersion=9.2.2` | The same, on the oldest supported Gradle |
 | End to end | `./gradlew -p examples/basic e2eTest`, `./gradlew -p examples/notes e2eTest` and `./gradlew -p examples/showcase e2eTest` | A real SvelteKit build in a real JAR, over real HTTP |
+| Browsers | `./gradlew -p examples/showcase browserTest -Pbrowser=chromium`, also with `firefox` and `webkit` | The showcase JAR in a real browser: sign in, forms, uploads, both languages, the Content-Security-Policy, and accessibility checks with axe in a light and a dark theme |
+| Development mode | `./gradlew -p examples/showcase devBrowserTest` | `svelteDevAll` with a real browser: pages through the dev proxy, hot reload of a Svelte file, an app restart after a Kotlin change, and browser errors in the dev log |
 | Frontend types | `./gradlew -p examples/notes svelteCheck` | Generated TypeScript compiles in a real SvelteKit project |
 
 Every behaviour change needs a test. Bug fixes should start with a failing one.
@@ -85,7 +87,9 @@ If you change the API of an example or the generator, refresh the generated clie
 
 ### Testing dev mode by hand
 
-HMR is not covered by automated tests. Check it before changing the dev proxy:
+`devBrowserTest` covers hot reload and restarts on the showcase. It needs ports 8080 and 5173 to be free, and it edits two source files while it runs and puts them back afterwards. The browser tests download their browser on the first run. On Linux, `./gradlew -p examples/showcase installBrowsers -Pbrowser=webkit` also installs the system packages a browser needs.
+
+Some things still need a person. Check them before changing the dev proxy:
 
 1. Run `Notes: Dev` in IntelliJ.
 2. Open `http://localhost:8080/notes` and check that your notes appear.
