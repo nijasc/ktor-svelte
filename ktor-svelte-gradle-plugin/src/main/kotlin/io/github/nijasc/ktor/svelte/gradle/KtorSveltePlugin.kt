@@ -28,6 +28,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
@@ -90,11 +91,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
                 val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
                 task.mainClass.set(project.extensions.getByType(JavaApplication::class.java).mainClass)
-                task.appClasspath.from(
-                    main.map { it.output.classesDirs },
-                    project.layout.projectDirectory.dir("src/main/resources"),
-                    project.configurations.named("runtimeClasspath"),
-                )
+                task.appClasspath.from(developmentClasspath(project))
                 task.dependsOn(main.map { it.output.classesDirs })
                 task.javaLauncher.set(toolchains.launcherFor(project.extensions.getByType(JavaPluginExtension::class.java).toolchain))
             }
@@ -404,11 +401,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.debugPort.set(extension.dev.debugPort)
             task.openBrowser.set(extension.dev.openBrowser)
             task.mainClass.set(application.mainClass)
-            task.appClasspath.from(
-                main.map { it.output.classesDirs },
-                project.layout.projectDirectory.dir("src/main/resources"),
-                project.configurations.named("runtimeClasspath"),
-            )
+            task.appClasspath.from(developmentClasspath(project))
             task.classesDirectories.from(main.map { it.output.classesDirs })
             task.projectDirectory.set(project.layout.projectDirectory)
             task.gradleExecutable.set(gradleExecutablePath(gradleHome))
@@ -417,20 +410,28 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
     }
 
+    private fun developmentClasspath(project: Project): FileCollection {
+        val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
+        val librarySettings =
+            project.tasks
+                .named("svelteGenerateSources", SvelteGenerateSourcesTask::class.java)
+                .flatMap { it.resourcesDirectory }
+        return project.files(
+            main.map { it.output.classesDirs },
+            project.layout.projectDirectory.dir("src/main/resources"),
+            librarySettings,
+            project.configurations.named("runtimeClasspath"),
+        )
+    }
+
     private fun configureGenerateTsExec(
         project: Project,
         extension: SvelteExtension,
         task: JavaExec,
     ) {
-        val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
         task.group = TASK_GROUP
         task.mainClass.set(project.extensions.getByType(JavaApplication::class.java).mainClass)
-        task.classpath =
-            project.files(
-                main.map { it.output.classesDirs },
-                project.layout.projectDirectory.dir("src/main/resources"),
-                project.configurations.named("runtimeClasspath"),
-            )
+        task.classpath = developmentClasspath(project)
         task.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
         task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
     }
