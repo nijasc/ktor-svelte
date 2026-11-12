@@ -31,7 +31,7 @@ routing {
 
 In SvelteKit, put the admin pages under `src/routes/admin/` and check the user once in their layout:
 
-```ts
+```ts no-check
 import { redirect } from '@sveltejs/kit';
 import { apiWith } from '#api';
 import type { LayoutLoad } from './$types';

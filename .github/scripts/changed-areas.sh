@@ -30,7 +30,7 @@ matches() {
   if grep -qE "$1" <<< "$changed"; then echo true; else echo false; fi
 }
 
-code="$(matches '^(ktor-svelte-server/|ktor-svelte-gradle-plugin/|build-logic/|gradle/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradlew|version\.txt$)')"
+code="$(matches '^(ktor-svelte-server/|ktor-svelte-gradle-plugin/|ktor-svelte-catalog/|build-logic/|gradle/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradlew|version\.txt$)')"
 examples="$(matches '^examples/')"
 setup="$(matches '^scripts/')"
 docs="$(matches '^docs/')"

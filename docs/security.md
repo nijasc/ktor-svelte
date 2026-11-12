@@ -162,6 +162,16 @@ It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless
 
 Every [GitHub release](https://github.com/nijasc/ktor-svelte/releases) has a [CycloneDX](https://cyclonedx.org) SBOM for each artifact attached: `ktor-svelte-server-<version>.cdx.json` and `ktor-svelte-gradle-plugin-<version>.cdx.json`. They list the runtime dependencies with versions, licenses and hashes, so you can feed them to Dependency-Track or a license scanner before approving an upgrade. Test and compile-only dependencies are left out. The plugin's own list is short, because Gradle provides the rest.
 
+## Verifying a release
+
+Every JAR of a release, for the runtime and for the Gradle plugin, has signed [SLSA build provenance](https://slsa.dev/spec/v1.0/provenance). It records that the file was built by the release workflow of this repository from the tagged commit, and it is signed with [Sigstore](https://www.sigstore.dev) through GitHub artifact attestations. To check a JAR you downloaded, for example from Maven Central or your Gradle cache, use the GitHub CLI:
+
+```bash
+gh attestation verify ktor-svelte-server-<version>.jar --repo nijasc/ktor-svelte
+```
+
+It fails if the file was changed or built anywhere else. Maven Central also has the usual PGP signature next to every file.
+
 ## Reporting a vulnerability
 
 See [SECURITY.md](https://github.com/nijasc/ktor-svelte/blob/main/SECURITY.md) for how to report a vulnerability privately, and for a table of every secure default.

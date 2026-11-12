@@ -40,7 +40,7 @@ install(Svelte) {
 
 Routes that declare a `text/event-stream` response, for example through `describe`, become async generators. Each event's `data` is parsed as JSON when possible, and the stream ends when the connection closes or you stop iterating:
 
-```ts
+```ts no-check
 for await (const tick of api.ticks.watch()) console.log(tick);
 ```
 
@@ -97,6 +97,7 @@ Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `
 
 ```ts
 import { apiWith } from '#api';
+import type { PageLoad } from './$types';
 
 export const load: PageLoad = async (event) => {
     const api = apiWith(event);
@@ -152,7 +153,7 @@ The ID is available in routes as `call.callId`, and with Ktor's `CallLogging` yo
 
 A request that hangs blocks the UI until the browser gives up, which can take minutes. Set a timeout for every call, or for one:
 
-```ts
+```ts no-check
 import { api, apiConfig, isTimeoutError } from '#api';
 
 apiConfig.timeout = 10_000;

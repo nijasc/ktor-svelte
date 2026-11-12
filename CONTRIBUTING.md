@@ -37,6 +37,7 @@ In IntelliJ, open the repository root, then right-click `ide/settings.gradle.kts
 | `ktor-svelte-server/.../internal/validation/` | `SchemaConstraints`, which checks received values against `JsonSchema` annotations and `Validated` rules |
 | `ktor-svelte-server/.../internal/dev/` | The Vite dev proxy and the status endpoint |
 | `ktor-svelte-server/.../internal/typescript/` | OpenAPI to TypeScript. `TypeScriptGenerator` takes OpenAPI JSON and returns files, so it is easy to test |
+| `ktor-svelte-catalog/` | The published version catalog. It takes the Kotlin, Ktor and serialization versions from `gradle/libs.versions.toml`, so bumping them there updates the catalog too |
 | `ktor-svelte-gradle-plugin/` | The Gradle plugin. `KtorSveltePlugin.kt` wires the tasks in `tasks/`, and `libraries/` generates the files for configured frontend libraries |
 | `build-logic/` | Convention plugins shared by both modules: Kotlin, ktlint and toolchain setup, and the publishing metadata |
 | `examples/basic/` | The smallest possible app |
@@ -98,6 +99,14 @@ cd docs && bun install && bun run dev
 
 `bun run build` fails on any dead link, and CI runs it for every pull request. The changelog page is generated from the GitHub release notes when the site is built.
 
+CI also compiles every Kotlin block and type-checks every TypeScript and Svelte block in the docs, so a renamed setting or helper breaks the build instead of the docs. Run the same check locally:
+
+```bash
+bun docs/scripts/check-snippets.mjs
+```
+
+It needs Java and Bun. Kotlin blocks that configure Gradle (`svelte { }`, `plugins { }`, `dependencies`) are evaluated as build scripts. Other Kotlin blocks are compiled against the server module: statements are wrapped in a function on `Application`, `Route` or `SvelteConfig`, depending on how they start, and blocks on the same page share a package. TypeScript and Svelte blocks are type-checked inside a copy of the notes example frontend, so `#api` is its generated client. Missing imports from `#api` are added automatically. Loose names that a snippet takes for granted, such as `notes` or `showError`, are declared in `docs/snippets/globals.d.ts`, and server stubs such as `store` or `users` live in `docs/snippets/src/main/kotlin/snippets/prelude/Prelude.kt`. Mark a block that can't compile, such as one using routes the notes example lacks, with ` ```ts no-check `. Blocks with placeholders like `"<new version>"` are skipped. Failures name the generated file after the page and line, such as `features_typescript_L31.ts`.
+
 The API reference is built with Dokka from the public API of both modules:
 
 ```bash
@@ -124,7 +133,7 @@ Pull requests only run the jobs their changes can affect. `.github/scripts/chang
 
 | Area | Changed paths | Jobs |
 |---|---|---|
-| code | `ktor-svelte-server/`, `ktor-svelte-gradle-plugin/`, `build-logic/`, `gradle/`, root build files, `version.txt` | everything |
+| code | `ktor-svelte-server/`, `ktor-svelte-gradle-plugin/`, `ktor-svelte-catalog/`, `build-logic/`, `gradle/`, root build files, `version.txt` | everything |
 | examples | `examples/` | example builds, generated client check |
 | setup | `scripts/` | setup script builds |
 | docs | `docs/` | docs site build |
@@ -170,7 +179,7 @@ A change that makes existing apps behave differently, such as a new default, a n
 
 Scopes are `server`, `gradle-plugin`, `example` and `repo`. Write `feat` and `fix` summaries for users, since they appear in the release notes as they are.
 
-There is no changelog file and you never bump a version by hand. [release-please](https://github.com/googleapis/release-please) keeps a release pull request open on `main`. Merging it creates the tag and GitHub release, then publishes both artifacts and attaches a CycloneDX SBOM for each to the release. Run `./gradlew cyclonedxDirectBom` to see them locally in `build/reports/cyclonedx-direct/` of each module.
+There is no changelog file and you never bump a version by hand. [release-please](https://github.com/googleapis/release-please) keeps a release pull request open on `main`. Merging it creates the tag and GitHub release, then publishes both artifacts, attaches a CycloneDX SBOM for each, and records signed build provenance for every published JAR with `actions/attest-build-provenance`. Run `./gradlew cyclonedxDirectBom` to see the SBOMs locally in `build/reports/cyclonedx-direct/` of each module.
 
 The release workflow needs these repository secrets:
 

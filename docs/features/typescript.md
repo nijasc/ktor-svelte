@@ -111,7 +111,7 @@ post("/api/notes/{id}/attachments") { /* ... */ }.describe {
 }
 ```
 
-```ts
+```ts no-check
 /**
  * Uploads files to a note.
  *

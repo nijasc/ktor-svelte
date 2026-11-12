@@ -20,7 +20,7 @@ routing {
 }
 ```
 
-```svelte
+```svelte no-check
 <script lang="ts">
     import { api, type Tick } from '#api';
 
