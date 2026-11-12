@@ -20,6 +20,7 @@ import io.github.nijasc.ktor.svelte.internal.constantGetPaths
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.DevRequestLog
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
+import io.github.nijasc.ktor.svelte.internal.dev.browserLogRoute
 import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
@@ -107,7 +108,13 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val devProxy =
             if (isDevProxyActive(pluginConfig.devConfig.mode, application)) {
                 requireAllowedTarget(devUrl, allowRemote)
-                DevProxy(devUrl, pluginConfig.devConfig.panel)
+                DevProxy(
+                    devUrl,
+                    listOfNotNull(
+                        "panel".takeIf { pluginConfig.devConfig.panel },
+                        "logs".takeIf { pluginConfig.devConfig.browserLogs },
+                    ),
+                )
             } else {
                 null
             }
@@ -241,6 +248,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 catchAll(handler)
             }
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
+            if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
             if (devRequests != null) devRequestRoutes(devRequests, allowRemote)
             if (publicConfig != null) {
                 get(PUBLIC_CONFIG_PATH) {

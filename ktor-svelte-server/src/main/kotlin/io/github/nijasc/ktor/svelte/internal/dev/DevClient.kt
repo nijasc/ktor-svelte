@@ -27,11 +27,11 @@ private val devClientScript: String by lazy {
 
 internal fun injectDevClient(
     html: String,
-    panel: Boolean,
+    features: List<String>,
 ): String {
     if (DEV_CLIENT_PATH in html) return html
     val head = html.indexOf("</head>", ignoreCase = true)
-    val source = if (panel) "$DEV_CLIENT_PATH?panel" else DEV_CLIENT_PATH
+    val source = if (features.isEmpty()) DEV_CLIENT_PATH else "$DEV_CLIENT_PATH?" + features.joinToString("&")
     val tag = "<script type=\"module\" src=\"$source\"></script>"
     return if (head < 0) html else html.substring(0, head) + tag + html.substring(head)
 }
