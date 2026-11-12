@@ -52,6 +52,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 ## Upgrading
 
 - [Overview](https://nijasc.github.io/ktor-svelte/main/migrations/)
+- [What is new in 1.0](https://nijasc.github.io/ktor-svelte/main/releases/1.0)
 - [To 1.0](https://nijasc.github.io/ktor-svelte/main/migrations/1.0)
 - [To 0.11](https://nijasc.github.io/ktor-svelte/main/migrations/0.11)
 - [To 0.10](https://nijasc.github.io/ktor-svelte/main/migrations/0.10)
