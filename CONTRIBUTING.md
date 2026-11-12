@@ -176,7 +176,7 @@ type(scope): summary
 |---|---|---|
 | `feat` | Something new for users | Minor |
 | `fix` | A bug users can hit | Patch |
-| `feat!` or `BREAKING CHANGE:` | Anything that breaks users | Major, or minor before 1.0 |
+| `feat!` or `BREAKING CHANGE:` | Anything that breaks users | Major |
 | `docs`, `test`, `build`, `ci`, `refactor`, `chore` | Everything else | None |
 
 A change that makes existing apps behave differently, such as a new default, a new response status or a renamed setting, also adds its steps to the upgrade guide of the next minor release in `docs/migrations/`, and lists it in `docs/migrations/index.md` and the sidebar. The changelog links a release to its guide when the file exists.
