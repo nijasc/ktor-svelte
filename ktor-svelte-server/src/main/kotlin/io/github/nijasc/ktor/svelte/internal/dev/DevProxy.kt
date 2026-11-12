@@ -136,6 +136,7 @@ internal fun upstreamUri(
 
 internal class DevProxy(
     baseUrl: String,
+    private val panel: Boolean = false,
 ) {
     private val client =
         HttpClient
@@ -243,7 +244,7 @@ internal class DevProxy(
             call.respond(ProxiedHeaders(status, contentType, contentLength, headers))
         } else if (injectable) {
             val html = withContext(Dispatchers.IO) { response.body().use { it.readBytes() } }.toString(Charsets.UTF_8)
-            call.respond(ProxiedBytes(status, contentType, headers, injectDevClient(html).toByteArray()))
+            call.respond(ProxiedBytes(status, contentType, headers, injectDevClient(html, panel).toByteArray()))
         } else {
             call.respond(ProxiedBody(status, contentType, contentLength, headers, response.body()))
         }

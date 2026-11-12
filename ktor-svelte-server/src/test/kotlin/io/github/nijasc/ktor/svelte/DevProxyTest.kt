@@ -20,6 +20,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.install
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.readUTF8Line
@@ -120,7 +121,7 @@ class DevProxyTest {
                 }
             }
             val page = client.get("/html-page")
-            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js\"></script>"
+            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js?panel\"></script>"
             val html = "<html><head><title>x</title>$script</head><body>page</body></html>"
             assertEquals(html, page.bodyAsText())
             assertEquals(html.length.toString(), page.headers[HttpHeaders.ContentLength])
@@ -128,6 +129,53 @@ class DevProxyTest {
             val devClient = client.get("/_ktor-svelte/dev/client.js")
             assertContains(devClient.headers[HttpHeaders.ContentType].orEmpty(), "javascript")
             assertContains(devClient.bodyAsText(), "vite-error-overlay")
+        }
+
+    @Test
+    fun `the dev panel streams API calls with status, timing and validation errors`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.ALWAYS
+                    }
+                }
+                routing {
+                    get("/api/hello") { call.respondText("hi") }
+                    post("/api/notes") { throw ValidationException(mapOf("title" to listOf("Required."))) }
+                }
+            }
+            client.get("/api/hello") { header(HttpHeaders.XRequestId, "abc") }
+            client.post("/api/notes")
+            client.get("/about")
+            val lines =
+                client.prepareGet("/_ktor-svelte/dev/requests").execute { response ->
+                    assertContains(response.headers[HttpHeaders.ContentType].orEmpty(), "text/event-stream")
+                    val channel = response.bodyAsChannel()
+                    listOf(channel.readUTF8Line(), channel.readUTF8Line(), channel.readUTF8Line())
+                }
+            assertContains(lines[0].orEmpty(), "\"method\":\"GET\",\"path\":\"/api/hello\",\"status\":200")
+            assertContains(lines[0].orEmpty(), "\"id\":\"abc\"")
+            assertEquals("", lines[1])
+            assertContains(lines[2].orEmpty(), "\"path\":\"/api/notes\",\"status\":422")
+            assertContains(lines[2].orEmpty(), "\"fields\":{\"title\":[\"Required.\"]}")
+        }
+
+    @Test
+    fun `the dev panel can be turned off`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.ALWAYS
+                        panel = false
+                    }
+                }
+            }
+            assertContains(client.get("/html-page").bodyAsText(), "src=\"/_ktor-svelte/dev/client.js\"")
+            assertEquals("vite:/_ktor-svelte/dev/requests", client.get("/_ktor-svelte/dev/requests").bodyAsText())
         }
 
     @Test
