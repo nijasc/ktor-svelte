@@ -74,6 +74,8 @@ install(Svelte) {
 
 **Body size limit.** Request bodies on API paths are limited to 1 MiB. Larger bodies get 413, whether they send `Content-Length` or are chunked. It uses Ktor's `RequestBodyLimit` plugin, so do not install that plugin yourself unless you set `maxApiBodySize = null`.
 
+A compressed request body is a way around a size limit, because a few kilobytes can unpack to gigabytes. Ktor only unpacks request bodies when its `Compression` plugin is installed for requests, which `transport { compression() }` does. ktor-svelte then applies the same limit to the unpacked size, so such a body gets 413 as well. The default API compression only compresses responses and never unpacks requests. If you install `Compression` yourself, set its `maxDecodedContentLength`.
+
 A refused cross-origin write gets `{"message":"Cross-origin API request refused."}`. In development mode the message also says how to allow the origin, which production leaves out so it does not tell attackers which setting to look for. Other refused requests get a JSON body such as `{"message":"Request body is larger than the limit of 1048576 bytes."}`.
 
 **Error details.** In production, an exception that no route handles answers with its status and a generic message, such as `{"message":"Internal Server Error."}` on API paths, instead of the exception message, which Ktor sends by default and which can reveal internals. Malformed or unreadable bodies keep their 400 or 415 without naming your classes. The exception is still logged. In development mode, or when you install `StatusPages`, nothing changes. Set `hideErrorDetails = false` to send the messages again.
@@ -157,6 +159,28 @@ rateLimit {
 The default limit runs before routing, so read the user from the session there, not from `call.principal()`, which only `authenticate` routes set. Do not read the request body in a key: it would be gone by the time your route receives it.
 
 It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless you set `rateLimit { enabled = false }`. `apiWrites = 0` keeps the named limits but drops the default one.
+
+## Malformed requests
+
+A path with a broken percent escape, such as `/%zz`, and a `Host` header that cannot be parsed answer 400. They are the client's mistake, so they do not show up as errors in your log.
+
+## What runs on your machine
+
+ktor-svelte runs other people's code in three places, and it is worth knowing which.
+
+**The setup script.** `setup.sh` and `setup.ps1` ask Maven Central for the latest version, download `scripts/Setup.java` for that version's tag from this repository over HTTPS, and run it with your `java`. Nothing is installed globally. The shell script does nothing until it has arrived completely, and both scripts refuse a version that is not made of letters, digits, dots and dashes. If you would rather read the code first, download it and run it yourself:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/nijasc/ktor-svelte/v<version>/scripts/Setup.java
+```
+
+```bash
+java Setup.java --version=<version>
+```
+
+**Your package manager.** `svelteInstall` runs `bun install --frozen-lockfile`, `npm ci`, `pnpm install --frozen-lockfile` or `yarn install --frozen-lockfile`, so a build only installs what your lockfile names. Install scripts of dependencies run as your package manager allows: Bun and pnpm only run them for packages you trust explicitly, npm and Yarn run them for every package unless you set `ignore-scripts`. ktor-svelte does not change that setting for you. Only `svelteSync`, `svelteInit` and `svelteUpdateDependencies` change `package.json` or the lockfile, and never as part of a build.
+
+**The pinned Bun.** With `bunVersion` set, the plugin downloads that exact Bun release from GitHub and checks it against the release's `SHASUMS256.txt` before unpacking it. See [Pin Bun](reference/gradle.md#pin-bun).
 
 ## Software bill of materials
 

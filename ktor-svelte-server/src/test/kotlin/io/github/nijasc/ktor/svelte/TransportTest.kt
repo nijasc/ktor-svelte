@@ -8,6 +8,7 @@ import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -22,7 +23,9 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.Serializable
+import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -159,6 +162,42 @@ class TransportTest {
 
             val api = client.get("/api/greeting") { header(HttpHeaders.AcceptEncoding, browser) }
             assertEquals(listOf("gzip"), api.headers.getAll(HttpHeaders.ContentEncoding))
+        }
+
+    @Test
+    fun `a compressed request body cannot grow past the body limit`() =
+        testApplication {
+            val build = fixtureBuild()
+            application {
+                install(Svelte) {
+                    source = SvelteSource.Directory(build)
+                    dev { mode = DevMode.Never }
+                    maxApiBodySize = 1024
+                    transport {
+                        json()
+                        compression()
+                    }
+                }
+                greetingRoutes()
+            }
+
+            fun gzip(text: String): ByteArray =
+                ByteArrayOutputStream().also { bytes -> GZIPOutputStream(bytes).use { it.write(text.toByteArray()) } }.toByteArray()
+
+            suspend fun send(text: String) =
+                client.post("/api/greeting") {
+                    header(HttpHeaders.ContentEncoding, "gzip")
+                    contentType(ContentType.Application.Json)
+                    setBody(gzip(text))
+                }
+
+            val small = send("""{"message":"hi"}""")
+            assertEquals(HttpStatusCode.OK, small.status)
+            assertContains(small.bodyAsText(), "hi")
+
+            val inflated = """{"message":"${"a".repeat(200_000)}"}"""
+            assertTrue(gzip(inflated).size < 1024)
+            assertEquals(HttpStatusCode.PayloadTooLarge, send(inflated).status)
         }
 
     @Test

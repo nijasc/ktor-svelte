@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte.internal.assets
 
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLBuilder
 import io.ktor.http.URLProtocol
 import io.ktor.http.encodeURLPath
@@ -30,6 +31,10 @@ internal class SiteFiles(
         manifest: Manifest,
     ) {
         val base = siteUrl ?: requestBaseUrl(call)
+        if (base == null) {
+            call.respondText("${HttpStatusCode.BadRequest.description}.", status = HttpStatusCode.BadRequest)
+            return
+        }
         call.response.header(HttpHeaders.CacheControl, "no-cache")
         if (path == SITEMAP_PATH) {
             call.respondText(sitemapXml(base, manifest), ContentType.Application.Xml.withCharset(Charsets.UTF_8))
@@ -73,14 +78,17 @@ private fun pageUrl(file: String): String =
         else -> "/" + file.removeSuffix(".html")
     }
 
-private fun requestBaseUrl(call: ApplicationCall): String {
-    val origin = call.request.origin
-    return URLBuilder(
-        protocol = URLProtocol.createOrDefault(origin.scheme),
-        host = origin.serverHost,
-        port = origin.serverPort,
-    ).buildString().trimEnd('/')
-}
+private fun requestBaseUrl(call: ApplicationCall): String? =
+    try {
+        val origin = call.request.origin
+        URLBuilder(
+            protocol = URLProtocol.createOrDefault(origin.scheme),
+            host = origin.serverHost,
+            port = origin.serverPort,
+        ).buildString().trimEnd('/')
+    } catch (_: IllegalArgumentException) {
+        null
+    }
 
 private fun escapeXml(value: String): String =
     value

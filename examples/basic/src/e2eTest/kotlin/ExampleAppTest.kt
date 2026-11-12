@@ -2,6 +2,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import java.io.File
 import java.net.ServerSocket
+import java.net.Socket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -55,6 +56,26 @@ class ExampleAppTest {
     }
 
     private val html = "Accept" to "text/html"
+
+    private fun statusOf(
+        requestLine: String,
+        host: String = "localhost:$port",
+    ): String =
+        Socket("localhost", port).use { socket ->
+            socket.getOutputStream().write("$requestLine HTTP/1.1\r\nHost: $host\r\nAccept: text/html\r\nConnection: close\r\n\r\n".toByteArray())
+            socket.getInputStream().bufferedReader().readLine().orEmpty()
+        }
+
+    @Test
+    fun `requests that cannot be read are bad requests, not server errors`() {
+        listOf("GET /%", "GET /%zz", "GET /api/%zz", "GET /_app/%").forEach { requestLine ->
+            assertContains(statusOf(requestLine), " 400 ", message = requestLine)
+        }
+        listOf("/sitemap.xml", "/robots.txt").forEach { path ->
+            assertContains(statusOf("GET $path", host = "localhost:$port@evil.example"), " 400 ", message = path)
+        }
+        assertContains(statusOf("GET /"), " 200 ")
+    }
 
     @Test
     fun `api route answers on the same port`() {

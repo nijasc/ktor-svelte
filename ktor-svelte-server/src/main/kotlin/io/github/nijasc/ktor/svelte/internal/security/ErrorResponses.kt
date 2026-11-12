@@ -18,6 +18,18 @@ internal fun mayHideErrorDetails(call: ApplicationCall): Boolean =
         call.application.pluginRegistry.allKeys
             .none { it.name == STATUS_PAGES_PLUGIN }
 
+internal suspend fun respondBadRequest(
+    call: ApplicationCall,
+    asJson: Boolean,
+) {
+    val message = "${HttpStatusCode.BadRequest.description}."
+    if (asJson) {
+        respondJsonMessage(call, HttpStatusCode.BadRequest, message)
+    } else {
+        call.respondText(message, status = HttpStatusCode.BadRequest)
+    }
+}
+
 internal suspend fun respondWithoutDetails(
     call: ApplicationCall,
     cause: Throwable,
