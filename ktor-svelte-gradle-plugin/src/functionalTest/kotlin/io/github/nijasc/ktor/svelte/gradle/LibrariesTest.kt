@@ -225,6 +225,50 @@ class LibrariesTest {
     }
 
     @Test
+    fun `tasks that start the app in development see the library settings`() {
+        val project = TestProject(dir)
+        project.buildScript(
+            """
+            plugins {
+                java
+                application
+                id("io.github.nijasc.ktor-svelte")
+            }
+
+            svelte {
+                addRuntimeDependency = false
+                libraries {
+                    i18n { locales("en", "de") }
+                }
+            }
+
+            application {
+                mainClass = "Main"
+            }
+            """.trimIndent(),
+        )
+        messages(project)
+        project.run("svelteSync")
+        val source = dir.resolve("src/main/java/Main.java")
+        source.parentFile.mkdirs()
+        source.writeText(
+            """
+            public class Main {
+                public static void main(String[] args) throws Exception {
+                    java.util.Properties settings = new java.util.Properties();
+                    try (java.io.InputStream stream = Main.class.getClassLoader().getResourceAsStream("ktor-svelte/libraries.properties")) {
+                        if (stream != null) settings.load(stream);
+                    }
+                    System.out.println("locales=" + settings.getProperty("i18n.locales"));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertContains(project.run("svelteGenerateTs").output, "locales=en,de")
+    }
+
+    @Test
     fun `configuration cache works with libraries`() {
         val project = project("tailwind()")
         project.run("svelteSync", "--configuration-cache")
