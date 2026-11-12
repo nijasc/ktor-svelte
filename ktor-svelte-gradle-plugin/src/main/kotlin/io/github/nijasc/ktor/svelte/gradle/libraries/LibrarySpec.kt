@@ -56,6 +56,7 @@ public data class LibrarySpec(
     val generatedPackage: String,
     val images: Boolean = false,
     val toasts: Boolean = false,
+    val allIcons: Boolean = false,
 ) : Serializable {
     val isEmpty: Boolean get() = tailwind == null && daisy == null && !lucide && i18n == null && !images && !toasts
     val usesCss: Boolean get() = tailwind != null || daisy != null

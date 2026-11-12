@@ -34,16 +34,20 @@ internal fun frontendFiles(
         }
     }
 
-internal fun iconSources(iconFiles: List<String>): Map<String, String> {
+internal fun iconSources(
+    iconFiles: List<String>,
+    used: Set<String>? = null,
+): Map<String, String> {
     val entries = iconFiles.sorted().map { iconConstant(it) to it }
     val loaders =
-        entries.joinToString("\n") { (constant, file) ->
-            "    $constant: () => import('@lucide/svelte/icons/$file'),"
+        entries.filter { (constant, _) -> used == null || constant in used }.joinToString("") { (constant, file) ->
+            "    $constant: () => import('@lucide/svelte/icons/$file'),\n"
         }
+    val names = entries.joinToString("\n") { (constant, _) -> "    | '$constant'" }
     val icons =
         HEADER + "import type { Component } from 'svelte';\n\n" +
-            "export const icons = {\n$loaders\n} satisfies Record<string, () => Promise<{ default: Component<any> }>>;\n\n" +
-            "export type LucideIconName = keyof typeof icons;\n"
+            "export type LucideIconName =\n$names;\n\n" +
+            "export const icons: Partial<Record<LucideIconName, () => Promise<{ default: Component<any> }>>> = {\n$loaders};\n"
     return mapOf(
         "$GENERATED_DIR/icons.ts" to icons,
         "$GENERATED_DIR/icons.json" to json(entries.map { it.first }) + "\n",
