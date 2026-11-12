@@ -31,8 +31,27 @@ class ConfigAssessmentTest {
     @Test
     fun `without the app only build settings are scored`() {
         val checks = assess(gradle, null)
-        assertEquals(3, checks.size)
-        assertTrue(checks.all { it.passed })
+        assertEquals(6, checks.size)
+        assertEquals(
+            listOf(
+                "Images are resized and served as AVIF and WebP",
+                "Every machine builds with the same Bun",
+                "Failed API calls are shown to users",
+            ),
+            checks.filterNot { it.passed }.map { it.label },
+        )
+        val complete = gradle + mapOf("libraries.images" to "true", "libraries.toasts" to "true", "bunVersion" to "1.3.14")
+        assertTrue(assess(complete, null).all { it.passed })
+    }
+
+    @Test
+    fun `a sitemap without siteUrl gets a suggestion`() {
+        val withSitemap = secureDefaults + ("sitemap" to true)
+        assertTrue(assess(gradle, withSitemap).any { it.label.startsWith("Sitemap URLs") && !it.passed })
+        assertTrue(
+            assess(gradle, withSitemap + ("siteUrl" to "https://example.com")).any { it.label.startsWith("Sitemap URLs") && it.passed },
+        )
+        assertTrue(assess(gradle, secureDefaults).none { it.label.startsWith("Sitemap URLs") })
     }
 
     @Test

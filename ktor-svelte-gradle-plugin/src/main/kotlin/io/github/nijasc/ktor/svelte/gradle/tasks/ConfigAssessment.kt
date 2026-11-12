@@ -56,6 +56,24 @@ internal fun assess(
         "Set svelte { precompress = true } so gzip and brotli files are served without compressing on every request.",
     )
     check(
+        Area.PERFORMANCE,
+        gradle["libraries.images"] == "true",
+        "Images are resized and served as AVIF and WebP",
+        "Turn on svelte { libraries { images() } } and use enhanced:img for pictures in src/lib/assets.",
+    )
+    check(
+        Area.OPERATIONS,
+        gradle["bunVersion"].let { it != null && it != "not pinned" },
+        "Every machine builds with the same Bun",
+        "Set svelte { bunVersion = \"1.3.14\" } so CI and new laptops download the same Bun instead of needing one installed.",
+    )
+    check(
+        Area.DEVELOPER_EXPERIENCE,
+        gradle["libraries.toasts"] == "true",
+        "Failed API calls are shown to users",
+        "Turn on svelte { libraries { toasts() } } so failed API calls show a message without handling code.",
+    )
+    check(
         Area.DEVELOPER_EXPERIENCE,
         gradle["verifyTs"] != "false",
         "check verifies the generated TypeScript",
@@ -150,6 +168,14 @@ internal fun assess(
         "A health endpoint for load balancers",
         "Set healthEndpoint = true and point your orchestrator at /_ktor-svelte/health.",
     )
+    if (app.flag("sitemap") == true) {
+        check(
+            Area.OPERATIONS,
+            app.isSet("siteUrl"),
+            "Sitemap URLs don't depend on the request's Host",
+            "Set siteUrl = \"https://example.com\" so sitemap.xml and robots.txt always name your public address.",
+        )
+    }
     check(
         Area.OPERATIONS,
         app.flag("requestIds") != false,
@@ -254,7 +280,7 @@ internal fun renderReport(
             appendLine("Nothing to suggest. Every check passes.")
         } else {
             appendLine("Suggestions")
-            failed.forEach { appendLine("  - [${it.area.label}] ${it.suggestion}") }
+            failed.sortedBy { it.area }.forEach { appendLine("  - [${it.area.label}] ${it.suggestion}") }
         }
         val passedChecks = checks.filter { it.passed }
         if (passedChecks.isNotEmpty()) {
