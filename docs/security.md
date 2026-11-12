@@ -158,6 +158,10 @@ The default limit runs before routing, so read the user from the session there, 
 
 It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless you set `rateLimit { enabled = false }`. `apiWrites = 0` keeps the named limits but drops the default one.
 
+## Software bill of materials
+
+Every [GitHub release](https://github.com/nijasc/ktor-svelte/releases) has a [CycloneDX](https://cyclonedx.org) SBOM for each artifact attached: `ktor-svelte-server-<version>.cdx.json` and `ktor-svelte-gradle-plugin-<version>.cdx.json`. They list the runtime dependencies with versions, licenses and hashes, so you can feed them to Dependency-Track or a license scanner before approving an upgrade. Test and compile-only dependencies are left out. The plugin's own list is short, because Gradle provides the rest.
+
 ## Reporting a vulnerability
 
 See [SECURITY.md](https://github.com/nijasc/ktor-svelte/blob/main/SECURITY.md) for how to report a vulnerability privately, and for a table of every secure default.
