@@ -22,32 +22,36 @@ internal val PACKAGE_VERSIONS =
         "@sveltejs/enhanced-img" to "1.0.0",
     )
 
-public data class TailwindSpec(
+@ConsistentCopyVisibility
+public data class TailwindSpec internal constructor(
     val typography: Boolean,
     val forms: Boolean,
 ) : Serializable
 
-public data class DaisySpec(
+@ConsistentCopyVisibility
+public data class DaisySpec internal constructor(
     val themes: List<String>,
     val defaultTheme: String,
     val prefersDark: String?,
     val customThemes: List<DaisyCustomTheme>,
     val order: List<String> = emptyList(),
 ) : Serializable {
-    val allThemes: List<String>
+    internal val allThemes: List<String>
         get() {
             val defined = themes + customThemes.map { it.name }
             return order.filter { it in defined } + defined.filterNot { it in order }
         }
 }
 
-public data class I18nSpec(
+@ConsistentCopyVisibility
+public data class I18nSpec internal constructor(
     val locales: List<String>,
     val defaultLocale: String,
     val strategy: LocaleStrategy,
 ) : Serializable
 
-public data class LibrarySpec(
+@ConsistentCopyVisibility
+public data class LibrarySpec internal constructor(
     val tailwind: TailwindSpec?,
     val daisy: DaisySpec?,
     val lucide: Boolean,
@@ -58,11 +62,11 @@ public data class LibrarySpec(
     val toasts: Boolean = false,
     val allIcons: Boolean = false,
 ) : Serializable {
-    val isEmpty: Boolean get() = tailwind == null && daisy == null && !lucide && i18n == null && !images && !toasts
-    val usesCss: Boolean get() = tailwind != null || daisy != null
-    val usesHooks: Boolean get() = daisy != null || i18n != null
+    internal val isEmpty: Boolean get() = tailwind == null && daisy == null && !lucide && i18n == null && !images && !toasts
+    internal val usesCss: Boolean get() = tailwind != null || daisy != null
+    internal val usesHooks: Boolean get() = daisy != null || i18n != null
 
-    val requiredPackages: Set<String>
+    internal val requiredPackages: Set<String>
         get() =
             buildSet {
                 if (tailwind != null) {
@@ -76,7 +80,7 @@ public data class LibrarySpec(
                 if (images) add("@sveltejs/enhanced-img")
             }
 
-    public fun validate() {
+    internal fun validate() {
         if (daisy != null) {
             if (daisy.allThemes.isEmpty()) throw GradleException("daisyUi needs at least one theme." + DocLink.DAISYUI.see())
             if (daisy.defaultTheme !in daisy.allThemes) {

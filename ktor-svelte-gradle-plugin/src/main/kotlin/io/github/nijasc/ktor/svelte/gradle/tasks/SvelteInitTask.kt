@@ -29,7 +29,7 @@ private val TEMPLATE_FILES =
 
 private val DOTFILES = setOf("gitignore", "editorconfig")
 
-private val PREFERRED_TOOLS = listOf(PackageManager.BUN, PackageManager.PNPM, PackageManager.NPM, PackageManager.YARN)
+private val PREFERRED_TOOLS = listOf(PackageManager.Bun, PackageManager.Pnpm, PackageManager.Npm, PackageManager.Yarn)
 
 @UntrackedTask(because = "Creates the frontend project once")
 public abstract class SvelteInitTask : SvelteToolTask() {
@@ -45,7 +45,7 @@ public abstract class SvelteInitTask : SvelteToolTask() {
             throw GradleException("ktor-svelte will not overwrite $target because it is not empty." + DocLink.CREATE_A_PROJECT.see())
         }
         val tool = FrontendTool(chooseTool())
-        if (!(bunVersion.isPresent && tool.packageManager == PackageManager.BUN)) requireToolOnPath(tool)
+        if (!(bunVersion.isPresent && tool.packageManager == PackageManager.Bun)) requireToolOnPath(tool)
         TEMPLATE_FILES.forEach { path -> copyTemplate(path, target) }
         runToolQuietly(tool, listOf("install"))
         logger.lifecycle("ktor-svelte: created a SvelteKit project in $target using ${tool.executableName}.")
@@ -59,8 +59,8 @@ public abstract class SvelteInitTask : SvelteToolTask() {
                 ?: throw GradleException("Unknown package manager '$requested'. Use bun, pnpm, npm or yarn.")
         }
         val configured = packageManager.get()
-        if (configured != PackageManager.AUTO) return configured
-        if (bunVersion.isPresent) return PackageManager.BUN
+        if (configured != PackageManager.Auto) return configured
+        if (bunVersion.isPresent) return PackageManager.Bun
         return PREFERRED_TOOLS.firstOrNull { locateExecutable(FrontendTool(it).executableName) != null }
             ?: throw GradleException("ktor-svelte found no package manager on PATH. Install bun, pnpm, npm or yarn.")
     }

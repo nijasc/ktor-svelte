@@ -32,7 +32,7 @@ class RateLimitTest {
             install(XForwardedHeaders)
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 config()
             }
             routing {
@@ -94,7 +94,7 @@ class RateLimitTest {
                 install(RateLimit) { register(RateLimitName("mine")) { rateLimiter(limit = 1, refillPeriod = 1.minutes) } }
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                     rateLimit { enabled = false }
                 }
                 routing { post("/api/notes") { call.respondText("created") } }
@@ -112,7 +112,7 @@ class RateLimitTest {
                         install(RateLimit) { register(RateLimitName("mine")) { rateLimiter(limit = 1, refillPeriod = 1.minutes) } }
                         install(Svelte) {
                             source = SvelteSource.Directory(build)
-                            dev { mode = DevMode.NEVER }
+                            dev { mode = DevMode.Never }
                         }
                     }
                     startApplication()

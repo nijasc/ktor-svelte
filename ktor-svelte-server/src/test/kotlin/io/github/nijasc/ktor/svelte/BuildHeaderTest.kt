@@ -25,7 +25,7 @@ class BuildHeaderTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 config()
             }
             routing { get("/api/ping") { call.respondText("pong", ContentType.Text.Plain) } }
@@ -50,7 +50,7 @@ class BuildHeaderTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 routing { get("/api/ping") { call.respondText("pong") } }
             }

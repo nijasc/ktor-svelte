@@ -55,13 +55,14 @@ public enum class LocaleStrategy {
     UrlPrefix,
 }
 
-public data class DaisyCustomTheme(
+@ConsistentCopyVisibility
+public data class DaisyCustomTheme internal constructor(
     val name: String,
     val colorScheme: String,
     val colors: Map<String, String>,
 ) : Serializable
 
-public class DaisyCustomThemeBuilder {
+public class DaisyCustomThemeBuilder internal constructor() {
     private val values = linkedMapOf<String, String>()
 
     public var primary: String? by color("primary")

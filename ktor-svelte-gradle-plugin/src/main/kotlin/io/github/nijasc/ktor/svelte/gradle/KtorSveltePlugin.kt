@@ -455,7 +455,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         val extension = project.extensions.create("svelte", SvelteExtension::class.java)
         extension.frontendDir.convention(project.layout.projectDirectory.dir("frontend"))
         extension.outputDir.convention("build")
-        extension.packageManager.convention(PackageManager.AUTO)
+        extension.packageManager.convention(PackageManager.Auto)
         extension.buildScript.convention("build")
         extension.addRuntimeDependency.convention(true)
         extension.includeSourceMaps.convention(false)

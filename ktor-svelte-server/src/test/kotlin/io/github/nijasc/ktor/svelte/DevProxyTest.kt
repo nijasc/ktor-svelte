@@ -98,7 +98,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -116,7 +116,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -138,7 +138,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
                 routing {
@@ -169,7 +169,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                         panel = false
                     }
                 }
@@ -189,7 +189,7 @@ class DevProxyTest {
                     install(Svelte) {
                         dev {
                             url = viteUrl
-                            mode = DevMode.ALWAYS
+                            mode = DevMode.Always
                         }
                     }
                 }
@@ -217,7 +217,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -234,7 +234,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -252,7 +252,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -268,7 +268,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
                 routing { get("/health") { call.respondText("ok") } }
@@ -285,7 +285,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -312,7 +312,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -327,7 +327,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -344,7 +344,7 @@ class DevProxyTest {
                     source = SvelteSource.Directory(build)
                     dev {
                         url = unusedUrl()
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -359,7 +359,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = unusedUrl()
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -401,7 +401,7 @@ class DevProxyTest {
                     source = SvelteSource.Directory(build)
                     dev {
                         url = viteUrl
-                        mode = DevMode.NEVER
+                        mode = DevMode.Never
                     }
                 }
             }
@@ -446,7 +446,7 @@ class DevProxyTest {
                     install(Svelte) {
                         dev {
                             url = "http://localhost:${server.address.port}"
-                            mode = DevMode.ALWAYS
+                            mode = DevMode.Always
                         }
                     }
                 }
@@ -471,7 +471,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }
@@ -494,7 +494,7 @@ class DevProxyTest {
                         install(Svelte) {
                             dev {
                                 url = "http://vite.example.com:5173"
-                                mode = DevMode.ALWAYS
+                                mode = DevMode.Always
                             }
                         }
                     }
@@ -511,7 +511,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = "http://vite.example.invalid:5173"
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                         allowRemote = true
                     }
                 }
@@ -578,7 +578,7 @@ class DevProxyTest {
                 install(Svelte) {
                     dev {
                         url = viteUrl
-                        mode = DevMode.ALWAYS
+                        mode = DevMode.Always
                     }
                 }
             }

@@ -45,7 +45,7 @@ class TransportTest {
         val build = fixtureBuild()
         install(Svelte) {
             source = SvelteSource.Directory(build)
-            dev { mode = DevMode.NEVER }
+            dev { mode = DevMode.Never }
             transport(transportConfig)
         }
     }
@@ -99,7 +99,7 @@ class TransportTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                     transport {
                         json()
                         compression { gzip { minimumSize(1) } }
@@ -120,7 +120,7 @@ class TransportTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 install(ContentNegotiation)
                 install(Compression)

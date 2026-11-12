@@ -20,7 +20,7 @@ internal class NamedRateLimit(
 )
 
 @KtorDsl
-public class SvelteRateLimitConfig {
+public class SvelteRateLimitConfig internal constructor() {
     internal val namedLimits: MutableMap<String, NamedRateLimit> = linkedMapOf()
     internal var clientKey: suspend (ApplicationCall) -> Any = { call -> call.request.origin.remoteAddress }
         private set

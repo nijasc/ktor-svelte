@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonBuilder
 
 @KtorDsl
-public class SvelteTransportConfig {
+public class SvelteTransportConfig internal constructor() {
     internal val negotiation: MutableList<ContentNegotiationConfig.() -> Unit> = mutableListOf()
     internal var compressionConfig: (CompressionConfig.() -> Unit)? = null
         private set

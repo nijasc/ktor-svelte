@@ -4,20 +4,20 @@ import org.gradle.api.GradleException
 import java.io.File
 
 public enum class PackageManager {
-    AUTO,
-    BUN,
-    PNPM,
-    NPM,
-    YARN,
+    Auto,
+    Bun,
+    Pnpm,
+    Npm,
+    Yarn,
 }
 
 internal val LOCKFILES: List<Pair<String, PackageManager>> =
     listOf(
-        "bun.lock" to PackageManager.BUN,
-        "bun.lockb" to PackageManager.BUN,
-        "pnpm-lock.yaml" to PackageManager.PNPM,
-        "package-lock.json" to PackageManager.NPM,
-        "yarn.lock" to PackageManager.YARN,
+        "bun.lock" to PackageManager.Bun,
+        "bun.lockb" to PackageManager.Bun,
+        "pnpm-lock.yaml" to PackageManager.Pnpm,
+        "package-lock.json" to PackageManager.Npm,
+        "yarn.lock" to PackageManager.Yarn,
     )
 
 internal data class FrontendTool(
@@ -28,7 +28,7 @@ internal data class FrontendTool(
     val installArguments: List<String>
         get() =
             when (packageManager) {
-                PackageManager.NPM -> listOf("ci")
+                PackageManager.Npm -> listOf("ci")
                 else -> listOf("install", "--frozen-lockfile")
             }
 
@@ -36,7 +36,7 @@ internal data class FrontendTool(
         script: String,
         scriptArguments: List<String> = emptyList(),
     ): List<String> {
-        val separator = if (packageManager == PackageManager.NPM && scriptArguments.isNotEmpty()) listOf("--") else emptyList()
+        val separator = if (packageManager == PackageManager.Npm && scriptArguments.isNotEmpty()) listOf("--") else emptyList()
         return listOf("run", script) + separator + scriptArguments
     }
 }
@@ -45,7 +45,7 @@ internal fun resolveFrontendTool(
     frontendDir: File,
     configured: PackageManager,
 ): FrontendTool {
-    if (configured != PackageManager.AUTO) return FrontendTool(configured)
+    if (configured != PackageManager.Auto) return FrontendTool(configured)
     val detected =
         LOCKFILES.firstOrNull { (lockfile, _) -> frontendDir.resolve(lockfile).isFile }
             ?: throw GradleException(

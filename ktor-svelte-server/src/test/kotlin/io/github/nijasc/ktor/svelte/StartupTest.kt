@@ -24,7 +24,7 @@ class StartupTest {
                         classLoader = emptyClassLoader
                     }
                     application {
-                        install(Svelte) { dev { mode = DevMode.NEVER } }
+                        install(Svelte) { dev { mode = DevMode.Never } }
                     }
                     client.get("/")
                 }
@@ -38,7 +38,7 @@ class StartupTest {
             serverConfig { developmentMode = true }
             environment { classLoader = emptyClassLoader }
             application {
-                install(Svelte) { dev { mode = DevMode.NEVER } }
+                install(Svelte) { dev { mode = DevMode.Never } }
             }
             val response = client.get("/")
             assertEquals(HttpStatusCode.ServiceUnavailable, response.status)
@@ -56,7 +56,7 @@ class StartupTest {
                         classLoader = classLoaderWithManifest("""{"formatVersion":99,"files":{}}""")
                     }
                     application {
-                        install(Svelte) { dev { mode = DevMode.NEVER } }
+                        install(Svelte) { dev { mode = DevMode.Never } }
                     }
                     client.get("/")
                 }
@@ -72,7 +72,7 @@ class StartupTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(empty)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.ServiceUnavailable, client.get("/").status)

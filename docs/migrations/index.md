@@ -1,11 +1,12 @@
 # Upgrading
 
-While the version starts with `0.`, a minor release such as 0.8.0 to 0.9.0 can change behaviour. Patch releases such as 0.9.0 to 0.9.1 only fix bugs. Each release that changes what your app does, or what you need to write, has a guide with the steps to adopt it. The [changelog](../changelog.md) links each release to its guide.
+From 1.0 on, ktor-svelte follows semantic versioning: only a major release can break your build, and patch releases only fix bugs. Before 1.0, a minor release such as 0.8.0 to 0.9.0 could change behaviour. Each release that changes what your app does, or what you need to write, has a guide with the steps to adopt it. The [changelog](../changelog.md) links each release to its guide.
 
 To upgrade across several releases, follow the guides in order.
 
 | Release | What changes for you |
 |---|---|
+| [1.0](1.0.md) | Enum constants use one casing, the deprecated `SvelteSecurityHeaders` alias is removed, and configuration classes lose their public constructors |
 | [0.11](0.11.md) | Generated Kotlin moves to `io.github.nijasc.ktorsvelte`, and apps serve a generated `sitemap.xml` and `robots.txt` |
 | [0.10](0.10.md) | `publicConfig` is inlined into pages, API responses carry a build header, and `svelteDevAll` opens the browser |
 | [0.9](0.9.md) | Wrong methods on pages answer 405, JSON request bodies have a nesting limit, and every request gets an `X-Request-Id` |

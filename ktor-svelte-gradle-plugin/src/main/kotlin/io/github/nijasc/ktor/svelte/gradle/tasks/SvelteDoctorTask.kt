@@ -39,7 +39,7 @@ internal class SetupDoctor(
     private val nodeVersion: () -> String? = ::installedNodeVersion,
     private val bunVersion: String? = null,
 ) {
-    private val pinnedBun = bunVersion != null && (packageManager == PackageManager.AUTO || packageManager == PackageManager.BUN)
+    private val pinnedBun = bunVersion != null && (packageManager == PackageManager.Auto || packageManager == PackageManager.Bun)
 
     fun examine(): List<Finding> {
         if (!frontend.isDirectory) return listOf(Finding(Severity.ERROR, "No frontend at $frontend. Run svelteInit to create one."))
@@ -64,7 +64,7 @@ internal class SetupDoctor(
 
     private fun tool(): Finding {
         if (pinnedBun) return Finding(Severity.OK, "Bun $bunVersion is pinned, and ktor-svelte downloads it when a task needs it")
-        if (packageManager == PackageManager.AUTO && LOCKFILES.none { (name, _) -> frontend.resolve(name).isFile }) {
+        if (packageManager == PackageManager.Auto && LOCKFILES.none { (name, _) -> frontend.resolve(name).isFile }) {
             return Finding(Severity.ERROR, "No lockfile found. Install dependencies once, or set svelte.packageManager.")
         }
         val name = resolveFrontendTool(frontend, packageManager).executableName

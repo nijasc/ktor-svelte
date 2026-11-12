@@ -8,7 +8,7 @@ public class ValidationException(
 ) : RuntimeException("Validation failed for ${fields.keys.joinToString()}")
 
 @KtorDsl
-public class Validator {
+public class Validator internal constructor() {
     private val errors = linkedMapOf<String, MutableList<String>>()
 
     public fun check(

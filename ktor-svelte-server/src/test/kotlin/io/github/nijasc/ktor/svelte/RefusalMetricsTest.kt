@@ -32,7 +32,7 @@ class RefusalMetricsTest {
                 app = this
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                     statusEndpoint = true
                     maxApiBodySize = 10
                     rateLimit { apiWrites = 3 }

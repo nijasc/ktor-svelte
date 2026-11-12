@@ -41,7 +41,7 @@ class SecurityHeadersTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 configure()
             }
             routing { get("/api/x") { call.respondText("x") } }
@@ -169,7 +169,7 @@ class SecurityHeadersTest {
         app({
             dev {
                 url = "http://127.0.0.1:1"
-                mode = DevMode.ALWAYS
+                mode = DevMode.Always
             }
         }) {
             val response = client.get("/")
@@ -182,7 +182,7 @@ class SecurityHeadersTest {
         app({
             dev {
                 url = "http://127.0.0.1:1"
-                mode = DevMode.ALWAYS
+                mode = DevMode.Always
             }
             securityHeaders { contentSecurityPolicy = "default-src 'self'" }
         }) {

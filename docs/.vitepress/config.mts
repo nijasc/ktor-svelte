@@ -177,6 +177,7 @@ export default defineConfig({
                 collapsed: true,
                 items: [
                     { text: 'Overview', link: '/migrations/' },
+                    { text: 'To 1.0', link: '/migrations/1.0' },
                     { text: 'To 0.11', link: '/migrations/0.11' },
                     { text: 'To 0.10', link: '/migrations/0.10' },
                     { text: 'To 0.9', link: '/migrations/0.9' },

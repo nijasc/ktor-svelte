@@ -49,7 +49,7 @@ class RequestGuardsTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 transport { json() }
                 configure()
             }
@@ -101,7 +101,7 @@ class RequestGuardsTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 routing { post("/api/notes") { call.respondText("created") } }
             }

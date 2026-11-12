@@ -64,7 +64,7 @@ class ProductionFeaturesTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     routing = SvelteRouting.Manual
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 routing {
                     get("/api/open") { call.respondText("open") }
@@ -130,7 +130,7 @@ class ProductionFeaturesTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     spaFallback = null
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.NotFound, client.get("/.env").status)
@@ -146,7 +146,7 @@ class ProductionFeaturesTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     routing = SvelteRouting.Manual
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.NotFound, client.get("/").status)
@@ -173,7 +173,7 @@ class ProductionFeaturesTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                     publicConfig(PublicSettings("demo", limits = Limits(3)))
                 }
             }
@@ -190,7 +190,7 @@ class ProductionFeaturesTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     spaFallback = null
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
             }
             assertEquals(HttpStatusCode.NotFound, client.get("/_ktor-svelte/config.json").status)
@@ -207,7 +207,7 @@ class ProductionFeaturesTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                     generateTs = true
                     generateTsOutput = output.toString()
                     publicConfig(PublicSettings("demo", limits = Limits(3)))
@@ -242,7 +242,7 @@ class ProductionFeaturesTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                     apiDocs = true
                     generateTs = true
                     generateTsOutput = output.toString()
@@ -267,7 +267,7 @@ class ProductionFeaturesTest {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
                     spaFallback = null
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                     apiDocs = true
                 }
             }

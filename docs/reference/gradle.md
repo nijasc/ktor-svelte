@@ -10,7 +10,7 @@ import io.github.nijasc.ktor.svelte.gradle.PackageManager
 svelte {
     frontendDir = layout.projectDirectory.dir("frontend")
     outputDir = "build"
-    packageManager = PackageManager.AUTO
+    packageManager = PackageManager.Auto
     buildScript = "build"
     buildEnv = emptySet()
     addRuntimeDependency = true
@@ -29,7 +29,7 @@ svelte {
 |---|---|
 | `frontendDir` | Directory of the SvelteKit project |
 | `outputDir` | Adapter output, a folder inside `frontendDir` given relative to it. Must match the adapter's `pages` option |
-| `packageManager` | `AUTO`, `BUN`, `PNPM`, `NPM` or `YARN`. `AUTO` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
+| `packageManager` | `Auto`, `Bun`, `Pnpm`, `Npm` or `Yarn`. `Auto` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
 | `bunVersion` | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. Unset by default. See [Pin Bun](#pin-bun) |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |

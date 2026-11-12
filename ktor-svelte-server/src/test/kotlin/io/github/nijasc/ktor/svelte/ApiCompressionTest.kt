@@ -31,7 +31,7 @@ class ApiCompressionTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 config()
             }
             routing {
@@ -97,7 +97,7 @@ class ApiCompressionTest {
             application {
                 install(Svelte) {
                     source = SvelteSource.Directory(build)
-                    dev { mode = DevMode.NEVER }
+                    dev { mode = DevMode.Never }
                 }
                 install(Compression) { deflate() }
                 routing { get("/api/large") { call.respondText(large, ContentType.Application.Json) } }

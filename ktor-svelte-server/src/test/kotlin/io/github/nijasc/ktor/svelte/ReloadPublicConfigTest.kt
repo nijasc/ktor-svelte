@@ -23,7 +23,7 @@ class ReloadPublicConfigTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
                 publicConfig {
                     reads.incrementAndGet()
                     SiteConfig(name())

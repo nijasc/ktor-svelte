@@ -57,7 +57,7 @@ class LibrariesTest {
         application {
             install(Svelte) {
                 source = SvelteSource.Directory(build)
-                dev { mode = DevMode.NEVER }
+                dev { mode = DevMode.Never }
             }
             routing {
                 get("/api/locale") { call.respondText(call.svelteLocale) }

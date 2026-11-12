@@ -242,7 +242,7 @@ class KtorSveltePluginTest {
                 """
 
                 svelte {
-                    packageManager = io.github.nijasc.ktor.svelte.gradle.PackageManager.PNPM
+                    packageManager = io.github.nijasc.ktor.svelte.gradle.PackageManager.Pnpm
                 }
                 """.trimIndent(),
         )

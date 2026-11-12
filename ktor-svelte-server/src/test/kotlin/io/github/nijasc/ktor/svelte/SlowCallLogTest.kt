@@ -35,7 +35,7 @@ class SlowCallLogTest {
                     install(Svelte) {
                         source = SvelteSource.Directory(build)
                         dev {
-                            mode = DevMode.NEVER
+                            mode = DevMode.Never
                             slowApiCall = threshold
                         }
                     }

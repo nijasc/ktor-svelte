@@ -6,7 +6,7 @@ Find the message you see, then its cause and fix. Run `./gradlew svelteDoctor` f
 
 ### ktor-svelte found no lockfile
 
-The frontend has no `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock`, so the plugin cannot tell which package manager to use. Install the dependencies once with your package manager, or set `svelte { packageManager = PackageManager.BUN }`.
+The frontend has no `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock`, so the plugin cannot tell which package manager to use. Install the dependencies once with your package manager, or set `svelte { packageManager = PackageManager.Bun }`.
 
 ### ktor-svelte could not find bun on PATH
 
