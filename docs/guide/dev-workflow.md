@@ -26,6 +26,15 @@ When Kotlin stops compiling, the app keeps running its last good version, and th
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
 
+Browser console output lands in the same console as your app. Every `console.log`, `info`, `debug`, `warn` and `error`, uncaught errors and unhandled promise rejections are sent to the app and logged by the `ktor-svelte.browser` logger, with the page they came from:
+
+```text
+10:21:19 WARN  ktor-svelte.browser Probe warning {"id":7} [/notes]
+10:21:19 ERROR ktor-svelte.browser Error: Probe crash
+```
+
+Objects are written as JSON, and errors with their stack trace. `console.debug` uses the DEBUG level, so it only shows when you enable it in your logging configuration. Like the panel, this only exists while ktor-svelte proxies to Vite, and only for requests from this machine. Turn it off with `dev { browserLogs = false }`.
+
 Once the app is listening, it prints the links you need, so they do not get lost in the output:
 
 ```

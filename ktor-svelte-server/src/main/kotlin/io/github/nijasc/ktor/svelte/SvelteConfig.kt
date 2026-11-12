@@ -149,6 +149,7 @@ public class SvelteDevConfig {
     public var allowRemote: Boolean = false
     public var slowApiCall: Duration? = 500.milliseconds
     public var panel: Boolean = true
+    public var browserLogs: Boolean = true
 }
 
 @KtorDsl

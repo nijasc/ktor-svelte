@@ -121,7 +121,7 @@ class DevProxyTest {
                 }
             }
             val page = client.get("/html-page")
-            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js?panel\"></script>"
+            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js?panel&logs\"></script>"
             val html = "<html><head><title>x</title>$script</head><body>page</body></html>"
             assertEquals(html, page.bodyAsText())
             assertEquals(html.length.toString(), page.headers[HttpHeaders.ContentLength])
@@ -174,7 +174,7 @@ class DevProxyTest {
                     }
                 }
             }
-            assertContains(client.get("/html-page").bodyAsText(), "src=\"/_ktor-svelte/dev/client.js\"")
+            assertContains(client.get("/html-page").bodyAsText(), "src=\"/_ktor-svelte/dev/client.js?logs\"")
             assertEquals("vite:/_ktor-svelte/dev/requests", client.get("/_ktor-svelte/dev/requests").bodyAsText())
         }
 

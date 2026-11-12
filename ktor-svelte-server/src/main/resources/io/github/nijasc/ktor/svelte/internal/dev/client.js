@@ -155,3 +155,58 @@ if (new URL(import.meta.url).searchParams.has('panel')) {
     if (document.body) startPanel();
     else document.addEventListener('DOMContentLoaded', startPanel);
 }
+
+function describe(value) {
+    if (typeof value === 'string') return value;
+    if (value instanceof Error) return value.stack ?? `${value.name}: ${value.message}`;
+    try {
+        const seen = new WeakSet();
+        return JSON.stringify(value, (_, item) => {
+            if (typeof item === 'object' && item !== null) {
+                if (seen.has(item)) return '[circular]';
+                seen.add(item);
+            }
+            return typeof item === 'bigint' ? `${item}n` : item;
+        });
+    } catch {
+        return String(value);
+    }
+}
+
+function forwardBrowserLogs() {
+    const queue = [];
+    let timer;
+    const flush = () => {
+        timer = undefined;
+        if (queue.length === 0) return;
+        const body = JSON.stringify(queue.splice(0));
+        fetch('/_ktor-svelte/dev/log', { method: 'POST', body, headers: { 'content-type': 'application/json' }, keepalive: true }).catch(
+            () => undefined
+        );
+    };
+    const push = (level, values) => {
+        const message = values.map(describe).join(' ').slice(0, 4000);
+        if (message.startsWith('[vite]')) return;
+        queue.push({ level, message, url: location.pathname + location.search });
+        if (queue.length >= 50) flush();
+        else timer ??= setTimeout(flush, 200);
+    };
+    for (const [method, level] of [
+        ['log', 'info'],
+        ['info', 'info'],
+        ['debug', 'debug'],
+        ['warn', 'warn'],
+        ['error', 'error']
+    ]) {
+        const original = console[method].bind(console);
+        console[method] = (...values) => {
+            original(...values);
+            push(level, values);
+        };
+    }
+    addEventListener('error', (event) => push('error', [event.error ?? event.message]));
+    addEventListener('unhandledrejection', (event) => push('error', ['Unhandled promise rejection:', event.reason]));
+    addEventListener('pagehide', flush);
+}
+
+if (new URL(import.meta.url).searchParams.has('logs')) forwardBrowserLogs();

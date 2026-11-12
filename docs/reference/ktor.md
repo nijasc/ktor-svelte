@@ -47,6 +47,7 @@ install(Svelte) {
         mode = DevMode.AUTO
         allowRemote = false
         panel = true
+        browserLogs = true
     }
 
     transport {
@@ -85,6 +86,7 @@ install(Svelte) {
 | `dev.url` | Vite URL. The `KTOR_SVELTE_DEV_SERVER` environment variable overrides it |
 | `dev.mode` | `AUTO` follows Ktor's development mode. `ALWAYS` and `NEVER` force it |
 | `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
+| `dev.browserLogs` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log. On by default |
 | `dev.panel` | Shows a panel of recent API calls, with status, timing and validation errors, on pages proxied from Vite. On by default. See [Dev workflow](../guide/dev-workflow.md) |
 | `transport` | JSON, XML and compression. See [Transport](../features/transport.md) |
 
