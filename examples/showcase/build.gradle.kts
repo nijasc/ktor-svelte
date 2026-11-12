@@ -79,6 +79,19 @@ tasks.register<JavaExec>("installBrowsers") {
     args(listOf("install") + systemPackages + providers.gradleProperty("browser").orElse("chromium").get())
 }
 
+tasks.register<JavaExec>("screenshots") {
+    group = "documentation"
+    description = "Starts the showcase JAR and writes the screenshots the docs use."
+    val exampleJar = tasks.named<Jar>("shadowJar").flatMap { it.archiveFile }
+    val target = layout.projectDirectory.dir("../../docs/public/showcase")
+    inputs.file(exampleJar)
+    outputs.dir(target)
+    classpath = sourceSets["browserTest"].runtimeClasspath
+    mainClass = "ScreenshotsKt"
+    args(target.asFile.path)
+    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dexample.jar=${exampleJar.get().asFile.path}") })
+}
+
 testing {
     suites {
         register<JvmTestSuite>("e2eTest") {

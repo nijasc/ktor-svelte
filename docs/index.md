@@ -45,3 +45,19 @@ features:
     link: /features/frontend-libraries
     linkText: Libraries
 ---
+
+## See it in an app
+
+The [showcase example](./examples.md#showcase) is a team board with sign in, roles, a database, file uploads, search and two languages. These are pictures of its production JAR: one process that serves the pages and the API.
+
+![The board of the showcase, with counters, a search box, filters and a list of tasks](/showcase/board.png)
+
+A task in the dark theme, with its files and comments:
+
+![A task of the showcase in the dark theme, with a file upload and a comment](/showcase/task.png)
+
+The admin area in German and in a custom theme, both set from Gradle:
+
+![The admin area of the showcase in German, with a role select and an active switch for each person](/showcase/admin.png)
+
+The pictures come from `./gradlew -p examples/showcase screenshots`, so they show what the current code does.
