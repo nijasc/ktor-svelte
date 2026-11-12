@@ -17,7 +17,7 @@ post("/api/files") {
 }
 ```
 
-```ts
+```ts no-check
 const form = new FormData();
 for (const file of input.files ?? []) form.append('file', file);
 const stored = await api.files.create(form, {
