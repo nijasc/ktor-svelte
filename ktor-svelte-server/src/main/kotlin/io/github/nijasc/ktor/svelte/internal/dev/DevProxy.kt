@@ -60,6 +60,9 @@ private val UNFORWARDED_RESPONSE_HEADERS =
         "upgrade",
     )
 
+internal fun asksForWebSocket(upgrade: String?): Boolean =
+    upgrade.orEmpty().split(',').any { it.trim().equals("websocket", ignoreCase = true) }
+
 private val IPV4_LOOPBACK = Regex("127(\\.\\d{1,3}){3}")
 private val IPV6_LITERAL = Regex("[0-9a-f:.]+")
 
@@ -162,7 +165,7 @@ internal class DevProxy(
     private var preferredTarget: String = targets.first()
 
     suspend fun forward(call: ApplicationCall): Boolean {
-        if (call.request.header(HttpHeaders.Upgrade) != null) {
+        if (asksForWebSocket(call.request.header(HttpHeaders.Upgrade))) {
             call.respondText("The ktor-svelte dev proxy does not forward WebSockets.", status = HttpStatusCode.BadGateway)
             return true
         }
