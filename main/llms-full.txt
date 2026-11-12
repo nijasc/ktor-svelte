@@ -1464,12 +1464,6 @@ install(Svelte) {
 
 To write your own, put `sitemap.xml` or `robots.txt` in `frontend/static/`. Files from the build always win. `sitemap = false` turns both off. With `routing = SvelteRouting.Manual`, they are only served where you route `svelte()`.
 
-## Default favicon
-
-Browsers ask every site for `/favicon.ico`. Until your app has its own icon, ktor-svelte answers with a ktor-svelte one, so tabs and bookmarks show something and the log has no 404s for it. It serves `/favicon.ico`, `/favicon.svg`, `/favicon.png` and `/apple-touch-icon.png`, cached for a day.
-
-As soon as your build has any of `favicon.ico`, `favicon.svg` or `favicon.png`, for example in `frontend/static/`, none of the defaults are served and yours are used. In development, ktor-svelte checks `frontend/static/` instead. Turn the default off with `defaultFavicon = false`.
-
 ## Status endpoint
 
 ```kotlin
@@ -2124,7 +2118,6 @@ install(Svelte) {
     maxJsonDepth = 64
     maxJsonStringLength = null
     sitemap = true
-    defaultFavicon = true
     siteUrl = null
 
     securityHeaders {
@@ -2171,7 +2164,6 @@ install(Svelte) {
 | `maxJsonStringLength` | Refuses JSON request bodies on API paths with a longer string, with 400. Off by default |
 | `sitemap` | Serves a generated `/sitemap.xml` and `/robots.txt` when the build has none. On by default. See [Sitemap and robots.txt](https://nijasc.github.io/ktor-svelte/main/features/endpoints#sitemap-and-robots-txt) |
 | `siteUrl` | Public address used in the sitemap, such as `https://example.com`. `null` takes it from the request |
-| `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](https://nijasc.github.io/ktor-svelte/main/features/endpoints#default-favicon) |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](https://nijasc.github.io/ktor-svelte/main/security#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](https://nijasc.github.io/ktor-svelte/main/features/transport#api-compression) |
