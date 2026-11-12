@@ -1,4 +1,4 @@
-# ktor-svelte 0.10.1
+# ktor-svelte 0.11.0
 
 > Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.
 
@@ -19,6 +19,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 ## Features
 
 - [Generated TypeScript](https://nijasc.github.io/ktor-svelte/features/typescript)
+- [Generator playground](https://nijasc.github.io/ktor-svelte/features/playground)
 - [Calling the API](https://nijasc.github.io/ktor-svelte/features/calling-the-api)
 - [Validation](https://nijasc.github.io/ktor-svelte/features/validation)
 - [Transport and compression](https://nijasc.github.io/ktor-svelte/features/transport)
@@ -50,6 +51,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 ## Upgrading
 
 - [Overview](https://nijasc.github.io/ktor-svelte/migrations/)
+- [To 0.11](https://nijasc.github.io/ktor-svelte/migrations/0.11)
 - [To 0.10](https://nijasc.github.io/ktor-svelte/migrations/0.10)
 - [To 0.9](https://nijasc.github.io/ktor-svelte/migrations/0.9)
 - [To 0.8](https://nijasc.github.io/ktor-svelte/migrations/0.8)
