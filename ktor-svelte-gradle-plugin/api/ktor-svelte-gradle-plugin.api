@@ -348,6 +348,8 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteGenerateSo
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteInitTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
+	public abstract fun getLocales ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getMessagesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getPackageManagerOption ()Lorg/gradle/api/provider/Property;
 	public final fun init ()V
 }

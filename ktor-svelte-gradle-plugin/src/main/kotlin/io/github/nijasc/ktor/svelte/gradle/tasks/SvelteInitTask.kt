@@ -5,8 +5,11 @@ import io.github.nijasc.ktor.svelte.gradle.FrontendTool
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
 import io.github.nijasc.ktor.svelte.gradle.locateExecutable
 import org.gradle.api.GradleException
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
@@ -38,6 +41,12 @@ public abstract class SvelteInitTask : SvelteToolTask() {
     @get:Option(option = "package-manager", description = "bun, pnpm, npm or yarn. Defaults to the first one found on PATH")
     public abstract val packageManagerOption: Property<String>
 
+    @get:Input
+    public abstract val locales: ListProperty<String>
+
+    @get:Internal
+    public abstract val messagesDirectory: DirectoryProperty
+
     @TaskAction
     public fun init() {
         val target = frontendDir.get().asFile
@@ -47,9 +56,21 @@ public abstract class SvelteInitTask : SvelteToolTask() {
         val tool = FrontendTool(chooseTool())
         if (!(bunVersion.isPresent && tool.packageManager == PackageManager.Bun)) requireToolOnPath(tool)
         TEMPLATE_FILES.forEach { path -> copyTemplate(path, target) }
+        createMessageFiles()
         runToolQuietly(tool, listOf("install"))
         logger.lifecycle("ktor-svelte: created a SvelteKit project in $target using ${tool.executableName}.")
         logger.lifecycle("Next: run svelteDoctor to check the setup, then svelteDev and run -Psvelte.dev=true.")
+    }
+
+    private fun createMessageFiles() {
+        locales.get().forEach { locale ->
+            val file = messagesDirectory.get().asFile.resolve("$locale.json")
+            if (!file.exists()) {
+                file.parentFile.mkdirs()
+                file.writeText("{}\n")
+                logger.lifecycle("ktor-svelte: created ${file.name} for your messages.")
+            }
+        }
     }
 
     private fun chooseTool(): PackageManager {
