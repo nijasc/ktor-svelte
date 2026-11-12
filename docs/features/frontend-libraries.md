@@ -1,6 +1,6 @@
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide, i18n and image optimization, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts, configured in Gradle with typed helpers on both sides.
 
 Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
 
@@ -25,6 +25,7 @@ svelte {
         }
         lucide()
         images()
+        toasts()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -124,6 +125,10 @@ Each icon loads on demand, so you only download the ones a page uses. An icon's 
 At build time, every image becomes AVIF and WebP in several widths, plus a fallback in the original format, inside a `<picture>` with `srcset`, `width` and `height`. Browsers download only the size and format they need, and the layout doesn't jump while the image loads. In the notes example, a 339 KB PNG becomes an 8 KB AVIF for a laptop screen. The files land in `_app/immutable/`, so browsers cache them for a year like any other hashed asset.
 
 Files in `frontend/static/` are copied as they are, because nothing in the build knows where they are used. Move images there to `src/lib/assets` to have them optimized. Processing uses `sharp`, which comes with prebuilt binaries for Windows, macOS and Linux. The first build with many large images takes longer, and later builds reuse Vite's cache.
+
+## Toasts
+
+`toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](./calling-the-api.md#show-errors-automatically).
 
 ## i18n
 
