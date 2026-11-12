@@ -1,5 +1,6 @@
 plugins {
     id("com.vanniktech.maven.publish")
+    id("org.cyclonedx.bom")
 }
 
 mavenPublishing {
@@ -25,4 +26,8 @@ mavenPublishing {
             connection = "scm:git:$PROJECT_GIT_URL"
         }
     }
+}
+
+tasks.cyclonedxDirectBom {
+    includeConfigs = listOf("runtimeClasspath")
 }

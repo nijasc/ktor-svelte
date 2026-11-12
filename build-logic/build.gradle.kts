@@ -12,4 +12,5 @@ dependencies {
     implementation(plugin(libs.plugins.dokka))
     implementation(plugin(libs.plugins.maven.publish))
     implementation(plugin(libs.plugins.plugin.publish))
+    implementation(plugin(libs.plugins.cyclonedx))
 }
