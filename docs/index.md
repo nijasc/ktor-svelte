@@ -13,6 +13,9 @@ hero:
       text: What is ktor-svelte?
       link: /guide/introduction
     - theme: alt
+      text: New in 1.0
+      link: /releases/1.0
+    - theme: alt
       text: View on GitHub
       link: https://github.com/nijasc/ktor-svelte
 
