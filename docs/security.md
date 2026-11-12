@@ -111,7 +111,7 @@ install(Svelte) {
 
 Set `maxJsonDepth = null` to turn the depth check off.
 
-**Rate limit.** Each client may send 120 writes per minute to your API paths, meaning every method except GET, HEAD, OPTIONS and TRACE. More get 429 with a `Retry-After` header. Reads and frontend files are never limited. Clients are told apart by `call.request.origin.remoteHost`, so behind a reverse proxy install `XForwardedHeaders` or `ForwardedHeaders`, or every user shares one limit.
+**Rate limit.** Each client may send 120 writes per minute to your API paths, meaning every method except GET, HEAD, OPTIONS and TRACE. More get 429 with a `Retry-After` header. Reads and frontend files are never limited. Clients are told apart by `call.request.origin.remoteAddress`, so behind a reverse proxy install `XForwardedHeaders` or `ForwardedHeaders`, or every user shares one limit.
 
 Routes such as login need a much tighter limit. Name one, and wrap the routes in Ktor's own `rateLimit`:
 
@@ -149,7 +149,7 @@ By default every client address gets its own budget. Choose another key when tha
 
 ```kotlin
 rateLimit {
-    key { call -> call.sessions.get<UserSession>()?.userId ?: call.request.origin.remoteHost }
+    key { call -> call.sessions.get<UserSession>()?.userId ?: call.request.origin.remoteAddress }
     limit("export", requests = 2, per = 1.hours) { call -> call.sessions.get<UserSession>()?.userId ?: "anonymous" }
 }
 ```
