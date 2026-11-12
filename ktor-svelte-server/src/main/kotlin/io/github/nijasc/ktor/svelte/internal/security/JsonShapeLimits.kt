@@ -6,8 +6,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.plugins.PayloadTooLargeException
 import io.ktor.server.request.ApplicationReceivePipeline
 import io.ktor.server.request.contentType
+import io.ktor.util.AttributeKey
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
@@ -72,6 +74,8 @@ internal class JsonShapeScanner(
 internal fun Throwable.findJsonShapeException(): JsonShapeException? =
     generateSequence(this) { it.cause }.take(16).filterIsInstance<JsonShapeException>().firstOrNull()
 
+internal val BodyTooLarge = AttributeKey<Boolean>("KtorSvelteBodyTooLarge")
+
 internal fun installJsonShapeLimits(
     application: Application,
     resolver: RequestResolver,
@@ -81,7 +85,7 @@ internal fun installJsonShapeLimits(
     if (maxDepth == null && maxStringLength == null) return
     application.receivePipeline.intercept(ApplicationReceivePipeline.Before) { body ->
         if (body !is ByteReadChannel || !isJsonApiCall(context, resolver)) return@intercept
-        proceedWith(scanned(this, body, JsonShapeScanner(maxDepth, maxStringLength)))
+        proceedWith(scanned(this, context, body, JsonShapeScanner(maxDepth, maxStringLength)))
     }
 }
 
@@ -96,6 +100,7 @@ private fun isJsonApiCall(
 
 private fun scanned(
     scope: CoroutineScope,
+    call: ApplicationCall,
     source: ByteReadChannel,
     scanner: JsonShapeScanner,
 ): ByteReadChannel =
@@ -103,8 +108,21 @@ private fun scanned(
         .writer {
             val buffer = ByteArray(8192)
             while (true) {
-                val read = source.readAvailable(buffer)
-                if (read < 0) break
+                val read =
+                    try {
+                        source.readAvailable(buffer)
+                    } catch (tooLarge: PayloadTooLargeException) {
+                        call.attributes.put(BodyTooLarge, true)
+                        throw tooLarge
+                    }
+                if (read < 0) {
+                    val closed = source.closedCause
+                    if (closed is PayloadTooLargeException) {
+                        call.attributes.put(BodyTooLarge, true)
+                        throw closed
+                    }
+                    break
+                }
                 if (read == 0) continue
                 scanner.feed(buffer, read)
                 channel.writeFully(buffer, 0, read)
