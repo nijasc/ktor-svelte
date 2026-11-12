@@ -32,8 +32,13 @@ public data class DaisySpec(
     val defaultTheme: String,
     val prefersDark: String?,
     val customThemes: List<DaisyCustomTheme>,
+    val order: List<String> = emptyList(),
 ) : Serializable {
-    val allThemes: List<String> get() = themes + customThemes.map { it.name }
+    val allThemes: List<String>
+        get() {
+            val defined = themes + customThemes.map { it.name }
+            return order.filter { it in defined } + defined.filterNot { it in order }
+        }
 }
 
 public data class I18nSpec(

@@ -89,6 +89,8 @@ public final class io/github/nijasc/ktor/svelte/gradle/DaisyTheme : java/lang/En
 	public static final field Nord Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
 	public static final field Pastel Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
 	public static final field Retro Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field ShadcnDark Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
+	public static final field ShadcnLight Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
 	public static final field Silk Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
 	public static final field Sunset Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
 	public static final field Synthwave Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
@@ -194,17 +196,20 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/TailwindSettings {
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec : java/io/Serializable {
-	public fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/util/List;
-	public final fun copy (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
-	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAllThemes ()Ljava/util/List;
 	public final fun getCustomThemes ()Ljava/util/List;
 	public final fun getDefaultTheme ()Ljava/lang/String;
+	public final fun getOrder ()Ljava/util/List;
 	public final fun getPrefersDark ()Ljava/lang/String;
 	public final fun getThemes ()Ljava/util/List;
 	public fun hashCode ()I

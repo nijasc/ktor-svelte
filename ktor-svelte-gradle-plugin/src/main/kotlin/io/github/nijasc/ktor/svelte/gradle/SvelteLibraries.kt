@@ -46,6 +46,8 @@ public enum class DaisyTheme(
     Caramellatte("caramellatte"),
     Abyss("abyss"),
     Silk("silk"),
+    ShadcnLight("shadcn-light"),
+    ShadcnDark("shadcn-dark"),
 }
 
 public enum class LocaleStrategy {

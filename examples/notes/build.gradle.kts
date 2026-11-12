@@ -31,15 +31,15 @@ svelte {
             typography()
         }
         daisyUi {
-            themes(DaisyTheme.Light, DaisyTheme.Dark, DaisyTheme.Cupcake)
+            themes(DaisyTheme.ShadcnLight, DaisyTheme.ShadcnDark, DaisyTheme.Cupcake)
             customTheme("ktor") {
                 primary = "#6b57ff"
                 secondary = "#f97316"
                 base100 = "#fdfcff"
                 baseContent = "#1f1b3a"
             }
-            defaultTheme(DaisyTheme.Light)
-            prefersDark(DaisyTheme.Dark)
+            defaultTheme(DaisyTheme.ShadcnLight)
+            prefersDark(DaisyTheme.ShadcnDark)
         }
         lucide()
         images()

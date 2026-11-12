@@ -4,12 +4,12 @@
     import Icon from '#icon';
     import '#lib/ktor-svelte/app.css';
     import { getLocale, localizeHref, locales, m, setLocale, type Locale } from '#i18n';
-    import { getTheme, setTheme, themes, type ThemeName } from '#theme';
+    import { defaultTheme, getTheme, setTheme, themes, type ThemeName } from '#theme';
 
     let { children } = $props();
 
     let appName = $state(m.appTitle());
-    let theme = $state<ThemeName>('light');
+    let theme = $state<ThemeName>(defaultTheme);
     let locale = $state<Locale>('en');
 
     onMount(async () => {
