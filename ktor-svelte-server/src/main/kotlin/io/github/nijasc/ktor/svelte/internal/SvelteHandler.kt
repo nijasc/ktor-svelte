@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte.internal
 
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.DefaultFavicon
 import io.github.nijasc.ktor.svelte.internal.assets.Manifest
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.Resolution
@@ -37,6 +38,7 @@ internal class SvelteHandler(
     private val devUrl: String,
     private val allowRemote: Boolean,
     private val siteFiles: SiteFiles? = null,
+    private val defaultFavicon: DefaultFavicon? = null,
 ) {
     val proxiesToVite: Boolean get() = devProxy != null
 
@@ -55,6 +57,10 @@ internal class SvelteHandler(
         }
         if (needsLocalePrefix(path, call.application.libraryConfig)) {
             redirectToLocale(call)
+            return
+        }
+        if (defaultFavicon?.serves(path) == true && !defaultFavicon.appHasOwn(store.manifest())) {
+            defaultFavicon.respond(call, path)
             return
         }
         if (mayProxy && devProxy?.forward(call) == true) return

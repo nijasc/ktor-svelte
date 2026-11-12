@@ -12,6 +12,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ConfigInjector
+import io.github.nijasc.ktor.svelte.internal.assets.DefaultFavicon
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
@@ -49,6 +50,7 @@ import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
 import io.github.nijasc.ktor.svelte.internal.settingsSummary
 import io.github.nijasc.ktor.svelte.internal.shadowedPages
 import io.github.nijasc.ktor.svelte.internal.startupLine
+import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.ktor.http.ContentType
@@ -84,6 +86,7 @@ import io.ktor.server.routing.routing
 import io.ktor.util.AttributeKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.io.path.Path
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
@@ -131,7 +134,13 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 null
             }
         val devRequests = if (devProxy != null && pluginConfig.devConfig.panel) DevRequestLog(resolver) else null
-        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles)
+        val defaultFavicon =
+            if (pluginConfig.defaultFavicon) {
+                DefaultFavicon(devProxy?.let { Path(System.getProperty(FRONTEND_DIR_PROPERTY) ?: "frontend").resolve("static") })
+            } else {
+                null
+            }
+        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles, defaultFavicon)
         application.attributes.put(SvelteHandlerKey, handler)
         val metrics = SvelteMetrics()
         application.attributes.put(SvelteMetricsKey, metrics)
