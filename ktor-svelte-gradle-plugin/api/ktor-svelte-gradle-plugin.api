@@ -293,6 +293,17 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteCheckTask 
 	public final fun check ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteConfigTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getAppClasspath ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	protected abstract fun getExecOperations ()Lorg/gradle/process/ExecOperations;
+	public abstract fun getGradleSettings ()Lorg/gradle/api/provider/MapProperty;
+	public abstract fun getJavaLauncher ()Lorg/gradle/api/provider/Property;
+	public abstract fun getMainClass ()Lorg/gradle/api/provider/Property;
+	public abstract fun getReportFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public final fun report ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public abstract fun getAppClasspath ()Lorg/gradle/api/file/ConfigurableFileCollection;

@@ -31,6 +31,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.statusJson
 import io.github.nijasc.ktor.svelte.internal.dev.toHtml
 import io.github.nijasc.ktor.svelte.internal.dev.toJson
 import io.github.nijasc.ktor.svelte.internal.installApiCompression
+import io.github.nijasc.ktor.svelte.internal.installConfigReport
 import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.onOwn
@@ -140,6 +141,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         installTransport(application, pluginConfig.transportConfig)
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
         if (pluginConfig.requestIds) installRequestIds(application)
+        installConfigReport(application, pluginConfig)
         installTypeScriptGeneration(
             application,
             pluginConfig.generateTs,

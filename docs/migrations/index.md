@@ -25,3 +25,5 @@ plugins {
 ```
 
 If you set `addRuntimeDependency = false` and declare `ktor-svelte-server` yourself, bump it to the same version. Then run `./gradlew svelteSync` once, because generated files and frontend library setup can change between releases.
+
+Afterwards, `./gradlew svelteConfig` shows every setting with its new default and suggests what to turn on, so you notice new options. See [Review your configuration](../reference/gradle.md#review-your-configuration).

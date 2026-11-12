@@ -42,9 +42,29 @@ svelte {
 | `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |
 | `dev.openBrowser` | Opens the app in the default browser once `svelteDevAll` is ready, the first time only. Never in CI or without a display |
 
-The package manager must already be installed. The plugin does not download Node or Bun.
+The package manager must already be installed unless you set `bunVersion`. The plugin does not download Node.
 
 In a Groovy `build.gradle`, a misspelled setting such as `fronendDir = file('web')` fails with the closest name and the list of settings, instead of Gradle's generic missing property error. The Kotlin DSL catches the same mistake when it compiles the script.
+
+## Review your configuration
+
+`./gradlew svelteConfig` gives an overview of how ktor-svelte is set up in your app. It lists the Gradle settings, then starts your app once to read the effective `install(Svelte) { }` settings, the same way `svelteGenerateTs` does, so it shows what really runs, including values set from environment variables. Settings you changed are marked with their default, which makes it easy to see what a new version changed or added after an upgrade.
+
+Then it scores the setup and lists what to change:
+
+```text
+Scores
+  Security              [#########-]  90%  10 of 11
+  Performance           [##########] 100%  4 of 4
+  Operations            [#######---]  66%  2 of 3
+  Developer experience  [##########] 100%  4 of 4
+
+Suggestions
+  - [Security] Set maxJsonStringLength = 100_000, or the longest text your API accepts.
+  - [Operations] Set healthEndpoint = true and point your orchestrator at /_ktor-svelte/health.
+```
+
+The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, health and request IDs, generated TypeScript and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
 
 ## Pin Bun
 
@@ -67,6 +87,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
 | `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, and says what to fix |
+| `svelteConfig` | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores security, performance, operations and developer experience, and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
