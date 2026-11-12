@@ -332,6 +332,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.projectDirectory.set(project.layout.projectDirectory)
             task.gradleExecutable.set(gradleExecutablePath(gradleHome))
             task.javaLauncher.set(toolchains.launcherFor(toolchain))
+            task.compileErrorsFile.set(project.layout.buildDirectory.file("ktor-svelte/compile-errors.json"))
         }
     }
 

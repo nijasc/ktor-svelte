@@ -1,10 +1,12 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import io.github.nijasc.ktor.svelte.gradle.COMPILE_ERRORS_SYSTEM_PROPERTY
 import io.github.nijasc.ktor.svelte.gradle.DEVELOPMENT_SYSTEM_PROPERTY
 import io.github.nijasc.ktor.svelte.gradle.FRONTEND_DIR_SYSTEM_PROPERTY
 import io.github.nijasc.ktor.svelte.gradle.requireExecutable
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -93,6 +95,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     @get:Nested
     public abstract val javaLauncher: Property<JavaLauncher>
 
+    @get:Internal
+    public abstract val compileErrorsFile: RegularFileProperty
+
     @TaskAction
     public fun runAll() {
         val running = mutableListOf<Process>()
@@ -103,7 +108,8 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         try {
             val vite = startVite()
             running += vite
-            running += startCompiler()
+            val errors = CompileErrorReport(compileErrorsFile.get().asFile)
+            running += startCompiler(errors)
             var app = startApp(banner)
             running += app
             logger.lifecycle("ktor-svelte: Vite, the Kotlin compiler and the app are running. Stop this task to stop them all.")
@@ -148,7 +154,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         return start("vite", command, frontendDir.get().asFile)
     }
 
-    private fun startCompiler(): Process {
+    private fun startCompiler(errors: CompileErrorReport): Process {
         val command =
             listOf(
                 gradleExecutable.get(),
@@ -160,7 +166,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 "svelteSync",
                 "-Psvelte.dev=true",
             )
-        return start("kotlin", command, projectDirectory.get().asFile)
+        return start("kotlin", command, projectDirectory.get().asFile, errors::onLine)
     }
 
     private fun startApp(banner: ReadyBanner): Process {
@@ -173,6 +179,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 listOf(
                     "-D$DEVELOPMENT_SYSTEM_PROPERTY=true",
                     "-D$FRONTEND_DIR_SYSTEM_PROPERTY=${frontendDir.get().asFile.path}",
+                    "-D$COMPILE_ERRORS_SYSTEM_PROPERTY=${compileErrorsFile.get().asFile.path}",
                     "-cp",
                     appClasspath.asPath,
                     mainClass.get(),
