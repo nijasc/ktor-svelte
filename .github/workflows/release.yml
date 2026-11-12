@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     env:
       RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
     steps:
@@ -55,6 +57,12 @@ jobs:
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+      - name: Record build provenance for the published JARs
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: |
+            ktor-svelte-server/build/libs/*.jar
+            ktor-svelte-gradle-plugin/build/libs/*.jar
 
   docs:
     needs: release-please

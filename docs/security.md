@@ -158,6 +158,16 @@ The default limit runs before routing, so read the user from the session there, 
 
 It uses Ktor's `RateLimit` plugin, so do not install that plugin yourself unless you set `rateLimit { enabled = false }`. `apiWrites = 0` keeps the named limits but drops the default one.
 
+## Verifying a release
+
+Every JAR of a release, for the runtime and for the Gradle plugin, has signed [SLSA build provenance](https://slsa.dev/spec/v1.0/provenance). It records that the file was built by the release workflow of this repository from the tagged commit, and it is signed with [Sigstore](https://www.sigstore.dev) through GitHub artifact attestations. To check a JAR you downloaded, for example from Maven Central or your Gradle cache, use the GitHub CLI:
+
+```bash
+gh attestation verify ktor-svelte-server-<version>.jar --repo nijasc/ktor-svelte
+```
+
+It fails if the file was changed or built anywhere else. Maven Central also has the usual PGP signature next to every file.
+
 ## Reporting a vulnerability
 
 See [SECURITY.md](https://github.com/nijasc/ktor-svelte/blob/main/SECURITY.md) for how to report a vulnerability privately, and for a table of every secure default.
