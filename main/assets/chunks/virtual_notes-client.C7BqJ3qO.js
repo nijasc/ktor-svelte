@@ -1,4 +1,4 @@
-const e={"client.ts":`export interface UploadProgress {
+const n={"client.ts":`export interface UploadProgress {
     loaded: number;
     total?: number;
 }
@@ -7,6 +7,7 @@ export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
     fetch?: typeof fetch;
     onUploadProgress?: (progress: UploadProgress) => void;
     timeout?: number;
+    silent?: boolean;
 }
 
 export interface ApiConfig {
@@ -17,6 +18,7 @@ export interface ApiConfig {
     dedupeGets?: boolean;
     timeout?: number;
     onNewBuild?: (build: string) => void;
+    onError?: (error: unknown) => void;
 }
 
 export function isTimeoutError(error: unknown): boolean {
@@ -129,7 +131,7 @@ function withTimeout(signal: AbortSignal | null | undefined, timeout: number | u
 }
 
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
-    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, ...init } = options;
+    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, ...init } = options;
     const limit = timeout ?? (streaming ? undefined : apiConfig.timeout);
     const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);
     const url = apiConfig.baseUrl + path + queryString(query);
@@ -164,6 +166,15 @@ async function checked(response: Response, url: string, operation: string | unde
     return response;
 }
 
+function report(error: unknown, silent: boolean | undefined) {
+    if (silent || isAbortError(error)) return;
+    try {
+        apiConfig.onError?.(error);
+    } catch {
+        return;
+    }
+}
+
 const inFlight = new Map<string, Promise<unknown>>();
 
 function isShareable(method: string, options: InternalOptions): boolean {
@@ -173,7 +184,7 @@ function isShareable(method: string, options: InternalOptions): boolean {
 const prefetched = new Map<string, { response: Promise<unknown>; expires: number }>();
 let prefetchUntil: number | undefined;
 
-function fromPrefetch<T>(url: string, run: () => Promise<T>): Promise<T> | undefined {
+function fromPrefetch<T>(url: string, run: (silent?: boolean) => Promise<T>): Promise<T> | undefined {
     const until = prefetchUntil;
     prefetchUntil = undefined;
     const hit = prefetched.get(url);
@@ -185,7 +196,7 @@ function fromPrefetch<T>(url: string, run: () => Promise<T>): Promise<T> | undef
         return hit.response as Promise<T>;
     }
     if (fresh) return hit.response as Promise<T>;
-    const response = run();
+    const response = run(true);
     prefetched.set(url, { response, expires: until });
     response.catch(() => prefetched.delete(url));
     return response;
@@ -193,7 +204,14 @@ function fromPrefetch<T>(url: string, run: () => Promise<T>): Promise<T> | undef
 
 export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
     const { url, operation, send } = prepare(method, path, options, 'application/json');
-    const run = async () => (await parseResponse(await checked(await send(), url, operation))) as T;
+    const run = async (silent = options.silent) => {
+        try {
+            return (await parseResponse(await checked(await send(), url, operation))) as T;
+        } catch (error) {
+            report(error, silent);
+            throw error;
+        }
+    };
     if (method === 'GET' && !options.signal && !options.headers) {
         const early = fromPrefetch(url, run);
         if (early) return early;
@@ -216,7 +234,13 @@ function eventData<T>(data: string): T {
 
 export async function* stream<T>(method: string, path: string, options: InternalOptions = {}): AsyncGenerator<T, void, undefined> {
     const { url, operation, send } = prepare(method, path, options, 'text/event-stream', true);
-    const response = await checked(await send(), url, operation);
+    let response: Response;
+    try {
+        response = await checked(await send(), url, operation);
+    } catch (error) {
+        report(error, options.silent);
+        throw error;
+    }
     if (!response.body) return;
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = '';
@@ -699,4 +723,4 @@ export const PublicConfig = {
 function addError(errors: Record<string, string[]>, field: string, message: string): void {
     (errors[field] ??= []).push(message);
 }
-`};export{e as default};
+`};export{n as default};

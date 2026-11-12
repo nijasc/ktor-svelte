@@ -50,7 +50,7 @@ The frontend is plain files, so there is no Node process in production. SvelteKi
 - **Real hot reload.** One command runs Vite, the Kotlin compiler and your app.
 - **Secure defaults.** CSP, security headers, origin check, body and rate limits, hidden error details.
 - **Fast defaults.** Immutable caching, ETags, precompressed files, compressed API responses, real 404s for stale chunks.
-- **Frontend libraries from Kotlin.** Tailwind, DaisyUI, Lucide, i18n and image optimization, configured in Gradle.
+- **Frontend libraries from Kotlin.** Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts, configured in Gradle.
 - **Any package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
 - **IntelliJ run configurations.** One click starts everything.
 
@@ -1215,6 +1215,28 @@ To refresh the files without your dev server, for example in CI, run the task be
 ./gradlew svelteGenerateTs
 ```
 
+## Show errors automatically
+
+Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:
+
+```kotlin
+svelte {
+    libraries {
+        toasts()
+    }
+}
+```
+
+Run `svelteSync` once. It writes `src/lib/ktor-svelte/toasts.ts` and a `src/hooks.client.ts` that sets `apiConfig.onError`. The message comes from the error body's `message`, such as `Problem("That note does not exist.")`, or reads "Something went wrong (error 500)" with the request ID for server errors. Network failures and timeouts get their own message. With DaisyUI, toasts are DaisyUI alerts in your theme. Otherwise they bring their own small style.
+
+Some errors are left to you, because a toast would be the wrong answer:
+
+- 422 validation errors, which your form shows next to the fields.
+- 401, which `apiConfig.onUnauthorized` handles.
+- Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
+
+The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts` for your own messages, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
+
 ## Reload after a deploy
 
 Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API:
@@ -1522,7 +1544,7 @@ Source: https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries
 
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide, i18n and image optimization, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts, configured in Gradle with typed helpers on both sides.
 
 Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
 
@@ -1547,6 +1569,7 @@ svelte {
         }
         lucide()
         images()
+        toasts()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -1666,6 +1689,10 @@ Each icon loads on demand, so you only download the ones a page uses. An icon's 
 At build time, every image becomes AVIF and WebP in several widths, plus a fallback in the original format, inside a `<picture>` with `srcset`, `width` and `height`. Browsers download only the size and format they need, and the layout doesn't jump while the image loads. In the notes example, a 339 KB PNG becomes an 8 KB AVIF for a laptop screen. The files land in `_app/immutable/`, so browsers cache them for a year like any other hashed asset.
 
 Files in `frontend/static/` are copied as they are, because nothing in the build knows where they are used. Move images there to `src/lib/assets` to have them optimized. Processing uses `sharp`, which comes with prebuilt binaries for Windows, macOS and Linux. The first build with many large images takes longer, and later builds reuse Vite's cache.
+
+## Toasts
+
+`toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#show-errors-automatically).
 
 ## i18n
 
