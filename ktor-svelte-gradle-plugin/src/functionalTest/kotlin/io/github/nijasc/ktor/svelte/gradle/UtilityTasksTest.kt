@@ -164,6 +164,22 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `IntelliJ leaves the frontend build output out of the index`() {
+        val project = project()
+        dir.resolve("build.gradle.kts").appendText(
+            """
+
+            val excluded = provider { extensions.getByType<org.gradle.plugins.ide.idea.model.IdeaModel>().module.excludeDirs.map { it.relativeTo(projectDir).invariantSeparatorsPath }.sorted() }
+            tasks.register("printExcluded") {
+                val names = excluded
+                doLast { println("EXCLUDED " + names.get()) }
+            }
+            """.trimIndent(),
+        )
+        assertContains(project.run("printExcluded").output, "EXCLUDED [.gradle, build, frontend/.svelte-kit/output, frontend/build]")
+    }
+
+    @Test
     fun `run configurations leave out app tasks without the application plugin`() {
         val project = project()
         project.run("svelteGenerateRunConfigurations")

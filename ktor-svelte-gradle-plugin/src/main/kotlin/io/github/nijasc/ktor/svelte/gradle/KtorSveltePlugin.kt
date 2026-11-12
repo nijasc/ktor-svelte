@@ -40,6 +40,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.gradle.process.CommandLineArgumentProvider
 import java.io.File
 import java.util.Properties
@@ -71,6 +72,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         serializeFrontendTasks(project)
         val config = registerConfigReport(project, extension)
 
+        excludeFrontendOutputFromIde(project, extension)
         project.pluginManager.withPlugin("java") {
             wireResources(project, bundle)
             wireGeneratedSources(project, extension, librarySpec)
@@ -145,6 +147,19 @@ public class KtorSveltePlugin : Plugin<Project> {
             )
             settings.put("verifyTs", project.providers.gradleProperty(VERIFY_TS_PROPERTY).orElse("true"))
         }
+
+    private fun excludeFrontendOutputFromIde(
+        project: Project,
+        extension: SvelteExtension,
+    ) {
+        project.pluginManager.apply("idea")
+        project.afterEvaluate {
+            val frontend = extension.frontendDir.get().asFile
+            project.extensions.getByType(IdeaModel::class.java).module.excludeDirs.addAll(
+                listOf(frontend.resolve(extension.outputDir.get()), frontend.resolve(".svelte-kit/output")),
+            )
+        }
+    }
 
     private fun librarySpecProvider(
         project: Project,
@@ -221,7 +236,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             }
         install.configure { it.mustRunAfter(sync) }
         build.configure { it.dependsOn(verify) }
-        project.tasks.named("svelteInit").configure { it.finalizedBy(sync) }
+        project.tasks.named("svelteInit").configure { it.finalizedBy(sync, "svelteGenerateRunConfigurations") }
         sync.configure { it.mustRunAfter("svelteInit") }
         project.tasks.named("svelteDev", SvelteDevTask::class.java).configure { task ->
             task.dependsOn(sync)
