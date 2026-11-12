@@ -112,6 +112,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("frontendDir", extension.frontendDir.map { it.asFile.relativeToOrSelf(projectDirectory).invariantSeparatorsPath })
             settings.put("outputDir", extension.outputDir)
             settings.put("packageManager", extension.packageManager.map { it.name })
+            settings.put("bunVersion", extension.bunVersion.orElse("not pinned"))
             settings.put("buildScript", extension.buildScript)
             settings.put("buildEnv", extension.buildEnv.map { it.sorted().joinToString(", ").ifEmpty { "none" } })
             settings.put("addRuntimeDependency", extension.addRuntimeDependency.map { it.toString() })
@@ -134,6 +135,8 @@ public class KtorSveltePlugin : Plugin<Project> {
                     .orElse("false"),
             )
             settings.put("libraries.lucide", libraries.lucideEnabled.map { it.toString() }.orElse("false"))
+            settings.put("libraries.images", libraries.imagesEnabled.map { it.toString() }.orElse("false"))
+            settings.put("libraries.toasts", libraries.toastsEnabled.map { it.toString() }.orElse("false"))
             settings.put(
                 "libraries.i18n",
                 libraries.i18nSettings.enabled

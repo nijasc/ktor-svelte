@@ -50,6 +50,9 @@ internal fun configReport(config: SvelteConfig): JsonObject =
         put("publicConfig", config.publicConfigProvider != null)
         put("buildHeader", config.buildHeader)
         put("requestIds", config.requestIds)
+        put("sitemap", config.sitemap)
+        put("siteUrl", config.siteUrl)
+        put("defaultFavicon", config.defaultFavicon)
         put("maxApiBodySize", config.maxApiBodySize)
         put("maxJsonDepth", config.maxJsonDepth)
         put("maxJsonStringLength", config.maxJsonStringLength)
@@ -64,6 +67,8 @@ internal fun configReport(config: SvelteConfig): JsonObject =
             put("mode", config.devConfig.mode.name)
             put("allowRemote", config.devConfig.allowRemote)
             put("slowApiCall", config.devConfig.slowApiCall?.toString())
+            put("panel", config.devConfig.panel)
+            put("browserLogs", config.devConfig.browserLogs)
         }
         putJsonObject("transport") {
             put("formats", strings(config.transportConfig.formatNames.ifEmpty { listOf("json") }))
