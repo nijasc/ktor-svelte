@@ -45,6 +45,7 @@ import java.io.File
 import java.util.Properties
 
 private const val TASK_GROUP = "svelte"
+private const val DEFAULT_APP_URL = "http://localhost:8080"
 private val DEEP_CLEAN_FRONTEND_PATHS = listOf("node_modules", ".svelte-kit", ".vite", ".turbo", ".cache", ".eslintcache")
 private val DEEP_CLEAN_PROJECT_PATHS = listOf(".gradle", ".kotlin")
 private const val SKIP_PROPERTY = "svelte.skip"
@@ -341,6 +342,11 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.externalProjectPath.set("\$PROJECT_DIR\$")
             task.taskPrefix.set(if (project == project.rootProject) "" else "${project.path}:")
             task.namePrefix.set(if (project == project.rootProject) "" else "${project.name}: ")
+            task.appUrl.set(DEFAULT_APP_URL)
+            val rootDirectory = project.rootDir
+            task.frontendPath.set(
+                extension.frontendDir.map { "\$PROJECT_DIR\$/" + it.asFile.relativeToOrSelf(rootDirectory).invariantSeparatorsPath },
+            )
         }
     }
 

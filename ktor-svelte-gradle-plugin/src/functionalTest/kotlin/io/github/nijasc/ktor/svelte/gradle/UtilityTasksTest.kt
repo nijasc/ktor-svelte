@@ -161,6 +161,13 @@ class UtilityTasksTest {
         assertContains(debug, "type=\"Remote\"")
         assertContains(debug, "value=\"5005\"")
         assertContains(debug, "AUTO_RESTART")
+        val frontend = dir.resolve(".run/Debug frontend.run.xml").readText()
+        assertContains(frontend, "type=\"JavascriptDebugType\" uri=\"http://localhost:8080\"")
+        assertContains(frontend, "<mapping url=\"http://localhost:8080\" local-file=\"${'$'}PROJECT_DIR${'$'}/frontend\" />")
+        val compound = dir.resolve(".run/Dev and debug.run.xml").readText()
+        assertContains(compound, "type=\"CompoundRunConfigurationType\"")
+        assertContains(compound, "<toRun name=\"Dev\" type=\"GradleRunConfiguration\" />")
+        assertContains(compound, "<toRun name=\"Debug app\" type=\"Remote\" />")
     }
 
     @Test

@@ -112,6 +112,12 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
     @get:Input
     public abstract val namePrefix: Property<String>
 
+    @get:Input
+    public abstract val appUrl: Property<String>
+
+    @get:Input
+    public abstract val frontendPath: Property<String>
+
     @TaskAction
     public fun generate() {
         val directory = outputDirectory.get().asFile
@@ -128,7 +134,16 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
                     add(gradleConfiguration("${prefix}Ktor", "${tasks}run", "-Psvelte.dev=true"))
                     add(gradleConfiguration("${prefix}Generate TypeScript", "${tasks}svelteGenerateTs"))
                     add(gradleConfiguration("${prefix}Dev", "${tasks}svelteDevAll"))
-                    if (debugPort.get() > 0) add(remoteDebugConfiguration("${prefix}Debug app", debugPort.get()))
+                    add(javaScriptDebugConfiguration("${prefix}Debug frontend"))
+                    if (debugPort.get() > 0) {
+                        add(remoteDebugConfiguration("${prefix}Debug app", debugPort.get()))
+                        add(
+                            compoundConfiguration(
+                                "${prefix}Dev and debug",
+                                listOf("${prefix}Dev" to "GradleRunConfiguration", "${prefix}Debug app" to "Remote"),
+                            ),
+                        )
+                    }
                 }
             }.mapNotNull { (name, xml) ->
                 val file = directory.resolve(name.replace(Regex("[^A-Za-z0-9 _-]"), "_") + ".run.xml")
@@ -168,6 +183,26 @@ public abstract class SvelteRunConfigurationsTask : DefaultTask() {
         name: String,
         port: Int,
     ): Pair<String, String> = name to renderTemplate("remote-debug.run.xml", mapOf("name" to escapeXml(name), "port" to port.toString()))
+
+    private fun javaScriptDebugConfiguration(name: String): Pair<String, String> =
+        name to
+            renderTemplate(
+                "js-debug.run.xml",
+                mapOf("name" to escapeXml(name), "url" to escapeXml(appUrl.get()), "frontend" to escapeXml(frontendPath.get())),
+            )
+
+    private fun compoundConfiguration(
+        name: String,
+        parts: List<Pair<String, String>>,
+    ): Pair<String, String> =
+        name to
+            renderTemplate(
+                "compound.run.xml",
+                mapOf(
+                    "name" to escapeXml(name),
+                    "entries" to parts.joinToString("\n") { (part, type) -> "    <toRun name=\"${escapeXml(part)}\" type=\"$type\" />" },
+                ),
+            )
 
     private fun escapeXml(value: String): String =
         value

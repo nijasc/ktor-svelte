@@ -406,8 +406,10 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteOutdatedTa
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRunConfigurationsTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public final fun generate ()V
+	public abstract fun getAppUrl ()Lorg/gradle/api/provider/Property;
 	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getExternalProjectPath ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFrontendPath ()Lorg/gradle/api/provider/Property;
 	public abstract fun getHasApplicationPlugin ()Lorg/gradle/api/provider/Property;
 	public abstract fun getNamePrefix ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOutputDirectory ()Lorg/gradle/api/file/DirectoryProperty;
