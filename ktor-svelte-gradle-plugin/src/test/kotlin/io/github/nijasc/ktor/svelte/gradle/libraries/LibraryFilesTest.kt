@@ -70,6 +70,17 @@ class LibraryFilesTest {
     }
 
     @Test
+    fun `the reload prompt is wired only when it is asked for`() {
+        val wiring = "if (reloadPrompt && client?.apiConfig && !client.apiConfig.onNewBuild) client.apiConfig.onNewBuild = toastNewBuild;"
+        val off = frontendFiles(spec(toasts = true), null, false).getValue("src/hooks.client.ts")
+        assertContains(off, "const reloadPrompt = false;")
+        assertContains(off, wiring)
+        val on = frontendFiles(spec(toasts = true).copy(reloadPrompt = true), null, false).getValue("src/hooks.client.ts")
+        assertContains(on, "const reloadPrompt = true;")
+        assertFalse("src/hooks.client.ts" in frontendFiles(spec().copy(reloadPrompt = true), null, false))
+    }
+
+    @Test
     fun `no css library means no tailwind in vite`() {
         val files = frontendFiles(spec(lucide = true), null, false)
         assertFalse(files.getValue("vite.config.ts").contains("tailwind"))

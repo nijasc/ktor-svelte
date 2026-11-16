@@ -196,6 +196,19 @@ public abstract class LucideSettings {
     ): Nothing = throw unknownSetting(LucideSettings::class.java, "lucide", name)
 }
 
+public abstract class ToastsSettings {
+    public abstract val reloadPromptEnabled: Property<Boolean>
+
+    public fun reloadPrompt() {
+        reloadPromptEnabled.set(true)
+    }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(ToastsSettings::class.java, "toasts", name)
+}
+
 public abstract class RoutesSettings {
     public abstract val dir: DirectoryProperty
 
@@ -225,6 +238,9 @@ public abstract class SvelteLibraries {
     public abstract val lucideSettings: LucideSettings
 
     @get:Nested
+    public abstract val toastsSettings: ToastsSettings
+
+    @get:Nested
     public abstract val routesSettings: RoutesSettings
 
     public abstract val overrides: MapProperty<String, String>
@@ -244,6 +260,11 @@ public abstract class SvelteLibraries {
 
     public fun toasts() {
         toastsEnabled.set(true)
+    }
+
+    public fun toasts(action: Action<ToastsSettings>) {
+        toastsEnabled.set(true)
+        action.execute(toastsSettings)
     }
 
     public fun routes() {

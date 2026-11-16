@@ -170,6 +170,12 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("libraries.lucide", libraries.lucideEnabled.map { it.toString() }.orElse("false"))
             settings.put("libraries.images", libraries.imagesEnabled.map { it.toString() }.orElse("false"))
             settings.put("libraries.toasts", libraries.toastsEnabled.map { it.toString() }.orElse("false"))
+            settings.put(
+                "libraries.toasts.reloadPrompt",
+                libraries.toastsSettings.reloadPromptEnabled
+                    .map { it.toString() }
+                    .orElse("false"),
+            )
             settings.put("libraries.routes", libraries.routesEnabled.map { it.toString() }.orElse("false"))
             settings.put(
                 "libraries.i18n",
@@ -219,6 +225,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 toasts = libraries.toastsEnabled.getOrElse(false),
                 routes = libraries.routesEnabled.getOrElse(false),
                 allIcons = libraries.lucideSettings.allIconsEnabled.getOrElse(false),
+                reloadPrompt = libraries.toastsSettings.reloadPromptEnabled.getOrElse(false),
                 i18n =
                     libraries.i18nSettings.takeIf { it.enabled.getOrElse(false) }?.let { i18n ->
                         I18nSpec(
