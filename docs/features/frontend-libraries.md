@@ -111,6 +111,18 @@ On the server they are `AppTheme.ShadcnLight` and `AppTheme.ShadcnDark`, and in 
 
 `customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
 
+You do not have to guess those colors in the build file. With DaisyUI on, the [dev panel](../guide/dev-workflow.md) has a **Theme colors** section with a color picker for each of the twelve. Changing one recolors the open page at once, so you tune the theme on your real screens. **Copy for Gradle** puts the result on the clipboard as a finished block, named as you typed it:
+
+```kotlin no-check
+customTheme("sunset") {
+    primary = "#ff0044"
+    secondary = "#f5f5f5"
+    base100 = "#fff8e7"
+}
+```
+
+The real block lists all twelve colors, and says `colorScheme = "dark"` when you started from a dark theme. Paste it into `daisyUi { }`, add the name to your themes, and `svelteSync` makes it a theme like any other. The changes on the page are a preview only: **Reset**, or a reload, brings the theme back.
+
 The saved theme is applied by a small inline script. The automatic [Content-Security-Policy](../security.md#security-headers) allows it by its hash. If you set your own `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
 
 ## Lucide
