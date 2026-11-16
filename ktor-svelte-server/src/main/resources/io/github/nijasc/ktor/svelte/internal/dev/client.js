@@ -135,6 +135,82 @@ function overridePublicConfig() {
     };
 }
 
+function cookieInspector(root) {
+    const section = root.querySelector('.cookies');
+    const rows = root.querySelector('.cookies-rows');
+    const note = root.querySelector('.cookies-note');
+
+    function meaning(cookie) {
+        const parts = [];
+        if (cookie.session !== undefined) parts.push(`session: ${cookie.session}`);
+        if (cookie.declared) {
+            const declared = cookie.declared;
+            const reads = declared.reads === null ? 'nothing' : declared.reads;
+            if (!cookie.sent) parts.push(`not set, reads as ${reads}`);
+            else if (!declared.fits) parts.push(`does not fit, reads as ${reads}`);
+            else parts.push(`reads as ${reads}`);
+            parts.push(`${declared.type}; ${declared.options}`);
+        }
+        return parts.join(' \u00b7 ');
+    }
+
+    async function clear(name) {
+        const query = name === undefined ? '' : `?name=${encodeURIComponent(name)}`;
+        try {
+            await plainFetch(`/_ktor-svelte/dev/cookies/clear${query}`, { method: 'POST', headers: { 'X-Ktor-Svelte-Dev': '1' } });
+        } finally {
+            await load();
+            note.textContent = `${note.textContent} Reload the page to see it without ${name === undefined ? 'them' : name}.`;
+        }
+    }
+
+    function draw(cookies) {
+        rows.replaceChildren(
+            ...cookies.map((cookie) => {
+                const row = document.createElement('div');
+                row.className = 'cookies-row';
+                row.classList.toggle('broken', Boolean(cookie.sent && cookie.declared && !cookie.declared.fits));
+                row.classList.toggle('unset', !cookie.sent);
+                const name = document.createElement('span');
+                name.className = 'cookies-name';
+                name.textContent = cookie.name;
+                const value = document.createElement('span');
+                value.className = 'cookies-value';
+                value.textContent = cookie.sent ? cookie.value : '';
+                value.title = cookie.sent ? cookie.value : '';
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = 'Clear';
+                button.hidden = !cookie.sent;
+                button.setAttribute('aria-label', `Clear the cookie ${cookie.name}`);
+                button.addEventListener('click', () => void clear(cookie.name));
+                const about = document.createElement('span');
+                about.className = 'cookies-about';
+                about.textContent = meaning(cookie);
+                row.append(name, value, button, about);
+                return row;
+            })
+        );
+        const sent = cookies.filter((cookie) => cookie.sent).length;
+        note.textContent = sent === 0 ? 'This browser sends no cookies.' : `${sent} sent with each request.`;
+        root.querySelector('.cookies-clear').hidden = sent === 0;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/cookies', { headers: { accept: 'application/json' } });
+            draw((await response.json()).cookies);
+        } catch {
+            note.textContent = 'The cookies could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    root.querySelector('.cookies-clear').addEventListener('click', () => void clear(undefined));
+}
+
 function routeMap(root) {
     const section = root.querySelector('.routes');
     const rows = root.querySelector('.routes-rows');
@@ -638,6 +714,16 @@ button.path:hover { text-decoration: underline; }
 .config-note { margin: 0; padding: 4px 10px; color: #aaa; }
 .routes { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .routes summary { padding: 6px 10px; cursor: pointer; }
+.cookies-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; }
+.cookies-note { color: #aaa; }
+.cookies-row { display: grid; grid-template-columns: minmax(80px, 1fr) 2fr auto; gap: 2px 8px; padding: 3px 10px; font-family: ui-monospace, monospace; }
+.cookies-name { color: #f3c969; }
+.cookies-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cookies-about { grid-column: 1 / -1; color: #aaa; font-family: system-ui, sans-serif; }
+.cookies-about:empty { display: none; }
+.cookies-row.broken .cookies-value { color: #ff8f8f; }
+.cookies-row.unset .cookies-name { color: #aaa; }
+.cookies-row button[hidden], .cookies-clear[hidden] { display: none; }
 .routes-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; }
 .routes-filter { flex: 1; min-width: 0; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
 .routes-docs { color: #9ecbff; }
@@ -917,6 +1003,11 @@ function startPanel() {
                     <button type="button" class="config-reset">Reset all</button>
                 </div>
             </details>
+            <details class="cookies">
+                <summary>Cookies</summary>
+                <div class="cookies-tools"><button type="button" class="cookies-clear" hidden>Clear all</button><span class="cookies-note"></span></div>
+                <div class="cookies-rows"></div>
+            </details>
             <details class="routes">
                 <summary>Routes</summary>
                 <div class="routes-tools">
@@ -1033,6 +1124,7 @@ function startPanel() {
     });
     root.querySelector('.save').addEventListener('click', () => void saveFixtures());
     configEditor(root);
+    cookieInspector(root);
     routeMap(root);
     statusView(root);
     themeEditor(root);
