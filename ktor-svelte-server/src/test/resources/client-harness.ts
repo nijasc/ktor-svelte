@@ -204,6 +204,35 @@ results.toastFromAnotherOrigin = await toastsShownFor({ 'x-ktor-svelte-toast': '
     apiConfig.baseUrl = 'https://other.example';
 });
 results.noToastHeader = await toastsShownFor({}, '/api/notes');
+async function navigatedAfter(header: string | undefined, status = 200, setup: () => void = () => {}): Promise<string[]> {
+    const visited: string[] = [];
+    apiConfig.retry = undefined;
+    apiConfig.onError = undefined;
+    apiConfig.baseUrl = '';
+    apiConfig.onNavigate = (path) => visited.push(path);
+    setup();
+    const headers: Record<string, string> = header === undefined ? {} : { 'x-ktor-svelte-navigate': header };
+    apiConfig.fetch = (async () => new Response('{}', { status, headers })) as typeof fetch;
+    await request('POST', '/api/notes', { body: {} }).catch(() => undefined);
+    visited.push('the call returned');
+    await new Promise((resolve) => realTimeout(resolve, 20));
+    apiConfig.onNavigate = undefined;
+    apiConfig.baseUrl = '';
+    return visited;
+}
+
+results.navigates = await navigatedAfter('/notes/7?tab=files');
+results.noNavigationHeader = await navigatedAfter(undefined);
+results.noNavigationAfterAFailure = await navigatedAfter('/notes/7', 409);
+results.otherSitesAreNotFollowed = [
+    ...(await navigatedAfter('https://other.example/notes')),
+    ...(await navigatedAfter('//other.example/notes')),
+    ...(await navigatedAfter('/\\other.example')),
+    ...(await navigatedAfter('notes/7'))
+];
+results.noNavigationFromAnotherOrigin = await navigatedAfter('/notes/7', 200, () => {
+    apiConfig.baseUrl = 'https://other.example';
+});
 Reflect.deleteProperty(globalThis, 'document');
 Reflect.deleteProperty(globalThis, 'location');
 

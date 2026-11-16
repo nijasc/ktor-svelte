@@ -31,6 +31,7 @@ export interface ApiConfig {
     sendTimeZone?: boolean;
     onWrite?: () => void;
     onToast?: (message: string, kind: ServerToastKind) => void;
+    onNavigate?: (path: string) => void;
 }
 
 export type ServerToastKind = 'info' | 'success' | 'warning' | 'error';
@@ -293,9 +294,17 @@ function noticeToasts(response: Response, url: string) {
     }
 }
 
+function noticeNavigation(response: Response, url: string) {
+    const path = response.headers.get('x-ktor-svelte-navigate');
+    if (!path || !apiConfig.onNavigate || typeof document === 'undefined' || !isSameOrigin(url)) return;
+    if (!/^\/(?![/\\])/.test(path)) return;
+    setTimeout(() => apiConfig.onNavigate?.(path), 0);
+}
+
 async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
     noticeBuild(response);
     noticeToasts(response, url);
+    if (response.ok) noticeNavigation(response, url);
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
     if (!response.ok) {
         const requestId = response.headers.get('x-request-id') ?? undefined;
