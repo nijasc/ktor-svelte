@@ -13,6 +13,9 @@ import kotlin.time.Duration.Companion.days
 
 private val COOKIE_NAME = Regex("[A-Za-z0-9_.-]+")
 private val COOKIE_PATH = Regex("/[A-Za-z0-9_./~-]*")
+private val COOKIE_CATEGORY = Regex("[a-z][a-z0-9-]*")
+private const val NO_CONSENT = "none"
+internal const val CONSENT_COOKIE = "cookie-consent"
 
 public enum class CookieSameSite { Lax, Strict, None }
 
@@ -27,6 +30,7 @@ public class TypedCookie<T : Any>
         public val sameSite: CookieSameSite,
         public val secure: Boolean,
         public val httpOnly: Boolean,
+        public val category: String? = null,
     ) {
         private val kind: String =
             when {
@@ -50,6 +54,13 @@ public class TypedCookie<T : Any>
             require(
                 sameSite != CookieSameSite.None || secure,
             ) { "The cookie '$name' is SameSite=None, which browsers only accept with secure = true." }
+        }
+
+        init {
+            require(name != CONSENT_COOKIE) { "'$CONSENT_COOKIE' is the cookie that holds the visitor's choice. Pick another name." }
+            require(category == null || (COOKIE_CATEGORY.matches(category) && category != NO_CONSENT)) {
+                "The cookie '$name' has the category '$category'. Use lower case letters, digits and '-', such as analytics."
+            }
         }
 
         internal fun format(value: T): String {
@@ -83,6 +94,7 @@ public class TypedCookie<T : Any>
                 sameSite = sameSite.name.lowercase(),
                 secure = secure,
                 httpOnly = httpOnly,
+                category = category,
             )
     }
 
@@ -94,10 +106,24 @@ public inline fun <reified T : Any> typedCookie(
     sameSite: CookieSameSite = CookieSameSite.Lax,
     secure: Boolean = false,
     httpOnly: Boolean = false,
-): TypedCookie<T> = TypedCookie(name, T::class.javaObjectType, default, maxAge, path, sameSite, secure, httpOnly)
+    category: String? = null,
+): TypedCookie<T> = TypedCookie(name, T::class.javaObjectType, default, maxAge, path, sameSite, secure, httpOnly, category)
 
-public fun <T : Any> ApplicationCall.readCookie(cookie: TypedCookie<T>): T? =
-    request.cookies[cookie.name, CookieEncoding.RAW]?.let(cookie::parse) ?: cookie.default
+public val ApplicationCall.cookieConsent: Set<String>?
+    get() =
+        request.cookies[CONSENT_COOKIE, CookieEncoding.RAW]
+            ?.split('.')
+            ?.filter { COOKIE_CATEGORY.matches(it) && it != NO_CONSENT }
+            ?.toSet()
+
+public fun ApplicationCall.consentsTo(category: String): Boolean = cookieConsent?.contains(category) == true
+
+private fun ApplicationCall.mayUse(cookie: TypedCookie<*>): Boolean = cookie.category == null || consentsTo(cookie.category)
+
+public fun <T : Any> ApplicationCall.readCookie(cookie: TypedCookie<T>): T? {
+    if (!mayUse(cookie)) return cookie.default
+    return request.cookies[cookie.name, CookieEncoding.RAW]?.let(cookie::parse) ?: cookie.default
+}
 
 private fun ApplicationCall.sendCookie(
     cookie: TypedCookie<*>,
@@ -126,6 +152,7 @@ public fun <T : Any> ApplicationCall.writeCookie(
     cookie: TypedCookie<T>,
     value: T,
 ) {
+    if (!mayUse(cookie)) return
     sendCookie(
         cookie,
         cookie.format(value),

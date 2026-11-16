@@ -2,6 +2,7 @@ import {
     ApiError,
     apiConfig,
     codeMessages,
+    consentStore,
     errorCode,
     errorMessage,
     fixtureFetch,
@@ -340,6 +341,51 @@ results.cookies = {
     broken,
     fromHeader: [themeCookie.get('x=1; theme=Dark'), sizeCookie.get('theme=Dark') ?? null],
     jar
+};
+const kept = new Map<string, string>();
+cookieHost.document = {
+    get cookie() {
+        return [...kept].map(([name, value]) => `${name}=${value}`).join('; ');
+    },
+    set cookie(text: string) {
+        const [pair, ...attributes] = text.split('; ');
+        const name = pair.slice(0, pair.indexOf('='));
+        if (attributes.includes('max-age=0')) kept.delete(name);
+        else kept.set(name, pair.slice(name.length + 1));
+    }
+};
+const visits = typedCookie<number, number>('visits', { kind: 'int', default: 0, path: '/', sameSite: 'lax', secure: false, category: 'analytics' });
+const layout = typedCookie<string>('layout', { kind: 'string', path: '/app', sameSite: 'lax', secure: false, category: 'preferences' });
+const consent = consentStore(['analytics', 'marketing', 'preferences'] as const, [
+    { name: 'layout', path: '/app', category: 'preferences' },
+    { name: 'visits', path: '/', category: 'analytics' }
+]);
+const consentSeen: string[] = [];
+const stopConsent = consent.subscribe((now) => consentSeen.push(`${now.decided}:${now.accepted.join('+')}`));
+const consentSteps: unknown[] = [];
+const consentStep = () => consentSteps.push([consent.decided(), consent.allows('analytics'), visits.get(), layout.get() ?? null, document.cookie]);
+visits.set(1);
+layout.set('wide');
+consentStep();
+consent.accept();
+visits.set(2);
+layout.set('wide');
+consentStep();
+consent.accept(['analytics']);
+consentStep();
+consent.refuse();
+visits.set(3);
+consentStep();
+consent.accept(['preferences']);
+layout.set('narrow');
+consent.reset();
+consentStep();
+stopConsent();
+consent.accept();
+results.consent = {
+    steps: consentSteps,
+    seen: consentSeen,
+    fromHeader: [visits.get('visits=9'), visits.get('visits=9; cookie-consent=analytics'), visits.get('visits=9; cookie-consent=none')]
 };
 if (!hadDocument) Reflect.deleteProperty(cookieHost, 'document');
 

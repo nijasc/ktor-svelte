@@ -36,7 +36,9 @@ internal class TypeScriptGenerator(
     private val errorCodes: List<String> = emptyList(),
     cookies: List<CookieSpec> = emptyList(),
 ) {
+    private val declaredCookies = cookies
     private val cookies = cookies.filterNot { it.httpOnly }
+    private val cookieFile = this.cookies.isNotEmpty() || cookies.any { it.category != null }
 
     private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
@@ -73,6 +75,9 @@ internal class TypeScriptGenerator(
         check(cookies.isEmpty() || "cookies" !in taken) {
             "cookies(...) would be exported as 'cookies', which the generated client already uses for the routes under /cookies."
         }
+        check(cookieCategories(declaredCookies).isEmpty() || "cookieConsent" !in taken) {
+            "Cookies with a category export 'cookieConsent', which the generated client already uses for the routes under /cookie-consent."
+        }
         cookies.groupBy { cookieKey(it.name) }.values.firstOrNull { it.size > 1 }?.let { same ->
             error(
                 "The cookies ${same.joinToString(
@@ -99,9 +104,9 @@ internal class TypeScriptGenerator(
                     schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name } + dateTypes,
                 ),
             "index.ts" to typeScriptTemplate("index.ts") + (if (constants.isEmpty()) "" else "export * from './constants.js';\n") +
-                (if (cookies.isEmpty()) "" else "export * from './cookies.js';\n"),
+                (if (cookieFile) "export * from './cookies.js';\n" else ""),
             *(if (constants.isEmpty()) emptyArray() else arrayOf(CONSTANTS_FILE to constantsSource(constants))),
-            *(if (cookies.isEmpty()) emptyArray() else arrayOf(COOKIES_FILE to cookiesSource(cookies))),
+            *(if (cookieFile) arrayOf(COOKIES_FILE to cookiesSource(declaredCookies)) else emptyArray()),
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
     }
