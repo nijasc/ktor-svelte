@@ -324,6 +324,46 @@ const refusedForm = await request('POST', '/api/documents', {
 results.forms = { sent: sentForms, refused: refusedForm };
 apiConfig.fetch = undefined;
 
+const keysSeen: (string | null)[] = [];
+let keyCalls = 0;
+let keyOutcomes: number[] = [];
+apiConfig.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+    keysSeen.push(new Headers(init?.headers).get('Idempotency-Key'));
+    const status = keyOutcomes[Math.min(keyCalls++, keyOutcomes.length - 1)];
+    const body = status === 409 ? { code: 'idempotency.inProgress', message: 'busy' } : {};
+    return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+const keyRun = async (method: string, outcomes: number[], options: RequestOptions = {}) => {
+    keysSeen.length = 0;
+    keyCalls = 0;
+    keyOutcomes = outcomes;
+    const outcome = await request(method, '/api/orders', options).then(
+        () => 'ok',
+        (error: unknown) => (error instanceof ApiError ? String(error.status) : 'failed')
+    );
+    return { outcome, keys: [...keysSeen] };
+};
+const fast = { attempts: 3, delay: 1, maxDelay: 2 };
+const plainWrite = await keyRun('POST', [200]);
+const keyedRead = await keyRun('GET', [200]);
+const retriedWrite = await keyRun('POST', [503, 409, 200], { retry: fast });
+apiConfig.retry = fast;
+const notRetriedByDefault = await keyRun('POST', [503, 200]);
+apiConfig.retry = undefined;
+const ownKey = await keyRun('PUT', [200], { headers: { 'Idempotency-Key': 'mine' } });
+apiConfig.idempotencyKeys = false;
+const switchedOff = await keyRun('POST', [503, 200], { retry: fast });
+apiConfig.idempotencyKeys = undefined;
+results.idempotency = {
+    writeHasKey: plainWrite.keys.length === 1 && (plainWrite.keys[0]?.length ?? 0) >= 10,
+    readHasNone: keyedRead.keys,
+    retried: [retriedWrite.outcome, retriedWrite.keys.length, new Set(retriedWrite.keys).size],
+    notRetriedByDefault: [notRetriedByDefault.outcome, notRetriedByDefault.keys.length],
+    ownKey: ownKey.keys,
+    switchedOff: [switchedOff.outcome, switchedOff.keys]
+};
+apiConfig.fetch = undefined;
+
 results.conflicts = [
     isVersionConflict(new ApiError(409, { message: 'x', code: 'version.conflict', current: { version: 2 } }, '/api/n')),
     isVersionConflict(new ApiError(409, { message: 'x', code: 'EmailTaken' }, '/api/n')),

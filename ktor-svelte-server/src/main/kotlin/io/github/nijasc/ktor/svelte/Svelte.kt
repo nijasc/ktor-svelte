@@ -7,6 +7,7 @@ import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
+import io.github.nijasc.ktor.svelte.internal.IdempotencyStore
 import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
 import io.github.nijasc.ktor.svelte.internal.StartupTiming
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
@@ -41,6 +42,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.toHtml
 import io.github.nijasc.ktor.svelte.internal.dev.toJson
 import io.github.nijasc.ktor.svelte.internal.installApiCompression
 import io.github.nijasc.ktor.svelte.internal.installConfigReport
+import io.github.nijasc.ktor.svelte.internal.installIdempotency
 import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.jvmStartIfFirstApplication
@@ -245,6 +247,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
             if (devProxy == null) application.log.warn(MISSING_BUILD_MESSAGE)
+        }
+
+        if (pluginConfig.idempotencyConfig.enabled) {
+            val idempotency = pluginConfig.idempotencyConfig
+            installIdempotency(application, resolver, IdempotencyStore(idempotency.ttl.inWholeMilliseconds, idempotency.maxEntries))
         }
 
         val constraints = SchemaConstraints()

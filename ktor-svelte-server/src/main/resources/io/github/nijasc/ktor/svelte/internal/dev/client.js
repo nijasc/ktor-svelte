@@ -910,6 +910,7 @@ function replay(entry) {
     const seen = seenCalls.get(entry.id);
     const headers = new Headers(seen?.headers ?? [['accept', 'application/json']]);
     headers.set(REQUEST_ID, crypto.randomUUID());
+    headers.delete('idempotency-key');
     replaying = true;
     try {
         return window.fetch(entry.path, { method: entry.method, headers, body: seen?.body, credentials: 'same-origin' }).catch(() => undefined);
