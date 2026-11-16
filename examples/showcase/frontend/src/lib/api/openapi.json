@@ -790,7 +790,12 @@
                         "name": "status",
                         "in": "query",
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "TODO",
+                                "DOING",
+                                "DONE"
+                            ]
                         }
                     },
                     {
@@ -804,14 +809,16 @@
                         "name": "mine",
                         "in": "query",
                         "schema": {
-                            "type": "string"
+                            "type": "boolean"
                         }
                     },
                     {
                         "name": "limit",
                         "in": "query",
                         "schema": {
-                            "type": "string"
+                            "type": "integer",
+                            "maximum": 100.0,
+                            "minimum": 1.0
                         }
                     },
                     {

@@ -151,6 +151,18 @@ data class Task(
 )
 
 @Serializable
+data class TaskQuery(
+    val search: String? = null,
+    val status: TaskStatus? = null,
+    val label: String? = null,
+    val mine: Boolean = false,
+    @JsonSchema.Minimum(1.0)
+    @JsonSchema.Maximum(100.0)
+    val limit: Int = 10,
+    val cursor: String? = null,
+)
+
+@Serializable
 data class TaskInput(
     @Trim
     @JsonSchema.MinLength(1)

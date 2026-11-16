@@ -367,6 +367,18 @@ class ShowcaseAppTest {
         assertContains(admin.send("GET", "/api/tasks?search=%25&limit=50").body(), """"items":[]""")
         assertContains(admin.send("GET", "/api/tasks?search=$token&status=DONE").body(), """"items":[]""")
         assertFalse(admin.send("GET", "/api/tasks?mine=true&limit=50").body().contains(token))
+
+        val wrong = admin.send("GET", "/api/tasks?status=LATER&limit=many&mine=maybe")
+        assertEquals(422, wrong.statusCode())
+        assertContains(wrong.body(), """"status":["Must be one of TODO, DOING, DONE."]""")
+        assertContains(wrong.body(), """"limit":["Must be a whole number."]""")
+        assertContains(wrong.body(), """"mine":["Must be true or false."]""")
+        assertEquals(422, admin.send("GET", "/api/tasks?limit=0").statusCode())
+        val services = File("frontend/src/lib/api/services.ts").readText()
+        assertContains(
+            services,
+            "query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string }",
+        )
         assertContains(admin.send("GET", "/api/stats").body(), """"$token":3""")
     }
 

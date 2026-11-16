@@ -86,7 +86,7 @@
 <div id="all-tasks" class="max-w-3xl">
     <DataTable
         load={api.tasks.list}
-        query={{ limit: '5' }}
+        query={{ limit: 5 }}
         paging="pages"
         key={(task) => task.id}
         columns={[

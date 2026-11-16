@@ -3,6 +3,8 @@ package showcase
 import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.Patch
+import io.github.nijasc.ktor.svelte.query
+import io.github.nijasc.ktor.svelte.queryOf
 import io.github.nijasc.ktor.svelte.receiveForm
 import io.github.nijasc.ktor.svelte.respondIfStale
 import io.github.nijasc.ktor.svelte.ToastKind
@@ -31,7 +33,6 @@ import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import java.nio.file.Files
 
-private const val DEFAULT_PAGE_SIZE = 10
 private const val MAX_FILE_NAME_LENGTH = 120
 
 private val INLINE_TYPES = setOf("image/png", "image/jpeg", "image/gif", "image/webp")
@@ -63,17 +64,11 @@ fun Route.taskRoutes(
     route("/api/tasks") {
         get {
             val viewer = call.currentUser(users)
-            val filter =
-                TaskFilter(
-                    search = call.queryParameters["search"],
-                    status = call.queryParameters["status"]?.let { name -> TaskStatus.entries.firstOrNull { it.name == name } },
-                    label = call.queryParameters["label"],
-                    assigneeId = viewer.id.takeIf { call.queryParameters["mine"] == "true" },
-                )
-            val limit = call.queryParameters["limit"]?.toIntOrNull() ?: DEFAULT_PAGE_SIZE
-            val page: Page<Task> = tasks.page(filter, call.queryParameters["cursor"], limit)
+            val query = call.query<TaskQuery>()
+            val filter = TaskFilter(query.search, query.status, query.label, viewer.id.takeIf { query.mine })
+            val page: Page<Task> = tasks.page(filter, query.cursor, query.limit)
             call.respond(page)
-        }
+        }.queryOf<TaskQuery>()
 
         post {
             val input = call.receive<TaskInput>()

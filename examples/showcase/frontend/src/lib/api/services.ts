@@ -1,5 +1,5 @@
 import { ApiError, request, codeMessages, errorCode, type RequestOptions } from './client.js';
-import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, FieldCheckAnswer, Greeting, Login, LucideIcon, PasswordChange, Priority, Problem, ProfileInput, PublicConfig, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
+import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, FieldCheckAnswer, Greeting, Login, LucideIcon, PasswordChange, Priority, Problem, ProfileInput, PublicConfig, Registration, RoleChange, Status, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
 
 /** @see showcase/Auth.kt */
 export const adminGetUsers = (options?: RequestOptions) => request<User[]>('GET', '/api/admin/users', { ...options, operation: 'admin.getUsers' });
@@ -90,7 +90,7 @@ export const stats = {
 };
 
 /** @see showcase/TaskRoutes.kt */
-export const tasksList = (query?: { search?: string; status?: string; label?: string; mine?: string; limit?: string; cursor?: string }, options?: RequestOptions) => request<{
+export const tasksList = (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string }, options?: RequestOptions) => request<{
     items: Task[];
     next?: string | null;
 }>('GET', '/api/tasks', { ...options, query, operation: 'tasks.list' });

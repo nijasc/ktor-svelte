@@ -197,6 +197,11 @@ public final class io/github/nijasc/ktor/svelte/PathParametersKt {
 	public static final fun pathParameter (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Lkotlin/reflect/KClass;)Ljava/lang/Object;
 }
 
+public final class io/github/nijasc/ktor/svelte/QueriesKt {
+	public static final fun describeQuery (Lio/ktor/server/routing/Route;Lkotlinx/serialization/descriptors/SerialDescriptor;)Lio/ktor/server/routing/Route;
+	public static final fun readQuery (Lio/ktor/server/application/ApplicationCall;Lkotlinx/serialization/KSerializer;)Ljava/lang/Object;
+}
+
 public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/Enum {
 	public static final field FixedWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 	public static final field SlidingWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
