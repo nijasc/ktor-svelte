@@ -7,6 +7,7 @@ import io.github.nijasc.ktor.svelte.gradle.renderTemplate
 private const val HEADER = "// $GENERATED_MARKER\n"
 
 internal const val GENERATED_GIT_ATTRIBUTES = "$GENERATED_DIR/.gitattributes"
+internal const val GENERATED_LINT_RULES = "$GENERATED_DIR/eslint.js"
 private const val GIT_ATTRIBUTES = "# $GENERATED_MARKER\n* text eol=lf linguist-generated\n"
 
 private fun json(value: Any?): String = JsonOutput.toJson(value)
@@ -37,7 +38,10 @@ internal fun frontendFiles(
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
             put("src/hooks.client.ts", renderTemplate("hooks.client.ts"))
         }
-        if (spec.lucide || keys.any { it.startsWith("$GENERATED_DIR/") }) put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
+        if (spec.lucide || keys.any { it.startsWith("$GENERATED_DIR/") }) {
+            put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
+            put(GENERATED_LINT_RULES, lintRulesSource(routes.takeIf { spec.routes }))
+        }
     }
 
 internal fun iconSources(
@@ -68,6 +72,9 @@ internal fun iconConstant(file: String): String {
             .joinToString("") { part -> part.replaceFirstChar { it.uppercase() } }
     return if (pascal.first().isDigit()) "Icon$pascal" else pascal
 }
+
+internal fun lintRulesSource(routes: List<FrontendRoute>?): String =
+    HEADER + renderTemplate("eslint.js", mapOf("routes" to json(routes.orEmpty().associate { it.name to it.id })))
 
 private fun viteConfig(
     spec: LibrarySpec,

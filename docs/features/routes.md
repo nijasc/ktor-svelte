@@ -63,6 +63,18 @@ A route's name is its path in camel case, without groups: `/` is `home`, `/about
 
 `routes.ts` is a generated file like the others: commit it, and a production build fails if it is out of date. While `svelteDev` or `svelteDevAll` runs, adding, moving or deleting a page updates `routes.ts` at once. Under `svelteDevAll` `FrontendRoutes` follows and the app restarts. Otherwise it updates the next time Kotlin compiles.
 
+## Renaming a page
+
+Moving a page folder changes its route name, so every typed call to it stops compiling. `svelteRename` moves the folder and fixes those calls in one step:
+
+```bash
+./gradlew svelteRename --page=notes/[id] --to=memos/[id]
+```
+
+It moves `src/routes/notes/[id]` and every page below it, rewrites `routes.notesId` and `routeIds.notesId` in the frontend and `FrontendRoutes.notesId` in Kotlin to the new names, and then runs `svelteSync`, so `routes.ts` matches again. Both paths are relative to the routes folder, and route groups such as `(app)` are written as they are on disk.
+
+The task stops before it changes anything when a file it would rewrite has uncommitted changes, so the rename stays one clean diff. Add `--force` to rename anyway. When the page's parameters change, such as `[id]` to `[noteId]`, the calls are renamed but their arguments are yours to update, and the compiler names each one. Nothing answers at the old address afterwards, so add a redirect if it was linked from outside the app.
+
 ## Finding links that are still strings
 
 An app that turns typed routes on later still has links such as `href="/notes/{note.id}"`. `svelteVerifyRoutes` reads every `.svelte`, `.ts` and `.js` file under `src` and lists each `href`, `goto` and `redirect` whose path is one of your pages, with the call to write instead. It reads the Kotlin files in `src/main/kotlin` too, and lists each `respondRedirect` to a page with its `FrontendRoutes` replacement:

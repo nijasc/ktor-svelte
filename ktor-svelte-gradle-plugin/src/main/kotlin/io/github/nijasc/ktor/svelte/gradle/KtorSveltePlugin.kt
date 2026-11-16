@@ -16,6 +16,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteLiveTemplatesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRenameTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
@@ -266,6 +267,15 @@ public class KtorSveltePlugin : Plugin<Project> {
                         .orEmpty()
                 },
             )
+        }
+        project.tasks.register("svelteRename", SvelteRenameTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Moves a page and updates its typed route calls: svelteRename --page=notes/[id] --to=memos/[id]"
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
+            task.finalizedBy(sync)
         }
         install.configure { it.mustRunAfter(sync) }
         build.configure { it.dependsOn(verify) }
