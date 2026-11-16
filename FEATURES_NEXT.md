@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 10 | Production access log |  |
+| 18 | Jump from TypeScript to Kotlin |  |
 
 ### In review
 
@@ -35,6 +35,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 7 | i18n message check | #218 |
 | 8 | Retry with backoff | #219 |
 | 9 | `respondPage` helper | #221 |
+| 10 | Production access log | #222 |
 
 ### Next up
 
@@ -70,7 +71,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 18 | Jump from TypeScript to Kotlin | Small | 2 |
 | 19 | Field docs and deprecations | Small | 2 |
 | 35 | Typed path parameters | Small | 2 |
 | 36 | Unused endpoints report | Small | 2 |
