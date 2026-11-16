@@ -26,20 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 37 | Declared environment variables |  |
+| 46 | Secret leak check |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 32 | Decimal and duration types | #284 |
-| 33 | Version conflicts | #285 |
-| 43 | `Patch<T>` partial updates | #286 |
-| 44 | Typed multipart uploads | #287 |
-| 95 | File drop zone | #288 |
-| 86 | Query parameters as a data class | #289 |
-| 92 | Exposed helpers | #290 |
-| 72 | Idempotency keys | #291 |
+| 37 | Declared environment variables | #292 |
 
 ### Next up
 
@@ -129,12 +122,19 @@ Features of this plan that are merged:
 | 106 | Navigation progress bar | #281 |
 | 71 | Server checks while typing | #282 |
 | 31 | Branded ID types | #283 |
+| 32 | Decimal and duration types | #284 |
+| 33 | Version conflicts | #285 |
+| 43 | `Patch<T>` partial updates | #286 |
+| 44 | Typed multipart uploads | #287 |
+| 95 | File drop zone | #288 |
+| 86 | Query parameters as a data class | #289 |
+| 92 | Exposed helpers | #290 |
+| 72 | Idempotency keys | #291 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 46 | Secret leak check | Medium | 6 |
 | 82 | Deploy presets | Medium | 6 |
 | 49 | Plurals in messages | Medium | 7 |
 | 50 | Shared formatting | Medium | 7 |
