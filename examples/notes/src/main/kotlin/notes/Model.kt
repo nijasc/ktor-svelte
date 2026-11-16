@@ -23,10 +23,12 @@ data class AppConfig(
 enum class NoteStatus { ACTIVE, ARCHIVED }
 
 @Serializable
+@JsonSchema.Description("A note with its tags and its icon.")
 data class Note(
     val id: Int,
     val title: String,
     val body: String,
+    @JsonSchema.Description("Lowercase words the list can be filtered by.")
     val tags: List<String>,
     val status: NoteStatus,
     val icon: LucideIcon,

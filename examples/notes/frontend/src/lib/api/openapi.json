@@ -528,6 +528,7 @@
             "Note": {
                 "type": "object",
                 "title": "Note",
+                "description": "A note with its tags and its icon.",
                 "required": [
                     "id",
                     "title",
@@ -549,6 +550,7 @@
                     },
                     "tags": {
                         "type": "array",
+                        "description": "Lowercase words the list can be filtered by.",
                         "items": {
                             "type": "string"
                         }
