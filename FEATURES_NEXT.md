@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-One hundred and nine features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+The list holds 153 features, which is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## What matters most
 
@@ -160,6 +160,50 @@ What these features build on has shipped in 1.1.0:
 | 61 | Emails from Svelte components | Large | 11 |
 | 60 | Multiple frontends | Large | 12 |
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
+| 110 | Typed request headers | Small | 14 |
+| 111 | Per-route timeout | Small | 14 |
+| 112 | Sparse fields | Large | 14 |
+| 113 | Included relations | Large | 14 |
+| 114 | Totals for lists | Small | 14 |
+| 115 | Rule presets | Small | 14 |
+| 116 | Read-only computed fields | Small | 14 |
+| 117 | Created and updated stamps | Small | 14 |
+| 118 | Owner checks | Small | 14 |
+| 119 | Pending writes indicator | Small | 14 |
+| 120 | Input masks | Medium | 14 |
+| 121 | Focus the first error | Small | 14 |
+| 122 | Changed-field markers | Small | 14 |
+| 123 | Send only what changed | Small | 14 |
+| 124 | Autocomplete hints from names | Small | 14 |
+| 125 | Password strength meter | Small | 14 |
+| 126 | Money and number inputs | Medium | 14 |
+| 127 | Multi-step forms | Medium | 14 |
+| 128 | Column chooser | Medium | 14 |
+| 129 | Row selection and bulk actions | Medium | 14 |
+| 130 | Sorting by header click | Medium | 14 |
+| 131 | Empty states | Small | 14 |
+| 132 | Skeleton rows | Small | 14 |
+| 133 | Virtual scrolling | Large | 14 |
+| 134 | Keyboard navigation | Medium | 14 |
+| 135 | Breadcrumb component | Small | 14 |
+| 136 | Collapsible sidebar state | Small | 14 |
+| 137 | Focus after navigation | Small | 14 |
+| 138 | Payload sizes | Small | 14 |
+| 139 | Config and environment view | Small | 14 |
+| 140 | Migration state | Small | 14 |
+| 141 | Memory and threads | Small | 14 |
+| 142 | Clear site data | Small | 14 |
+| 143 | Slowest routes of the session | Small | 14 |
+| 144 | Catch outgoing email | Medium | 14 |
+| 145 | Timing summary | Small | 14 |
+| 146 | Network check in doctor | Medium | 14 |
+| 147 | Pinned Node download | Medium | 14 |
+| 148 | Warm-up before ready | Small | 14 |
+| 149 | Latency and errors per route | Medium | 14 |
+| 150 | README section | Small | 14 |
+| 151 | Pages-to-routes diagram | Medium | 14 |
+| 152 | Doc links in generated code | Small | 14 |
+| 153 | Naming conventions check | Medium | 14 |
 
 ## Scope
 
@@ -274,6 +318,50 @@ What these features build on has shipped in 1.1.0:
 | 107 | Browser test recorder | Test kit | Medium | 30 |
 | 108 | Charts preset | Gradle plugin | Medium | |
 | 109 | Protect internal endpoints | Server | Small | |
+| 110 | Typed request headers | Server and generated client | Small |  |
+| 111 | Per-route timeout | Server and generated client | Small |  |
+| 112 | Sparse fields | Server and generated client | Large |  |
+| 113 | Included relations | Server and generated client | Large |  |
+| 114 | Totals for lists | Server | Small | 9 |
+| 115 | Rule presets | Server and generated client | Small |  |
+| 116 | Read-only computed fields | Server and generated client | Small |  |
+| 117 | Created and updated stamps | Server and generated client | Small |  |
+| 118 | Owner checks | Server | Small | 21 |
+| 119 | Pending writes indicator | Generated client | Small |  |
+| 120 | Input masks | Generated files | Medium | 63 |
+| 121 | Focus the first error | Generated client | Small | 11 |
+| 122 | Changed-field markers | Generated client | Small | 11 |
+| 123 | Send only what changed | Generated client | Small | 11, 43 |
+| 124 | Autocomplete hints from names | Generated files | Small | 63 |
+| 125 | Password strength meter | Generated files | Small | 115 |
+| 126 | Money and number inputs | Generated files | Medium | 32 |
+| 127 | Multi-step forms | Generated client | Medium | 11 |
+| 128 | Column chooser | Generated files | Medium | 65 |
+| 129 | Row selection and bulk actions | Generated files | Medium | 65 |
+| 130 | Sorting by header click | Generated files | Medium | 65 |
+| 131 | Empty states | Generated files | Small | 65 |
+| 132 | Skeleton rows | Generated files | Small | 65 |
+| 133 | Virtual scrolling | Generated files | Large | 65 |
+| 134 | Keyboard navigation | Generated files | Medium | 65 |
+| 135 | Breadcrumb component | Generated files | Small | 16 |
+| 136 | Collapsible sidebar state | Generated files | Small | 16 |
+| 137 | Focus after navigation | Generated files | Small |  |
+| 138 | Payload sizes | Dev panel | Small | #201 |
+| 139 | Config and environment view | Dev panel | Small | 37 |
+| 140 | Migration state | Dev panel | Small |  |
+| 141 | Memory and threads | Dev panel | Small |  |
+| 142 | Clear site data | Dev panel | Small |  |
+| 143 | Slowest routes of the session | Dev panel | Small | #201 |
+| 144 | Catch outgoing email | Dev panel | Medium | 61 |
+| 145 | Timing summary | Gradle plugin | Small |  |
+| 146 | Network check in doctor | Gradle plugin | Medium | #203 |
+| 147 | Pinned Node download | Gradle plugin | Medium |  |
+| 148 | Warm-up before ready | Server | Small |  |
+| 149 | Latency and errors per route | Server | Medium |  |
+| 150 | README section | Gradle plugin | Small |  |
+| 151 | Pages-to-routes diagram | Gradle plugin | Medium | 36 |
+| 152 | Doc links in generated code | Gradle plugin | Small |  |
+| 153 | Naming conventions check | Gradle plugin | Medium |  |
 
 ## What each one does
 
@@ -497,6 +585,65 @@ What these features build on has shipped in 1.1.0:
 108. **Charts preset.** `libraries { charts() }` sets up a Svelte chart library with the DaisyUI theme colors wired in, light and dark, and typed series helpers.
 109. **Protect internal endpoints.** One setting puts the status endpoint, the API docs and metrics behind a token, a role or a private network range, instead of each being open or off.
 
+### More for Kotlin routes
+
+110. **Typed request headers.** A route declares the headers it reads, and the generated client takes them as typed arguments instead of a loose headers object.
+111. **Per-route timeout.** A route declares how long it may take, and the generated client uses that as the timeout for exactly that call.
+112. **Sparse fields.** A list route can be asked for only some fields, such as `?fields=id,title`, and the return type of the client call narrows to exactly those.
+113. **Included relations.** `?include=author` makes a route embed related objects, typed on the client so the field exists only when it was asked for.
+114. **Totals for lists.** `Page<T>` can carry the total count, with a helper that only counts when the client asks for it.
+115. **Rule presets.** Ready rules for email, URL, phone, slug and strong password, identical on both sides, instead of hand-written patterns.
+116. **Read-only computed fields.** Fields the server computes are marked in Kotlin, become `readonly` in TypeScript and are dropped from request bodies automatically.
+117. **Created and updated stamps.** A small shared type for created at, updated at and by whom, filled on the server and typed on the client.
+118. **Owner checks.** `requireOwner(note)` and similar helpers answer 403 or 404 when a record does not belong to the caller, typed for the client.
+
+### More for forms
+
+119. **Pending writes indicator.** A reactive flag that is true while any write is in flight, plus a guard that warns before the tab is closed then.
+120. **Input masks.** Formatting while typing for phone numbers, IBANs, dates and money, with the clean value going to the server.
+121. **Focus the first error.** After a failed submit the first invalid field is focused and scrolled into view, and an error summary links to each field.
+122. **Changed-field markers.** Each field knows whether it differs from the saved value, for a marker beside it and a summary of changes before saving.
+123. **Send only what changed.** The form helper can send just the changed fields as a `Patch<T>`, instead of the whole object.
+124. **Autocomplete hints from names.** Fields named email, password, given name and so on get the right `autocomplete` and input type attributes without writing them.
+125. **Password strength meter.** A meter and a rule list driven by the same password rule the server enforces.
+126. **Money and number inputs.** Inputs bound to the decimal types that format for the visitor's locale and never lose precision.
+127. **Multi-step forms.** A wizard helper that validates each step against the same DTO, keeps progress and submits once at the end.
+
+### More for the data table and navigation
+
+128. **Column chooser.** Users show, hide and reorder the columns of the data table, and the choice is remembered.
+129. **Row selection and bulk actions.** Checkboxes, select all across pages, and a bar of actions that run a client call for every selected row.
+130. **Sorting by header click.** Clicking a column header sorts through the route when it supports that, or in the browser for small lists.
+131. **Empty states.** A generated empty-state block with a message and a primary action, different for "nothing yet" and "no results for this filter".
+132. **Skeleton rows.** Placeholder rows shaped like the table's columns while the first page loads.
+133. **Virtual scrolling.** Long lists render only the visible rows, combined with loading pages on demand.
+134. **Keyboard navigation.** Arrow keys move between rows and cells and Enter opens, with the right roles for screen readers.
+135. **Breadcrumb component.** A ready breadcrumb trail built from the nav metadata and the current route, with dynamic labels such as a record's name.
+136. **Collapsible sidebar state.** A sidebar that collapses to icons, remembers its state and opens as a drawer on small screens.
+137. **Focus after navigation.** After a client-side navigation, focus moves to the page heading and the new title is announced.
+
+### Still more for the dev panel
+
+138. **Payload sizes.** Each request shows its response size and its largest fields, so an oversized list is easy to spot.
+139. **Config and environment view.** The settings and environment variables the running app sees, with secrets masked.
+140. **Migration state.** Which database migrations ran, which are pending, and whether the last one failed.
+141. **Memory and threads.** Heap use, garbage collection and thread counts of the running app at a glance.
+142. **Clear site data.** One click clears cookies, storage and caches for the app in this browser.
+143. **Slowest routes of the session.** A ranking of the routes that took the most time since the app started.
+144. **Catch outgoing email.** Emails sent in development are shown in the dev panel instead of being sent.
+
+### Builds, operations and docs
+
+145. **Timing summary.** After a build, a short table of how long install, the frontend build, bundling and the Kotlin compile took.
+146. **Network check in doctor.** `svelteDoctor` checks that the package registry is reachable and which proxy and certificate settings apply, and says what to set when it is not.
+147. **Pinned Node download.** Like the pinned Bun, a pinned Node version that the plugin downloads, for teams that use npm or pnpm.
+148. **Warm-up before ready.** The app calls a few of its own routes before it reports ready, so the first real visitor is not the slow one.
+149. **Latency and errors per route.** Histograms and error rates per API route and per page in the existing metrics, named by route and not by raw path.
+150. **README section.** A generated section in the project README with the commands, addresses and environment variables of this app.
+151. **Pages-to-routes diagram.** A diagram of which page calls which API route, generated from the code.
+152. **Doc links in generated code.** Generated files carry a link to the docs page that explains them.
+153. **Naming conventions check.** A task that enforces the project's naming rules for routes, DTOs, pages and message keys.
+
 ## Order
 
 1. The route check group (1, 2, 3), then renaming a page (91) and the editor-time lint rules (103), because all of them build on the matcher from #202.
@@ -512,6 +659,7 @@ What these features build on has shipped in 1.1.0:
 11. HTTPS in development (105), the installable app (52), which needs it for testing, and emails from Svelte components (61).
 12. Multiple frontends (60). It changes the one-frontend, one-manifest assumption the whole project rests on, so it is a candidate for 2.0 and not for a minor release.
 13. `svelteUpgrade` (17) last.
+14. The features from 110 on were chosen last and are not ordered yet. Each one joins the group of the feature it builds on when that group is planned: the route features go with group 6, the form and table features with group 5, the dev panel features with group 3, and the rest with group 2.
 
 Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 11 are enough for 1.3.0 through 1.7.0, and any of them can move there without rework.
 
@@ -557,7 +705,7 @@ Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 11 are enough for 1.3.0 th
 | Emails from Svelte components | How are components rendered without a browser? | Open. It needs a second build step that renders components on the server side and inlines their CSS, which the plugin does not have today. It needs a design note before any code. |
 | Typed cookies | What about `HttpOnly` cookies? | They stay server-only. The frontend half is generated only for cookies declared readable by scripts. |
 | Generated UI building blocks | Does every app get components it did not ask for? | No. They are a library like the others, turned on with `libraries { components() }`, and the files are generated and owned by the plugin. An app that needs a different look writes its own on top of the same helpers. |
-| Generated UI building blocks | Does this make ktor-svelte a component library? | It must not. The set stays at the pieces that exist only because of the generated types: a field, typed inputs, a paged table and an error page. Buttons, dialogs and layout stay with DaisyUI or the app. |
+| Generated UI building blocks | Does this make ktor-svelte a component library? | With the features from 119 to 135 it does: masks, a multi-step form, a full data table, breadcrumbs and a sidebar go well beyond pieces that only exist because of the generated types. That conflicts with the project rule against bloat, so the proposal is to ship them as a separate package, `ktor-svelte-components`, that the plugin can install, and to keep only the field, the typed inputs, the plain paged table and the error page in the generated files. |
 | Typed error pages | What if the app already has a `+error.svelte`? | It is left alone. The page is written once when there is none, like the root layout. |
 | Inline page data | Whose data is inlined? | Open. The answers depend on the visitor's session, so nothing may be cached or shared between visitors, and the server must make the calls as that visitor. It is designed together with generated page loads (28), which provides the list of calls. |
 | Session expiry warning | How does the frontend learn the expiry time? | From the typed current user endpoint, which returns it next to the user. The app supplies it, because ktor-svelte does not own the session. |
@@ -593,6 +741,11 @@ Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 11 are enough for 1.3.0 th
 | Browser test recorder | Is the recorder written from scratch? | No. It wraps the recorder of the browser automation library the test kit uses, and only translates the result into the kit's Kotlin calls and typed routes. |
 | Charts preset | Which chart library? | Open. It must support Svelte 5, read colors from CSS variables so the DaisyUI themes apply, and be small. The choice is made when the feature is built, and the plugin pins its version like every other library. |
 | Protect internal endpoints | What is the default? | Nothing changes for existing apps. When turned on, a token from an environment variable is the default, because it works on every host. |
+| Sparse fields and included relations | Can the types really follow the query? | Open. Both need the route to declare what can be asked for, and both make the return type depend on an argument. They are the two largest items after multiple frontends and need a design note. |
+| Migration state, memory and threads | Does the dev panel depend on Flyway or on JVM internals? | No. Migration state shows only when Flyway is on the classpath, and the JVM figures come from the standard management beans. |
+| Pinned Node download | Why, when Bun is already pinned? | Only for teams whose lockfile is npm's or pnpm's. It follows the same download, checksum and cache rules as the pinned Bun. |
+| README section | How does it avoid touching the rest of the README? | It only rewrites the text between two markers, and does nothing when the markers are not there. |
+| Naming conventions check | Whose conventions? | The project's own. The rules are configured in `svelte { }`, there is no default set, and the task does nothing until one is given. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -642,6 +795,20 @@ These were offered and not chosen for 1.2.0:
 - Build and delivery: a build cache for the frontend build, assets from a CDN, loading only the visitor's language.
 - Production: graceful shutdown, a JSON logs preset, deprecation headers.
 - Upkeep: upgrade codemods, export and import of translations, a component error boundary, a license report.
+- Kotlin routes: route groups with shared settings, a batch write helper, streamed large lists, cross-field rules, translated rule messages, warnings beside errors, unknown enum values, a slug helper.
+- Generated client: cancel on navigation, request and response hooks, a polling helper, refresh on focus, old data while refreshing, connection status, a per-call cache, resumable uploads, an upload queue, pasted images, shrinking images before upload, runtime type guards, schemas for a validation library, JavaScript output, query string helpers.
+- Forms: list fields, nested object errors, dependent fields, submit with the keyboard, a tag input, a form generated from a DTO, a read-only detail view, a comparison of two versions.
+- Tables and lists: inline cell editing, a filter bar from the query type, saved filters, a quick search box, grouping, a card grid, drag to reorder, a tree view, a calendar view.
+- Navigation and layout: tabs tied to the route, a smart back link, recent and favourite pages, mobile bottom navigation, a page header component, a two-pane layout, a skip link, a shortcut overview, reduced motion, 404 suggestions, modals with an address, external link handling, a landing page per role.
+- Accounts: signed-in devices, remember me, sign out everywhere, acting as another user, invitations, magic links, passkeys, two-step verification, a permission overview, access tokens, field-level visibility, a profile page, avatar upload, data export and deletion, terms acceptance.
+- Languages: translated addresses, right-to-left support, a fallback chain, message groups, notes for translators, choices in messages, lists and units, localised date inputs, currency per user, a time zone switch, language per user, editing text on the page, a pseudo language, a progress report, a pre-translate hook. Choosing the language from the browser was picked, but it already exists on both sides.
+- Dev panel: a waterfall per page load, HAR export, sharing a request, a view of what the app is doing, restart and regenerate buttons, opening a page's files, fields nobody reads, grouped errors, a request count limit.
+- Gradle and builds: why a task ran, first-build progress, quiet output, offline mode, a registry mirror, routes across Gradle modules, workspace frontends, a team convention plugin, the client as its own module, a JAR contents report, a reproducible build check, a frontend bill of materials, a service file generator.
+- Operations: waiting for the database, a startup probe, settings per environment, page analytics, counters, an outside self-check, secrets from files, changing the log level, a dump endpoint, no indexing outside production, proxy cache presets, a purge hook, a static-only export, rolling deploy safety.
+- Docs and onboarding: a route and page map, a "what's new" page, a next steps task, explaining a setting, recipes as commands, hover help for translations, routes and permissions, a locale file schema, setup for new teammates, owners on routes, a TODO report.
+- Everyday shortcuts: a client for an outside API, a DTO from a JSON sample, routes from an OpenAPI file, a DTO from a table, debug values in the panel, unfinished markers, opening the app at a file, development-only pages, fake data for empty lists, database snapshots, setting the time, labels, formats, enum colours and help text declared once.
+
+The sixteen testing features of the last round (server tests, browser tests, generated tests and CI) were shown but not answered, so they are neither chosen nor left out.
 
 ## Release
 
