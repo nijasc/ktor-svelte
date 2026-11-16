@@ -184,4 +184,22 @@ class GeneratedClientBehaviourTest {
             results.getValue("codeMessages").jsonArray.map { it.jsonPrimitive.content },
         )
     }
+
+    @Test
+    fun `a typed cookie is read, checked and written in the browser as the server does it`() {
+        val cookies = runHarness().getValue("cookies").jsonObject
+        assertEquals("""["Light",null]""", cookies.getValue("withoutDocument").toString())
+        assertEquals("""["Dark",50,true,true]""", cookies.getValue("read").toString())
+        assertEquals("""["Light",null,null,false]""", cookies.getValue("broken").toString())
+        assertEquals("""["Dark",null]""", cookies.getValue("fromHeader").toString())
+        assertEquals(
+            listOf(
+                "theme=Dark; path=/; samesite=lax; max-age=60",
+                "page-size=20; path=/app; samesite=strict; secure",
+                "greeting=a%20b%3Bc; path=/; samesite=lax",
+                "theme=; path=/; samesite=lax; max-age=0",
+            ),
+            cookies.getValue("jar").jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
 }

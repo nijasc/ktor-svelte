@@ -208,6 +208,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.declaredErrorList.toList(),
             pluginConfig.constantHolders.map(::sharedHolder),
             pluginConfig.errorCodeSet?.names.orEmpty(),
+            pluginConfig.typedCookies.map { it.spec() },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)

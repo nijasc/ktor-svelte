@@ -5,6 +5,7 @@ import {
     errorCode,
     errorMessage,
     fixtureFetch,
+    typedCookie,
     isRateLimitError,
     isUploadError,
     request,
@@ -300,5 +301,46 @@ results.codeMessages = [
 ];
 Reflect.deleteProperty(codeMessages, 'NoteLocked');
 Reflect.deleteProperty(codeMessages, 'QuotaReached');
+
+const jar: string[] = [];
+const hadDocument = 'document' in globalThis;
+const cookieHost = globalThis as unknown as { document?: { cookie: string } };
+const themeCookie = typedCookie<'Light' | 'Dark', 'Light' | 'Dark'>('theme', {
+    kind: 'enum',
+    values: ['Light', 'Dark'],
+    default: 'Light',
+    maxAge: 60,
+    path: '/',
+    sameSite: 'lax',
+    secure: false
+});
+const sizeCookie = typedCookie<number>('page-size', { kind: 'int', path: '/app', sameSite: 'strict', secure: true });
+const greetingCookie = typedCookie<string>('greeting', { kind: 'string', path: '/', sameSite: 'lax', secure: false });
+const seenCookie = typedCookie<boolean, boolean>('seen', { kind: 'boolean', default: false, path: '/', sameSite: 'lax', secure: false });
+const withoutDocument = hadDocument ? null : [themeCookie.get(), sizeCookie.get() ?? null];
+let stored = 'other=1; theme=Dark; page-size=50; greeting=Gr%C3%BC%C3%9F%20dich%3B%20a%2Bb; seen=true';
+cookieHost.document = {
+    get cookie() {
+        return stored;
+    },
+    set cookie(value: string) {
+        jar.push(value);
+    }
+};
+const read = [themeCookie.get(), sizeCookie.get(), greetingCookie.get() === 'Gr\u00fc\u00df dich; a+b', seenCookie.get()];
+stored = 'theme=Purple; page-size=1.5; greeting=%E0%A4%A; seen=yes';
+const broken = [themeCookie.get(), sizeCookie.get() ?? null, greetingCookie.get() ?? null, seenCookie.get()];
+themeCookie.set('Dark');
+sizeCookie.set(20);
+greetingCookie.set('a b;c');
+themeCookie.clear();
+results.cookies = {
+    withoutDocument,
+    read,
+    broken,
+    fromHeader: [themeCookie.get('x=1; theme=Dark'), sizeCookie.get('theme=Dark') ?? null],
+    jar
+};
+if (!hadDocument) Reflect.deleteProperty(cookieHost, 'document');
 
 console.log(JSON.stringify(results));
