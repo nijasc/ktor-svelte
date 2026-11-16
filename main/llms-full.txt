@@ -1381,6 +1381,29 @@ try {
 
 A per-call `timeout` wins over `apiConfig.timeout`, and your own `signal` still works next to it. Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
 
+## Retries
+
+A GET that fails because the network dropped, the request timed out, or a proxy answered 502, 503 or 504 often works a moment later. Turn retries on once, and the client tries again by itself:
+
+```ts
+import { apiConfig } from '#api';
+
+apiConfig.retry = true;
+```
+
+It then makes up to three attempts, waiting 300 ms before the second and 600 ms before the third. Only GET requests are retried, because repeating a write could do the work twice. Every other answer, such as a 404 or a 500, fails at once as before, and `apiConfig.onError` only hears about the last failure.
+
+To change the numbers, pass them instead of `true`. A single call can also set its own, or opt out:
+
+```ts
+apiConfig.retry = { attempts: 5, delay: 200, maxDelay: 2000 };
+
+const notes = await api.notes.list({ retry: false });
+const report = await api.reports.get(id, { retry: { attempts: 2 } });
+```
+
+`delay` doubles after every attempt until it reaches `maxDelay`. A call that is aborted through its `signal` stops waiting at once, and each attempt gets the full `timeout`.
+
 ## Search as you type
 
 When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:

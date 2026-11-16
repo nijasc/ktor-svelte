@@ -3,11 +3,18 @@ const e={"client.ts":`export interface UploadProgress {
     total?: number;
 }
 
+export interface RetryConfig {
+    attempts?: number;
+    delay?: number;
+    maxDelay?: number;
+}
+
 export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
     fetch?: typeof fetch;
     onUploadProgress?: (progress: UploadProgress) => void;
     timeout?: number;
     silent?: boolean;
+    retry?: boolean | RetryConfig;
 }
 
 export interface ApiConfig {
@@ -19,6 +26,7 @@ export interface ApiConfig {
     timeout?: number;
     onNewBuild?: (build: string) => void;
     onError?: (error: unknown) => void;
+    retry?: boolean | RetryConfig;
 }
 
 export function isTimeoutError(error: unknown): boolean {
@@ -145,8 +153,50 @@ function withTimeout(signal: AbortSignal | null | undefined, timeout: number | u
     return signal ? AbortSignal.any([signal, timer]) : timer;
 }
 
+const RETRIED_STATUSES = [502, 503, 504];
+
+function retryPlan(method: string, own: boolean | RetryConfig | undefined): Required<RetryConfig> | undefined {
+    const chosen = own ?? apiConfig.retry;
+    if (method !== 'GET' || !chosen) return undefined;
+    const config = chosen === true ? {} : chosen;
+    return { attempts: config.attempts ?? 3, delay: config.delay ?? 300, maxDelay: config.maxDelay ?? 5000 };
+}
+
+function isRetryable(error: unknown): boolean {
+    if (isTimeoutError(error) || error instanceof TypeError) return true;
+    return error instanceof ApiError && RETRIED_STATUSES.includes(error.status);
+}
+
+function pause(milliseconds: number, signal: AbortSignal | null | undefined): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const aborted = () => signal?.reason ?? new DOMException('The request was aborted.', 'AbortError');
+        if (signal?.aborted) return reject(aborted());
+        const stop = () => {
+            clearTimeout(timer);
+            reject(aborted());
+        };
+        const timer = setTimeout(() => {
+            signal?.removeEventListener('abort', stop);
+            resolve();
+        }, milliseconds);
+        signal?.addEventListener('abort', stop, { once: true });
+    });
+}
+
+async function withRetry<T>(call: () => Promise<T>, plan: Required<RetryConfig> | undefined, signal: AbortSignal | null | undefined): Promise<T> {
+    for (let tried = 1; ; tried++) {
+        try {
+            return await call();
+        } catch (error) {
+            if (!plan || tried >= plan.attempts || !isRetryable(error)) throw error;
+            await pause(Math.min(plan.delay * 2 ** (tried - 1), plan.maxDelay), signal);
+        }
+    }
+}
+
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
-    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, ...init } = options;
+    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, ...init } = options;
+    const plan = streaming ? undefined : retryPlan(method, retry);
     const limit = timeout ?? (streaming ? undefined : apiConfig.timeout);
     const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);
     const url = apiConfig.baseUrl + path + queryString(query);
@@ -159,7 +209,12 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
         payload = isRawBody(body) ? body : JSON.stringify(body);
         if (!isRawBody(body) && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json');
     }
-    return { url, operation, send: () => send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) }) };
+    return {
+        url,
+        operation,
+        send: () => send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) }),
+        attempt: <T>(call: () => Promise<T>) => withRetry(call, plan, signal)
+    };
 }
 
 let knownBuild: string | undefined;
@@ -218,10 +273,10 @@ function fromPrefetch<T>(url: string, run: (silent?: boolean) => Promise<T>): Pr
 }
 
 export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
-    const { url, operation, send } = prepare(method, path, options, 'application/json');
+    const { url, operation, send, attempt } = prepare(method, path, options, 'application/json');
     const run = async (silent = options.silent) => {
         try {
-            return (await parseResponse(await checked(await send(), url, operation))) as T;
+            return (await attempt(async () => parseResponse(await checked(await send(), url, operation)))) as T;
         } catch (error) {
             report(error, silent);
             throw error;
