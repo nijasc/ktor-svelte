@@ -181,6 +181,41 @@ class DevProxyTest {
         }
 
     @Test
+    fun `the file of a route that was called can be opened through Vite, and no other file`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.Always
+                    }
+                }
+                routing { get("/api/hello") { call.respondText("hi") } }
+            }
+            val here =
+                java.io
+                    .File("src/test/kotlin/io/github/nijasc/ktor/svelte/DevProxyTest.kt")
+                    .absoluteFile.invariantSeparatorsPath
+            val open = "/_ktor-svelte/dev/open"
+            assertEquals(HttpStatusCode.BadRequest, client.get("$open?file=$here&line=3").status, "nothing was called yet")
+
+            client.get("/api/hello")
+
+            val opened = client.get("$open?file=$here&line=3")
+            assertEquals(HttpStatusCode.NoContent, opened.status)
+            assertEquals("no-store", opened.headers[HttpHeaders.CacheControl])
+            assertEquals(HttpStatusCode.BadRequest, client.get("$open?file=$here").status)
+            assertEquals(HttpStatusCode.BadRequest, client.get("$open?file=$here&line=0").status)
+            assertEquals(
+                HttpStatusCode.BadRequest,
+                client.get("$open?file=${here.replace("DevProxyTest", "StatusEndpointTest")}&line=3").status,
+            )
+            assertEquals(HttpStatusCode.BadRequest, client.get("$open?file=/etc/passwd&line=1").status)
+            val remote = client.get("$open?file=$here&line=3") { header(HttpHeaders.XForwardedFor, "203.0.113.9") }
+            assertEquals(HttpStatusCode.Forbidden, remote.status)
+        }
+
+    @Test
     fun `the dev panel can be turned off`() =
         testApplication {
             application {
