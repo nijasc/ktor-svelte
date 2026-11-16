@@ -9,6 +9,7 @@ private const val HEADER = "// $GENERATED_MARKER\n"
 
 internal const val GENERATED_GIT_ATTRIBUTES = "$GENERATED_DIR/.gitattributes"
 internal const val GENERATED_LINT_RULES = "$GENERATED_DIR/eslint.js"
+internal const val CONFIRM_HELPER = "$GENERATED_DIR/confirm.ts"
 private const val GIT_ATTRIBUTES = "# $GENERATED_MARKER\n* text eol=lf linguist-generated merge=$MERGE_DRIVER\n"
 
 private fun json(value: Any?): String = JsonOutput.toJson(value)
@@ -43,6 +44,7 @@ internal fun frontendFiles(
             put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
             put(GENERATED_LINT_RULES, lintRulesSource(routes.takeIf { spec.routes }))
             put(ASSISTANT_GUIDE, assistantGuide(spec, routes.takeIf { spec.routes }))
+            put(CONFIRM_HELPER, renderTemplate("confirm.ts", mapOf("daisy" to (spec.daisy != null).toString())))
         }
     }
 

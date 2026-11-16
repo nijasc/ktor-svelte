@@ -229,8 +229,19 @@ class ShowcaseBrowserTest {
         assertThat(page.getByLabel("Status")).hasValue("DOING")
 
         page.button("Delete").click()
-        assertThat(page.getByRole(AriaRole.DIALOG)).containsText("Delete this task?")
-        page.locator("#confirm-delete").click()
+        val question = page.getByRole(AriaRole.DIALOG)
+        assertThat(question).containsText("Delete this task?")
+        page.expectAccessible()
+        question.getByText("Cancel").click()
+        assertThat(question).hasCount(0)
+        assertThat(page.locator("#task-title")).hasText("$title edited")
+
+        page.button("Delete").click()
+        page.keyboard().press("Escape")
+        assertThat(question).hasCount(0)
+
+        page.button("Delete").click()
+        question.locator("[data-confirm]").click()
         assertThat(page).hasURL(BOARD)
         page.getByLabel("Search tasks").fill(title)
         assertThat(page.locator("#no-tasks")).isVisible()
