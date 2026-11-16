@@ -28,8 +28,10 @@ import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
+import io.github.nijasc.ktor.svelte.internal.dev.pagesOf
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
 import io.github.nijasc.ktor.svelte.internal.dev.resolveDevServerUrl
+import io.github.nijasc.ktor.svelte.internal.dev.routeMap
 import io.github.nijasc.ktor.svelte.internal.dev.routeTable
 import io.github.nijasc.ktor.svelte.internal.dev.statusJson
 import io.github.nijasc.ktor.svelte.internal.dev.toHtml
@@ -317,7 +319,16 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
-            if (devRequests != null && devProxy != null) devRequestRoutes(devRequests, allowRemote, devProxy)
+            if (devRequests != null && devProxy != null) {
+                devRequestRoutes(devRequests, allowRemote, devProxy) {
+                    routeMap(
+                        routeTable(application.plugin(RoutingRoot), store.manifest(), resolver, pluginConfig.paramRouteList),
+                        pagesOf(System.getProperty(FRONTEND_DIR_PROPERTY)?.let { java.io.File(it) }, store.manifest()),
+                        devRequests.sourceFiles,
+                        docsPath,
+                    )
+                }
+            }
             if (pluginConfig.publicBuildInfo) {
                 get(BUILD_INFO_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")

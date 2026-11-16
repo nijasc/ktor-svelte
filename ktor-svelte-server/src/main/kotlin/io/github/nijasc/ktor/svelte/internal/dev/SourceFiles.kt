@@ -12,6 +12,7 @@ internal class SourceFiles(
     private var files: List<String>? = null
     private var builtAt = 0L
     private val found = HashMap<String, String>()
+    private val allowed = HashSet<String>()
 
     @Synchronized
     fun pathOf(location: String): String? {
@@ -22,7 +23,10 @@ internal class SourceFiles(
     }
 
     @Synchronized
-    fun isKnown(path: String): Boolean = path in found.values
+    fun isKnown(path: String): Boolean = path in found.values || path in allowed
+
+    @Synchronized
+    fun allow(path: String): String = path.also { allowed += it }
 
     private fun lookUp(
         location: String,

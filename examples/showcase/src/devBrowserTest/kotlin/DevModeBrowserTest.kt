@@ -439,6 +439,28 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel lists every page and API route, filters them and leads to a page`() {
+        page.navigate("/")
+        assertThat(page.locator("#greeting")).containsText("greetings from Ktor!")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".routes summary").click()
+        val rows = panel.locator(".routes-row")
+        assertThat(rows.filter(Locator.FilterOptions().setHasText("/api/greeting"))).containsText("showcase/TaskRoutes.kt:")
+        assertThat(rows.filter(Locator.FilterOptions().setHasText("src/routes/about/+page.svelte"))).containsText("PAGE")
+        assertThat(rows.filter(Locator.FilterOptions().setHasText("/tasks/[id]")).first()).containsText("src/routes/(app)/tasks/[id]/+page.svelte")
+        assertThat(panel.locator(".routes-docs")).hasAttribute("href", "/api/docs")
+        val all = rows.count()
+        assertTrue(all > 10, "only $all routes listed")
+
+        panel.getByLabel("Filter routes").fill("about")
+        assertThat(rows).hasCount(1)
+        assertThat(panel.locator(".routes-note")).hasText("1 of $all")
+        rows.first().locator("a.path").click()
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
