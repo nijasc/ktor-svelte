@@ -218,3 +218,25 @@ Choose how the language is picked with `strategy`:
 On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy, and `call.localizeHref` does the same for redirects from Ktor.
 
 Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
+
+## Lint rules
+
+Next to the generated files, `svelteSync` writes `src/lib/ktor-svelte/eslint.js`, a small ESLint plugin with rules for mistakes that are easy to make in a ktor-svelte app. They show up in the editor while you type:
+
+| Rule | What it flags |
+|---|---|
+| `ktor-svelte/no-string-page-links` | An `href`, `goto` or `redirect` that leads to one of your pages as a string, when [typed routes](./routes.md) are on |
+| `ktor-svelte/fetch-in-load` | An API call inside a `load` function that goes through neither `apiWith(event)` nor `{ fetch }`, which SvelteKit reports at runtime as `window_fetch_in_load` |
+| `ktor-svelte/no-error-body-message` | Reading `error.body.message` from a caught error without narrowing it with `isApiError` first, where [`errorMessage`](./calling-the-api.md) is the safe choice |
+
+A project made by the setup script has them wired in. In an existing project, add two lines to `eslint.config.js`:
+
+```js
+import ktorSvelte from './src/lib/ktor-svelte/eslint.js';
+
+export default [
+    ...ktorSvelte.configs.recommended
+];
+```
+
+All three are warnings. To turn one off or make it an error, set it like any other rule, such as `{ rules: { 'ktor-svelte/fetch-in-load': 'error' } }`. The page list inside the file follows your routes, so the first rule stays current the same way `routes.ts` does. For a one-off check across the whole project, and to rewrite string links automatically, use [`svelteVerifyRoutes`](./routes.md#finding-links-that-are-still-strings).

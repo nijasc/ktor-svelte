@@ -146,7 +146,7 @@ public class Setup {
 
         gradle(directory, "svelteInit", "--package-manager=" + manager, "svelteGenerateRunConfigurations");
         if (liveTemplates) gradle(directory, "svelteLiveTemplates", "--install");
-        writeFrontendLinting(directory);
+        writeFrontendLinting(directory, tailwind || lucide || i18n);
         Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth));
         if (auth) writeAuthPages(directory, daisy, tailwind, i18n);
         installPackages(directory, manager);
@@ -505,9 +505,13 @@ public class Setup {
         Files.writeString(directory.resolve(".github/workflows/ci.yml"), WORKFLOW.replace("__SETUP_MANAGER__\n", setup));
     }
 
-    private static void writeFrontendLinting(Path directory) throws IOException {
+    private static void writeFrontendLinting(Path directory, boolean generatedFiles) throws IOException {
         Path frontend = directory.resolve("frontend");
-        Files.writeString(frontend.resolve("eslint.config.js"), ESLINT_CONFIG);
+        String rulesImport = generatedFiles ? "import ktorSvelte from './src/lib/ktor-svelte/eslint.js';\n" : "";
+        String rules = generatedFiles ? "    ...ktorSvelte.configs.recommended,\n" : "";
+        Files.writeString(
+            frontend.resolve("eslint.config.js"),
+            ESLINT_CONFIG.replace("__KTOR_SVELTE_IMPORT__\n", rulesImport).replace("__KTOR_SVELTE_RULES__\n", rules));
         Files.writeString(frontend.resolve(".prettierrc"), PRETTIER_CONFIG);
         Files.writeString(frontend.resolve(".prettierignore"), PRETTIER_IGNORE);
         Path manifest = frontend.resolve("package.json");
@@ -1305,6 +1309,7 @@ public class Setup {
         import svelte from 'eslint-plugin-svelte';
         import globals from 'globals';
         import ts from 'typescript-eslint';
+        __KTOR_SVELTE_IMPORT__
 
         export default ts.config(
             {
@@ -1323,6 +1328,7 @@ public class Setup {
             ...svelte.configs.recommended,
             prettier,
             ...svelte.configs.prettier,
+        __KTOR_SVELTE_RULES__
             { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
             { files: ['**/*.svelte', '**/*.svelte.ts'], languageOptions: { parserOptions: { parser: ts.parser } } },
             { rules: { 'svelte/no-navigation-without-resolve': 'off' } }
