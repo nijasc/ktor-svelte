@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
+import io.github.nijasc.ktor.svelte.UPLOAD_EXTENSION
 import io.github.nijasc.ktor.svelte.internal.validation.ConstraintMessages
 import io.github.nijasc.ktor.svelte.internal.validation.formatNumber
 import kotlinx.serialization.json.Json
@@ -12,9 +13,11 @@ import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -730,6 +733,7 @@ internal class TypeScriptGenerator(
         val references = mutableSetOf<String>()
         val groups = linkedMapOf<String, MutableList<Endpoint>>()
         val errors = mutableListOf<ErrorEntry>()
+        val uploads = sortedMapOf<String, String>()
         paths.forEach { (path, item) ->
             val pathItem = item.jsonObject
             HTTP_METHODS.forEach { method ->
@@ -750,6 +754,7 @@ internal class TypeScriptGenerator(
                         val operation = "$group.$name"
                         operations += GeneratedOperation(operation, endpoint.method, endpoint.path)
                         endpoint.errorType?.let { errors += ErrorEntry(operation, it, endpoint.errorStatuses) }
+                        endpoint.upload?.let { uploads[operation] = it }
                         val exportName = exportName("$group-$name", exportNames)
                         exports.append(jsDoc(endpoint.docs, ""))
                         exports.append("export const $exportName = ${endpoint.source(operation)};\n")
@@ -766,10 +771,30 @@ internal class TypeScriptGenerator(
             append("\n")
             serviceBlocks.forEach { block -> append(block).append("\n") }
             append(errorsSource(errors))
+            if (uploads.isNotEmpty()) {
+                append("export const uploadRules = {\n")
+                uploads.forEach { (operation, rules) -> append("    '$operation': $rules,\n") }
+                append("} as const;\n\n")
+            }
             if (publicConfigSchema != null) append(typeScriptTemplate("public-config.ts"))
             append("export const api = { ${groups.keys.sorted().joinToString()} };\n")
             append(typeScriptTemplate("api-with.ts"))
         }
+    }
+
+    private fun uploadRulesLiteral(rules: JsonObject): String {
+        val parts =
+            listOfNotNull(
+                rules["maxBytes"]?.jsonPrimitive?.longOrNull?.let { "maxBytes: $it" },
+                rules
+                    .arrayAt(
+                        "types",
+                    )?.map { quoted(it.jsonPrimitive.content) }
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { "types: [${it.joinToString()}]" },
+                rules["maxFiles"]?.jsonPrimitive?.intOrNull?.let { "maxFiles: $it" },
+            )
+        return "{ ${parts.joinToString()} }"
     }
 
     private fun errorsSource(errors: List<ErrorEntry>): String {
@@ -845,11 +870,13 @@ internal class TypeScriptGenerator(
         signature += "options?: RequestOptions"
 
         val urlSource = if (pathParameters.isEmpty()) quoted(path) else urlTemplate(path)
+        val upload = operation.objectAt(UPLOAD_EXTENSION)?.let(::uploadRulesLiteral)
         val extras =
             buildList {
                 add("...options")
                 if (queryParameters.isNotEmpty()) add("query")
                 if (requestBody != null) add("body")
+                if (upload != null) add("upload: $upload")
             }
         val returnType = responseType(operation, references)
         val streaming = isEventStream(operation)
@@ -875,6 +902,7 @@ internal class TypeScriptGenerator(
             },
             references = references,
             streaming = streaming,
+            upload = upload,
             errorType =
                 declaredErrors.values
                     .distinct()
@@ -999,6 +1027,7 @@ internal class TypeScriptGenerator(
         val source: (String) -> String,
         val references: Set<String>,
         val streaming: Boolean,
+        val upload: String?,
         val errorType: String?,
         val errorStatuses: List<Int>,
     )
@@ -1086,7 +1115,7 @@ internal const val GIT_ATTRIBUTES_FILE = ".gitattributes"
 internal const val FORM_STATE_FILE = "form-state.svelte.ts"
 private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated merge=ktor-svelte"
 private val SERVICES_MODULE_NAMES =
-    setOf("api", "request", "stream", "ApiError", "errorStatuses", "isApiError", "publicConfig", "loadPublicConfig")
+    setOf("api", "request", "stream", "ApiError", "errorStatuses", "isApiError", "publicConfig", "loadPublicConfig", "uploadRules")
 private val ENDPOINT_ARGUMENTS = setOf("body", "query", "options", "encodeURIComponent")
 private val RESERVED_WORDS =
     setOf(

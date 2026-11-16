@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal.security
 
+import io.github.nijasc.ktor.svelte.UploadRuleException
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -82,6 +83,19 @@ internal suspend fun respondBodyTooLarge(
     limit: Long,
 ) {
     respondJsonMessage(call, HttpStatusCode.PayloadTooLarge, "Request body is larger than the limit of $limit bytes.")
+}
+
+internal suspend fun respondUploadProblem(
+    call: ApplicationCall,
+    problem: UploadRuleException,
+) {
+    val content =
+        mutableMapOf<String, JsonElement>(
+            "message" to JsonPrimitive(problem.message.orEmpty()),
+            "code" to JsonPrimitive(problem.code),
+        )
+    problem.file?.let { content["file"] = JsonPrimitive(it) }
+    call.respondText(JsonObject(content).toString(), ContentType.Application.Json, problem.status)
 }
 
 internal suspend fun respondJsonMessage(

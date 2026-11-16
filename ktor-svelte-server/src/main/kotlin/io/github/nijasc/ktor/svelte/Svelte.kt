@@ -60,6 +60,7 @@ import io.github.nijasc.ktor.svelte.internal.security.respondBadRequest
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonShape
+import io.github.nijasc.ktor.svelte.internal.security.respondUploadProblem
 import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
 import io.github.nijasc.ktor.svelte.internal.settingsSummary
 import io.github.nijasc.ktor.svelte.internal.shadowedPages
@@ -292,6 +293,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (cause is ValidationException) {
                 devRequests?.validationFailed(call, cause.fields)
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
+                return@on
+            }
+            if (cause is UploadRuleException && !call.response.isCommitted) {
+                respondUploadProblem(call, cause)
                 return@on
             }
             if (cause is URLDecodeException && !call.response.isCommitted) {
