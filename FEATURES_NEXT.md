@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-Thirty features is more than one release usually holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+Forty-two features is far more than one release usually holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## Scope
 
@@ -40,6 +40,18 @@ Thirty features is more than one release usually holds. The [order](#order) puts
 | 28 | Generated page loads | Server and Gradle plugin | Large | |
 | 29 | Frontend errors in the server log | Server and generated files | Medium | |
 | 30 | Kotlin browser test kit | New module | Large | |
+| 31 | Branded ID types | Generated client | Medium | |
+| 32 | Decimal and duration types | Generated client | Medium | |
+| 33 | Version conflicts | Server and generated client | Medium | |
+| 34 | Resource routes DSL | Server | Medium | |
+| 35 | Typed path parameters | Server | Small | |
+| 36 | Unused endpoints report | Gradle plugin | Small | |
+| 37 | Declared environment variables | Server and Gradle plugin | Medium | |
+| 38 | SQL queries per request | Dev panel | Medium | #201 |
+| 39 | Override `publicConfig` in dev | Dev panel | Small | #201 |
+| 40 | Record requests as fixtures | Dev panel | Medium | 12 |
+| 41 | Synced user preferences | Server and generated client | Large | 21 |
+| 42 | CRUD scaffold from a DTO | Gradle plugin | Large | 15 |
 
 ## What each one does
 
@@ -103,18 +115,43 @@ Thirty features is more than one release usually holds. The [order](#order) puts
 29. **Frontend errors in the server log.** Uncaught browser errors in production are reported to an endpoint and logged by the app with the request ID and the page, rate limited. Today browser logs only reach the dev log.
 30. **Kotlin browser test kit.** A published test library that starts the app and drives a real browser from Kotlin tests, with typed routes and the app's own DTOs, like the showcase's `browserTest`.
 
+### Richer shared types
+
+31. **Branded ID types.** A Kotlin value class such as `NoteId` becomes its own TypeScript type instead of plain `string`, so passing a user ID where a note ID is expected is a compile error on both sides. Dates already work this way.
+32. **Decimal and duration types.** `BigDecimal` and `kotlin.time.Duration` get branded TypeScript types with small helpers to parse, format and add, instead of arriving as plain strings or as numbers that lose precision.
+33. **Version conflicts.** A DTO carries a version, updates send it back, and a stale write answers a typed 409. The client gets a helper to show that someone else changed the record, with reload or overwrite.
+
+### Kotlin helpers and cross-checks
+
+34. **Resource routes DSL.** `resource<Note>("/api/notes") { list { } get { } create { } update { } delete { } }` registers conventional CRUD routes whose names and types line up with `api.notes.*` on the client.
+35. **Typed path parameters.** `call.pathId<UUID>("id")` and its relatives parse a path parameter and answer a typed 400 or 404 when it is malformed, replacing the parse-or-respond code repeated in every route.
+36. **Unused endpoints report.** A task that lists API routes no frontend file calls. It is the counterpart to the compile errors you already get for calls to routes that no longer exist.
+37. **Declared environment variables.** The app declares the environment variables it needs in Kotlin, fails at startup with one table of what is missing, and `.env.example` is generated from the same list.
+
+### More for the dev panel
+
+38. **SQL queries per request.** With Exposed on the classpath, each request in the dev panel shows how many SQL statements it ran and how long they took, and flags the same statement repeated many times.
+39. **Override `publicConfig` in dev.** Change `publicConfig` values from the dev panel for your browser only, to try a feature flag or a limit without editing config or restarting.
+40. **Record requests as fixtures.** Save the API calls of a session from the dev panel as JSON fixtures, typed against the generated client, for frontend tests.
+
+### Whole-app features
+
+41. **Synced user preferences.** Theme, locale and app-defined preferences are declared once in Kotlin, stored per user on the server, and available as a typed, reactive store on the frontend.
+42. **CRUD scaffold from a DTO.** `svelteAdd --crud=Note` generates list, detail and form pages wired to the generated client, with typed routes, validation bounds and i18n keys, as normal files the app then owns.
+
 ## Order
 
 1. The route check group (1, 2, 3), because all three build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19). Each is a self-contained pull request.
-3. The client helper and the dev panel group (11 to 14).
+2. The small independent ones (4 to 10, 18, 19, 35, 36). Each is a self-contained pull request.
+3. The client helper and the dev panel group (11 to 14, then 38, 39, 40).
 4. The server talks to the UI (25, 26, 27) and shared constants (20). They share one mechanism: the server adds something to a response, and the generated client acts on it.
-5. One login (21, then 24, 22, 23). Typed current user comes first, because the other three read it.
-6. Page scaffolding (15), nav metadata (16) and generated page loads (28). All three change how a page is described, so they are designed together.
-7. Frontend errors in the server log (29) and the Kotlin browser test kit (30).
-8. `svelteUpgrade` (17) last.
+5. Richer shared types (31, 32, 33) and declared environment variables (37).
+6. One login (21, then 24, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
+7. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16) and generated page loads (28). All of them change how a route or a page is described, so they are designed together.
+8. Frontend errors in the server log (29) and the Kotlin browser test kit (30).
+9. `svelteUpgrade` (17) last.
 
-Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 7 hold the four large features, and any of them can move to 1.3.0.
+Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 8 hold every large feature, and any of them can move to 1.3.0.
 
 ## Open decisions
 
@@ -133,6 +170,14 @@ Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 7 hold the four large feat
 | Generated page loads | Where does Kotlin say what a page needs? | Open. It conflicts with the rule that the plugin never reads Kit config and that files without the generated header are never overwritten, so it needs a design note before any code. |
 | Shared constants | How are they marked? | An annotation on a `const val` or an object, read at the same time as the routes, written to `constants.ts` next to the client. |
 | Frontend errors in the server log | On or off by default? | Off by default, with a small body limit and its own rate limit, because it is an endpoint anyone can post to. |
+| Branded ID types, decimal and duration types | Are they on for everyone? | No. They change the type of existing fields, which breaks frontend code that passes a plain `string`, so within 1.x they are a `generateTs` option that is off by default. |
+| Version conflicts | How is the version sent? | As a field of the DTO, marked with an annotation, so it works with any storage. `If-Match` headers are not used, because the generated client would hide them. |
+| Resource routes DSL | How much does it do? | It only registers ordinary Ktor routes with conventional paths and names. No storage, no generated handlers, and every block is optional. |
+| Unused endpoints report | Fail or report? | Report only. A route can be called from outside the frontend. |
+| Declared environment variables | Where are they declared? | In a small Kotlin DSL the app calls at startup, which also returns the typed values. The Gradle task reads the same declaration by starting the app once, as `svelteGenerateTs` does. |
+| SQL queries per request | Does the runtime depend on Exposed? | No. It is compiled against Exposed as `compileOnly` and turns itself on only when Exposed is on the classpath and the app is in development mode. |
+| Synced user preferences | Who stores them? | The app. It gives ktor-svelte a load and a save function, and ktor-svelte generates the endpoint, the types and the store. |
+| CRUD scaffold | Who owns the generated pages? | The app. They are written once without the generated header and never touched again, and the task refuses to overwrite an existing file. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -144,8 +189,10 @@ These were offered and not chosen for 1.2.0:
 - Dev tools: fresh-cache reinstall after a broken install, latency and failure injection, LAN URL with a QR code.
 - Gradle: bundle size report and budget, a check for mismatched plugin and runtime versions.
 - Server: problem details helper, input types without server fields, typed WebSocket channels, automatic ETags for API GETs.
-- One contract: enum labels.
-- The server talks to the UI: live data pushed from the server.
+- One contract: enum labels, typed sort and filter params.
+- The server talks to the UI: live data pushed from the server, background job progress.
+- Dev panel: a login switcher for test users.
+- Whole app: maintenance mode.
 
 ## Release
 
