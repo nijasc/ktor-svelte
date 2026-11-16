@@ -26,13 +26,14 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 68 | Visitor time zone on the server |  |
+| 70 | Refresh page data after writes |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
 | 57 | Reload data after restart | #231 |
+| 68 | Visitor time zone on the server | #232 |
 
 ### Next up
 
@@ -80,7 +81,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 70 | Refresh page data after writes | Small | 2 |
 | 76 | Starter page with next steps | Small | 2 |
 | 83 | Reload prompt after deploy | Small | 2 |
 | 84 | Project guide for coding assistants | Small | 2 |

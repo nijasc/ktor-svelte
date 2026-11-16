@@ -160,6 +160,13 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val metrics = SvelteMetrics()
         application.attributes.put(SvelteMetricsKey, metrics)
 
+        application.attributes.put(
+            DefaultTimeZoneKey,
+            zoneOrNull(pluginConfig.defaultTimeZone)
+                ?: throw IllegalArgumentException(
+                    "defaultTimeZone '${pluginConfig.defaultTimeZone}' is not a time zone. Use a name such as \"Europe/Zurich\" or \"UTC\".",
+                ),
+        )
         installTransport(application, pluginConfig.transportConfig, pluginConfig.maxApiBodySize)
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
         if (pluginConfig.requestIds) installRequestIds(application)
