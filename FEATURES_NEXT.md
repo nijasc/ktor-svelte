@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-Fifty-four features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+Sixty-two features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## Scope
 
@@ -64,6 +64,14 @@ Fifty-four features is far more than one release holds. The [order](#order) puts
 | 52 | Installable app (PWA) | Gradle plugin and server | Large | |
 | 53 | Build info on both sides | Server and generated client | Small | |
 | 54 | Web vitals in metrics | Server and generated files | Medium | 29 |
+| 55 | One format command | Gradle plugin | Small | |
+| 56 | Git pre-commit hook | Gradle plugin | Small | 55 |
+| 57 | Reload data after restart | Dev client | Small | #201 |
+| 58 | Route map in dev panel | Dev panel | Medium | #201 |
+| 59 | Self-hosted fonts | Gradle plugin | Medium | |
+| 60 | Multiple frontends | Server and Gradle plugin | Large | |
+| 61 | Emails from Svelte components | Gradle plugin and server | Large | |
+| 62 | Typed cookies | Server and generated client | Medium | |
 
 ## What each one does
 
@@ -175,19 +183,40 @@ Fifty-four features is far more than one release holds. The [order](#order) puts
 53. **Build info on both sides.** Version, git commit and build time are available as `BuildInfo` in Kotlin and `buildInfo` in TypeScript, for an about box, bug reports and logs, without any setup.
 54. **Web vitals in metrics.** The frontend reports loading and interaction timings per page to the app, which adds them to the existing metrics, so slow pages show up next to slow API calls.
 
+### One toolchain
+
+55. **One format command.** `./gradlew format` runs ktlint on Kotlin and Prettier on the frontend, and `formatCheck` verifies both, so nobody has to remember two commands or two tools.
+56. **Git pre-commit hook.** A task installs a pre-commit hook that formats staged Kotlin and frontend files and blocks a commit when generated files are out of sync.
+
+### More for the dev loop
+
+57. **Reload data after restart.** When the app restarts after a Kotlin change, open pages rerun their load functions by themselves, so the new backend behaviour shows up without a manual reload.
+58. **Route map in dev panel.** A searchable list of every page and every API route, with method, path, the Kotlin or Svelte file behind it, and a link to open the page or its API docs entry.
+
+### Frontend libraries and app shape
+
+59. **Self-hosted fonts.** `libraries { fonts("Inter") }` installs the font, wires it into the generated CSS and preloads it, with no request to a font CDN and no Content-Security-Policy exception.
+60. **Multiple frontends.** One app serves more than one SvelteKit project, such as a public site and an admin area under `/admin`, each with its own build, routes and typed client.
+
+### More on the server
+
+61. **Emails from Svelte components.** Email templates are written as Svelte components. The build renders them to HTML, and Kotlin gets a typed function per template that fills in the values, with the same theme and messages as the app.
+62. **Typed cookies.** A cookie is declared once in Kotlin with its type and options, and read and written with the same name and type on both sides, as the theme and locale cookies already are internally.
+
 ## Order
 
 1. The route check group (1, 2, 3), because all three build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53). Each is a self-contained pull request.
-3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51).
-4. The server talks to the UI (25, 26, 27) and shared constants (20). They share one mechanism: the server adds something to a response, and the generated client acts on it.
+2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57). Each is a self-contained pull request.
+3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51, 58).
+4. The server talks to the UI (25, 26, 27), shared constants (20) and typed cookies (62). They share one mechanism: the server says something once, and the generated client acts on it.
 5. Richer shared types (31, 32, 33, 43, 44) and declared environment variables (37), then the secret leak check (46), which reads that declaration.
-6. Languages (49, 50) and the API change report (48).
+6. Languages (49, 50), self-hosted fonts (59) and the API change report (48).
 7. One login (21, then 24, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
 8. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16) and generated page loads (28). All of them change how a route or a page is described, so they are designed together.
 9. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30) and the accessibility check (47), which runs on the test kit's browser.
-10. The installable app (52).
-11. `svelteUpgrade` (17) last.
+10. The installable app (52) and emails from Svelte components (61). Both add a second kind of build output next to the pages.
+11. Multiple frontends (60). It changes the one-frontend, one-manifest assumption the whole project rests on, so it is a candidate for 2.0 and not for a minor release.
+12. `svelteUpgrade` (17) last.
 
 Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list. Groups 5 to 10 are enough for 1.3.0 and 1.4.0, and any of them can move there without rework.
 
@@ -225,6 +254,13 @@ Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list
 | Shared formatting | Can the two sides really print the same text? | Open. The JDK and the browser carry different locale data, so "the same text" only holds for patterns ktor-svelte defines itself. This needs a design note that says which formats are supported. |
 | Installable app | What does the service worker cache? | The offline page and hashed assets only. It never caches API responses or HTML pages, so a deploy is never hidden by a stale worker. |
 | Web vitals in metrics | On or off by default? | Off by default and sampled, with the same limits as frontend error reporting, because it is an endpoint anyone can post to. |
+| One format command | What if the project already has a `format` task, or no ktlint? | The tasks are only registered when the names are free. Kotlin is formatted through whichever of ktlint or Spotless the build applies, and skipped with a note when there is neither. |
+| Git pre-commit hook | Is it installed automatically? | Never. Only the explicit task installs it, and it refuses to replace a hook it did not write. |
+| Reload data after restart | What happens to what the user typed? | Only load functions rerun, through SvelteKit's `invalidateAll`, so component state and form input stay. Development mode only. |
+| Self-hosted fonts | Where do the font files come from? | From the Fontsource packages on npm, installed by `svelteSync` like every other library, so the lockfile pins them. |
+| Multiple frontends | Does it fit a minor release? | Probably not. The manifest, the request resolver, the dev proxy and every Gradle task assume one frontend. It needs a design note first and is likely a 2.0 feature. |
+| Emails from Svelte components | How are components rendered without a browser? | Open. It needs a second build step that renders components on the server side and inlines their CSS, which the plugin does not have today. It needs a design note before any code. |
+| Typed cookies | What about `HttpOnly` cookies? | They stay server-only. The frontend half is generated only for cookies declared readable by scripts. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -242,6 +278,10 @@ These were offered and not chosen for 1.2.0:
 - Whole app: maintenance mode.
 - Generated client: request batching.
 - Gradle: a dependency audit task, a container image task, a task that finds the frontend usages of a Kotlin route.
+- One toolchain: frontend checks as part of `check`, frontend tests run from Gradle.
+- Dev loop: frontend type errors in the dev log, a locale and theme switcher in the dev panel.
+- Setup and editors: adding setup features to an existing project, VS Code configurations.
+- Server: redirect rules, a typed Kotlin test client.
 
 ## Release
 
