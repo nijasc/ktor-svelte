@@ -202,4 +202,24 @@ class GeneratedClientBehaviourTest {
             cookies.getValue("jar").jsonArray.map { it.jsonPrimitive.content },
         )
     }
+
+    @Test
+    fun `optional cookies follow the visitor's choice in the browser`() {
+        val consent = runHarness().getValue("consent").jsonObject
+        assertEquals(
+            listOf(
+                """[false,false,0,null,""]""",
+                """[true,true,2,"wide","cookie-consent=analytics.marketing.preferences; visits=2; layout=wide"]""",
+                """[true,true,2,null,"cookie-consent=analytics; visits=2"]""",
+                """[true,false,0,null,"cookie-consent=none"]""",
+                """[false,false,0,null,""]""",
+            ),
+            consent.getValue("steps").jsonArray.map { it.toString() },
+        )
+        assertEquals(
+            listOf("false:", "true:analytics+marketing+preferences", "true:analytics", "true:", "true:preferences", "false:"),
+            consent.getValue("seen").jsonArray.map { it.jsonPrimitive.content },
+        )
+        assertEquals("[0,9,0]", consent.getValue("fromHeader").toString())
+    }
 }

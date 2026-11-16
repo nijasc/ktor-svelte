@@ -244,7 +244,7 @@ class ShowcaseAppTest {
         assertContains(
             File("frontend/src/lib/api/cookies.ts").readText(),
             "boardMine: typedCookie<boolean, boolean>('board-mine', " +
-                "{ kind: 'boolean', default: false, maxAge: 7776000, path: '/', sameSite: 'lax', secure: false })",
+                "{ kind: 'boolean', default: false, maxAge: 7776000, path: '/', sameSite: 'lax', secure: false, category: 'preferences' })",
         )
     }
 

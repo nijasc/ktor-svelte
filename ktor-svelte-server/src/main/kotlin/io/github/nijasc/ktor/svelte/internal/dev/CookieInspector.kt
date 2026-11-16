@@ -91,6 +91,7 @@ private fun declaredJson(
                 "SameSite=${cookie.sameSite.name}",
                 "Secure".takeIf { cookie.secure },
                 "HttpOnly".takeIf { cookie.httpOnly },
+                cookie.category?.let { "needs consent to $it" },
             ).joinToString(", "),
         )
     }

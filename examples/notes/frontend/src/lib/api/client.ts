@@ -647,6 +647,7 @@ export interface CookieRules<T> {
     path: string;
     sameSite: 'lax' | 'strict' | 'none';
     secure: boolean;
+    category?: string;
 }
 
 export interface TypedCookie<T, D extends T | undefined = undefined> {
@@ -655,6 +656,21 @@ export interface TypedCookie<T, D extends T | undefined = undefined> {
     get(header?: string): T | D;
     set(value: T): void;
     clear(): void;
+}
+
+const CONSENT_COOKIE = 'cookie-consent';
+const CONSENT_SECONDS = 15552000;
+
+function cookieText(name: string, header?: string): string | undefined {
+    const source = header ?? (typeof document === 'undefined' ? '' : document.cookie);
+    return source
+        .split(/;\s*/)
+        .find((part) => part.startsWith(`${name}=`))
+        ?.slice(name.length + 1);
+}
+
+function consentAllows(category: string | undefined, header?: string): boolean {
+    return category === undefined || (cookieText(CONSENT_COOKIE, header)?.split('.').includes(category) ?? false);
 }
 
 function cookieValue(raw: string, rules: CookieRules<unknown>): unknown {
@@ -678,12 +694,12 @@ export function typedCookie<T, D extends T | undefined = undefined>(name: string
         name,
         rules,
         get(header) {
-            const source = header ?? (typeof document === 'undefined' ? '' : document.cookie);
-            const found = source.split(/;\s*/).find((part) => part.startsWith(`${name}=`));
-            const value = found === undefined ? undefined : cookieValue(found.slice(name.length + 1), rules);
+            const found = consentAllows(rules.category, header) ? cookieText(name, header) : undefined;
+            const value = found === undefined ? undefined : cookieValue(found, rules);
             return (value ?? rules.default) as T | D;
         },
         set(value) {
+            if (!consentAllows(rules.category)) return;
             const age = rules.maxAge === undefined ? '' : `; max-age=${rules.maxAge}`;
             document.cookie = `${name}=${encodeURIComponent(String(value))}${attributes}${age}`;
         },
@@ -692,3 +708,139 @@ export function typedCookie<T, D extends T | undefined = undefined>(name: string
         }
     };
 }
+
+export interface ConsentState<C extends string> {
+    decided: boolean;
+    accepted: readonly C[];
+}
+
+export interface ConsentBannerOptions<C extends string> {
+    text: string;
+    accept: string;
+    refuse: string;
+    title?: string;
+    labels?: Partial<Record<C, string>>;
+    save?: string;
+    link?: { href: string; text: string };
+}
+
+export interface ConsentStore<C extends string> {
+    readonly categories: readonly C[];
+    decided(): boolean;
+    allows(category: C): boolean;
+    accept(categories?: readonly C[]): void;
+    refuse(): void;
+    reset(): void;
+    subscribe(run: (state: ConsentState<C>) => void): () => void;
+    banner(options: ConsentBannerOptions<C>): () => void;
+}
+
+export function consentStore<C extends string>(
+    categories: readonly C[],
+    optional: readonly { name: string; path: string; category: C }[]
+): ConsentStore<C> {
+    const listeners = new Set<(state: ConsentState<C>) => void>();
+
+    function state(): ConsentState<C> {
+        const chosen = cookieText(CONSENT_COOKIE)?.split('.');
+        return { decided: chosen !== undefined, accepted: categories.filter((category) => chosen?.includes(category)) };
+    }
+
+    function changed(): void {
+        const accepted = state().accepted;
+        for (const cookie of optional) {
+            if (!accepted.includes(cookie.category)) document.cookie = `${cookie.name}=; path=${cookie.path}; max-age=0`;
+        }
+        const now = state();
+        listeners.forEach((run) => run(now));
+    }
+
+    const store: ConsentStore<C> = {
+        categories,
+        decided: () => state().decided,
+        allows: (category) => state().accepted.includes(category),
+        accept(chosen = categories) {
+            const kept = categories.filter((category) => chosen.includes(category));
+            document.cookie = `${CONSENT_COOKIE}=${kept.length === 0 ? 'none' : kept.join('.')}; path=/; samesite=lax; max-age=${CONSENT_SECONDS}`;
+            changed();
+        },
+        refuse() {
+            store.accept([]);
+        },
+        reset() {
+            document.cookie = `${CONSENT_COOKIE}=; path=/; samesite=lax; max-age=0`;
+            changed();
+        },
+        subscribe(run) {
+            listeners.add(run);
+            run(state());
+            return () => void listeners.delete(run);
+        },
+        banner(options) {
+            if (typeof document === 'undefined' || store.decided()) return () => undefined;
+            const box = document.createElement('div');
+            box.className = 'ktor-svelte-consent';
+            box.setAttribute('role', 'region');
+            box.setAttribute('aria-label', options.title ?? 'Cookies');
+            Object.assign(box.style, {
+                position: 'fixed',
+                inset: 'auto 0 0 0',
+                zIndex: '2147483000',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '12px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px 16px',
+                background: 'Canvas',
+                color: 'CanvasText',
+                borderTop: '1px solid GrayText'
+            });
+            const text = document.createElement('p');
+            text.style.margin = '0';
+            text.textContent = options.text;
+            if (options.link) {
+                const link = document.createElement('a');
+                link.className = 'link';
+                link.href = options.link.href;
+                link.textContent = options.link.text;
+                text.append(' ', link);
+            }
+            box.append(text);
+            const boxes = new Map<C, HTMLInputElement>();
+            for (const category of categories) {
+                const name = options.labels?.[category];
+                if (name === undefined) continue;
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.className = 'checkbox checkbox-sm';
+                input.value = category;
+                label.append(input, ` ${name}`);
+                boxes.set(category, input);
+                box.append(label);
+            }
+            const close = () => box.remove();
+            const button = (label: string, className: string, run: () => void) => {
+                const node = document.createElement('button');
+                node.type = 'button';
+                node.className = className;
+                node.textContent = label;
+                node.addEventListener('click', () => {
+                    run();
+                    close();
+                });
+                box.append(node);
+            };
+            button(options.refuse, 'btn btn-sm', () => store.refuse());
+            if (boxes.size > 0 && options.save !== undefined) {
+                button(options.save, 'btn btn-sm', () => store.accept([...boxes].filter(([, input]) => input.checked).map(([category]) => category)));
+            }
+            button(options.accept, 'btn btn-sm btn-primary', () => store.accept());
+            document.body.append(box);
+            return close;
+        }
+    };
+    return store;
+}
+

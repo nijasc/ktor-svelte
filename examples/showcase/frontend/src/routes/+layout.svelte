@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import { loadPublicConfig, Role } from '#api';
+    import { cookieConsent, loadPublicConfig, Role } from '#api';
     import Icon from '#icon';
     import '#lib/ktor-svelte/app.css';
     import { getLocale, locales, m, setLocale, type Locale } from '#i18n';
@@ -27,6 +27,7 @@
     );
 
     onMount(async () => {
+        cookieConsent.banner({ text: m.consentText(), accept: m.consentAccept(), refuse: m.consentRefuse() });
         theme = getTheme();
         locale = getLocale();
         if (!session.ready) void loadSession();

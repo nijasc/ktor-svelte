@@ -116,6 +116,7 @@ class DevModeBrowserTest {
 
         private fun visitEveryPageUntilViteIsSettled() {
             val context = browser.newContext(Browser.NewContextOptions().setBaseURL(APP).setLocale("en-US"))
+            context.addCookies(listOf(com.microsoft.playwright.options.Cookie("cookie-consent", "preferences").setUrl(APP)))
             try {
                 val page = context.newPage()
                 waitFor("the first sign in", 120) {
@@ -163,6 +164,7 @@ class DevModeBrowserTest {
     @BeforeEach
     fun open() {
         context = browser.newContext(Browser.NewContextOptions().setBaseURL(APP).setLocale("en-US"))
+        context.addCookies(listOf(com.microsoft.playwright.options.Cookie("cookie-consent", "preferences").setUrl(APP)))
         page = context.newPage()
     }
 

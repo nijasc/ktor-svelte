@@ -123,3 +123,75 @@ cookies.density.clear();
 
 Names and values are plain text in the visitor's browser. Do not keep anything in a typed cookie that the visitor must not read or change. For that, use a session.
 
+## Cookie consent
+
+A cookie the site does not need to work, such as one for statistics, may only be set after the visitor agreed. Give such a cookie a category where it is declared:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.consentsTo
+import io.github.nijasc.ktor.svelte.typedCookie
+import io.github.nijasc.ktor.svelte.writeCookie
+
+val VisitsCookie = typedCookie<Int>("visits", default = 0, category = "analytics")
+
+install(Svelte) {
+    generateTs = true
+    cookies(VisitsCookie)
+}
+
+routing {
+    get("/api/visit") {
+        call.writeCookie(VisitsCookie, 1)
+        if (call.consentsTo("analytics")) call.application.log.info("counted")
+        call.respondText("ok")
+    }
+}
+```
+
+From then on, both sides follow the visitor's choice without further code:
+
+- `call.writeCookie` and `cookies.visits.set` do nothing until the visitor has accepted the category.
+- `call.readCookie` and `cookies.visits.get` give the default until then, also when an old cookie is still there.
+- A cookie without a category is needed for the site to work, and is always read and written.
+
+The generated client has the choice as `cookieConsent`, with the categories of all declared cookies:
+
+```ts no-check
+import { cookieConsent } from '#api';
+
+cookieConsent.decided(); // false until the visitor chose
+cookieConsent.allows('analytics');
+cookieConsent.accept(); // everything
+cookieConsent.accept(['analytics']); // only these
+cookieConsent.refuse();
+cookieConsent.reset(); // ask again
+```
+
+Refusing a category, or leaving it out, also removes its cookies from the browser. `cookieConsent` is a Svelte store, so `$cookieConsent.accepted` in a component follows the choice, for a script that should only load after consent.
+
+To ask the visitor, show the banner once, in the root layout:
+
+```svelte no-check
+<script lang="ts">
+    import { onMount } from 'svelte';
+    import { cookieConsent } from '#api';
+
+    onMount(() =>
+        cookieConsent.banner({
+            text: 'We use cookies to count visits.',
+            accept: 'Accept all',
+            refuse: 'Only what is needed',
+            labels: { analytics: 'Statistics' },
+            save: 'Save my choice',
+            link: { href: '/privacy', text: 'Privacy' }
+        })
+    );
+</script>
+```
+
+The banner appears only while the visitor has not chosen. `labels` and `save` are optional: with them, each labelled category gets a checkbox and there is a third button. All text is yours, so it can come from your translations. It is a plain bar at the bottom of the page with the class `ktor-svelte-consent`, and its buttons carry daisyUI's `btn` classes. For your own design, build a component on `cookieConsent` and leave `banner` out. A settings page can call `cookieConsent.reset()` and show the banner again.
+
+On the server, `call.cookieConsent` is the set of accepted categories, or null while the visitor has not chosen, and `call.consentsTo("analytics")` asks for one.
+
+The choice is kept for 180 days in a cookie named `cookie-consent`, which itself needs no consent. This helper keeps the choice and follows it for typed cookies. It cannot know about cookies that other scripts set, and which cookies need consent where you operate is a legal question it does not answer.
+

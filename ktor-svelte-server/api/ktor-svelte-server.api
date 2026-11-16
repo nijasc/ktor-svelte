@@ -36,6 +36,8 @@ public final class io/github/nijasc/ktor/svelte/CookieSameSite : java/lang/Enum 
 
 public final class io/github/nijasc/ktor/svelte/CookiesKt {
 	public static final fun clearCookie (Lio/ktor/server/application/ApplicationCall;Lio/github/nijasc/ktor/svelte/TypedCookie;)V
+	public static final fun consentsTo (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;)Z
+	public static final fun getCookieConsent (Lio/ktor/server/application/ApplicationCall;)Ljava/util/Set;
 	public static final fun readCookie (Lio/ktor/server/application/ApplicationCall;Lio/github/nijasc/ktor/svelte/TypedCookie;)Ljava/lang/Object;
 	public static final fun writeCookie (Lio/ktor/server/application/ApplicationCall;Lio/github/nijasc/ktor/svelte/TypedCookie;Ljava/lang/Object;)V
 }
@@ -369,7 +371,9 @@ public final synthetic class io/github/nijasc/ktor/svelte/Trim$Impl : io/github/
 }
 
 public final class io/github/nijasc/ktor/svelte/TypedCookie {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Class;Ljava/lang/Object;Lkotlin/time/Duration;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/CookieSameSite;ZZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Class;Ljava/lang/Object;Lkotlin/time/Duration;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/CookieSameSite;ZZLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Class;Ljava/lang/Object;Lkotlin/time/Duration;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/CookieSameSite;ZZLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCategory ()Ljava/lang/String;
 	public final fun getDefault ()Ljava/lang/Object;
 	public final fun getHttpOnly ()Z
 	public final fun getMaxAge-FghU774 ()Lkotlin/time/Duration;

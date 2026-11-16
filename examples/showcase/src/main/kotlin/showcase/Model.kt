@@ -24,7 +24,7 @@ const val MAX_PASSWORD_LENGTH = 200
 const val MAX_LABELS = 5
 const val MAX_UPLOAD_BYTES = 5L * 1024L * 1024L
 
-val OnlyMineCookie = typedCookie<Boolean>("board-mine", default = false, maxAge = 90.days)
+val OnlyMineCookie = typedCookie<Boolean>("board-mine", default = false, maxAge = 90.days, category = "preferences")
 
 enum class AccountError { EmailTaken, WrongPassword, LastAdmin }
 
