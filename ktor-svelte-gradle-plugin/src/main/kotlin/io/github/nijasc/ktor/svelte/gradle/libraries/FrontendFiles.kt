@@ -75,6 +75,39 @@ private const val PLAIN_TABLE_STYLE =
         "    .ktor-svelte-table-pager {\n        display: flex;\n        gap: 0.5rem;\n    }\n" +
         "</style>\n"
 
+private const val PLAIN_DROP_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-drop {\n        display: grid;\n        gap: 0.5rem;\n        padding: 1rem;\n" +
+        "        border: 2px dashed currentColor;\n        border-radius: 0.5rem;\n    }\n\n" +
+        "    .ktor-svelte-drop-over {\n        border-style: solid;\n    }\n\n" +
+        "    .ktor-svelte-drop-list {\n        display: grid;\n        gap: 0.5rem;\n        margin: 0;\n        padding: 0;\n" +
+        "        list-style: none;\n    }\n\n" +
+        "    .ktor-svelte-drop-row {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 0.5rem;\n" +
+        "        align-items: center;\n    }\n\n" +
+        "    .ktor-svelte-drop-preview {\n        width: 3rem;\n        height: 3rem;\n        object-fit: cover;\n    }\n\n" +
+        "    .ktor-svelte-drop-name {\n        flex: 1;\n    }\n\n" +
+        "    .ktor-svelte-drop-progress,\n    .ktor-svelte-drop-error {\n        width: 100%;\n        margin: 0;\n    }\n" +
+        "</style>\n"
+
+private fun fileDrop(daisy: Boolean): String =
+    renderTemplate(
+        "components/FileDrop.svelte",
+        mapOf(
+            "zone" to if (daisy) "border-base-300 rounded-box grid gap-2 border-2 border-dashed p-4" else "ktor-svelte-drop",
+            "over" to if (daisy) "border-primary bg-base-200" else "ktor-svelte-drop-over",
+            "label" to if (daisy) "text-sm font-medium" else "ktor-svelte-drop-label",
+            "input" to if (daisy) "file-input w-full" else "ktor-svelte-drop-input",
+            "hint" to if (daisy) "text-sm opacity-70" else "ktor-svelte-drop-hint",
+            "list" to if (daisy) "grid gap-2 text-sm" else "ktor-svelte-drop-list",
+            "row" to if (daisy) "flex flex-wrap items-center gap-2" else "ktor-svelte-drop-row",
+            "preview" to if (daisy) "h-12 w-12 rounded object-cover" else "ktor-svelte-drop-preview",
+            "name" to if (daisy) "flex-1" else "ktor-svelte-drop-name",
+            "error" to if (daisy) "text-error w-full" else "ktor-svelte-drop-error",
+            "progress" to if (daisy) "progress progress-primary w-full" else "ktor-svelte-drop-progress",
+            "style" to if (daisy) "" else PLAIN_DROP_STYLE,
+        ),
+    )
+
 private fun dataTable(daisy: Boolean): String =
     renderTemplate(
         "components/DataTable.svelte",
@@ -178,6 +211,7 @@ internal fun componentFiles(
             "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
             "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
             "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
+            "$COMPONENTS_DIR/FileDrop.svelte" to fileDrop(daisy),
             "$COMPONENTS_DIR/ErrorPage.svelte" to errorPage(daisy, messages),
             "$COMPONENTS_DIR/NavigationProgress.svelte" to
                 renderTemplate(

@@ -71,6 +71,11 @@ internal fun assistantGuide(
             if (spec.i18n != null) appendLine("- `LocaleSwitch.svelte`: lets the visitor pick one of the configured languages.")
             appendLine("- `NavigationProgress.svelte`: a bar at the top while a page loads. It belongs in the root layout, once.")
             appendLine(
+                "- `FileDrop.svelte`: a drop area and file input for an upload route, with previews, progress and the route's refusals, " +
+                    "such as `<FileDrop label=\"Files\" rules={uploadRules['files.create']} " +
+                    "upload={(file, options) => api.files.create({ file }, options)} />`.",
+            )
+            appendLine(
                 "- `ErrorPage.svelte`: the page behind `src/routes/+error.svelte`. A failed API call in a `load` function shows it " +
                     "with the call's status and message, so do not catch `ApiError` there only to call `error(...)`.",
             )
