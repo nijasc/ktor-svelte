@@ -5,6 +5,7 @@ import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
 import io.github.nijasc.ktor.svelte.internal.subscribeWhileRunning
 import io.github.nijasc.ktor.svelte.internal.typescript.SourceLocation
 import io.github.nijasc.ktor.svelte.internal.typescript.handlerSource
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -34,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 internal const val DEV_REQUESTS_PATH = "/_ktor-svelte/dev/requests"
 internal const val DEV_OPEN_PATH = "/_ktor-svelte/dev/open"
+internal const val DEV_ROUTE_MAP_PATH = "/_ktor-svelte/dev/routes"
 private const val KEPT_REQUESTS = 100
 
 private val RequestStartedAt = AttributeKey<Long>("KtorSvelteDevRequestStartedAt")
@@ -46,7 +48,7 @@ internal class DevRequestLog(
     private val resolver: RequestResolver,
     private val clock: () -> Long = System::nanoTime,
     private val wallClock: () -> Long = System::currentTimeMillis,
-    private val sourceFiles: SourceFiles = SourceFiles(),
+    val sourceFiles: SourceFiles = SourceFiles(),
 ) {
     private val sources = ConcurrentHashMap<RoutingNode, Any>()
     private val unknown = Any()
@@ -151,7 +153,16 @@ internal fun Route.devRequestRoutes(
     log: DevRequestLog,
     allowRemote: Boolean,
     proxy: DevProxy,
+    routeMap: () -> JsonObject,
 ) {
+    get(DEV_ROUTE_MAP_PATH) {
+        if (!allowRemote && !isLocalCall(call)) {
+            call.respondText("The ktor-svelte dev client only answers this machine.", status = HttpStatusCode.Forbidden)
+            return@get
+        }
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        call.respondText(routeMap().toString(), ContentType.Application.Json)
+    }
     get(DEV_OPEN_PATH) {
         val file = call.request.queryParameters["file"].orEmpty()
         val line = call.request.queryParameters["line"]?.toIntOrNull()
