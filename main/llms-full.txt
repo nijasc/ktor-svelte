@@ -1895,7 +1895,7 @@ A route's name is its path in camel case, without groups: `/` is `home`, `/about
 
 ## Finding links that are still strings
 
-An app that turns typed routes on later still has links such as `href="/notes/{note.id}"`. `svelteVerifyRoutes` reads every `.svelte`, `.ts` and `.js` file under `src` and lists each `href`, `goto` and `redirect` whose path is one of your pages, with the call to write instead:
+An app that turns typed routes on later still has links such as `href="/notes/{note.id}"`. `svelteVerifyRoutes` reads every `.svelte`, `.ts` and `.js` file under `src` and lists each `href`, `goto` and `redirect` whose path is one of your pages, with the call to write instead. It reads the Kotlin files in `src/main/kotlin` too, and lists each `respondRedirect` to a page with its `FrontendRoutes` replacement:
 
 ```bash
 ./gradlew svelteVerifyRoutes
@@ -1904,9 +1904,10 @@ An app that turns typed routes on later still has links such as `href="/notes/{n
 ```text
 src/routes/+page.svelte:12  href="/notes/{note.id}"  ->  routes.notesId({ id: note.id })
 src/lib/NoteForm.svelte:31  goto("/notes/" + created.id)  ->  routes.notesId({ id: created.id })
+src/main/kotlin/notes/Routes.kt:48  respondRedirect("/notes/${note.id}")  ->  FrontendRoutes.notesId(note.id)
 ```
 
-It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. It is not part of `check`. To keep new string links out, add it yourself:
+It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. In Kotlin, string templates such as `$id` and `${note.id}` become the arguments, and a value that is not a `String` still needs its `toString()`. It is not part of `check`. To keep new string links out, add it yourself:
 
 ```kotlin
 tasks.check {
@@ -2581,7 +2582,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
-| `svelteVerifyRoutes` | Lists links to pages that are written as strings, with the [typed route](https://nijasc.github.io/ktor-svelte/main/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
+| `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](https://nijasc.github.io/ktor-svelte/main/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
 | `svelteCheck` | Runs your `check` script |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |
 | `svelteOutdated` | Lists outdated frontend dependencies |
