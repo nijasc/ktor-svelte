@@ -28,6 +28,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 - [Runtime config](https://nijasc.github.io/ktor-svelte/main/features/runtime-config)
 - [Built-in endpoints](https://nijasc.github.io/ktor-svelte/main/features/endpoints)
 - [Frontend libraries](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries)
+- [Typed routes](https://nijasc.github.io/ktor-svelte/main/features/routes)
 - [Security](https://nijasc.github.io/ktor-svelte/main/security)
 
 ## Recipes

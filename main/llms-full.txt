@@ -1590,7 +1590,7 @@ Source: https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries
 
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, Lucide, i18n, image optimization, error toasts and typed routes, configured in Gradle with typed helpers on both sides.
 
 Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
 
@@ -1616,6 +1616,7 @@ svelte {
         lucide()
         images()
         toasts()
+        routes()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -1756,6 +1757,10 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 
 `toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#show-errors-automatically).
 
+## Routes
+
+`routes()` turns every page into a typed constant in TypeScript and Kotlin, for links and redirects that always point to a real page. See [Typed routes](https://nijasc.github.io/ktor-svelte/main/features/routes).
+
 ## i18n
 
 Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. `svelteInit` creates an empty file for every locale you configured, and never touches one that is already there. Files are flat, and `{name}` is a parameter:
@@ -1798,11 +1803,78 @@ Choose how the language is picked with `strategy`:
 | Strategy | URLs | Best for | Trade-off |
 |---|---|---|---|
 | `Cookie` (default) | `/about` | Apps behind a login | Prerendered pages hold the default language and switch on load, so others can flash briefly, and search engines mostly see one language |
-| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or pages won't be prerendered per language |
+| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or [typed routes](https://nijasc.github.io/ktor-svelte/main/features/routes), or pages won't be prerendered per language |
 
-On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy.
+On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy, and `call.localizeHref` does the same for redirects from Ktor.
 
 Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
+
+Source: https://nijasc.github.io/ktor-svelte/main/features/routes
+
+# Typed routes
+
+Every page in `src/routes` becomes a typed constant in TypeScript and in Kotlin, so a link or a redirect to a page that does not exist fails to compile.
+
+Turn it on in `build.gradle.kts` and run `./gradlew svelteSync`:
+
+```kotlin
+svelte {
+    libraries {
+        routes()
+    }
+}
+```
+
+A folder is a page when it holds a `+page.svelte`, `+page.ts`, `+page.js` or `+page.server.ts`. Route groups such as `(app)` are left out of the path, and layouts alone are not pages. If your routes live somewhere else, point to them with `routes { dir = layout.projectDirectory.dir("frontend/src/pages") }`.
+
+## In Svelte
+
+`#routes` exports `routes`, an object with one function per page. Each one returns the page's URL through SvelteKit's `resolve()` from `$app/paths`:
+
+```svelte
+<script lang="ts">
+    import { routes } from '#routes';
+
+    let { note } = $props();
+</script>
+
+<a href={routes.home()}>Home</a>
+<a href={routes.notesId({ id: note.id })}>{note.title}</a>
+```
+
+The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Numbers are accepted too, so an ID needs no `String()`. Since every call goes through `resolve()`, a base path and relative prerender links work as usual, and the same functions work with `goto`.
+
+`routeIds` holds the raw SvelteKit route IDs under the same names, such as `routeIds.notesId` for `/notes/[id]`. Use it to compare with `page.route.id`, or to call `resolve()` yourself.
+
+With [i18n](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#i18n) and `strategy = LocaleStrategy.UrlPrefix`, every route also puts the current language in front, such as `/de/notes/1`, so every language gets prerendered without calling `localizeHref` by hand. With the `Cookie` strategy, or without i18n, it is plain `resolve()`.
+
+## In Kotlin
+
+The same pages become `FrontendRoutes` in the generated package. Pages without parameters are constants, and pages with parameters are functions that encode their arguments:
+
+```kotlin
+import io.github.nijasc.ktorsvelte.FrontendRoutes
+import io.github.nijasc.ktorsvelte.localizeHref
+
+post("/api/notes") {
+    val note = notes.create(call.receive())
+    call.respondRedirect(call.localizeHref(FrontendRoutes.notesId(note.id.toString())))
+}
+
+get("/old-about") {
+    call.respondRedirect(FrontendRoutes.about, permanent = true)
+}
+```
+
+Optional parameters such as `[[lang]]` become nullable arguments, and rest parameters such as `[...path]` keep their slashes. With i18n, `call.localizeHref` adds the visitor's language for `UrlPrefix` and returns the path unchanged for `Cookie`.
+
+## Names
+
+A route's name is its path in camel case, without groups: `/` is `home`, `/about` is `about`, `/notes/[id]` is `notesId` and `/[[lang]]/docs/[...path]` is `langDocsPath`. A name that would start with a digit gets a `route` prefix, such as `route404`. When two pages would get the same name, such as `/blog-post` and `/blog/post`, sync fails and names both, so rename one of the folders.
+
+## Keeping it current
+
+`routes.ts` is a generated file like the others: commit it, and a production build fails if it is out of date. While `svelteDev` or `svelteDevAll` runs, adding, moving or deleting a page updates `routes.ts` at once. Under `svelteDevAll` `FrontendRoutes` follows and the app restarts. Otherwise it updates the next time Kotlin compiles.
 
 Source: https://nijasc.github.io/ktor-svelte/main/security
 
@@ -2410,7 +2482,7 @@ svelte {
 | `bunVersion` | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. Unset by default. See [Pin Bun](#pin-bun) |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
-| `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries) |
+| `libraries` | Tailwind, DaisyUI, Lucide, i18n and typed routes. See [Frontend libraries](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
@@ -2434,14 +2506,14 @@ Scores
   Security              [#########-]  90%  10 of 11
   Performance           [##########] 100%  4 of 4
   Operations            [#######---]  66%  2 of 3
-  Developer experience  [##########] 100%  4 of 4
+  Developer experience  [##########] 100%  5 of 5
 
 Suggestions
   - [Security] Set maxJsonStringLength = 100_000, or the longest text your API accepts.
   - [Operations] Set healthEndpoint = true and point your orchestrator at /_ktor-svelte/health.
 ```
 
-The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
+The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts, typed routes and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
 
 ## Pin Bun
 
@@ -2729,6 +2801,7 @@ What each release was built and tested with, read from the release's tagged sour
 | ktor-svelte | Ktor | Kotlin | JVM | Gradle tested | SvelteKit |
 |---|---|---|---|---|---|
 | main (unreleased) | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
+| 1.0.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.12.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.11.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.10.1 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
