@@ -318,6 +318,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask
 	public abstract fun getClassesDirectories ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public abstract fun getCompileErrorsFile ()Lorg/gradle/api/file/RegularFileProperty;
 	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFullStackTraces ()Lorg/gradle/api/provider/Property;
 	public abstract fun getGradleExecutable ()Lorg/gradle/api/provider/Property;
 	public abstract fun getJavaLauncher ()Lorg/gradle/api/provider/Property;
 	public abstract fun getMainClass ()Lorg/gradle/api/provider/Property;
