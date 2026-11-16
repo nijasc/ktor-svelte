@@ -673,7 +673,7 @@ public class Setup {
         String list = tailwind ? " class=\"mt-2 list-disc pl-6\"" : "";
         String link = daisy ? " class=\"link\"" : "";
         List<String> setUp = new ArrayList<>();
-        setUp.add("<a" + link + " href=\"/api/hello\">/api/hello</a> answers from Kotlin, in <code>Application.kt</code>");
+        setUp.add("<code>/api/hello</code> answers from Kotlin, in <code>Application.kt</code>");
         if (generateTs) setUp.add(docsLink(link, "features/typescript", "A typed client") + " in <code>src/lib/api</code>");
         if (daisy) setUp.add(docsLink(link, "features/frontend-libraries#daisyui", "DaisyUI") + ", themed from Gradle");
         if (tailwind && !daisy) setUp.add(docsLink(link, "features/frontend-libraries#tailwind", "Tailwind") + ", set up from Gradle");
