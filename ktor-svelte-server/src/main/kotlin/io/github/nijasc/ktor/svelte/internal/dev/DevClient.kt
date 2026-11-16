@@ -5,7 +5,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.header
 import io.ktor.server.response.respondText
-import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import kotlinx.coroutines.delay
@@ -61,7 +60,7 @@ internal fun Route.devClientRoutes(
             return@get
         }
         call.response.header(HttpHeaders.CacheControl, "no-store")
-        call.respondTextWriter(ContentType.Text.EventStream) {
+        call.respondEventStreamUntilDisconnect {
             var sent: String? = null
             while (true) {
                 val current = readCompileErrors(errors).replace('\n', ' ')
