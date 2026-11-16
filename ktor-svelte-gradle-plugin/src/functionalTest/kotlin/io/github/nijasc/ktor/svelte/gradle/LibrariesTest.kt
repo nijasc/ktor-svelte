@@ -381,7 +381,10 @@ class LibrariesTest {
         addLucide(project)
         messages(project)
         listOf("", "notes/[id]", "(app)/docs/[[lang]]/[...path]").forEach { route ->
-            project.frontend.resolve("src/routes/$route/+page.svelte").apply { parentFile.mkdirs() }.writeText("")
+            project.frontend
+                .resolve("src/routes/$route/+page.svelte")
+                .apply { parentFile.mkdirs() }
+                .writeText("")
         }
         project.run("svelteSync")
         assertContains(project.frontend.resolve("src/lib/ktor-svelte/routes.ts").readText(), "notesId: '/notes/[id]'")
