@@ -3,6 +3,7 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import io.github.nijasc.ktor.svelte.gradle.DocLink
+import io.github.nijasc.ktor.svelte.gradle.libraries.COMPONENTS_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_MARKER
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
@@ -65,6 +66,7 @@ internal fun updatedPackageJson(
             if (spec.daisy != null) put("#theme", "./$GENERATED_DIR/theme.ts")
             if (spec.lucide) put("#icon", "./$GENERATED_DIR/Icon.svelte")
             if (spec.routes) put("#routes", "./$GENERATED_DIR/routes.ts")
+            if (spec.components) put("#components/*", "./$COMPONENTS_DIR/*")
         }
     imports.entries.removeIf { (name, target) -> name !in aliases && target.toString().startsWith("./$GENERATED_DIR/") }
     imports.putAll(aliases)

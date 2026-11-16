@@ -47,6 +47,16 @@ internal fun assistantGuide(
         appendLine(
             "- To add or change an endpoint: edit the Kotlin route, then run `./gradlew svelteGenerateTs`. In dev mode this happens on restart.",
         )
+        if (spec.components) {
+            appendLine()
+            appendLine("## Components")
+            appendLine()
+            appendLine("Ready-made components are in `#components/`. Use them before writing the same markup by hand.")
+            appendLine(
+                "- `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as " +
+                    "`<Field label=\"Title\" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.",
+            )
+        }
         if (spec.routes) {
             appendLine()
             appendLine("## Pages and links")

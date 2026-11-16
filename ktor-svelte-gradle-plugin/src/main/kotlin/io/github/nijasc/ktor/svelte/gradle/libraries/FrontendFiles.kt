@@ -11,6 +11,7 @@ internal const val GENERATED_GIT_ATTRIBUTES = "$GENERATED_DIR/.gitattributes"
 internal const val GENERATED_LINT_RULES = "$GENERATED_DIR/eslint.js"
 internal const val CONFIRM_HELPER = "$GENERATED_DIR/confirm.ts"
 internal const val MODAL_HELPER = "$GENERATED_DIR/modal.ts"
+internal const val COMPONENTS_DIR = "$GENERATED_DIR/components"
 private const val GIT_ATTRIBUTES = "# $GENERATED_MARKER\n* text eol=lf linguist-generated merge=$MERGE_DRIVER\n"
 
 private fun json(value: Any?): String = JsonOutput.toJson(value)
@@ -41,6 +42,7 @@ internal fun frontendFiles(
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
             put("src/hooks.client.ts", renderTemplate("hooks.client.ts", mapOf("reloadPrompt" to spec.reloadPrompt.toString())))
         }
+        if (spec.components) putAll(componentFiles(spec))
         if (spec.lucide || keys.any { it.startsWith("$GENERATED_DIR/") }) {
             put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
             put(GENERATED_LINT_RULES, lintRulesSource(routes.takeIf { spec.routes }))
@@ -49,6 +51,30 @@ internal fun frontendFiles(
             put(MODAL_HELPER, renderTemplate("modal.ts"))
         }
     }
+
+private const val PLAIN_FIELD_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-field {\n        display: grid;\n        gap: 0.25rem;\n    }\n\n" +
+        "    .ktor-svelte-field-hint {\n        margin: 0;\n        font-size: 0.875em;\n        opacity: 0.7;\n    }\n" +
+        "</style>\n"
+
+internal fun componentFiles(spec: LibrarySpec): Map<String, String> {
+    val daisy = spec.daisy != null
+    val field =
+        renderTemplate(
+            "components/Field.svelte",
+            mapOf(
+                "wrapper" to if (daisy) "grid gap-1" else "ktor-svelte-field",
+                "label" to if (daisy) "text-sm font-medium" else "ktor-svelte-field-label",
+                "input" to if (daisy) "input w-full" else "ktor-svelte-field-input",
+                "textarea" to if (daisy) "textarea w-full" else "ktor-svelte-field-input",
+                "hint" to if (daisy) "text-sm opacity-70" else "ktor-svelte-field-hint",
+                "error" to if (daisy) "text-error text-sm" else "field-error",
+                "style" to if (daisy) "" else PLAIN_FIELD_STYLE,
+            ),
+        )
+    return mapOf("$COMPONENTS_DIR/Field.svelte" to field)
+}
 
 internal fun iconSources(
     iconFiles: List<String>,
