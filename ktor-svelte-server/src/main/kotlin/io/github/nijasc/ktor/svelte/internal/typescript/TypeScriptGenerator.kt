@@ -32,6 +32,7 @@ internal class TypeScriptGenerator(
     private val publicConfigSchema: String? = null,
     iconNames: List<String> = emptyList(),
     private val declaredErrors: List<DeclaredError> = emptyList(),
+    private val constants: List<SharedHolder> = emptyList(),
 ) {
     private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
@@ -55,6 +56,18 @@ internal class TypeScriptGenerator(
         validationHelpers.clear()
         operations.clear()
         val types = typesSource(schemas) + publicConfigDeclaration(schemas)
+        val taken =
+            schemas.keys.map(::typeName) +
+                filtered
+                    .objectAt("paths")
+                    .orEmpty()
+                    .keys
+                    .map(::groupName) + SERVICES_MODULE_NAMES
+        constants.firstOrNull { it.name in taken }?.let { holder ->
+            error(
+                "constants(${holder.name}) would be exported as '${holder.name}', which the generated client already uses. Rename the object.",
+            )
+        }
         return withGitAttributes(
             "client.ts" to typeScriptTemplate("client.ts"),
             "form.ts" to typeScriptTemplate("form.ts"),
@@ -65,7 +78,8 @@ internal class TypeScriptGenerator(
                     filtered.objectAt("paths").orEmpty(),
                     schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name } + dateTypes,
                 ),
-            "index.ts" to typeScriptTemplate("index.ts"),
+            "index.ts" to typeScriptTemplate("index.ts") + if (constants.isEmpty()) "" else "export * from './constants.js';\n",
+            *(if (constants.isEmpty()) emptyArray() else arrayOf(CONSTANTS_FILE to constantsSource(constants))),
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
     }

@@ -30,6 +30,7 @@ public class SvelteConfig internal constructor() {
     internal val internalAccessConfig: SvelteInternalAccessConfig = SvelteInternalAccessConfig()
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
+    internal val constantHolders: MutableList<Any> = mutableListOf()
     internal var publicConfigProvider: (() -> String)? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -87,6 +88,10 @@ public class SvelteConfig internal constructor() {
 
     public fun transport(configure: SvelteTransportConfig.() -> Unit) {
         transportConfig.configure()
+    }
+
+    public fun constants(vararg holders: Any) {
+        constantHolders.addAll(holders)
     }
 
     public fun rateLimit(configure: SvelteRateLimitConfig.() -> Unit) {
