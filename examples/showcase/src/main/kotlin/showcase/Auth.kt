@@ -1,5 +1,6 @@
 package showcase
 
+import io.github.nijasc.ktor.svelte.fieldCheck
 import io.github.nijasc.ktor.svelte.respondError
 import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
@@ -89,6 +90,7 @@ fun Route.sessionRoutes(
     registrationOpen: Boolean,
 ) {
     rateLimit(RateLimitName(LOGIN_LIMIT)) {
+        fieldCheck("/api/checks/email") { email -> call.messages.problemEmailTaken().takeIf { users.isTaken(email) } }
         post("/api/session") {
             val login = call.receive<Login>()
             val user: User? = users.check(login.email, login.password)
