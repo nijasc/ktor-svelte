@@ -34,7 +34,10 @@ internal class TypeScriptGenerator(
     private val declaredErrors: List<DeclaredError> = emptyList(),
     private val constants: List<SharedHolder> = emptyList(),
     private val errorCodes: List<String> = emptyList(),
+    cookies: List<CookieSpec> = emptyList(),
 ) {
+    private val cookies = cookies.filterNot { it.httpOnly }
+
     private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
     private var enumTypes: Map<Set<String>, EnumType> = emptyMap()
@@ -67,6 +70,16 @@ internal class TypeScriptGenerator(
         check(errorCodes.isEmpty() || ERROR_CODE_TYPE !in taken) {
             "errorCodes would be exported as '$ERROR_CODE_TYPE', which a class of your API is already called. Rename that class."
         }
+        check(cookies.isEmpty() || "cookies" !in taken) {
+            "cookies(...) would be exported as 'cookies', which the generated client already uses for the routes under /cookies."
+        }
+        cookies.groupBy { cookieKey(it.name) }.values.firstOrNull { it.size > 1 }?.let { same ->
+            error(
+                "The cookies ${same.joinToString(
+                    " and ",
+                ) { "'${it.name}'" }} would both be called ${cookieKey(same.first().name)} in TypeScript.",
+            )
+        }
         constants.firstOrNull { it.name in taken }?.let { holder ->
             error(
                 "constants(${holder.name}) would be exported as '${holder.name}', which the generated client already uses. Rename the object.",
@@ -85,8 +98,10 @@ internal class TypeScriptGenerator(
                     filtered.objectAt("paths").orEmpty(),
                     schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name } + dateTypes,
                 ),
-            "index.ts" to typeScriptTemplate("index.ts") + if (constants.isEmpty()) "" else "export * from './constants.js';\n",
+            "index.ts" to typeScriptTemplate("index.ts") + (if (constants.isEmpty()) "" else "export * from './constants.js';\n") +
+                (if (cookies.isEmpty()) "" else "export * from './cookies.js';\n"),
             *(if (constants.isEmpty()) emptyArray() else arrayOf(CONSTANTS_FILE to constantsSource(constants))),
+            *(if (cookies.isEmpty()) emptyArray() else arrayOf(COOKIES_FILE to cookiesSource(cookies))),
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
     }

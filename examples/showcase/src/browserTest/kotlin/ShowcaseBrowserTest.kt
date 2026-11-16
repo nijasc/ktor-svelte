@@ -172,6 +172,19 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the board remembers the mine filter in its typed cookie`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/board")
+        assertThat(page.locator("#mine")).not().isChecked()
+        page.locator("#mine").check()
+        page.waitForCondition { page.context().cookies().any { it.name == "board-mine" && it.value == "true" } }
+        page.reload()
+        assertThat(page.locator("#mine")).isChecked()
+        page.locator("#mine").uncheck()
+        page.waitForCondition { page.context().cookies().any { it.name == "board-mine" && it.value == "false" } }
+    }
+
+    @Test
     fun `a task goes from the form through edits, comments and files to deletion`() {
         val problems = page.problems()
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)

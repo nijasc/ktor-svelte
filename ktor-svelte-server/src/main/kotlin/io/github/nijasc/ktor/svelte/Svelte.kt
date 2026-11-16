@@ -23,9 +23,11 @@ import io.github.nijasc.ktor.svelte.internal.constantGetPaths
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.DevRequestLog
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
+import io.github.nijasc.ktor.svelte.internal.dev.TypedCookiesKey
 import io.github.nijasc.ktor.svelte.internal.dev.browserLogRoute
 import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devCookieRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devStatus
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
@@ -208,8 +210,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.declaredErrorList.toList(),
             pluginConfig.constantHolders.map(::sharedHolder),
             pluginConfig.errorCodeSet?.names.orEmpty(),
+            pluginConfig.typedCookies.map { it.spec() },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
+        application.attributes.put(TypedCookiesKey, pluginConfig.typedCookies.toList())
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
         if (pluginConfig.buildHeader) {
             val build = BuildFingerprint(store)
@@ -337,6 +341,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
             if (devRequests != null && devProxy != null) {
                 val healthChecks = pluginConfig.healthCheckList.toList()
+                devCookieRoutes(allowRemote, devRequests.sensitive)
                 devRequestRoutes(
                     devRequests,
                     allowRemote,

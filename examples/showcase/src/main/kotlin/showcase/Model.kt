@@ -5,12 +5,14 @@ import io.github.nijasc.ktor.svelte.Sensitive
 import io.github.nijasc.ktor.svelte.Trim
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
+import io.github.nijasc.ktor.svelte.typedCookie
 import io.github.nijasc.ktorsvelte.LucideIcon
 import io.ktor.openapi.JsonSchema
+import java.time.LocalDate
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.time.LocalDate
-import kotlin.time.Instant
 
 const val MAX_TITLE_LENGTH = 120
 const val MAX_DESCRIPTION_LENGTH = 4000
@@ -21,6 +23,8 @@ const val MIN_PASSWORD_LENGTH = 10
 const val MAX_PASSWORD_LENGTH = 200
 const val MAX_LABELS = 5
 const val MAX_UPLOAD_BYTES = 5L * 1024L * 1024L
+
+val OnlyMineCookie = typedCookie<Boolean>("board-mine", default = false, maxAge = 90.days)
 
 enum class AccountError { EmailTaken, WrongPassword, LastAdmin }
 

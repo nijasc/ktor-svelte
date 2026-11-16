@@ -32,6 +32,7 @@ public class SvelteConfig internal constructor() {
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
     internal val constantHolders: MutableList<Any> = mutableListOf()
+    internal val typedCookies: MutableList<TypedCookie<*>> = mutableListOf()
     internal var errorCodeSet: ErrorCodeSet? = null
         private set
     internal var publicConfigProvider: (() -> String)? = null
@@ -110,6 +111,13 @@ public class SvelteConfig internal constructor() {
             errorCodeSet == null,
         ) { "errorCodes is already set to ${errorCodeSet?.type?.simpleName}. An app has one enum of error codes." }
         errorCodeSet = ErrorCodeSet(type, names, message)
+    }
+
+    public fun cookies(vararg cookies: TypedCookie<*>) {
+        cookies.forEach { cookie ->
+            require(typedCookies.none { it.name == cookie.name }) { "The cookie '${cookie.name}' is declared twice." }
+            typedCookies.add(cookie)
+        }
     }
 
     public fun constants(vararg holders: Any) {

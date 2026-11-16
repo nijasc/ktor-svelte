@@ -638,3 +638,57 @@ export function fixtureFetch(fixtures: ApiFixtures): typeof fetch {
         });
     }) as typeof fetch;
 }
+
+export interface CookieRules<T> {
+    kind: 'string' | 'int' | 'number' | 'boolean' | 'enum';
+    values?: readonly string[];
+    default?: T;
+    maxAge?: number;
+    path: string;
+    sameSite: 'lax' | 'strict' | 'none';
+    secure: boolean;
+}
+
+export interface TypedCookie<T, D extends T | undefined = undefined> {
+    readonly name: string;
+    readonly rules: CookieRules<T>;
+    get(header?: string): T | D;
+    set(value: T): void;
+    clear(): void;
+}
+
+function cookieValue(raw: string, rules: CookieRules<unknown>): unknown {
+    let text: string;
+    try {
+        text = decodeURIComponent(raw);
+    } catch {
+        return undefined;
+    }
+    if (rules.kind === 'string') return text;
+    if (rules.kind === 'boolean') return text === 'true' ? true : text === 'false' ? false : undefined;
+    if (rules.kind === 'enum') return rules.values?.includes(text) ? text : undefined;
+    const number = text.trim() === '' ? NaN : Number(text);
+    if (!Number.isFinite(number)) return undefined;
+    return rules.kind === 'int' && !Number.isInteger(number) ? undefined : number;
+}
+
+export function typedCookie<T, D extends T | undefined = undefined>(name: string, rules: CookieRules<T>): TypedCookie<T, D> {
+    const attributes = `; path=${rules.path}; samesite=${rules.sameSite}${rules.secure ? '; secure' : ''}`;
+    return {
+        name,
+        rules,
+        get(header) {
+            const source = header ?? (typeof document === 'undefined' ? '' : document.cookie);
+            const found = source.split(/;\s*/).find((part) => part.startsWith(`${name}=`));
+            const value = found === undefined ? undefined : cookieValue(found.slice(name.length + 1), rules);
+            return (value ?? rules.default) as T | D;
+        },
+        set(value) {
+            const age = rules.maxAge === undefined ? '' : `; max-age=${rules.maxAge}`;
+            document.cookie = `${name}=${encodeURIComponent(String(value))}${attributes}${age}`;
+        },
+        clear() {
+            document.cookie = `${name}=${attributes}; max-age=0`;
+        }
+    };
+}

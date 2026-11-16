@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { api, BoardLimits, isAbortError, latest, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
+    import { api, BoardLimits, cookies, isAbortError, latest, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { routes } from '#routes';
@@ -17,7 +17,7 @@
     let search = $state('');
     let status = $state<Status | undefined>(undefined);
     let label = $state<string | undefined>(undefined);
-    let mine = $state(false);
+    let mine = $state(cookies.boardMine.get());
     let loading = $state(false);
 
     const searchTasks = latest(api.tasks.list);
@@ -59,6 +59,11 @@
         toast(m.boardMoved({ title: moved.title, status: statusLabels[to]() }), { kind: 'success' });
     }
 
+    function pickMine() {
+        cookies.boardMine.set(mine);
+        return refresh();
+    }
+
     function pickStatus(selected: Status | undefined) {
         status = selected;
         return refresh();
@@ -91,7 +96,7 @@
         <label class="sr-only" for="search">{m.boardSearch()}</label>
         <input id="search" class="input input-sm w-56" type="search" placeholder={m.boardSearch()} bind:value={search} oninput={refresh} />
         <label class="flex items-center gap-2 text-sm" for="mine">
-            <input id="mine" class="checkbox checkbox-sm" type="checkbox" bind:checked={mine} onchange={refresh} />
+            <input id="mine" class="checkbox checkbox-sm" type="checkbox" bind:checked={mine} onchange={pickMine} />
             {m.boardOnlyMine()}
         </label>
     </div>

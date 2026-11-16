@@ -8,7 +8,7 @@ val generatorPackage = "io/github/nijasc/ktor/svelte/internal"
 val generatorSources =
     tasks.register<Sync>("generatorSources") {
         from(serverSources.dir("kotlin/$generatorPackage")) {
-            include("typescript/TypeScriptGenerator.kt", "typescript/SharedConstants.kt", "validation/ConstraintMessages.kt")
+            include("typescript/TypeScriptGenerator.kt", "typescript/SharedConstants.kt", "typescript/CookiesSource.kt", "validation/ConstraintMessages.kt")
         }
         into(layout.buildDirectory.dir("generated/generator/$generatorPackage"))
     }
