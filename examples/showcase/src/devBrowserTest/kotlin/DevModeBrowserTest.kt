@@ -535,7 +535,7 @@ class DevModeBrowserTest {
         panel.getByLabel("Theme name").fill("sunset")
         panel.locator(".theme-copy").click()
         assertThat(panel.locator(".theme-note")).containsText("Copied.")
-        val block = page.evaluate("navigator.clipboard.readText()") as String
+        val block = (page.evaluate("navigator.clipboard.readText()") as String).replace("\r\n", "\n")
         assertTrue(block.startsWith("customTheme(\"sunset\") {\n    primary = \"#ff0044\"\n"), block)
         assertContains(block, "    base100 = \"#fff8e7\"\n")
         assertEquals(14, block.lines().size, block)
