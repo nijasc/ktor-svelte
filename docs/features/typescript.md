@@ -121,6 +121,33 @@ post("/api/notes/{id}/attachments") { /* ... */ }.describe {
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
 ```
 
+Types and their fields are documented the same way. Put Ktor's `@JsonSchema.Description` on a class or a property, and it becomes JSDoc on the interface or the field. `@JsonSchema.DeprecatedSchema` on a property, or `deprecated = true` in `describe { }` on a route, becomes `@deprecated`, which editors show struck through at every use:
+
+```kotlin no-check
+@Serializable
+@JsonSchema.Description("A note with its tags and its icon.")
+data class Note(
+    val id: Int,
+    @JsonSchema.Description("Lowercase words the list can be filtered by.")
+    val tags: List<String>,
+    @JsonSchema.DeprecatedSchema
+    val color: String? = null,
+)
+```
+
+```ts no-check
+/** A note with its tags and its icon. */
+export interface Note {
+    id: number;
+    /** Lowercase words the list can be filtered by. */
+    tags: string[];
+    /** @deprecated */
+    color?: string | null;
+}
+```
+
+Kotlin's own documentation comments and `@Deprecated` do not exist at runtime, where the schema is read, so they cannot be picked up. The annotations are the way to say it once for both sides.
+
 Every generated function also names the Kotlin file its route is declared in, as an `@see` line, whether you describe the route or not:
 
 ```ts no-check
