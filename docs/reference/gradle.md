@@ -15,6 +15,7 @@ svelte {
     buildEnv = emptySet()
     addRuntimeDependency = true
     includeSourceMaps = false
+    shortTaskNames = true
     precompress = true
     dev {
         port = 5173
@@ -35,6 +36,7 @@ svelte {
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
 | `libraries` | Tailwind, DaisyUI, Lucide, i18n and typed routes. See [Frontend libraries](../features/frontend-libraries.md) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
+| `shortTaskNames` | Registers `dev`, `sync`, `doctor` and `gen` as [short names](#short-task-names) for the tasks used most. On by default |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
@@ -103,6 +105,21 @@ If your build already has a task called `format` or `formatCheck`, ktor-svelte d
 ```
 
 A commit that fails the check is stopped with the command that fixes it. `git commit --no-verify` skips the hook once, and `./gradlew svelteGitHooks --remove` takes it out again. The hook lives in `.git`, which git does not share, so everyone on the team runs the task once. A pre-commit hook that something else installed is never replaced: the task stops and tells you to call the two tasks from your own hook.
+
+## Short task names
+
+The four tasks you type most have a short name:
+
+| Short | Same as |
+|---|---|
+| `./gradlew dev` | `svelteDevAll` |
+| `./gradlew sync` | `svelteSync` |
+| `./gradlew doctor` | `svelteDoctor` |
+| `./gradlew gen` | `svelteGenerateTs` |
+
+They are the same tasks under another name, so options work as well: `./gradlew doctor --fix`, `./gradlew dev --full-stack-traces`. `dev` and `gen` exist when the long tasks do, which is in a project with the `application` plugin.
+
+A short name that your build or another plugin already uses is left alone, and the long name keeps working. Set `shortTaskNames = false` to register none of them. The docs use the long names, because those always exist.
 
 ## Gradle tasks
 
