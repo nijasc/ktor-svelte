@@ -2,18 +2,17 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { cookieConsent, loadPublicConfig, Role } from '#api';
+    import LocaleSwitch from '#components/LocaleSwitch.svelte';
+    import ThemeToggle from '#components/ThemeToggle.svelte';
     import Icon from '#icon';
     import '#lib/ktor-svelte/app.css';
-    import { getLocale, locales, m, setLocale, type Locale } from '#i18n';
+    import { m } from '#i18n';
     import { routes } from '#routes';
     import { loadSession, session, signOut } from '#lib/session.svelte.ts';
-    import { defaultTheme, getTheme, setTheme, themes, type ThemeName } from '#theme';
 
     let { children } = $props();
 
     let appName = $state(m.appTitle());
-    let theme = $state<ThemeName>(defaultTheme);
-    let locale = $state<Locale>('en');
 
     const links = $derived(
         session.user
@@ -28,8 +27,6 @@
 
     onMount(async () => {
         cookieConsent.banner({ text: m.consentText(), accept: m.consentAccept(), refuse: m.consentRefuse() });
-        theme = getTheme();
-        locale = getLocale();
         if (!session.ready) void loadSession();
         const configured = (await loadPublicConfig()).appName;
         if (configured) appName = configured;
@@ -48,14 +45,8 @@
             </a>
         {/each}
     </nav>
-    <label class="sr-only" for="theme">{m.settingsTheme()}</label>
-    <select id="theme" class="select select-sm w-36" bind:value={theme} onchange={() => setTheme(theme)}>
-        {#each themes as option (option)}<option value={option}>{option}</option>{/each}
-    </select>
-    <label class="sr-only" for="locale">{m.settingsLanguage()}</label>
-    <select id="locale" class="select select-sm w-20" bind:value={locale} onchange={() => setLocale(locale)}>
-        {#each locales as option (option)}<option value={option}>{option}</option>{/each}
-    </select>
+    <ThemeToggle id="theme" class="w-36" label={m.settingsTheme()} />
+    <LocaleSwitch id="locale" class="w-28" label={m.settingsLanguage()} />
     {#if session.user}
         <span id="signed-in-as" class="hidden text-sm sm:inline">{session.user.name}</span>
         <button class="btn btn-outline btn-sm" type="button" onclick={signOut}><Icon name="LogOut" size={16} /> {m.navSignOut()}</button>
