@@ -18,6 +18,149 @@ The most important thing is to make what a developer does a hundred times easier
 | Waiting on and reading the dev loop | Reload data after restart (57), free the dev ports (90), short task names (102), restart summary line (100), fold repeated stack traces (5), highlight your own frames (101) |
 | Keeping things tidy | Editor-time lint rules (103), generated files never conflict (104), one format command (55), git pre-commit hook (56), rename a page safely (91) |
 
+## Board
+
+The state of every feature. A card moves when work on it starts, when its pull request opens and when it merges, and the pull request number is added then. The numbers are the ones in the [scope](#scope) table, and the group is the step in the [order](#order).
+
+### In progress
+
+Nothing yet.
+
+### In review
+
+Nothing yet.
+
+### Next up
+
+| # | Feature | Size | Group |
+|---|---|---|---|
+| 1 | Kotlin redirects in the route check | Small | 1 |
+| 2 | `svelteVerifyRoutes --fix` | Medium | 1 |
+| 3 | Dead link check | Medium | 1 |
+
+### Done
+
+What these features build on has shipped in 1.1.0:
+
+| Pull request | What |
+|---|---|
+| #201 | Dev panel streams no longer fail requests |
+| #202 | `svelteVerifyRoutes` |
+| #203 | `svelteDoctor` catches installs that lost their files |
+| #204 | `errorMessage` in the generated client |
+| #205 | `.gitattributes` next to generated frontend files |
+
+### Backlog
+
+| # | Feature | Size | Group |
+|---|---|---|---|
+| 91 | Rename a page safely | Medium | 1 |
+| 103 | Editor-time lint rules | Medium | 1 |
+| 4 | Flag `window.fetch` in `load` | Small | 2 |
+| 5 | Fold repeated stack traces | Small | 2 |
+| 6 | `svelteDoctor --fix` | Medium | 2 |
+| 7 | i18n message check | Medium | 2 |
+| 8 | Retry with backoff | Small | 2 |
+| 9 | `respondPage` helper | Small | 2 |
+| 10 | Production access log | Small | 2 |
+| 18 | Jump from TypeScript to Kotlin | Small | 2 |
+| 19 | Field docs and deprecations | Small | 2 |
+| 35 | Typed path parameters | Small | 2 |
+| 36 | Unused endpoints report | Small | 2 |
+| 45 | Rate limit aware client | Small | 2 |
+| 53 | Build info on both sides | Small | 2 |
+| 55 | One format command | Small | 2 |
+| 56 | Git pre-commit hook | Small | 2 |
+| 57 | Reload data after restart | Small | 2 |
+| 68 | Visitor time zone on the server | Small | 2 |
+| 70 | Refresh page data after writes | Small | 2 |
+| 76 | Starter page with next steps | Small | 2 |
+| 83 | Reload prompt after deploy | Small | 2 |
+| 84 | Project guide for coding assistants | Small | 2 |
+| 88 | Active link helper | Small | 2 |
+| 90 | Free the dev ports | Small | 2 |
+| 97 | Input normalisation | Small | 2 |
+| 98 | Startup timing breakdown | Small | 2 |
+| 100 | Restart summary line | Small | 2 |
+| 101 | Highlight your own frames | Small | 2 |
+| 102 | Short task names | Small | 2 |
+| 104 | Generated files never conflict | Medium | 2 |
+| 109 | Protect internal endpoints | Small | 2 |
+| 11 | Draft and form state helper | Medium | 3 |
+| 12 | Replay and copy as curl | Medium | 3 |
+| 13 | Open route in IDE | Small | 3 |
+| 14 | Server error overlay | Medium | 3 |
+| 89 | Confirm helper | Small | 3 |
+| 93 | Dialog helper | Small | 3 |
+| 38 | SQL queries per request | Medium | 3 |
+| 39 | Override `publicConfig` in dev | Small | 3 |
+| 40 | Record requests as fixtures | Medium | 3 |
+| 51 | Missing translation highlight | Small | 3 |
+| 58 | Route map in dev panel | Medium | 3 |
+| 74 | Duplicate request detection | Small | 3 |
+| 75 | Live accessibility hints | Medium | 3 |
+| 78 | Theme editor | Medium | 3 |
+| 80 | Status view | Small | 3 |
+| 99 | Sensitive fields | Medium | 3 |
+| 25 | Server-sent toasts | Small | 4 |
+| 26 | Server-directed navigation | Small | 4 |
+| 27 | Upload rules shared | Medium | 4 |
+| 20 | Shared constants | Medium | 4 |
+| 73 | Typed error codes | Medium | 4 |
+| 62 | Typed cookies | Medium | 4 |
+| 79 | Cookie and session inspector | Small | 4 |
+| 85 | Cookie consent helper | Medium | 4 |
+| 63 | Field component | Medium | 5 |
+| 64 | Inputs for dates and enums | Medium | 5 |
+| 65 | Data table for paged routes | Medium | 5 |
+| 69 | Typed error pages | Small | 5 |
+| 94 | Theme and language switches | Small | 5 |
+| 106 | Navigation progress bar | Small | 5 |
+| 71 | Server checks while typing | Medium | 5 |
+| 31 | Branded ID types | Medium | 6 |
+| 32 | Decimal and duration types | Medium | 6 |
+| 33 | Version conflicts | Medium | 6 |
+| 43 | `Patch<T>` partial updates | Medium | 6 |
+| 44 | Typed multipart uploads | Medium | 6 |
+| 95 | File drop zone | Medium | 6 |
+| 86 | Query parameters as a data class | Medium | 6 |
+| 92 | Exposed helpers | Medium | 6 |
+| 72 | Idempotency keys | Medium | 6 |
+| 37 | Declared environment variables | Medium | 6 |
+| 46 | Secret leak check | Medium | 6 |
+| 82 | Deploy presets | Medium | 6 |
+| 49 | Plurals in messages | Medium | 7 |
+| 50 | Shared formatting | Medium | 7 |
+| 96 | Relative time | Small | 7 |
+| 59 | Self-hosted fonts | Medium | 7 |
+| 108 | Charts preset | Medium | 7 |
+| 48 | API change report | Medium | 7 |
+| 81 | Production smoke test | Medium | 7 |
+| 21 | Typed current user | Medium | 8 |
+| 87 | `call.user` in routes | Small | 8 |
+| 24 | Login redirect with return | Small | 8 |
+| 67 | Session expiry warning | Small | 8 |
+| 22 | Shared permissions | Large | 8 |
+| 23 | Page guards declared once | Large | 8 |
+| 41 | Synced user preferences | Large | 8 |
+| 34 | Resource routes DSL | Medium | 9 |
+| 15 | Page scaffolding task | Medium | 9 |
+| 42 | CRUD scaffold from a DTO | Large | 9 |
+| 16 | Nav metadata from routes | Large | 9 |
+| 77 | Page metadata for sharing | Medium | 9 |
+| 28 | Generated page loads | Large | 9 |
+| 66 | Inline page data | Large | 9 |
+| 29 | Frontend errors in the server log | Medium | 10 |
+| 54 | Web vitals in metrics | Medium | 10 |
+| 30 | Kotlin browser test kit | Large | 10 |
+| 107 | Browser test recorder | Medium | 10 |
+| 47 | Accessibility check task | Large | 10 |
+| 105 | HTTPS in development | Medium | 11 |
+| 52 | Installable app (PWA) | Large | 11 |
+| 61 | Emails from Svelte components | Large | 11 |
+| 60 | Multiple frontends | Large | 12 |
+| 17 | One-step `svelteUpgrade` | Medium | 13 |
+
 ## Scope
 
 | # | Feature | Area | Size | Builds on |
