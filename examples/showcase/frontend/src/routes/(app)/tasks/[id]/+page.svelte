@@ -103,6 +103,10 @@
         }
     }
 
+    async function clearDue() {
+        task = await api.tasks.patch(task.id, { dueOn: null });
+    }
+
     async function move(to: Status) {
         task = await api.tasks.status(task.id, { status: to });
     }
@@ -204,7 +208,15 @@
             </dd>
         </div>
         <div><dt class="font-semibold">{m.fieldAssignee()}</dt><dd>{task.assignee?.name ?? m.assigneeNobody()}</dd></div>
-        <div><dt class="font-semibold">{m.fieldDueOn()}</dt><dd>{task.dueOn ? formatDate(task.dueOn) : '-'}</dd></div>
+        <div>
+            <dt class="font-semibold">{m.fieldDueOn()}</dt>
+            <dd>
+                {task.dueOn ? formatDate(task.dueOn) : '-'}
+                {#if task.dueOn}
+                    <button id="clear-due" class="btn btn-ghost btn-xs" type="button" onclick={clearDue}>{m.taskClearDue()}</button>
+                {/if}
+            </dd>
+        </div>
         <div><dt class="font-semibold">{m.taskCreatedBy()}</dt><dd>{task.creator.name}, {formatDateTime(task.createdAt)}</dd></div>
     </dl>
 

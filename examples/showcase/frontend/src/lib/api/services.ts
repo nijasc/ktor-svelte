@@ -1,5 +1,5 @@
 import { ApiError, request, codeMessages, errorCode, type RequestOptions } from './client.js';
-import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, FieldCheckAnswer, Greeting, Login, PasswordChange, Problem, ProfileInput, PublicConfig, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
+import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, FieldCheckAnswer, Greeting, Login, LucideIcon, PasswordChange, Priority, Problem, ProfileInput, PublicConfig, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
 
 /** @see showcase/Auth.kt */
 export const adminGetUsers = (options?: RequestOptions) => request<User[]>('GET', '/api/admin/users', { ...options, operation: 'admin.getUsers' });
@@ -101,6 +101,17 @@ export const tasksGet = (id: string | number, options?: RequestOptions) => reque
 /** @see showcase/TaskRoutes.kt */
 export const tasksUpdate = (id: string | number, body: TaskInput, options?: RequestOptions) => request<Task>('PUT', `/api/tasks/${encodeURIComponent(id)}`, { ...options, body, operation: 'tasks.update' });
 /** @see showcase/TaskRoutes.kt */
+export const tasksPatch = (id: string | number, body: {
+    title?: string;
+    description?: string;
+    priority?: Priority;
+    labels?: string[];
+    icon?: LucideIcon;
+    assigneeId?: number | null;
+    dueOn?: string | null;
+    version?: number | null;
+}, options?: RequestOptions) => request<Task>('PATCH', `/api/tasks/${encodeURIComponent(id)}`, { ...options, body, operation: 'tasks.patch' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/tasks/${encodeURIComponent(id)}`, { ...options, operation: 'tasks.delete' });
 /** @see showcase/TaskRoutes.kt */
 export const tasksGetActivity = (id: string | number, options?: RequestOptions) => request<Activity[]>('GET', `/api/tasks/${encodeURIComponent(id)}/activity`, { ...options, operation: 'tasks.getActivity' });
@@ -130,6 +141,8 @@ export const tasks = {
     get: tasksGet,
     /** @see showcase/TaskRoutes.kt */
     update: tasksUpdate,
+    /** @see showcase/TaskRoutes.kt */
+    patch: tasksPatch,
     /** @see showcase/TaskRoutes.kt */
     delete: tasksDelete,
     /** @see showcase/TaskRoutes.kt */
@@ -179,6 +192,7 @@ export interface ApiErrors {
     'tasks.create': Problem;
     'tasks.get': Problem;
     'tasks.update': Problem;
+    'tasks.patch': Problem;
     'tasks.delete': Problem;
     'tasks.getActivity': Problem;
     'tasks.getAttachments': Problem;
@@ -208,6 +222,7 @@ const errorStatuses: Record<string, number[]> = {
     'tasks.create': [401, 403],
     'tasks.get': [401, 403, 404],
     'tasks.update': [401, 403, 404],
+    'tasks.patch': [401, 403, 404],
     'tasks.delete': [401, 403, 404],
     'tasks.getActivity': [401, 403, 404],
     'tasks.getAttachments': [401, 403, 404],

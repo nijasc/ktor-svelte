@@ -1,6 +1,7 @@
 import {
     ApiError,
     apiConfig,
+    applyPatch,
     codeMessages,
     consentStore,
     errorCode,
@@ -10,6 +11,7 @@ import {
     isRateLimitError,
     isUploadError,
     isVersionConflict,
+    patchOf,
     request,
     type ApiFixtures,
     type RequestOptions,
@@ -284,6 +286,15 @@ results.uploads = [
     await uploadOutcome([file('a.txt', 'text/plain'), file('b.txt', 'text/plain')], { maxFiles: 1 })
 ];
 
+const noteBefore = { title: 'Shopping', dueOn: '2026-12-24' as string | null, tags: ['home'], stars: 3 as number | undefined };
+results.patches = [
+    patchOf(noteBefore, { ...noteBefore }),
+    patchOf(noteBefore, { ...noteBefore, title: 'Groceries' }),
+    patchOf(noteBefore, { ...noteBefore, dueOn: null }),
+    patchOf(noteBefore, { ...noteBefore, tags: ['home', 'food'], stars: undefined }),
+    patchOf({ ...noteBefore, dueOn: null }, { ...noteBefore, dueOn: null }),
+    applyPatch(noteBefore, { dueOn: null, stars: 5 })
+];
 results.conflicts = [
     isVersionConflict(new ApiError(409, { message: 'x', code: 'version.conflict', current: { version: 2 } }, '/api/n')),
     isVersionConflict(new ApiError(409, { message: 'x', code: 'EmailTaken' }, '/api/n')),

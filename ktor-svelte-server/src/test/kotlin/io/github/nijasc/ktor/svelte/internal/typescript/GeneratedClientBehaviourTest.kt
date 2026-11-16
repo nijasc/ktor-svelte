@@ -227,4 +227,19 @@ class GeneratedClientBehaviourTest {
     fun `only a 409 with the conflict code and the current record is a version conflict`() {
         assertEquals("[true,false,false,false,false]", runHarness().getValue("conflicts").toString())
     }
+
+    @Test
+    fun `a patch holds the fields that changed, with null for the ones that were cleared`() {
+        assertEquals(
+            listOf(
+                """{}""",
+                """{"title":"Groceries"}""",
+                """{"dueOn":null}""",
+                """{"tags":["home","food"],"stars":null}""",
+                """{}""",
+                """{"title":"Shopping","dueOn":null,"tags":["home"],"stars":5}""",
+            ),
+            runHarness().getValue("patches").jsonArray.map { it.toString() },
+        )
+    }
 }
