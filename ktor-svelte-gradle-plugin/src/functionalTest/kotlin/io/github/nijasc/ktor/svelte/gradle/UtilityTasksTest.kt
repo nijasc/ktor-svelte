@@ -201,12 +201,20 @@ class UtilityTasksTest {
         assumeTrue(git("init", "-q"))
         val hook = dir.resolve(".git/hooks/pre-commit")
 
-        assertContains(project.run("svelteGitHooks").output, "Every commit now runs formatCheck and svelteVerifySync first")
+        val installed = project.run("svelteGitHooks").output
+        assertContains(installed, "Every commit now runs formatCheck and svelteVerifySync first")
+        assertContains(installed, "generated files no longer conflict in this clone.")
+        assertContains(installed, "one side is kept and svelteSync run afterwards.")
         assertContains(hook.readText(), "./gradlew --quiet formatCheck svelteVerifySync")
+        assertContains(hook.resolveSibling("post-merge").readText(), "./gradlew --quiet svelteSync")
+        assertContains(hook.resolveSibling("post-rewrite").readText(), "./gradlew --quiet svelteSync")
+        assertContains(dir.resolve(".git/config").readText(), "driver = git update-ref refs/ktor-svelte/regenerate HEAD")
         assertContains(project.run("svelteGitHooks", "--configuration-cache").output, "is up to date")
 
         assertContains(project.run("svelteGitHooks", "--remove").output, "removed")
         assertFalse(hook.exists())
+        assertFalse(hook.resolveSibling("post-merge").exists())
+        assertFalse("ktor-svelte" in dir.resolve(".git/config").readText())
         assertContains(project.run("svelteGitHooks", "--remove").output, "there is no ktor-svelte hook")
     }
 
