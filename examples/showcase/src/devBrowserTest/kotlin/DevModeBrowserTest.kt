@@ -30,6 +30,7 @@ private const val APP = "http://localhost:$APP_PORT"
 private const val ADMIN_EMAIL = "ada@example.com"
 private const val ADMIN_PASSWORD = "dev-browser-admin-password"
 private const val MEMBER_PASSWORD = "dev-browser-member-password"
+private const val SESSION_SIGN_KEY = "6b746f722d7376656c74652d6465762d62726f777365722d746573742d6b6579"
 private const val START_SECONDS = 240
 private const val CHANGE_SECONDS = 180
 
@@ -100,6 +101,7 @@ class DevModeBrowserTest {
                         environment()["SHOWCASE_DATA"] = directory.resolve("data").toString()
                         environment()["SHOWCASE_ADMIN_PASSWORD"] = ADMIN_PASSWORD
                         environment()["SHOWCASE_MEMBER_PASSWORD"] = MEMBER_PASSWORD
+                        environment()["SESSION_SIGN_KEY"] = SESSION_SIGN_KEY
                     }.redirectErrorStream(true)
                     .redirectOutput(log)
                     .start()
@@ -186,11 +188,15 @@ class DevModeBrowserTest {
     @Test
     fun `an open page loads its data again after the app restarts, without a reload`() {
         val routes = File(project, "src/main/kotlin/showcase/TaskRoutes.kt")
-        page.navigate("/login")
-        page.getByLabel("Email").fill(ADMIN_EMAIL)
-        page.getByLabel("Password").fill(ADMIN_PASSWORD)
-        page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
-        assertThat(page).hasURL(Pattern.compile(".*/board$"))
+        waitFor("the board after signing in", 60) {
+            page.navigate("/board")
+            page.waitForURL(Pattern.compile(".*/login$"), Page.WaitForURLOptions().setTimeout(5_000.0))
+            page.getByLabel("Email").fill(ADMIN_EMAIL)
+            page.getByLabel("Password").fill(ADMIN_PASSWORD)
+            page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
+            page.waitForURL(Pattern.compile(".*/board$"), Page.WaitForURLOptions().setTimeout(5_000.0))
+            true
+        }
         assertThat(page.locator("#tasks > li").first()).isVisible()
         val loads = java.util.concurrent.CopyOnWriteArrayList<String>()
         page.onRequest { request -> if ("/api/tasks" in request.url()) loads += request.url() }
