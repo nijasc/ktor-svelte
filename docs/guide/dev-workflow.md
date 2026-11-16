@@ -52,6 +52,10 @@ When Kotlin stops compiling, the app keeps running its last good version, and th
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
 
+Each call has two buttons. **Replay** sends it again, with the same method, path, headers and body, so you can repeat a call after changing the Kotlin code without clicking through the page again. **curl** copies it as a `curl` command, with its body and its `X-Request-Id`, to paste into a terminal or a bug report. The command carries no cookies, so add your session yourself for a call that needs one. And it carries the body as it was sent, passwords included, so look at it before you share it.
+
+The buttons work for calls this page made, since that is where the body is known, and for every `GET`. For other calls, such as an upload or one from another tab, they are disabled.
+
 Browser console output lands in the same console as your app. Every `console.log`, `info`, `debug`, `warn` and `error`, uncaught errors and unhandled promise rejections are sent to the app and logged by the `ktor-svelte.browser` logger, with the page they came from:
 
 ```text
