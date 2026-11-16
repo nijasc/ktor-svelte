@@ -178,6 +178,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                     .orElse("false"),
             )
             settings.put("libraries.routes", libraries.routesEnabled.map { it.toString() }.orElse("false"))
+            settings.put("libraries.components", libraries.componentsEnabled.map { it.toString() }.orElse("false"))
             settings.put(
                 "libraries.i18n",
                 libraries.i18nSettings.enabled
@@ -225,6 +226,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 images = libraries.imagesEnabled.getOrElse(false),
                 toasts = libraries.toastsEnabled.getOrElse(false),
                 routes = libraries.routesEnabled.getOrElse(false),
+                components = libraries.componentsEnabled.getOrElse(false),
                 allIcons = libraries.lucideSettings.allIconsEnabled.getOrElse(false),
                 reloadPrompt = libraries.toastsSettings.reloadPromptEnabled.getOrElse(false),
                 i18n =

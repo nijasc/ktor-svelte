@@ -15,6 +15,7 @@
   "problem-missing-task": "Diese Aufgabe gibt es nicht.",
   "app-title": "ktor-svelte Showcase",
   "skip-to-content": "Zum Inhalt springen",
+  "settings-password-hint": "Mindestens {min} Zeichen.",
   "consent-text": "Diese Seite kann sich deinen Board-Filter in einem Cookie merken.",
   "consent-accept": "Merken",
   "consent-refuse": "Nur das N\u00f6tige",

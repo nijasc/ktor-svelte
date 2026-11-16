@@ -223,6 +223,7 @@ public abstract class SvelteLibraries {
     public abstract val imagesEnabled: Property<Boolean>
     public abstract val toastsEnabled: Property<Boolean>
     public abstract val routesEnabled: Property<Boolean>
+    public abstract val componentsEnabled: Property<Boolean>
     public abstract val generatedPackage: Property<String>
 
     @get:Nested
@@ -265,6 +266,10 @@ public abstract class SvelteLibraries {
     public fun toasts(action: Action<ToastsSettings>) {
         toastsEnabled.set(true)
         action.execute(toastsSettings)
+    }
+
+    public fun components() {
+        componentsEnabled.set(true)
     }
 
     public fun routes() {

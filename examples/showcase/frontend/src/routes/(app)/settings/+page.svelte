@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { api, ErrorCode, field, hasErrorCode, isValidationError, PasswordChange, ProfileInput } from '#api';
+    import { api, ErrorCode, hasErrorCode, isValidationError, PasswordChange, ProfileInput } from '#api';
+    import Field from '#components/Field.svelte';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
@@ -56,16 +57,14 @@
     <h2 id="profile-title" class="mb-3 text-xl font-semibold">{m.settingsProfile()}</h2>
     <p class="mb-3 text-sm">{data.user.email}</p>
     <form class="grid gap-3" novalidate onsubmit={saveProfile}>
-        <label class="grid gap-1" for="profile-name">
-            <span>{m.fieldName()}</span>
-            <input
-                id="profile-name"
-                class="input w-full"
-                autocomplete="name"
-                bind:value={profile.name}
-                use:field={{ bounds: ProfileInput.bounds.name, errors: profileErrors.name, errorClass: 'text-error text-sm' }}
-            />
-        </label>
+        <Field
+            id="profile-name"
+            label={m.fieldName()}
+            autocomplete="name"
+            bind:value={profile.name}
+            bounds={ProfileInput.bounds.name}
+            errors={profileErrors.name}
+        />
         <button class="btn btn-primary justify-self-start" type="submit"><Icon name="Check" size={16} /> {m.taskSave()}</button>
     </form>
 </section>
@@ -73,28 +72,24 @@
 <section class="max-w-md" aria-labelledby="password-title">
     <h2 id="password-title" class="mb-3 text-xl font-semibold">{m.settingsPassword()}</h2>
     <form class="grid gap-3" novalidate onsubmit={changePassword}>
-        <label class="grid gap-1" for="password-current">
-            <span>{m.settingsCurrentPassword()}</span>
-            <input
-                id="password-current"
-                class="input w-full"
-                type="password"
-                autocomplete="current-password"
-                bind:value={password.current}
-                use:field={{ errors: passwordErrors.current, errorClass: 'text-error text-sm' }}
-            />
-        </label>
-        <label class="grid gap-1" for="password-next">
-            <span>{m.settingsNewPassword()}</span>
-            <input
-                id="password-next"
-                class="input w-full"
-                type="password"
-                autocomplete="new-password"
-                bind:value={password.next}
-                use:field={{ bounds: PasswordChange.bounds.next, errors: passwordErrors.next, errorClass: 'text-error text-sm' }}
-            />
-        </label>
+        <Field
+            id="password-current"
+            label={m.settingsCurrentPassword()}
+            type="password"
+            autocomplete="current-password"
+            bind:value={password.current}
+            errors={passwordErrors.current}
+        />
+        <Field
+            id="password-next"
+            label={m.settingsNewPassword()}
+            type="password"
+            autocomplete="new-password"
+            bind:value={password.next}
+            bounds={PasswordChange.bounds.next}
+            errors={passwordErrors.next}
+            hint={m.settingsPasswordHint({ min: PasswordChange.bounds.next.minlength ?? 0 })}
+        />
         <button class="btn btn-primary justify-self-start" type="submit"><Icon name="KeyRound" size={16} /> {m.settingsChangePassword()}</button>
     </form>
 </section>

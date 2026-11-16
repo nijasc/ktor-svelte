@@ -203,6 +203,27 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a generated field ties its label, hint, bounds and errors to the input`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/settings")
+        val next = page.getByLabel("New password")
+        assertThat(next).hasAttribute("minlength", "10")
+        assertThat(next).hasAttribute("type", "password")
+        val hint = page.locator("#" + next.getAttribute("aria-describedby"))
+        assertThat(hint).hasText("At least 10 characters.")
+
+        next.fill("short")
+        page.getByLabel("Current password").fill(ADMIN_PASSWORD)
+        next.press("Enter")
+        assertThat(next).hasAttribute("aria-invalid", "true")
+        val described = next.getAttribute("aria-describedby").orEmpty().split(" ")
+        assertEquals(2, described.size)
+        assertThat(page.locator("#" + described[0])).hasText("At least 10 characters.")
+        assertThat(page.locator("#" + described[1])).hasAttribute("role", "alert")
+        assertThat(page.locator("#" + described[1])).not().isEmpty()
+    }
+
+    @Test
     fun `the board remembers the mine filter in its typed cookie`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/board")
