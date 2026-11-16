@@ -62,4 +62,49 @@ class SvelteDevAllTest {
         stopProcessTree(parent)
         assertFalse(parent.isAlive)
     }
+
+    @Test
+    fun `the app runs from a copy of its folders, so nothing changes underneath it`() {
+        val classes = dir.resolve("build/classes/kotlin/main").apply { mkdirs() }
+        classes.resolve("app/Routes.class").apply {
+            parentFile.mkdirs()
+            writeText("first")
+        }
+        val resources = dir.resolve("build/resources/main").apply { mkdirs() }
+        resources.resolve("application.yaml").writeText("port: 8080")
+        val empty = dir.resolve("build/generated/empty").apply { mkdirs() }
+        val missing = dir.resolve("build/classes/java/main")
+        val library =
+            dir.resolve("cache/lib.jar").apply {
+                parentFile.mkdirs()
+                writeText("jar")
+            }
+        val snapshots = dir.resolve("build/ktor-svelte/dev-classpath")
+
+        val first = snapshotOfFolders(listOf(classes, resources, empty, missing, library), snapshots, 1)
+
+        assertEquals(listOf(missing, library), first.drop(3), "what is no folder is passed on as it is")
+        assertEquals("first", first[0].resolve("app/Routes.class").readText())
+        assertEquals("port: 8080", first[1].resolve("application.yaml").readText())
+        assertTrue(first[2].isDirectory)
+        assertTrue(first.take(3).all { it.startsWith(snapshots.resolve("1")) })
+        assertEquals(3, first.take(3).distinct().size)
+
+        classes.resolve("app/Routes.class").writeText("second")
+        assertEquals("first", first[0].resolve("app/Routes.class").readText(), "the running app keeps what it started with")
+
+        val second = snapshotOfFolders(listOf(classes, resources), snapshots, 2)
+        assertEquals("second", second[0].resolve("app/Routes.class").readText())
+        assertFalse(snapshots.resolve("1").exists(), "the copy of the stopped app is removed")
+    }
+
+    @Test
+    fun `two folders with the same name get their own copy`() {
+        val kotlin = dir.resolve("classes/kotlin/main").apply { mkdirs() }
+        val java = dir.resolve("classes/java/main").apply { mkdirs() }
+        kotlin.resolve("A.class").writeText("kotlin")
+        java.resolve("A.class").writeText("java")
+        val copies = snapshotOfFolders(listOf(kotlin, java), dir.resolve("snapshots"), 1)
+        assertEquals(listOf("kotlin", "java"), copies.map { it.resolve("A.class").readText() })
+    }
 }
