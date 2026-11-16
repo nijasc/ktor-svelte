@@ -409,4 +409,34 @@ class LibrariesTest {
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":compileKotlin")?.outcome)
     }
+
+    @Test
+    fun `svelteVerifyRoutes lists string links to pages and passes once they are typed`() {
+        val project = project("routes()")
+        val home = project.frontend.resolve("src/routes/+page.svelte")
+        val note = project.frontend.resolve("src/routes/notes/[id]/+page.svelte")
+        note.parentFile.mkdirs()
+        note.writeText("<a href=\"/\">Home</a>\n")
+        home.writeText("<script>\n    let { note } = ${'$'}props();\n</script>\n\n<a href=\"/notes/{note.id}\">Open</a>\n")
+
+        val output = project.runAndFail("svelteVerifyRoutes").output
+
+        assertContains(output, "src/routes/+page.svelte:5  href=\"/notes/{note.id}\"  ->  routes.notesId({ id: note.id })")
+        assertContains(output, "src/routes/notes/[id]/+page.svelte:1  href=\"/\"  ->  routes.home()")
+        assertContains(output, "2 link(s) to pages are written as strings.")
+
+        home.writeText("<a href={routes.notesId({ id: note.id })}>Open</a>\n")
+        note.writeText("<a href={routes.home()}>Home</a>\n")
+
+        assertContains(project.run("svelteVerifyRoutes").output, "every link to a page uses a typed route")
+    }
+
+    @Test
+    fun `svelteVerifyRoutes has nothing to do without typed routes`() {
+        val project = project("lucide()")
+        project.frontend.resolve("src/routes").mkdirs()
+        project.frontend.resolve("src/routes/+page.svelte").writeText("<a href=\"/\">Home</a>\n")
+
+        assertContains(project.run("svelteVerifyRoutes").output, "typed routes are off")
+    }
 }

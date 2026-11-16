@@ -21,6 +21,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
@@ -239,6 +240,13 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.mustRunAfter(sync)
                 task.onlyIf("libraries are configured") { hasLibraries.get() && !skipFrontend }
             }
+        project.tasks.register("svelteVerifyRoutes", SvelteVerifyRoutesTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Fails if a link to a page is written as a string instead of a typed route."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.routesEnabled.set(librarySpec.map { it.routes })
+        }
         install.configure { it.mustRunAfter(sync) }
         build.configure { it.dependsOn(verify) }
         project.tasks.named("svelteInit").configure { it.finalizedBy(sync, "svelteGenerateRunConfigurations") }
