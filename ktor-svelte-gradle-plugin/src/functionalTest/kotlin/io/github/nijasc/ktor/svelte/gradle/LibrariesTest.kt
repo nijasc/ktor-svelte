@@ -594,6 +594,35 @@ class LibrariesTest {
     }
 
     @Test
+    fun `svelteVerifyMessages lists messages nothing uses and only fails when strict`() {
+        val project = project("i18n { locales(\"en\", \"de\") }")
+        val directory = project.frontend.resolve("messages").apply { mkdirs() }
+        directory.resolve("en.json").writeText("""{"hello":"Hi {name}","old-banner":"Sale","from-kotlin":"Bye"}""")
+        directory.resolve("de.json").writeText("""{"hello":"Hallo {name}","old-banner":"Aktion","from-kotlin":"Tschuess"}""")
+        val page = project.frontend.resolve("src/routes/+page.svelte")
+        page.parentFile.mkdirs()
+        page.writeText("<h1>{m.hello({ name })}</h1>\n")
+        val kotlin = dir.resolve("src/main/kotlin/Routes.kt")
+        kotlin.parentFile.mkdirs()
+        kotlin.writeText("val text = Messages.forLocale(\"de\").fromKotlin()\n")
+
+        val output = project.run("svelteVerifyMessages").output
+
+        assertContains(output, "old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'")
+        assertContains(output, "1 message(s) are in every locale file but used nowhere. Add --strict")
+        assertContains(project.runAndFail("svelteVerifyMessages", "--strict").output, "1 message(s) are in every locale file")
+
+        page.writeText("<h1>{m.hello({ name })}</h1>\n<p>{m.oldBanner()}</p>\n")
+
+        assertContains(project.run("svelteVerifyMessages", "--strict").output, "every message is used")
+    }
+
+    @Test
+    fun `svelteVerifyMessages has nothing to do without i18n`() {
+        assertContains(project("lucide()").run("svelteVerifyMessages").output, "i18n is off")
+    }
+
+    @Test
     fun `svelteVerifyRoutes has nothing to do without typed routes`() {
         val project = project("lucide()")
         project.frontend.resolve("src/routes").mkdirs()

@@ -219,6 +219,20 @@ On the server, `call.svelteLocale` and `call.messages` follow the same rules: th
 
 Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
 
+### Messages nothing uses
+
+A missing message fails the build, but one that is no longer used stays in every locale file and keeps being translated. `svelteVerifyMessages` lists them:
+
+```bash
+./gradlew svelteVerifyMessages
+```
+
+```text
+old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'
+```
+
+A message counts as used when its generated function is called anywhere in the frontend or in Kotlin, or when its key appears as a string, because it may then be looked up by name. The task only lists what it finds. Add `--strict` to fail the build instead.
+
 ## Lint rules
 
 Next to the generated files, `svelteSync` writes `src/lib/ktor-svelte/eslint.js`, a small ESLint plugin with rules for mistakes that are easy to make in a ktor-svelte app. They show up in the editor while you type:

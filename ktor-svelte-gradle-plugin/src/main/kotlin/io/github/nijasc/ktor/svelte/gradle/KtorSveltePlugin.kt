@@ -24,6 +24,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLoadsTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyMessagesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
@@ -268,6 +269,14 @@ public class KtorSveltePlugin : Plugin<Project> {
                         .orEmpty()
                 },
             )
+        }
+        project.tasks.register("svelteVerifyMessages", SvelteVerifyMessagesTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Lists i18n messages that nothing uses. Add --strict to fail on them."
+            task.frontendDir.set(extension.frontendDir)
+            task.messagesDirectory.set(messages)
+            task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
+            task.locales.set(librarySpec.map { it.i18n?.locales.orEmpty() })
         }
         project.tasks.register("svelteVerifyLoads", SvelteVerifyLoadsTask::class.java) { task ->
             task.group = TASK_GROUP
