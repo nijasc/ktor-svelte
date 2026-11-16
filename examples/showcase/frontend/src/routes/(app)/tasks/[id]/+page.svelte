@@ -140,11 +140,9 @@
         const files = [...(input.files ?? [])];
         input.value = '';
         for (const file of files) {
-            const form = new FormData();
-            form.append('file', file);
             progress = 0;
             try {
-                const stored = await api.tasks.attachments(task.id, form, {
+                const stored = await api.tasks.attachments(task.id, { file }, {
                     silent: true,
                     onUploadProgress: ({ loaded, total }) => (progress = total ? loaded / total : 0)
                 });

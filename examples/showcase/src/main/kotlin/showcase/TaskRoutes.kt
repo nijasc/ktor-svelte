@@ -3,11 +3,11 @@ package showcase
 import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.Patch
-import io.github.nijasc.ktor.svelte.receiveUploads
+import io.github.nijasc.ktor.svelte.receiveForm
 import io.github.nijasc.ktor.svelte.respondIfStale
 import io.github.nijasc.ktor.svelte.ToastKind
 import io.github.nijasc.ktor.svelte.toast
-import io.github.nijasc.ktor.svelte.uploadRules
+import io.github.nijasc.ktor.svelte.uploadForm
 import io.github.nijasc.ktor.svelte.validate
 import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
@@ -155,12 +155,11 @@ fun Route.taskRoutes(
             post("/attachments") {
                 val task = tasks.find(call.id()) ?: return@post call.respondMissingTask()
                 val uploader = call.currentUser(users)
+                val file = call.receiveForm().file("file")
                 val attachments: List<Attachment> =
-                    call.receiveUploads().map { file ->
-                        tasks.attach(task.id, uploader, cleanFileName(file.fileName), file.contentType, file.bytes)
-                    }
+                    listOf(tasks.attach(task.id, uploader, cleanFileName(file.fileName), file.contentType, file.bytes))
                 call.respond(HttpStatusCode.Created, attachments)
-            }.uploadRules(maxSize = MAX_UPLOAD_BYTES, types = (INLINE_TYPES + DOWNLOAD_TYPES).toList()).describe {
+            }.uploadForm(maxSize = MAX_UPLOAD_BYTES, types = (INLINE_TYPES + DOWNLOAD_TYPES).toList()) { file("file") }.describe {
                 summary = "Uploads files to a task."
                 description = "Send the files as multipart form data. Images, PDF, text, CSV and ZIP files up to 5 MiB are accepted."
             }

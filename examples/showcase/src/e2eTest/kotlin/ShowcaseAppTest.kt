@@ -286,6 +286,13 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `the upload route says which fields its form has, and the generated function takes them by name`() {
+        val services = File("frontend/src/lib/api/services.ts").readText()
+        assertContains(services, "export const tasksAttachments = (id: string | number, body: { file: File }, options?: RequestOptions) =>")
+        assertContains(services, "multipart: true, operation: 'tasks.attachments'")
+    }
+
+    @Test
     fun `an id that is a value class in Kotlin is its own type in the generated client`() {
         val types = File("frontend/src/lib/api/types.ts").readText().replace("\r\n", "\n")
         assertContains(types, "export type AttachmentId = number & { readonly [brand]: 'AttachmentId' };")
