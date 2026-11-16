@@ -71,6 +71,7 @@ internal fun configReport(config: SvelteConfig): JsonObject =
             put("slowApiCall", config.devConfig.slowApiCall?.toString())
             put("panel", config.devConfig.panel)
             put("browserLogs", config.devConfig.browserLogs)
+            put("refreshAfterRestart", config.devConfig.refreshAfterRestart)
         }
         putJsonObject("transport") {
             put("formats", strings(config.transportConfig.formatNames.ifEmpty { listOf("json") }))

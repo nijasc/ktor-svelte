@@ -50,12 +50,53 @@ const viteOverlay = Promise.race([
     new Promise((resolve) => setTimeout(resolve, 3000))
 ]);
 
-new EventSource('/_ktor-svelte/dev/compile-errors').onmessage = async (event) => {
+const features = new URL(import.meta.url).searchParams;
+const kitClient = /@sveltejs\/kit\/src\/runtime\/client\/client\.js(\?|$)/;
+const kitEntry = /["'`]([^"'`]*@sveltejs\/kit\/src\/runtime\/client\/)entry\.js[^"'`]*["'`]/;
+
+function kitClientUrl() {
+    const loaded = performance
+        .getEntriesByType('resource')
+        .map((entry) => entry.name)
+        .find((name) => kitClient.test(name));
+    if (loaded) return loaded;
+    for (const script of document.scripts) {
+        const entry = script.textContent?.match(kitEntry);
+        if (entry) return new URL(`${entry[1]}client.js`, location.href).href;
+    }
+    return undefined;
+}
+
+async function refreshPageData() {
+    const url = kitClientUrl();
+    if (!url) return;
+    try {
+        const kit = await import(url);
+        await (kit.refreshAll ?? kit.invalidateAll)?.();
+    } catch {
+        return;
+    }
+}
+
+const compileErrors = new EventSource('/_ktor-svelte/dev/compile-errors');
+compileErrors.onmessage = async (event) => {
     const next = JSON.parse(event.data);
     await viteOverlay;
     errors = next;
     render();
 };
+
+if (features.has('refresh')) {
+    let appWasGone = false;
+    compileErrors.onerror = () => {
+        appWasGone = true;
+    };
+    compileErrors.onopen = () => {
+        if (!appWasGone) return;
+        appWasGone = false;
+        void refreshPageData();
+    };
+}
 
 const panelStyles = `
 :host { all: initial; }
@@ -151,7 +192,7 @@ function startPanel() {
     document.body.append(host);
 }
 
-if (new URL(import.meta.url).searchParams.has('panel')) {
+if (features.has('panel')) {
     if (document.body) startPanel();
     else document.addEventListener('DOMContentLoaded', startPanel);
 }
@@ -209,4 +250,4 @@ function forwardBrowserLogs() {
     addEventListener('pagehide', flush);
 }
 
-if (new URL(import.meta.url).searchParams.has('logs')) forwardBrowserLogs();
+if (features.has('logs')) forwardBrowserLogs();

@@ -123,6 +123,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     listOfNotNull(
                         "panel".takeIf { pluginConfig.devConfig.panel },
                         "logs".takeIf { pluginConfig.devConfig.browserLogs },
+                        "refresh".takeIf { pluginConfig.devConfig.refreshAfterRestart },
                     ),
                 )
             } else {
