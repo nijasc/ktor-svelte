@@ -1276,6 +1276,34 @@ To refresh the files without your dev server, for example in CI, run the task be
 ./gradlew svelteGenerateTs
 ```
 
+## In load functions
+
+Inside a SvelteKit `load` function, every call has to go through the `fetch` SvelteKit gives you. `apiWith(event)`, shown above, does that for all calls at once. For a single call, pass `fetch` as the last argument:
+
+```ts
+import { api } from '#api';
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ fetch, params }) => {
+    const note = await api.notes.get(params.id, { fetch });
+    return { note };
+};
+```
+
+With its own `fetch`, SvelteKit knows which requests a page depends on, reuses a response it already has during hydration, and can rerun the load when you invalidate it. Without it, the call still works, but the browser console warns with `window_fetch_in_load`.
+
+`svelteVerifyLoads` finds the calls that forgot. It reads every `+page.ts`, `+page.js`, `+layout.ts` and `+layout.js`, and fails with the file, the line and the call:
+
+```bash
+./gradlew svelteVerifyLoads
+```
+
+```text
+src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  use apiWith(event), or pass { fetch } as the last argument
+```
+
+It is not part of `check`. The [lint rule](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.
+
 ## Show errors automatically
 
 Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:
@@ -2636,6 +2664,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteInstall`, `svelteBuild`, `svelteBundle` | Install the frontend dependencies from the lockfile, build the frontend, and copy the build into the JAR's resources with its manifest. They run as part of `jar` and `processResources`, so you rarely call them yourself |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, with the [typed route](https://nijasc.github.io/ktor-svelte/main/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
 | `svelteVerifyLinks` | Lists [internal links that lead to no page, no API route and no static file](https://nijasc.github.io/ktor-svelte/main/features/routes#finding-links-that-lead-nowhere). With `--strict` it fails when it finds one |
+| `svelteVerifyLoads` | Fails if an API call inside a `load` function [uses neither `apiWith(event)` nor `{ fetch }`](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#in-load-functions) |
 | `svelteRename --page=notes/[id] --to=memos/[id]` | [Moves a page](https://nijasc.github.io/ktor-svelte/main/features/routes#renaming-a-page) and rewrites its typed route calls in the frontend and in Kotlin |
 | `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix |
 | `svelteConfig` | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores security, performance, operations and developer experience, and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
