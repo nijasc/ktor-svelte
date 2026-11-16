@@ -299,6 +299,35 @@ The toast travels in a response header, so the body and its type stay what they 
 
 The generated client reads the header on answers from your own origin only, so another server cannot put words into your app. Without `toasts()`, set `apiConfig.onToast = (message, kind) => ...` to show them your way, and nothing is shown until you do. Calls made on the server during SSR do not show toasts.
 
+## Navigation from the server
+
+"Create it, then open it" is the same few lines in every form: wait for the answer, read the ID, call `goto`. The route already knows where to go, so let it say so:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.navigateTo
+
+post("/api/notes") {
+    val note = store.create(call.receive<Note>())
+    call.navigateTo("/notes/${note.id}")
+    call.respond(HttpStatusCode.Created, note)
+}
+```
+
+With [typed routes](./routes.md) on, write `call.navigateTo(FrontendRoutes.notesId(note.id))`, and a renamed page cannot leave a stale path behind.
+
+After the call succeeded, the browser opens that page with SvelteKit's `goto`, so it is a client-side navigation and not a reload. The code that awaited the call runs first, so it can still use the result. A failed call navigates nowhere.
+
+With `toasts()` on, this is wired up for you. Without it, add one line to your root layout:
+
+```ts no-check
+import { goto } from '$app/navigation';
+import { apiConfig } from '#api';
+
+apiConfig.onNavigate = (path) => void goto(path);
+```
+
+The path has to be one inside your app: `navigateTo` refuses anything that does not start with a single `/`, and the client ignores such a header as well, and reads it on answers from your own origin only. So the header cannot be used to send a visitor to another site.
+
 ## Reload after a deploy
 
 Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API.
