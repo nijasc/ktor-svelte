@@ -144,6 +144,10 @@
   "admin-role-of": "Role of {name}",
   "admin-active-of": "{name} is active",
   "admin-saved": "{name} updated.",
-  "error-unknown": "Something went wrong.",
+  "error-failed": "Something went wrong.",
+  "error-not-found": "This page does not exist.",
+  "error-forbidden": "You are not allowed to see this page.",
+  "error-sign-in": "Sign in to see this page.",
+  "error-request-id": "Request ID:",
   "error-home": "Back to the start page"
 }

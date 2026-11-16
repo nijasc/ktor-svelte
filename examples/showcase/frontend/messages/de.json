@@ -144,6 +144,10 @@
   "admin-role-of": "Rolle von {name}",
   "admin-active-of": "{name} ist aktiv",
   "admin-saved": "{name} aktualisiert.",
-  "error-unknown": "Etwas ist schiefgelaufen.",
+  "error-failed": "Etwas ist schiefgelaufen.",
+  "error-not-found": "Diese Seite gibt es nicht.",
+  "error-forbidden": "Du darfst diese Seite nicht sehen.",
+  "error-sign-in": "Melde dich an, um diese Seite zu sehen.",
+  "error-request-id": "Anfrage-ID:",
   "error-home": "Zur Startseite"
 }

@@ -17,3 +17,5 @@ if (client?.apiConfig && !client.apiConfig.onError) client.apiConfig.onError = t
 if (reloadPrompt && client?.apiConfig && !client.apiConfig.onNewBuild) client.apiConfig.onNewBuild = toastNewBuild;
 if (client?.apiConfig && !client.apiConfig.onToast) client.apiConfig.onToast = (message, kind) => toast(message, { kind });
 if (client?.apiConfig && !client.apiConfig.onNavigate) client.apiConfig.onNavigate = (path) => void goto(path);
+
+export { handleError } from './lib/ktor-svelte/errors';
