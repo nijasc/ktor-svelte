@@ -441,7 +441,7 @@ The theme and i18n helpers already know the themes and languages you configured.
 
 `LocaleSwitch` is generated when `i18n` is on. It lists each language under its own name, such as English and Deutsch, and switches with `setLocale`.
 
-Both take `label` for the accessible name (`Theme` and `Language` unless given, so pass a translated one), `labels` to name single entries yourself, such as `labels={{ dracula: 'Dark' }}`, and `class` and `id`.
+Both take `label` for the accessible name (`Theme` and `Language` unless given, so pass a translated one), `labels` to name single entries yourself, an object from theme or language to the text to show, and `class` and `id`.
 
 ## Modals
 
