@@ -104,6 +104,8 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
 
+The app that `svelteDevAll` starts runs from a copy of your compiled classes and resources, taken at the moment it starts. So nothing changes underneath a running app: while the compiler rewrites class files, the app keeps answering from what it started with, and then it is restarted once, as a whole. A change in `src/main/resources` restarts it too. Ktor's own auto-reload, which watches the class folders and reloads inside the running process, has nothing to react to and stays out of the way. Without that, a Kotlin change was applied twice, once by each, and requests in between failed.
+
 After every restart, `svelteDevAll` sums it up in one line: which file caused it, how long compiling and starting took, and whether the generated API client is different now:
 
 ```
