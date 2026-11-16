@@ -171,6 +171,47 @@ GET /api/notes/export  ->  nothing in the frontend calls api.notes.export
 
 A route counts as called when `api.notes.export`, a client from `apiWith`, the `notes` object or the `notesExport` function is used anywhere outside the generated folders, even when it is only passed along. The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service. Add `--strict` to fail the build instead.
 
+## Shared constants
+
+A page size, a maximum number of labels, a list of plans: values like these are needed on both sides, and when they are typed in twice, one side changes and the other does not. Keep them in a Kotlin object and name it in `install(Svelte)`:
+
+```kotlin
+object Limits {
+    const val PAGE_SIZE = 20
+    const val MAX_LABELS = 5
+    val PLANS = listOf("free", "team")
+    val LABEL = Regex("[a-z0-9-]{1,20}")
+}
+
+install(Svelte) {
+    generateTs = true
+    constants(Limits)
+}
+```
+
+`svelteGenerateTs` writes them to `constants.ts` next to the client, and `#api` exports the object under its Kotlin name:
+
+```ts no-check
+import { Limits } from '#api';
+
+const next = await api.notes.list({ limit: Limits.PAGE_SIZE });
+```
+
+```ts no-check
+export const Limits = {
+    LABEL: '[a-z0-9-]{1,20}',
+    MAX_LABELS: 5,
+    PAGE_SIZE: 20,
+    PLANS: ['free', 'team']
+} as const;
+```
+
+Every public `const val` and `val` of the object is shared, under the name it has in Kotlin. Private and internal ones stay out, so the object can hold more than it shares. The values can be text, numbers, booleans, enums (by name), `Regex` (as its pattern text), and lists, sets and maps of those. Because the object is `as const`, TypeScript knows the exact values: `Limits.PLANS[number]` is `'free' | 'team'`.
+
+A value of another type stops generation with a message that names the property. That includes a `Duration` property, whose type is not visible from outside the object: share `timeout.inWholeMilliseconds` instead.
+
+Like the rest of the client, `constants.ts` is checked by `svelteVerifyTs`, so a changed constant with a stale client fails `check`.
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.

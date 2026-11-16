@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { api, isAbortError, latest, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
+    import { api, BoardLimits, isAbortError, latest, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { routes } from '#routes';
@@ -7,7 +7,7 @@
     import { toast } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
 
-    const PAGE_SIZE = '5';
+    const PAGE_SIZE = String(BoardLimits.PAGE_SIZE);
 
     let { data }: PageProps = $props();
 

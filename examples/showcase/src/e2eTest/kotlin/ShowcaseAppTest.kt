@@ -240,6 +240,15 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `the limits the server uses are in the generated client as typed constants`() {
+        val constants = File("frontend/src/lib/api/constants.ts").readText()
+        assertEquals(
+            "export const BoardLimits = {\n    MAX_LABELS: 5,\n    MAX_TITLE_LENGTH: 120,\n    PAGE_SIZE: 5\n} as const;\n",
+            constants.replace("\r\n", "\n"),
+        )
+    }
+
+    @Test
     fun `creating a task tells the browser which page to open`() {
         val created = admin.send("POST", "/api/tasks", """{"title":"${unique("Navigate")}"}""")
         assertEquals(201, created.statusCode())

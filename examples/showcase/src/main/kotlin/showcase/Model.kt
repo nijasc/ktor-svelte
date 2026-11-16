@@ -22,6 +22,12 @@ const val MAX_PASSWORD_LENGTH = 200
 const val MAX_LABELS = 5
 const val MAX_UPLOAD_BYTES = 5L * 1024L * 1024L
 
+object BoardLimits {
+    const val PAGE_SIZE = 5
+    const val MAX_LABELS = showcase.MAX_LABELS
+    const val MAX_TITLE_LENGTH = showcase.MAX_TITLE_LENGTH
+}
+
 private val LABEL = Regex("[a-z0-9-]{1,20}")
 private val EMAIL = Regex("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")
 

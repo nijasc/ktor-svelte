@@ -58,6 +58,7 @@ fun Application.module() {
         apiDocs = true
         healthEndpoint = true
         healthCheck { database.isReachable() }
+        constants(BoardLimits)
         siteUrl = System.getenv("SHOWCASE_SITE_URL")
         maxApiBodySize = MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES
         paramRoutes("/tasks/[id]")

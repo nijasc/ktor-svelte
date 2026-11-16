@@ -69,6 +69,7 @@ import io.github.nijasc.ktor.svelte.internal.startupSteps
 import io.github.nijasc.ktor.svelte.internal.subscribeWhileRunning
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
+import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.github.nijasc.ktor.svelte.internal.validation.installInputNormalisation
 import io.ktor.http.ContentType
@@ -205,6 +206,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             listOfNotNull(docsPath),
             pluginConfig.publicConfigSchema,
             pluginConfig.declaredErrorList.toList(),
+            pluginConfig.constantHolders.map(::sharedHolder),
         )
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
         if (pluginConfig.buildHeader) {
