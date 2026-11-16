@@ -204,6 +204,35 @@ await api.notes.update(id, draft, { refresh: false });
 
 The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
 
+## Fixtures for frontend tests
+
+A frontend test should not need the backend running, and writing its answers by hand goes stale. Record them instead. In development, click through the part of the app you want to test, open the [dev panel](../guide/dev-workflow.md) and press **Save fixtures**. You get `api-fixtures.json` with every call the page made and what the server answered:
+
+```json
+{
+    "recorded": "2026-11-16T12:00:00.000Z",
+    "calls": [
+        { "method": "GET", "path": "/api/notes?page=1", "status": 200, "response": { "items": [] } },
+        { "method": "POST", "path": "/api/notes", "status": 201, "request": { "title": "New" }, "response": { "id": 7 } }
+    ]
+}
+```
+
+In a test, let the client answer from that file:
+
+```ts no-check
+import { api, apiConfig, fixtureFetch, type ApiFixtures } from '#api';
+import recorded from './api-fixtures.json';
+
+apiConfig.fetch = fixtureFetch(recorded satisfies ApiFixtures);
+
+const page = await api.notes.list({ page: 1 });
+```
+
+The calls go through the real generated client, so the test sees typed results, `ApiError` for a recorded 404 and validation errors for a recorded 422, exactly as the app does. A call is matched by its method and its path with the query. When the same call was recorded more than once, such as a list before and after a create, the answers come back in that order, and the last one repeats. A call that was never recorded fails with a message that names it.
+
+Look through the file before you commit it. It holds the bodies as they were sent and received, which can include a password you typed or data you would not put in the repository. **Clear** in the panel starts a new recording.
+
 ## Ask before a call
 
 A call that deletes something should ask first. `confirmed` asks, and only calls when the answer is yes:

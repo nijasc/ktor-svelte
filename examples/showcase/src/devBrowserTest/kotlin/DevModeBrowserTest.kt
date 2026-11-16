@@ -391,6 +391,25 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the calls a page made can be saved as fixtures from the dev panel`() {
+        page.navigate("/")
+        assertThat(page.locator("#greeting")).containsText("greetings from Ktor!")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+
+        val download = page.waitForDownload { panel.locator(".save").click() }
+
+        assertEquals("api-fixtures.json", download.suggestedFilename())
+        val saved = download.path().toFile().readText()
+        assertTrue(saved.trimStart().startsWith("{") && saved.endsWith("}\n"), saved)
+        assertContains(saved, "\"recorded\": \"20")
+        assertContains(saved, "\"method\": \"GET\"")
+        assertContains(saved, "\"path\": \"/api/greeting")
+        assertContains(saved, "\"status\": 200")
+        assertContains(saved, "greetings from Ktor!")
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")

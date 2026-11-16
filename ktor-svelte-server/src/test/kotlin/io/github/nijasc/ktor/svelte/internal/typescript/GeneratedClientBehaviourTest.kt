@@ -105,4 +105,26 @@ class GeneratedClientBehaviourTest {
         assertEquals("1", result("writesTogetherAreNoticedOnce"))
         assertEquals("ok {\"status\":200}", result("brokenHandlerDoesNotFailTheCall"))
     }
+
+    @Test
+    fun `recorded calls answer the client in tests, in the order they were recorded`() {
+        val results = runHarness()
+        assertEquals(
+            listOf(
+                "ok {\"items\":[\"first\"]}",
+                "ok {\"id\":7}",
+                "ok {\"items\":[\"first\",\"New\"]}",
+                "ok {\"items\":[\"first\",\"New\"]}",
+                "ok undefined",
+                "ApiError 404",
+                "ok \"hello\"",
+            ),
+            results.getValue("fixtures").jsonArray.map { it.jsonPrimitive.content },
+        )
+        assertEquals(
+            "No fixture for GET /api/other. Make that call in the app, then save the fixtures from the dev panel again.",
+            results.getValue("missingFixture").jsonPrimitive.content,
+        )
+        assertEquals("ok {\"items\":[\"first\"]}", results.getValue("eachFetchStartsOver").jsonPrimitive.content)
+    }
 }

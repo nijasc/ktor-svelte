@@ -283,26 +283,76 @@ const seenCalls = new Map();
 const KEPT_CALLS = 200;
 const REQUEST_ID = 'x-request-id';
 
+const LONGEST_RECORDED_BODY = 256 * 1024;
+
+function jsonOrText(text) {
+    if (text === undefined || text === '') return undefined;
+    try {
+        return JSON.parse(text);
+    } catch {
+        return text;
+    }
+}
+
+async function recordAnswer(call, response) {
+    call.status = response.status;
+    const type = response.headers.get('content-type') ?? '';
+    if (response.status === 204 || !/json|text/.test(type)) return;
+    const text = await response.text();
+    if (text.length <= LONGEST_RECORDED_BODY) call.answer = jsonOrText(text);
+}
+
 function rememberCalls() {
     const send = window.fetch;
     window.fetch = function (input, init) {
+        let call;
         try {
             const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
             const id = headers.get(REQUEST_ID);
             if (id) {
                 const body = init?.body;
-                seenCalls.set(id, {
+                const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, location.href);
+                call = {
+                    method: (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase(),
+                    path: url.pathname + url.search,
                     headers: [...headers].filter(([name]) => name !== REQUEST_ID),
                     body: typeof body === 'string' ? body : undefined,
                     bodyNotKept: body != null && typeof body !== 'string'
-                });
+                };
+                seenCalls.set(id, call);
                 if (seenCalls.size > KEPT_CALLS) seenCalls.delete(seenCalls.keys().next().value);
             }
         } catch {
             return send.call(this, input, init);
         }
-        return send.call(this, input, init);
+        const answer = send.call(this, input, init);
+        if (call) answer.then((response) => recordAnswer(call, response.clone())).catch(() => undefined);
+        return answer;
     };
+}
+
+function fixtures() {
+    const calls = [...seenCalls.values()]
+        .filter((call) => call.status !== undefined)
+        .map((call) => ({
+            method: call.method,
+            path: call.path,
+            status: call.status,
+            ...(call.body === undefined ? {} : { request: jsonOrText(call.body) }),
+            ...(call.answer === undefined ? {} : { response: call.answer })
+        }));
+    return { recorded: new Date().toISOString(), calls };
+}
+
+function saveFixtures() {
+    const file = new Blob([JSON.stringify(fixtures(), null, 4) + '\n'], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(file);
+    link.download = 'api-fixtures.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
 function canRepeat(entry) {
@@ -388,7 +438,11 @@ function startPanel() {
     root.innerHTML = `<style>${panelStyles}</style>
         <button class="toggle" type="button" aria-expanded="false">API <span class="count">0</span><span class="overrides" hidden>config changed</span></button>
         <section class="panel" hidden aria-label="API requests">
-            <div class="head"><strong>API requests</strong><button type="button" class="clear">Clear</button></div>
+            <div class="head">
+                <strong>API requests</strong>
+                <span><button type="button" class="save" title="Save the calls this page made, with their answers, as fixtures for frontend tests">Save fixtures</button>
+                <button type="button" class="clear">Clear</button></span>
+            </div>
             <details class="config">
                 <summary>Public config<span class="config-count"></span></summary>
                 <div class="config-rows"></div>
@@ -468,8 +522,10 @@ function startPanel() {
     });
     root.querySelector('.clear').addEventListener('click', () => {
         entries = [];
+        seenCalls.clear();
         draw();
     });
+    root.querySelector('.save').addEventListener('click', saveFixtures);
     configEditor(root);
     const source = new EventSource('/_ktor-svelte/dev/requests');
     source.onopen = () => {
