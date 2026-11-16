@@ -10,6 +10,7 @@ internal enum class DocLink(
     CALLING_THE_API("features/calling-the-api", "in-load-functions"),
     CREATE_A_PROJECT("guide/getting-started", null),
     DAISYUI("features/frontend-libraries", "daisyui"),
+    DEV_WORKFLOW("guide/dev-workflow", "when-a-port-is-still-in-use"),
     FRONTEND_LIBRARIES("features/frontend-libraries", null),
     GENERATED_TYPESCRIPT("features/typescript", null),
     GRADLE("reference/gradle", null),

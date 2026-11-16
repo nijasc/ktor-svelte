@@ -4,6 +4,8 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.net.InetAddress
+import java.net.ServerSocket
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -399,7 +401,8 @@ class UtilityTasksTest {
     @Test
     fun `svelteDevAll stops everything when Vite stops`() {
         val project = project()
-        project.buildScript(applicationBuild)
+        val port = ServerSocket(0).use { it.localPort }
+        project.buildScript("$applicationBuild\nsvelte { dev { port = $port; debugPort = 0 } }\n")
         val source = dir.resolve("src/main/java/Main.java")
         source.parentFile.mkdirs()
         source.writeText("public class Main { public static void main(String[] args) throws Exception { Thread.sleep(600000); } }")
@@ -407,7 +410,26 @@ class UtilityTasksTest {
         val output = project.run("svelteDevAll").output
 
         assertContains(output, "Vite stopped, so everything else is stopping too.")
-        assertTrue(project.calls().contains("run dev --port 5173 --strictPort"))
+        assertTrue(project.calls().contains("run dev --port $port --strictPort"))
+        assertFalse(dir.resolve("build/ktor-svelte/dev-processes").exists(), "nothing is left to clean up after a normal stop")
+    }
+
+    @Test
+    fun `svelteDevAll starts nothing when another program holds Vite's port`() {
+        val project = project()
+        ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { taken ->
+            project.buildScript("$applicationBuild\nsvelte { dev { port = ${taken.localPort}; debugPort = 0 } }\n")
+            val source = dir.resolve("src/main/java/Main.java")
+            source.parentFile.mkdirs()
+            source.writeText("public class Main { public static void main(String[] args) {} }")
+
+            val output = project.runAndFail("svelteDevAll").output
+
+            assertContains(output, "Port ${taken.localPort}, which Vite needs, is in use by ")
+            assertContains(output, "svelteDevAll did not start it, so it was left alone.")
+            assertContains(output, "svelte { dev { port = ${taken.localPort + 1} } }")
+            assertFalse(project.calls().any { it.startsWith("run dev") })
+        }
     }
 
     @Test

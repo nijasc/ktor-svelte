@@ -2,7 +2,9 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 
 import io.github.nijasc.ktor.svelte.gradle.COMPILE_ERRORS_SYSTEM_PROPERTY
 import io.github.nijasc.ktor.svelte.gradle.DEVELOPMENT_SYSTEM_PROPERTY
+import io.github.nijasc.ktor.svelte.gradle.DocLink
 import io.github.nijasc.ktor.svelte.gradle.FRONTEND_DIR_SYSTEM_PROPERTY
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -20,6 +22,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 private const val POLL_MILLIS = 500L
+private const val RECORD_EVERY_POLLS = 4
 private const val SETTLE_MILLIS = 1000L
 
 internal fun fingerprintOf(directories: Iterable<File>): Long =
@@ -116,6 +119,8 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 frontendDirectory = frontendDir.get().asFile,
                 foldStackTraces = !fullStackTraces.getOrElse(false),
             )
+        val record = DevProcessRecord(compileErrorsFile.get().asFile.resolveSibling("dev-processes"))
+        freePorts(record)
         val running = mutableListOf<Process>()
         val banner = ReadyBanner(port.get())
         if (openBrowser.get()) banner.onFirstReady = ::openInBrowser
@@ -125,7 +130,8 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
             val vite = startVite()
             running += vite
             val errors = CompileErrorReport(compileErrorsFile.get().asFile)
-            running += startCompiler(errors)
+            val compiler = startCompiler(errors)
+            running += compiler
             var app = startApp(banner)
             running += app
             logger.lifecycle("ktor-svelte: Vite, the Kotlin compiler and the app are running. Stop this task to stop them all.")
@@ -137,8 +143,15 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
 
             val classes = classesDirectories.files
             val detector = ChangeDetector(fingerprintOf(classes), SETTLE_MILLIS)
+            var recorded = emptySet<RecordedProcess>()
+            var polls = 0
             while (vite.isAlive) {
                 Thread.sleep(POLL_MILLIS)
+                if (polls++ % RECORD_EVERY_POLLS == 0) {
+                    val tree = processTree(holdingPorts = running - compiler, sharingHelpers = listOf(compiler))
+                    if (tree != recorded) record.write(tree)
+                    recorded = tree
+                }
                 if (detector.hasSettledChange(fingerprintOf(classes), System.currentTimeMillis())) {
                     logger.lifecycle("ktor-svelte: Kotlin changed, restarting the app.")
                     stopProcessTree(app)
@@ -152,8 +165,29 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
             Thread.currentThread().interrupt()
         } finally {
             running.forEach(::stopProcessTree)
+            record.clear()
             Runtime.getRuntime().removeShutdownHook(stopAll)
         }
+    }
+
+    private fun freePorts(record: DevProcessRecord) {
+        val leftovers = stillRunning(record.read())
+        if (leftovers.isNotEmpty()) {
+            logger.lifecycle(
+                "ktor-svelte: stopping what an earlier svelteDevAll of this project left running: ${leftovers.joinToString {
+                    describe(
+                        it,
+                    )
+                }}.",
+            )
+            stopLeftovers(leftovers)
+        }
+        record.clear()
+        listOf(Triple(port.get(), "Vite", "port"), Triple(debugPort.get(), "the debugger", "debugPort"))
+            .filter { (number, _, _) -> number > 0 && portIsInUse(number) }
+            .forEach { (number, purpose, setting) ->
+                throw GradleException(portInUseMessage(number, purpose, setting, portOwner(number)) + DocLink.DEV_WORKFLOW.see())
+            }
     }
 
     private fun openInBrowser(url: String) {
