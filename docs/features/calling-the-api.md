@@ -61,6 +61,55 @@ try {
 
 To change or translate the three built-in sentences, assign to `errorMessages.network`, `errorMessages.timeout` and `errorMessages.failed` once at startup.
 
+### Error codes
+
+A page that has to tell "this email is taken" from "the last admin cannot leave" should not compare status numbers or message text. Give the errors names, in one enum, and name it in `install(Svelte)`:
+
+```kotlin
+enum class AccountError { EmailTaken, LastAdmin }
+
+install(Svelte) {
+    generateTs = true
+    errorCodes<AccountError>()
+}
+```
+
+A route answers with a code, either directly or by throwing from anywhere below it:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.ApiException
+import io.github.nijasc.ktor.svelte.respondError
+
+post("/api/register") {
+    call.respondError(AccountError.EmailTaken, HttpStatusCode.Conflict)
+}
+
+put("/api/admin/users/{id}/role") {
+    throw ApiException(AccountError.LastAdmin, HttpStatusCode.Conflict)
+}
+```
+
+The answer is `{ "message": "Email taken.", "code": "EmailTaken" }` with the given status, 400 when none is given. The generated client knows the enum as the type `ErrorCode`, so a mistyped or removed code no longer compiles:
+
+```ts no-check
+import { api, ErrorCode, hasErrorCode } from '#api';
+
+try {
+    await api.register.create(form);
+} catch (error) {
+    if (hasErrorCode(error, ErrorCode.EmailTaken)) emailProblem = error.body.message;
+    else throw error;
+}
+```
+
+The message is the code's name as a sentence unless you say otherwise. There are three places to say otherwise, and the first that applies wins:
+
+- One answer: `call.respondError(code, status, message = "...")`, or the `message` of `ApiException`.
+- Every answer, on the server: `errorCodes<AccountError> { call, code -> ... }` returns the text for a code, or null to leave it. It gets the call, so it can translate.
+- In the browser: `setCodeMessages({ EmailTaken: 'That email already has an account.' })` once at startup. `errorMessage`, and so the toasts of `toasts()`, then use this text for the code and ignore what the server sent. A value can be a function, for a translation that depends on the current language.
+
+An app has one enum of error codes. A class of your API named `ErrorCode` clashes with the generated type and stops generation.
+
 Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
 
 ```kotlin
