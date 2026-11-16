@@ -1742,6 +1742,47 @@ For a rule that depends on the route, such as comparing against a database, call
 
 The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty.
 
+## Form state
+
+Every form needs the same few variables: the values being edited, whether they changed, whether a submit is running, and the errors that came back. `formState` holds them, so a form is its inputs and one function:
+
+```svelte
+<script lang="ts">
+    import { api, field, NoteInput } from '#api';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate, resetOnSuccess: true });
+
+    async function create() {
+        const note = await form.submit((draft) => api.notes.create(draft));
+        if (note) console.log('created', note.id);
+    }
+</script>
+
+<form onsubmit={(event) => { event.preventDefault(); void create(); }}>
+    <input bind:value={form.draft.title} use:field={{ bounds: NoteInput.bounds.title, errors: form.errors.title }} />
+    <p role="alert">{form.message}</p>
+    <button disabled={form.submitting}>Create</button>
+    <button type="button" disabled={!form.dirty} onclick={() => form.reset()}>Discard</button>
+</form>
+```
+
+| | |
+|---|---|
+| `form.draft` | The values being edited, deeply reactive, so `bind:value={form.draft.title}` works |
+| `form.dirty` | `true` while the draft differs from the last saved values |
+| `form.submitting` | `true` while `submit` waits for the server. A second `submit` in that time does nothing |
+| `form.errors` | Errors per field, from `validate` or from a 422 answer. Hand them to `use:field` |
+| `form.error`, `form.message` | Any other failure of the last submit, and its text for the user. `message` is empty when there is none |
+| `form.reset()` | Back to the last saved values, with the errors cleared. `form.reset(values)` makes `values` the saved ones, such as after loading a record |
+| `form.submit(send)` | Runs `validate` first and stops on errors without calling the server. Otherwise calls `send` with a plain copy of the draft and returns its result, or `undefined` when it failed |
+
+After a successful submit the sent values are the saved ones, so the form is no longer dirty. That suits an edit form. For a form that creates something, `resetOnSuccess: true` empties it again.
+
+`submit` never throws: a failed call ends up in `errors` or `error`. The failure still reaches `apiConfig.onError`, so with [toasts](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#show-errors-automatically) on, the user sees it without any markup of yours.
+
+The helper uses runes, so it is a module of its own and not part of `#api`. The draft should be plain data, the kind that goes into a JSON body. `dirty` compares it as JSON.
+
 Source: https://nijasc.github.io/ktor-svelte/main/features/transport
 
 # Transport and compression
