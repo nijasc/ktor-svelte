@@ -274,6 +274,27 @@ const report = await api.reports.get(id, { retry: { attempts: 2 } });
 
 `delay` doubles after every attempt until it reaches `maxDelay`. A call that is aborted through its `signal` stops waiting at once, and each attempt gets the full `timeout`.
 
+### Rate limits
+
+When the server refuses a call with 429, the error says how long to wait. `isRateLimitError` narrows it, and `retryAfter` is the wait in milliseconds, read from the `Retry-After` header:
+
+```ts
+import { api, isRateLimitError } from '#api';
+
+let notice = '';
+
+try {
+    await api.notes.create({ title: 'Buy milk' });
+} catch (error) {
+    if (isRateLimitError(error)) {
+        const seconds = Math.ceil((error.retryAfter ?? 60_000) / 1000);
+        notice = `Too many requests. Try again in ${seconds} seconds.`;
+    }
+}
+```
+
+With retries on, the client waits and sends the call again by itself, once, when the wait is no longer than `maxDelay`, which is five seconds unless you change it. That also applies to writes: a call the rate limit refused never reached your route, so sending it again cannot do the work twice. A longer wait is not sat out, and the error reaches you at once.
+
 ## Search as you type
 
 When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:
