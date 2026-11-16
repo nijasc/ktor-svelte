@@ -102,4 +102,26 @@ server([limited('soon')]);
 const unreadable = await request('GET', '/api/notes').catch((error: unknown) => error);
 results.unreadableLimit = isRateLimitError(unreadable) && unreadable.retryAfter === undefined;
 
+async function sentHeaders(path: string, setup: () => void = () => {}): Promise<Headers> {
+    apiConfig.retry = undefined;
+    apiConfig.sendTimeZone = undefined;
+    apiConfig.baseUrl = '';
+    setup();
+    let sent = new Headers();
+    apiConfig.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+        sent = new Headers(init?.headers);
+        return answer(200);
+    }) as typeof fetch;
+    await request('GET', path);
+    apiConfig.baseUrl = '';
+    return sent;
+}
+
+const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+results.zoneIsSent = (await sentHeaders('/api/notes')).get('x-time-zone') === browserZone && browserZone.length > 0;
+results.zoneCanBeTurnedOff = (await sentHeaders('/api/notes', () => (apiConfig.sendTimeZone = false))).has('x-time-zone');
+results.zoneStaysHome = (await sentHeaders('/api/notes', () => (apiConfig.baseUrl = 'https://other.example'))).has('x-time-zone');
+results.ownZoneHeaderWins = (await sentHeaders('/api/notes', () => (apiConfig.headers = { 'X-Time-Zone': 'Asia/Tokyo' }))).get('x-time-zone');
+apiConfig.headers = {};
+
 console.log(JSON.stringify(results));

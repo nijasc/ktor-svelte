@@ -81,4 +81,15 @@ class GeneratedClientBehaviourTest {
         assertEquals("true", result("limitFromDate"))
         assertEquals("true", result("unreadableLimit"))
     }
+
+    @Test
+    fun `the visitor's time zone travels with calls to the app's own origin`() {
+        val results = runHarness()
+
+        fun result(name: String) = results.getValue(name).jsonPrimitive.content
+        assertEquals("true", result("zoneIsSent"))
+        assertEquals("false", result("zoneCanBeTurnedOff"))
+        assertEquals("false", result("zoneStaysHome"))
+        assertEquals("Asia/Tokyo", result("ownZoneHeaderWins"))
+    }
 }
