@@ -56,6 +56,7 @@ install(Svelte) {
         slowApiCall = 500.milliseconds
         panel = true
         browserLogs = true
+        refreshAfterRestart = true
     }
 
     rateLimit {
@@ -109,6 +110,7 @@ install(Svelte) {
 | `dev.mode` | `Auto` follows Ktor's development mode. `Always` and `Never` force it |
 | `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
 | `dev.slowApiCall` | Logs API calls that take longer than this in development. `null` turns it off |
+| `dev.refreshAfterRestart` | After the app restarts in development, open pages rerun their `load` functions, so a Kotlin change shows up without a manual reload. On by default |
 | `dev.browserLogs` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log. On by default |
 | `dev.panel` | Shows a panel of recent API calls, with status, timing and validation errors, on pages proxied from Vite. On by default. See [Dev workflow](../guide/dev-workflow.md) |
 | `transport` | JSON, XML and compression. See [Transport](../features/transport.md) |
