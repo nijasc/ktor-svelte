@@ -54,6 +54,10 @@ testing {
                     systemProperty("ktorSvelte.shadowVersion", shadowVersion)
                     systemProperty("ktorSvelte.ktorVersion", libs.versions.ktor.get())
                     maxParallelForks = 2
+                    testLogging {
+                        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+                        showStackTraces = false
+                    }
                 }
             }
         }
