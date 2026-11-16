@@ -137,7 +137,9 @@ private fun generate(
                 .Routing()
                 .read(application, OpenApiDoc(info = OpenApiInfo(title = "API", version = "1.0")))
                 .content
-        val files = generator.generate(openApiJson)
+        val routing = application.pluginOrNull(RoutingRoot)
+        val routeFiles = routing?.let { root -> routeSources(root).mapValues { it.value.file } }.orEmpty()
+        val files = generator.generate(openApiJson, routeFiles)
         if (verifyReport != null) {
             val stale = staleFiles(output, files).map { it.absolute().normalize().toString() }
             verifyReport.parent?.createDirectories()
@@ -145,7 +147,7 @@ private fun generate(
         } else {
             val changed = writeIfChanged(output, files)
             if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
-            application.pluginOrNull(RoutingRoot)?.let { root ->
+            routing?.let { root ->
                 writeIfChanged(
                     ROUTE_SOURCES.parent,
                     mapOf(

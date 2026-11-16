@@ -36,8 +36,13 @@ internal class TypeScriptGenerator(
     private var usesDates = false
     private val validationHelpers = mutableSetOf<ValidationHelper>()
     val operations = mutableListOf<GeneratedOperation>()
+    private var routeFiles: Map<String, String> = emptyMap()
 
-    fun generate(openApiJson: String): Map<String, String> {
+    fun generate(
+        openApiJson: String,
+        routeFiles: Map<String, String> = emptyMap(),
+    ): Map<String, String> {
+        this.routeFiles = routeFiles
         val document = Json.parseToJsonElement(openApiJson).jsonObject
         val filtered = withNullableReferences(withDeclaredErrors(withApiPathsOnly(document)))
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
@@ -851,7 +856,7 @@ internal class TypeScriptGenerator(
                 listOfNotNull(operation.stringAt("summary"), operation.stringAt("description"))
                     .map(String::trim)
                     .filter(String::isNotEmpty)
-                    .distinct(),
+                    .distinct() + listOfNotNull(routeFiles["${method.uppercase()} $path"]?.let { "@see $it" }),
             parameters = pathParameters,
             source = { key ->
                 val arguments = (extras + "operation: '$key'").joinToString()
