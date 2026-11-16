@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 internal const val DEV_REQUESTS_PATH = "/_ktor-svelte/dev/requests"
 internal const val DEV_OPEN_PATH = "/_ktor-svelte/dev/open"
 internal const val DEV_ROUTE_MAP_PATH = "/_ktor-svelte/dev/routes"
+internal const val DEV_STATUS_PATH = "/_ktor-svelte/dev/status"
 private const val KEPT_REQUESTS = 100
 
 private val RequestStartedAt = AttributeKey<Long>("KtorSvelteDevRequestStartedAt")
@@ -154,7 +155,16 @@ internal fun Route.devRequestRoutes(
     allowRemote: Boolean,
     proxy: DevProxy,
     routeMap: () -> JsonObject,
+    status: suspend (ApplicationCall) -> JsonObject,
 ) {
+    get(DEV_STATUS_PATH) {
+        if (!allowRemote && !isLocalCall(call)) {
+            call.respondText("The ktor-svelte dev client only answers this machine.", status = HttpStatusCode.Forbidden)
+            return@get
+        }
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        call.respondText(status(call).toString(), ContentType.Application.Json)
+    }
     get(DEV_ROUTE_MAP_PATH) {
         if (!allowRemote && !isLocalCall(call)) {
             call.respondText("The ktor-svelte dev client only answers this machine.", status = HttpStatusCode.Forbidden)

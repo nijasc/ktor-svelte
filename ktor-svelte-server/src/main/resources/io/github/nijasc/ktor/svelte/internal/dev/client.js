@@ -204,6 +204,51 @@ function routeMap(root) {
     filter.addEventListener('input', draw);
 }
 
+function statusView(root) {
+    const section = root.querySelector('.status');
+    const rows = root.querySelector('.status-rows');
+
+    function line(label, value, className = '') {
+        const row = document.createElement('div');
+        row.className = `status-row ${className}`.trim();
+        const name = document.createElement('span');
+        name.textContent = label;
+        const text = document.createElement('span');
+        text.textContent = String(value);
+        row.append(name, text);
+        return row;
+    }
+
+    function flat(value, prefix) {
+        if (value === null || typeof value !== 'object') return [[prefix, value]];
+        return Object.entries(value).flatMap(([name, inner]) => flat(inner, prefix ? `${prefix} ${name}` : name));
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/status', { headers: { accept: 'application/json' } });
+            const status = await response.json();
+            const lines = [
+                ...flat(status.versions, '').map(([name, value]) => line(name, value)),
+                ...flat(status.app, 'app').map(([name, value]) => line(name, value)),
+                line('health', status.health, status.health === 'down' ? 'bad' : status.health === 'up' ? 'ok' : ''),
+                ...flat(status.status, '').map(([name, value]) => line(name, value, value === false && name.endsWith('reachable') ? 'bad' : '')),
+                ...status.settings.map((setting) => {
+                    const at = setting.indexOf(': ');
+                    return at < 0 ? line(setting, '') : line(setting.slice(0, at), setting.slice(at + 2));
+                })
+            ];
+            rows.replaceChildren(...lines);
+        } catch {
+            rows.replaceChildren(line('The status could not be loaded.', ''));
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+}
+
 const THEME_COLORS = [
     ['primary', 'primary'],
     ['secondary', 'secondary'],
@@ -603,6 +648,14 @@ button.path:hover { text-decoration: underline; }
 .routes-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aaa; text-align: left; }
 button.routes-file { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
 button.routes-file:hover { text-decoration: underline; }
+.status { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.status summary { padding: 6px 10px; cursor: pointer; }
+.status-rows { padding-bottom: 6px; }
+.status-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 8px; padding: 2px 10px; }
+.status-row span:first-child { color: #aaa; }
+.status-row span:last-child { overflow-wrap: anywhere; }
+.status-row.ok span:last-child { color: #7bd88f; }
+.status-row.bad span:last-child { color: #ff7b72; }
 .theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .theme[hidden] { display: none; }
 .theme summary { padding: 6px 10px; cursor: pointer; }
@@ -843,6 +896,10 @@ function startPanel() {
                 </div>
                 <div class="routes-rows"></div>
             </details>
+            <details class="status">
+                <summary>Status</summary>
+                <div class="status-rows"></div>
+            </details>
             <details class="theme" hidden>
                 <summary>Theme colors</summary>
                 <div class="theme-rows"></div>
@@ -947,6 +1004,7 @@ function startPanel() {
     root.querySelector('.save').addEventListener('click', saveFixtures);
     configEditor(root);
     routeMap(root);
+    statusView(root);
     themeEditor(root);
     accessibilityHints(root);
     untranslatedTexts(root);

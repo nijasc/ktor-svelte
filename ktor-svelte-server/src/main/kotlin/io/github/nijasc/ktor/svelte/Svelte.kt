@@ -27,6 +27,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.browserLogRoute
 import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devStatus
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.pagesOf
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
@@ -42,6 +43,7 @@ import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.jvmStartIfFirstApplication
 import io.github.nijasc.ktor.svelte.internal.onOwn
+import io.github.nijasc.ktor.svelte.internal.runtimeVersion
 import io.github.nijasc.ktor.svelte.internal.security.BodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
 import io.github.nijasc.ktor.svelte.internal.security.InternalAccess
@@ -320,14 +322,35 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
             if (devRequests != null && devProxy != null) {
-                devRequestRoutes(devRequests, allowRemote, devProxy) {
-                    routeMap(
-                        routeTable(application.plugin(RoutingRoot), store.manifest(), resolver, pluginConfig.paramRouteList),
-                        pagesOf(System.getProperty(FRONTEND_DIR_PROPERTY)?.let { java.io.File(it) }, store.manifest()),
-                        devRequests.sourceFiles,
-                        docsPath,
-                    )
-                }
+                val healthChecks = pluginConfig.healthCheckList.toList()
+                devRequestRoutes(
+                    devRequests,
+                    allowRemote,
+                    devProxy,
+                    routeMap = {
+                        routeMap(
+                            routeTable(application.plugin(RoutingRoot), store.manifest(), resolver, pluginConfig.paramRouteList),
+                            pagesOf(System.getProperty(FRONTEND_DIR_PROPERTY)?.let { java.io.File(it) }, store.manifest()),
+                            devRequests.sourceFiles,
+                            docsPath,
+                        )
+                    },
+                    status = { call ->
+                        val build = application.buildInfo
+                        devStatus(
+                            statusJson(store.manifest(), devProxy, devUrl, metrics),
+                            if (healthChecks.isEmpty()) null else HealthReport(healthChecks).isUp(call, frontendReady = true),
+                            settingsSummary(pluginConfig, devUrl),
+                            mapOf(
+                                "ktor-svelte" to runtimeVersion,
+                                "Ktor" to Application::class.java.`package`?.implementationVersion,
+                                "Kotlin" to KotlinVersion.CURRENT.toString(),
+                                "Java" to System.getProperty("java.version"),
+                            ),
+                            mapOf("version" to build.version, "commit" to build.shortCommit, "built" to build.time?.toString()),
+                        )
+                    },
+                )
             }
             if (pluginConfig.publicBuildInfo) {
                 get(BUILD_INFO_PATH) {
