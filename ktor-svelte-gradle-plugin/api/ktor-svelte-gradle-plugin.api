@@ -171,6 +171,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPrecompress ()Lorg/gradle/api/provider/Property;
+	public abstract fun getShortTaskNames ()Lorg/gradle/api/provider/Property;
 	public final fun libraries (Lorg/gradle/api/Action;)V
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }

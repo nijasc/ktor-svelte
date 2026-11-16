@@ -151,6 +151,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("addRuntimeDependency", extension.addRuntimeDependency.map { it.toString() })
             settings.put("includeSourceMaps", extension.includeSourceMaps.map { it.toString() })
             settings.put("precompress", extension.precompress.map { it.toString() })
+            settings.put("shortTaskNames", extension.shortTaskNames.map { it.toString() })
             settings.put("dev.port", extension.dev.port.map { it.toString() })
             settings.put("dev.script", extension.dev.script)
             settings.put("dev.debugPort", extension.dev.debugPort.map { it.toString() })
@@ -259,7 +260,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 .convention(extension.frontendDir.dir("src/routes"))
         val hasLibraries = librarySpec.map { !it.isEmpty }
         val sync =
-            project.tasks.register("svelteSync", SvelteSyncTask::class.java) { task ->
+            registerWithShortName(project, extension, "svelteSync", "sync", SvelteSyncTask::class.java) { task ->
                 configureToolTask(task, extension)
                 task.description = "Installs configured frontend libraries and writes their generated files."
                 task.spec.set(librarySpec)
@@ -381,6 +382,26 @@ public class KtorSveltePlugin : Plugin<Project> {
                 kotlinFormatters.map { it.check },
             )
         }
+    }
+
+    private fun <T : Task> registerWithShortName(
+        project: Project,
+        extension: SvelteExtension,
+        name: String,
+        shortName: String,
+        type: Class<T>,
+        configure: (T) -> Unit,
+    ): TaskProvider<T> {
+        val registerShortName = {
+            if (extension.shortTaskNames.get() && shortName !in project.tasks.names) {
+                project.tasks.register(shortName, type) { task ->
+                    configure(task)
+                    task.description = "Short for $name. ${task.description.orEmpty()}".trim()
+                }
+            }
+        }
+        if (project.state.executed) registerShortName() else project.afterEvaluate { registerShortName() }
+        return project.tasks.register(name, type) { configure(it) }
     }
 
     private fun registerIfFree(
@@ -523,7 +544,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             )
             task.messagesDirectory.set(i18n.messagesDir)
         }
-        project.tasks.register("svelteDoctor", SvelteDoctorTask::class.java) { task ->
+        registerWithShortName(project, extension, "svelteDoctor", "doctor", SvelteDoctorTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Checks the frontend setup and says what to fix."
             task.frontendDir.set(extension.frontendDir)
@@ -566,7 +587,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
         val application = project.extensions.getByType(JavaApplication::class.java)
         val generateTs =
-            project.tasks.register("svelteGenerateTs", JavaExec::class.java) { task ->
+            registerWithShortName(project, extension, "svelteGenerateTs", "gen", JavaExec::class.java) { task ->
                 configureGenerateTsExec(project, extension, task)
                 task.description = "Starts the app once to regenerate TypeScript from its routes. Needs generateTs = true."
                 task.systemProperty(GENERATE_TS_ONLY_SYSTEM_PROPERTY, "true")
@@ -589,7 +610,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         val toolchain = project.extensions.getByType(JavaPluginExtension::class.java).toolchain
         val install = project.tasks.named("svelteInstall", SvelteInstallTask::class.java)
         val gradleHome = project.gradle.gradleHomeDir
-        project.tasks.register("svelteDevAll", SvelteDevAllTask::class.java) { task ->
+        registerWithShortName(project, extension, "svelteDevAll", "dev", SvelteDevAllTask::class.java) { task ->
             configureToolTask(task, extension)
             task.description = "Runs Vite, the Kotlin compiler and the app together, and restarts the app when Kotlin changes."
             task.dependsOn(install, main.map { it.output.classesDirs })
@@ -659,6 +680,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.addRuntimeDependency.convention(true)
         extension.includeSourceMaps.convention(false)
         extension.precompress.convention(true)
+        extension.shortTaskNames.convention(true)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
         extension.dev.debugPort.convention(5005)
