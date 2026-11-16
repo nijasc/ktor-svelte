@@ -20,7 +20,7 @@ class ComponentsTest {
         assertFalse(frontendFiles(spec(components = false), null, false).keys.any { it.startsWith(COMPONENTS_DIR) })
         val files = frontendFiles(spec(components = true), null, false)
         assertEquals(
-            listOf("DataTable.svelte", "DateInput.svelte", "DateTimeInput.svelte", "EnumSelect.svelte", "Field.svelte"),
+            listOf("DataTable.svelte", "DateInput.svelte", "DateTimeInput.svelte", "EnumSelect.svelte", "ErrorPage.svelte", "Field.svelte"),
             files.keys
                 .filter { it.startsWith(COMPONENTS_DIR) }
                 .map { it.substringAfterLast('/') }
@@ -94,6 +94,44 @@ class ComponentsTest {
         assertContains(plain, "<table class=\"ktor-svelte-table\" aria-busy={busy}>")
         assertContains(plain, ".ktor-svelte-table-pager {")
         assertFalse("{{" in plain)
+    }
+
+    @Test
+    fun `the error page comes with its route, the hook that fills it and the type of what it reads`() {
+        val files = frontendFiles(spec(components = true), null, false)
+        assertEquals(
+            "<!-- $GENERATED_MARKER -->\n<script lang=\"ts\">\n    import ErrorPage from '#components/ErrorPage.svelte';\n</script>\n\n<ErrorPage />\n",
+            files.getValue(ERROR_ROUTE),
+        )
+        assertEquals("// $GENERATED_MARKER\nexport { handleError } from './lib/ktor-svelte/errors';\n", files.getValue(CLIENT_HOOKS))
+        assertContains(
+            files.getValue("$GENERATED_DIR/errors.ts"),
+            "export function handleError(input: { error: unknown; kind?: string; status?: number }): PageErrorDetails | undefined {",
+        )
+        assertContains(files.getValue("$GENERATED_DIR/app-error.d.ts"), "interface Error {")
+
+        val withToasts = frontendFiles(spec(components = true).copy(toasts = true), null, false).getValue(CLIENT_HOOKS)
+        assertContains(withToasts, "client.apiConfig.onError = toastApiError;")
+        assertTrue(withToasts.endsWith(";\n\nexport { handleError } from './lib/ktor-svelte/errors';\n"), withToasts.takeLast(120))
+        val toastsOnly = frontendFiles(spec(components = false).copy(toasts = true), null, false)
+        assertFalse("handleError" in toastsOnly.getValue(CLIENT_HOOKS))
+        assertFalse(ERROR_ROUTE in toastsOnly)
+    }
+
+    @Test
+    fun `the error page speaks English until the app's messages have its keys`() {
+        val english = componentFiles(spec(components = true)).getValue("$COMPONENTS_DIR/ErrorPage.svelte")
+        assertContains(english, "status === 404 ? 'This page does not exist.' : status === 403 ? 'You are not allowed to see this page.'")
+        assertContains(english, ">Request ID: <code>{requestId}</code></p>")
+        assertContains(english, "<a class=\"ktor-svelte-error-home\" href={home}>Back to the start page</a>")
+        assertFalse("#i18n" in english)
+
+        val catalog = MessageCatalog(mapOf("en" to mapOf("error-not-found" to "Gone.", "error-home" to "Home", "title" to "App")))
+        val translated = componentFiles(spec(components = true, withDaisy = true), catalog).getValue("$COMPONENTS_DIR/ErrorPage.svelte")
+        assertContains(translated, "    import { m } from '#i18n';\n")
+        assertContains(translated, "status === 404 ? m.errorNotFound() : status === 403 ? 'You are not allowed to see this page.'")
+        assertContains(translated, "<a class=\"btn btn-primary\" href={home}>{m.errorHome()}</a>")
+        assertFalse("{{" in translated)
     }
 
     @Test

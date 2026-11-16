@@ -12,6 +12,11 @@ internal const val GENERATED_LINT_RULES = "$GENERATED_DIR/eslint.js"
 internal const val CONFIRM_HELPER = "$GENERATED_DIR/confirm.ts"
 internal const val MODAL_HELPER = "$GENERATED_DIR/modal.ts"
 internal const val COMPONENTS_DIR = "$GENERATED_DIR/components"
+internal const val CLIENT_HOOKS = "src/hooks.client.ts"
+internal const val ERROR_ROUTE = "src/routes/+error.svelte"
+private const val ERROR_ROUTE_SOURCE =
+    "<!-- $GENERATED_MARKER -->\n<script lang=\"ts\">\n    import ErrorPage from '#components/ErrorPage.svelte';\n</script>\n\n<ErrorPage />\n"
+private const val HANDLE_ERROR_EXPORT = "\nexport { handleError } from './lib/ktor-svelte/errors';\n"
 private const val GIT_ATTRIBUTES = "# $GENERATED_MARKER\n* text eol=lf linguist-generated merge=$MERGE_DRIVER\n"
 
 private fun json(value: Any?): String = JsonOutput.toJson(value)
@@ -40,9 +45,14 @@ internal fun frontendFiles(
         if (spec.routes && routes != null) put("$GENERATED_DIR/routes.ts", routesSource(routes, spec.i18n))
         if (spec.toasts) {
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
-            put("src/hooks.client.ts", renderTemplate("hooks.client.ts", mapOf("reloadPrompt" to spec.reloadPrompt.toString())))
         }
-        if (spec.components) putAll(componentFiles(spec))
+        if (spec.toasts || spec.components) put(CLIENT_HOOKS, clientHooks(spec))
+        if (spec.components) {
+            putAll(componentFiles(spec, messages))
+            put("$GENERATED_DIR/errors.ts", renderTemplate("errors.ts"))
+            put("$GENERATED_DIR/app-error.d.ts", renderTemplate("app-error.d.ts"))
+            put(ERROR_ROUTE, ERROR_ROUTE_SOURCE)
+        }
         if (spec.lucide || keys.any { it.startsWith("$GENERATED_DIR/") }) {
             put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
             put(GENERATED_LINT_RULES, lintRulesSource(routes.takeIf { spec.routes }))
@@ -80,7 +90,63 @@ private fun dataTable(daisy: Boolean): String =
         ),
     )
 
-internal fun componentFiles(spec: LibrarySpec): Map<String, String> {
+private fun clientHooks(spec: LibrarySpec): String {
+    val toasts = if (spec.toasts) renderTemplate("hooks.client.ts", mapOf("reloadPrompt" to spec.reloadPrompt.toString())) else HEADER
+    return if (spec.components) toasts + HANDLE_ERROR_EXPORT.removePrefix(if (spec.toasts) "" else "\n") else toasts
+}
+
+private const val PLAIN_ERROR_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-error {\n        display: grid;\n        gap: 1rem;\n        justify-items: center;\n" +
+        "        padding: 4rem 1rem;\n        text-align: center;\n    }\n\n" +
+        "    .ktor-svelte-error-status {\n        margin: 0;\n        font-size: 3.75rem;\n    }\n\n" +
+        "    .ktor-svelte-error-request {\n        font-size: 0.875em;\n        opacity: 0.7;\n    }\n" +
+        "</style>\n"
+
+private fun errorPage(
+    daisy: Boolean,
+    messages: MessageCatalog?,
+): String {
+    val keys = messages?.keys.orEmpty().toSet()
+    val translated = ERROR_PAGE_TEXTS.keys.any { it in keys }
+
+    fun inScript(key: String): String = if (key in keys) "m.${propertyName(key)}()" else "'${ERROR_PAGE_TEXTS.getValue(key)}'"
+
+    fun inMarkup(key: String): String = if (key in keys) "{m.${propertyName(key)}()}" else ERROR_PAGE_TEXTS.getValue(key)
+    return renderTemplate(
+        "components/ErrorPage.svelte",
+        mapOf(
+            "imports" to if (translated) "    import { m } from '#i18n';\n" else "",
+            "notFound" to inScript("error-not-found"),
+            "forbidden" to inScript("error-forbidden"),
+            "signIn" to inScript("error-sign-in"),
+            "failed" to inScript("error-failed"),
+            "requestText" to inMarkup("error-request-id"),
+            "homeText" to inMarkup("error-home"),
+            "wrapperClass" to if (daisy) "grid justify-items-center gap-4 py-16 text-center" else "ktor-svelte-error",
+            "statusClass" to if (daisy) "text-6xl font-bold" else "ktor-svelte-error-status",
+            "messageClass" to if (daisy) "text-lg" else "ktor-svelte-error-message",
+            "requestClass" to if (daisy) "text-sm opacity-70" else "ktor-svelte-error-request",
+            "buttonClass" to if (daisy) "btn btn-primary" else "ktor-svelte-error-home",
+            "style" to if (daisy) "" else PLAIN_ERROR_STYLE,
+        ),
+    )
+}
+
+internal val ERROR_PAGE_TEXTS =
+    mapOf(
+        "error-not-found" to "This page does not exist.",
+        "error-forbidden" to "You are not allowed to see this page.",
+        "error-sign-in" to "Sign in to see this page.",
+        "error-failed" to "Something went wrong. Please try again.",
+        "error-request-id" to "Request ID:",
+        "error-home" to "Back to the start page",
+    )
+
+internal fun componentFiles(
+    spec: LibrarySpec,
+    messages: MessageCatalog? = null,
+): Map<String, String> {
     val daisy = spec.daisy != null
     val field =
         renderTemplate(
@@ -103,6 +169,7 @@ internal fun componentFiles(spec: LibrarySpec): Map<String, String> {
         "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
         "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
         "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
+        "$COMPONENTS_DIR/ErrorPage.svelte" to errorPage(daisy, messages),
     )
 }
 

@@ -3,7 +3,9 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import io.github.nijasc.ktor.svelte.gradle.DocLink
+import io.github.nijasc.ktor.svelte.gradle.libraries.CLIENT_HOOKS
 import io.github.nijasc.ktor.svelte.gradle.libraries.COMPONENTS_DIR
+import io.github.nijasc.ktor.svelte.gradle.libraries.ERROR_ROUTE
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_MARKER
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
@@ -136,7 +138,10 @@ public abstract class SvelteLibraryTask : SvelteToolTask() {
         current.validate()
         val catalog = current.i18n?.let { readMessages(messagesDirectory.get().asFile, it.locales) }
         val routes = if (current.routes) scanRoutes(routesDirectory.get().asFile) else null
-        return frontendFiles(current, catalog, frontend.resolve(USER_VITE_CONFIG).isFile, routes)
+        return frontendFiles(current, catalog, frontend.resolve(USER_VITE_CONFIG).isFile, routes).filterNot { (path, _) ->
+            val yoursWins = path == ERROR_ROUTE || (path == CLIENT_HOOKS && !current.toasts)
+            yoursWins && !frontend.resolve(path).isOwnedByPlugin()
+        }
     }
 }
 
@@ -205,7 +210,7 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
             .walkBottomUp()
             .filter { it.isFile && it.relativeTo(frontend).invariantSeparatorsPath !in keep }
             .forEach { it.delete() }
-        listOf("src/hooks.server.ts", "src/hooks.ts", "src/hooks.client.ts").filter { it !in keep }.forEach { path ->
+        listOf("src/hooks.server.ts", "src/hooks.ts", CLIENT_HOOKS, ERROR_ROUTE).filter { it !in keep }.forEach { path ->
             val file = frontend.resolve(path)
             if (file.isFile && GENERATED_MARKER in file.readText()) file.delete()
         }
