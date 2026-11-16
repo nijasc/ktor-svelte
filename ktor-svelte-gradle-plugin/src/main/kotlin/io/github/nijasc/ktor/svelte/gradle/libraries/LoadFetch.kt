@@ -10,6 +10,7 @@ internal data class LoadCall(
 private const val SHOWN_CALL_LENGTH = 80
 private val LOAD_FILE = Regex("""\+(page|layout)\.(ts|js)""")
 private val LOAD_START = Regex("""\bexport\s+(?:const\s+load\b|(?:async\s+)?function\s+load\b)""")
+private val OWN_CLIENT = Regex("""\b(?:const|let|var)\s+api\b""")
 private val API_CALL = Regex("""\bapi(?:\s*\.\s*\w+)+\s*\(""")
 private val COMMENT = Regex("""//[^\n]*|/\*[\s\S]*?\*/""")
 private val OPTIONS_NAME = Regex("""(?i)\w*(?:options|opts|init)""")
@@ -27,6 +28,7 @@ internal fun loadFiles(routesDirectory: File): List<File> =
 internal fun findLoadCallsWithoutFetch(source: String): List<LoadCall> {
     val code = COMMENT.replace(source) { match -> match.value.replace(Regex("""[^\n]"""), " ") }
     val load = LOAD_START.find(code) ?: return emptyList()
+    if (OWN_CLIENT.containsMatchIn(code)) return emptyList()
     return API_CALL
         .findAll(code, load.range.last)
         .mapNotNull { match ->

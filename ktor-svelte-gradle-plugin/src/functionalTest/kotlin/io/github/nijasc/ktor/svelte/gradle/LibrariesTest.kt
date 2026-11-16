@@ -581,13 +581,16 @@ class LibrariesTest {
 
         val output = project.runAndFail("svelteVerifyLoads").output
 
-        assertContains(output, "src/routes/notes/+page.ts:4  api.notes.list()  ->  pass { fetch } as the last argument")
-        assertContains(output, "1 API call(s) in load functions do not pass { fetch }")
+        assertContains(
+            output,
+            "src/routes/notes/+page.ts:4  api.notes.list()  ->  use apiWith(event), or pass { fetch } as the last argument",
+        )
+        assertContains(output, "1 API call(s) in load functions use neither apiWith(event) nor { fetch }")
         assertContains(output, "features/calling-the-api#in-load-functions")
 
         load.writeText(load.readText().replace("api.notes.list()", "api.notes.list({ fetch })"))
 
-        assertContains(project.run("svelteVerifyLoads").output, "every API call in a load function passes its fetch")
+        assertContains(project.run("svelteVerifyLoads").output, "every API call in a load function goes through SvelteKit's fetch")
     }
 
     @Test

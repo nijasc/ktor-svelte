@@ -18,7 +18,7 @@ internal fun loadFetchReport(
     loadFiles(routesDirectory).flatMap { file ->
         val path = file.relativeToOrSelf(frontend).invariantSeparatorsPath
         findLoadCallsWithoutFetch(file.readText()).map { call ->
-            "$path:${call.line}  ${call.written}  ->  pass { fetch } as the last argument"
+            "$path:${call.line}  ${call.written}  ->  use apiWith(event), or pass { fetch } as the last argument"
         }
     }
 
@@ -34,13 +34,13 @@ public abstract class SvelteVerifyLoadsTask : DefaultTask() {
     public fun verify() {
         val report = loadFetchReport(frontendDir.get().asFile, routesDirectory.get().asFile)
         if (report.isEmpty()) {
-            logger.lifecycle("ktor-svelte: every API call in a load function passes its fetch.")
+            logger.lifecycle("ktor-svelte: every API call in a load function goes through SvelteKit's fetch.")
             return
         }
         report.forEach { logger.lifecycle(it) }
         throw GradleException(
-            "${report.size} API call(s) in load functions do not pass { fetch }, so SvelteKit cannot track or reuse them." +
-                DocLink.CALLING_THE_API.see(),
+            "${report.size} API call(s) in load functions use neither apiWith(event) nor { fetch }, " +
+                "so SvelteKit cannot track or reuse them." + DocLink.CALLING_THE_API.see(),
         )
     }
 }

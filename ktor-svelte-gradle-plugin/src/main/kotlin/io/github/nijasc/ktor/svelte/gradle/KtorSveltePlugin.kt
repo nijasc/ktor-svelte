@@ -271,7 +271,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
         project.tasks.register("svelteVerifyLoads", SvelteVerifyLoadsTask::class.java) { task ->
             task.group = TASK_GROUP
-            task.description = "Fails if an API call inside a load function does not pass { fetch }."
+            task.description = "Fails if an API call inside a load function uses neither apiWith(event) nor { fetch }."
             task.frontendDir.set(extension.frontendDir)
             task.routesDirectory.set(routes)
         }

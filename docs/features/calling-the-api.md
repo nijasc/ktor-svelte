@@ -157,7 +157,7 @@ To refresh the files without your dev server, for example in CI, run the task be
 
 ## In load functions
 
-Inside a SvelteKit `load` function, pass the `fetch` it gives you as the last argument of every call:
+Inside a SvelteKit `load` function, every call has to go through the `fetch` SvelteKit gives you. `apiWith(event)`, shown above, does that for all calls at once. For a single call, pass `fetch` as the last argument:
 
 ```ts no-check
 import { api } from '#api';
@@ -178,7 +178,7 @@ With its own `fetch`, SvelteKit knows which requests a page depends on, reuses a
 ```
 
 ```text
-src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  pass { fetch } as the last argument
+src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  use apiWith(event), or pass { fetch } as the last argument
 ```
 
 It is not part of `check`. The [lint rule](./frontend-libraries.md#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.

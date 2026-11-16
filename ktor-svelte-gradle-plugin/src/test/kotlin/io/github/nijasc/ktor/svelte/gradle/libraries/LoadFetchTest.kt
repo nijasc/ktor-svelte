@@ -51,6 +51,21 @@ class LoadFetchTest {
     }
 
     @Test
+    fun `a client made with apiWith needs nothing more`() {
+        val source =
+            """
+            import { apiWith } from '#api';
+
+            export const load = async (event) => {
+                const api = apiWith(event);
+                const [notes, stats] = await Promise.all([api.notes.list(), api.stats.list()]);
+                return { notes, stats };
+            };
+            """.trimIndent()
+        assertEquals(emptyList(), findLoadCallsWithoutFetch(source))
+    }
+
+    @Test
     fun `fetch inside the body argument does not count`() {
         val source =
             """
