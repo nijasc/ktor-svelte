@@ -97,6 +97,7 @@ import kotlin.io.path.Path
 
 private const val DEV_SERVER_VARIABLE = "KTOR_SVELTE_DEV_SERVER"
 private const val PUBLIC_CONFIG_PATH = "/_ktor-svelte/config.json"
+private const val BUILD_INFO_PATH = "/_ktor-svelte/build.json"
 private const val STATUS_PATH = "/_ktor-svelte/status"
 private const val ROUTES_PATH = "/_ktor-svelte/routes"
 private const val HEALTH_PATH = "/_ktor-svelte/health"
@@ -277,6 +278,12 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
             if (devRequests != null) devRequestRoutes(devRequests, allowRemote)
+            if (pluginConfig.publicBuildInfo) {
+                get(BUILD_INFO_PATH) {
+                    call.response.header(HttpHeaders.CacheControl, "no-cache")
+                    call.respondText(application.buildInfo.toJson(), ContentType.Application.Json)
+                }.hide()
+            }
             if (publicConfig != null) {
                 get(PUBLIC_CONFIG_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")
