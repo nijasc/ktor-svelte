@@ -872,7 +872,7 @@ class TypeScriptGeneratorTest {
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")
-        assertContains(client, "if (method !== 'GET' || !chosen) return undefined;")
+        assertContains(client, "if (method !== 'GET' && (!own || apiConfig.idempotencyKeys === false)) return undefined;")
         assertContains(client, "const RETRIED_STATUSES = [502, 503, 504];")
         assertContains(client, "export function isRateLimitError(error: unknown): error is ApiError {")
         assertContains(client, "        readonly retryAfter?: number")
