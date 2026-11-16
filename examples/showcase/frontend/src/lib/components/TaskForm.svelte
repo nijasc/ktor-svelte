@@ -1,5 +1,7 @@
 <script lang="ts">
     import { field, Priority, TaskInput, type LucideIcon, type UserRef } from '#api';
+    import DateInput from '#components/DateInput.svelte';
+    import EnumSelect from '#components/EnumSelect.svelte';
     import Icon from '#icon';
     import { m } from '#i18n';
 
@@ -58,14 +60,7 @@
         ></textarea>
     </label>
     <div class="grid gap-3 sm:grid-cols-3">
-        <label class="grid gap-1" for="task-priority">
-            <span>{m.fieldPriority()}</span>
-            <select id="task-priority" class="select w-full" bind:value={draft.priority}>
-                {#each Object.values(Priority) as priority (priority)}
-                    <option value={priority}>{priorityLabels[priority]()}</option>
-                {/each}
-            </select>
-        </label>
+        <EnumSelect id="task-priority" label={m.fieldPriority()} options={Priority} labels={priorityLabels} bind:value={draft.priority} />
         <label class="grid gap-1" for="task-assignee">
             <span>{m.fieldAssignee()}</span>
             <select
@@ -80,17 +75,7 @@
                 {/each}
             </select>
         </label>
-        <label class="grid gap-1" for="task-due">
-            <span>{m.fieldDueOn()}</span>
-            <input
-                id="task-due"
-                class="input w-full"
-                type="date"
-                value={draft.dueOn ?? ''}
-                onchange={(event) => (draft.dueOn = event.currentTarget.value || null)}
-                use:field={{ errors: errors.dueOn, errorClass: 'text-error text-sm' }}
-            />
-        </label>
+        <DateInput id="task-due" label={m.fieldDueOn()} bind:value={draft.dueOn} errors={errors.dueOn} />
     </div>
     <label class="grid gap-1" for="task-labels">
         <span>{m.fieldLabels()}</span>

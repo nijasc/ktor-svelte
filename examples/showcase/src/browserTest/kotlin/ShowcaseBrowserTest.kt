@@ -224,6 +224,23 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `generated date and enum inputs put typed values into the request`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/tasks/new")
+        val priority = page.getByLabel("Priority")
+        assertThat(priority.locator("option")).hasText(arrayOf("Low", "Normal", "High"))
+        priority.selectOption("HIGH")
+        val due = page.getByLabel("Due on")
+        assertThat(due).hasAttribute("type", "date")
+        due.fill("2026-12-24")
+        page.getByLabel("Title").fill(unique("Typed inputs"))
+        val created = java.util.function.Predicate<com.microsoft.playwright.Request> { it.method() == "POST" && it.url().endsWith("/api/tasks") }
+        val body = page.waitForRequest(created) { page.button("Create task").click() }.postData().orEmpty()
+        assertEquals(true, "\"priority\":\"HIGH\"" in body, body)
+        assertEquals(true, "\"dueOn\":\"2026-12-24\"" in body, body)
+    }
+
+    @Test
     fun `the board remembers the mine filter in its typed cookie`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/board")
