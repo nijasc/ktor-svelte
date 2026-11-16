@@ -219,6 +219,9 @@ const noErrorBodyMessage = {
     }
 };
 
+/** @type {any[]} */
+const recommended = [];
+
 const plugin = {
     meta: { name: 'ktor-svelte' },
     rules: {
@@ -226,18 +229,16 @@ const plugin = {
         'fetch-in-load': fetchInLoad,
         'no-error-body-message': noErrorBodyMessage
     },
-    configs: {}
+    configs: { recommended }
 };
 
-plugin.configs.recommended = [
-    {
-        plugins: { 'ktor-svelte': plugin },
-        rules: {
-            'ktor-svelte/no-string-page-links': 'warn',
-            'ktor-svelte/fetch-in-load': 'warn',
-            'ktor-svelte/no-error-body-message': 'warn'
-        }
+recommended.push({
+    plugins: { 'ktor-svelte': plugin },
+    rules: {
+        'ktor-svelte/no-string-page-links': 'warn',
+        'ktor-svelte/fetch-in-load': 'warn',
+        'ktor-svelte/no-error-body-message': 'warn'
     }
-];
+});
 
 export default plugin;
