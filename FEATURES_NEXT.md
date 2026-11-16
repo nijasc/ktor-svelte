@@ -26,17 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 84 | Project guide for coding assistants |  |
+| 88 | Active link helper |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 57 | Reload data after restart | #231 |
-| 68 | Visitor time zone on the server | #232 |
-| 70 | Refresh page data after writes | #233 |
-| 76 | Starter page with next steps | #234 |
-| 83 | Reload prompt after deploy | #235 |
+| 84 | Project guide for coding assistants | #238 |
 
 ### Next up
 
@@ -79,12 +75,16 @@ Features of this plan that are merged:
 | 53 | Build info on both sides | #228 |
 | 55 | One format command | #229 |
 | 56 | Git pre-commit hook | #230 |
+| 57 | Reload data after restart | #231 |
+| 68 | Visitor time zone on the server | #232 |
+| 70 | Refresh page data after writes | #233 |
+| 76 | Starter page with next steps | #234 |
+| 83 | Reload prompt after deploy | #235 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 88 | Active link helper | Small | 2 |
 | 90 | Free the dev ports | Small | 2 |
 | 97 | Input normalisation | Small | 2 |
 | 98 | Startup timing breakdown | Small | 2 |
