@@ -35,6 +35,8 @@ private val DEV_SOURCE_URL = Regex("""https?://(?:localhost|127\.0\.0\.1|\[::1])
 
 private const val REMEMBERED_ERRORS = 200
 private const val HIDDEN_FRAMES = "... framework frames hidden"
+private const val OWN_FRAMES_SHOWN_FIRST = 3
+private const val OWN_FRAME_LABEL = "    your code: "
 private val EXCEPTION_LINE = Regex("""^\s*(?:Caused by: )?[\w.$]+(?:Exception|Error|Throwable)\b.*""")
 private val STACK_FRAME = Regex("""^(\s*)at (\S+)""")
 private val FRAMEWORK_FRAMES =
@@ -99,8 +101,12 @@ internal class DevLogFormatter(
     private val now: () -> LocalTime = LocalTime::now,
     private val frontendDirectory: File? = null,
     private val foldStackTraces: Boolean = true,
+    sourceDirectories: List<File> = emptyList(),
 ) {
+    private val sources = SourceIndex(sourceDirectories)
     private val seenErrors = LinkedHashMap<String, SeenError>()
+    private var traceBlock: MutableList<String>? = null
+    private val ownFrames = mutableListOf<OwnFrame>()
     private var lastAppMessage = ""
     private var lastAppTime = ""
     private var awaitingException = false
@@ -125,6 +131,20 @@ internal class DevLogFormatter(
         }
     }
 
+    @Synchronized
+    fun flushStackTrace(): String? {
+        val lines = traceBlock ?: return null
+        traceBlock = null
+        val first =
+            ownFrames.distinct().take(OWN_FRAMES_SHOWN_FIRST).map { frame ->
+                render(LogSource.APP, null, "$OWN_FRAME_LABEL${frame.method}  ${fileUrl(frame.file)}:${frame.line}", null)
+            }
+        ownFrames.clear()
+        return (lines.take(1) + first + lines.drop(1)).joinToString(System.lineSeparator())
+    }
+
+    private fun afterStackTrace(line: String): String = listOfNotNull(flushStackTrace(), line).joinToString(System.lineSeparator())
+
     private fun app(line: String): String? {
         if (line.startsWith("Listening for transport dt_socket")) return null
         val match = APP_LINE.matchEntire(line) ?: return continuation(line)
@@ -138,35 +158,53 @@ internal class DevLogFormatter(
         hidingFrames = false
         if (message.startsWith("Application started")) seenErrors.clear()
         val shown = logger.substringAfterLast('.').takeUnless { source == LogSource.BROWSER || it == "Application" }
-        return render(source, levelOf(level), if (source == LogSource.BROWSER) linkSources(message) else message, shown, time)
+        return afterStackTrace(
+            render(source, levelOf(level), if (source == LogSource.BROWSER) linkSources(message) else message, shown, time),
+        )
     }
 
     private fun continuation(line: String): String? {
         if (lastAppSource == LogSource.BROWSER) return render(LogSource.BROWSER, null, linkSources(line), null)
         if (!foldStackTraces) return render(LogSource.APP, null, line, null)
         if (hidingTrace) return null
+        val startsTrace = EXCEPTION_LINE.matches(line)
         if (awaitingException) {
             awaitingException = false
-            if (EXCEPTION_LINE.matches(line)) {
+            if (startsTrace) {
                 val seen = seenErrors["$lastAppMessage\n${line.trim()}"]
                 if (seen != null) {
                     seen.count++
                     hidingTrace = true
                     val note = "(seen ${seen.count} times since ${seen.firstTime}, stack trace hidden)"
-                    return render(LogSource.APP, null, "$line  $note", null)
+                    return afterStackTrace(render(LogSource.APP, null, "$line  $note", null))
                 }
                 if (seenErrors.size >= REMEMBERED_ERRORS) seenErrors.remove(seenErrors.keys.first())
                 seenErrors["$lastAppMessage\n${line.trim()}"] = SeenError(lastAppTime, 1)
             }
         }
+        if (startsTrace) {
+            val before = flushStackTrace()
+            hidingFrames = false
+            traceBlock = mutableListOf(render(LogSource.APP, null, line, null))
+            return before
+        }
+        val rendered = stackTraceLine(line)
+        val block = traceBlock ?: return rendered
+        rendered?.let(block::add)
+        return null
+    }
+
+    private fun stackTraceLine(line: String): String? {
         val frame = STACK_FRAME.find(line)
         if (frame != null && FRAMEWORK_FRAMES.any { frame.groupValues[2].startsWith(it) }) {
             if (hidingFrames) return null
             hidingFrames = true
-            return render(LogSource.APP, null, frame.groupValues[1] + HIDDEN_FRAMES, null)
+            return render(LogSource.APP, null, frame.groupValues[1] + HIDDEN_FRAMES, null, dim = true)
         }
         hidingFrames = false
-        return render(LogSource.APP, null, line, null)
+        val own = if (frame != null && traceBlock != null) sources.ownFrame(line) else null
+        own?.let(ownFrames::add)
+        return render(LogSource.APP, null, line, null, dim = frame != null && own == null && !sources.isEmpty)
     }
 
     private fun vite(line: String): String? {
@@ -252,11 +290,17 @@ internal class DevLogFormatter(
         message: String,
         logger: String?,
         time: String = now().format(TIME),
+        dim: Boolean = false,
     ): String {
         val label = source.label.padEnd(LogSource.entries.maxOf { it.label.length })
         val levelText = (level?.name ?: "").padEnd(5)
         val loggerText = logger?.let { paint("2", it) + " " }.orEmpty()
-        val body = if (level == LogLevel.ERROR || level == LogLevel.WARN) paint(level.color, message) else message
+        val body =
+            when {
+                level == LogLevel.ERROR || level == LogLevel.WARN -> paint(level.color, message)
+                dim -> paint("2", message)
+                else -> message
+            }
         return "${paint(
             "2",
             time,
