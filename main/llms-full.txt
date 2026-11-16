@@ -941,6 +941,7 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
 | `openapi.json` | The OpenAPI document itself |
+| `.gitattributes` | Marks these files as generated and keeps their line endings the same on every machine, so Git on Windows does not warn about them and GitHub folds them in diffs |
 
 To see the output for your own API before installing anything, paste its OpenAPI document into the [generator playground](https://nijasc.github.io/ktor-svelte/main/features/playground).
 
@@ -1632,7 +1633,7 @@ Then apply it:
 ./gradlew svelteSync
 ```
 
-`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
+`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. The generated folder `src/lib/ktor-svelte` carries its own `.gitattributes`, which marks the files as generated and keeps their line endings the same on every machine. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
 
 **ktor-svelte owns `vite.config.ts`** once any library is on. Put your own Vite settings in `vite.user.ts`, and they are merged in:
 
