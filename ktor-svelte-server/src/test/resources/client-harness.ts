@@ -124,4 +124,30 @@ results.zoneStaysHome = (await sentHeaders('/api/notes', () => (apiConfig.baseUr
 results.ownZoneHeaderWins = (await sentHeaders('/api/notes', () => (apiConfig.headers = { 'X-Time-Zone': 'Asia/Tokyo' }))).get('x-time-zone');
 apiConfig.headers = {};
 
+async function writesNoticedAfter(calls: () => Promise<unknown>, outcomes: Outcome[] = [200]): Promise<number> {
+    apiConfig.retry = undefined;
+    let noticed = 0;
+    apiConfig.onWrite = () => noticed++;
+    server(outcomes);
+    await calls().catch(() => undefined);
+    await new Promise((resolve) => realTimeout(resolve, 20));
+    apiConfig.onWrite = undefined;
+    return noticed;
+}
+
+results.writeIsNoticed = await writesNoticedAfter(() => request('POST', '/api/notes', { body: {} }));
+results.readIsNotNoticed = await writesNoticedAfter(() => request('GET', '/api/notes'));
+results.failedWriteIsNotNoticed = await writesNoticedAfter(() => request('DELETE', '/api/notes/1'), [500]);
+results.oneCallCanStayQuiet = await writesNoticedAfter(() => request('PUT', '/api/notes/1', { body: {}, refresh: false }));
+results.writesTogetherAreNoticedOnce = await writesNoticedAfter(() =>
+    Promise.all([request('POST', '/api/notes', { body: {} }), request('POST', '/api/tags', { body: {} }), request('DELETE', '/api/notes/2')])
+);
+apiConfig.onWrite = () => {
+    throw new Error('broken handler');
+};
+server([200]);
+results.brokenHandlerDoesNotFailTheCall = await outcomeOf(() => request('POST', '/api/notes', { body: {} }));
+await new Promise((resolve) => realTimeout(resolve, 20));
+apiConfig.onWrite = undefined;
+
 console.log(JSON.stringify(results));
