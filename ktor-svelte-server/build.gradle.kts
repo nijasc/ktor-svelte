@@ -28,6 +28,7 @@ dependencies {
     compileOnly(libs.ktor.server.compression.zstd)
 
     testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.server.netty)
     testImplementation(libs.ktor.serialization.xml)
     testImplementation(libs.ktor.server.compression.zstd)
     testImplementation(libs.ktor.server.auth)
