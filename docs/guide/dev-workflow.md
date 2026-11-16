@@ -99,8 +99,8 @@ Most of it is usually your own module: opening the database, running migrations,
 
 ```kotlin
 fun Application.module() {
-    val database = startupStep("Database") { connect() }
-    startupStep("Migrations") { migrate(database) }
+    val connection = startupStep("Database") { openDatabase() }
+    startupStep("Migrations") { runMigrations(connection) }
     install(Svelte)
 }
 ```
