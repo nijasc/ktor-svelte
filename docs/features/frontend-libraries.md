@@ -293,6 +293,50 @@ One form field: its label, the input, an optional hint, and the validation error
 
 Everything else, such as `type`, `autocomplete`, `placeholder` or `id`, goes to the input unchanged. Underneath it is the [`field` action](validation.md), so errors appear and disappear the same way as with `use:field`.
 
+For a control that is not a plain input, pass it as the `control` snippet. It gets the `id` the label points at and the `options` for `use:field`, and the label, hint and errors stay as they are:
+
+```svelte no-check
+<Field label="Color" errors={form.errors.color}>
+    {#snippet control({ id, options })}
+        <input {id} type="color" bind:value={form.value.color} use:field={options} />
+    {/snippet}
+</Field>
+```
+
+### DateInput and DateTimeInput
+
+A date from the API is an `IsoDate`, text such as `2026-12-24`, and a field that may be empty is `null`. A plain `<input type="date">` gives `''` for empty and plain text otherwise, so pages convert by hand. `DateInput` binds to the value as it is:
+
+```svelte no-check
+<script lang="ts">
+    import DateInput from '#components/DateInput.svelte';
+    import DateTimeInput from '#components/DateTimeInput.svelte';
+</script>
+
+<DateInput label="Due on" bind:value={form.value.dueOn} errors={form.errors.dueOn} />
+<DateTimeInput label="Starts at" bind:value={form.value.startsAt} />
+<DateTimeInput label="Opens at" local bind:value={form.value.opensAt} />
+```
+
+Both take the props of `Field`, and an empty input is `null`.
+
+`DateTimeInput` shows a moment in the visitor's own time zone and stores it as the UTC text the server expects for a Kotlin `Instant`. With `local`, it is for a Kotlin `LocalDateTime` instead: the wall-clock text goes to the server as typed, with no time zone.
+
+### EnumSelect
+
+A `<select>` over a generated enum object:
+
+```svelte no-check
+<script lang="ts">
+    import { Status } from '#api';
+    import EnumSelect from '#components/EnumSelect.svelte';
+</script>
+
+<EnumSelect label="Status" options={Status} bind:value={form.value.status} labels={{ TODO: 'To do', DONE: 'Done' }} placeholder="Any" />
+```
+
+It lists every value of the enum, so a value added in Kotlin appears after the next `svelteGenerateTs`. `labels` gives the text to show, as text or as a function for translations, and a value without one shows its name. With `placeholder` there is a first option that stands for `null`. The bound value has the enum's type, so no cast is needed.
+
 ## Modals
 
 A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:
