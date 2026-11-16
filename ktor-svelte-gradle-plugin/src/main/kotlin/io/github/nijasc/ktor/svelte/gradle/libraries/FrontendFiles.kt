@@ -163,14 +163,23 @@ internal fun componentFiles(
         )
     val input = mapOf("input" to if (daisy) "input w-full" else "ktor-svelte-field-input")
     val select = mapOf("select" to if (daisy) "select w-full" else "ktor-svelte-field-input")
-    return mapOf(
-        "$COMPONENTS_DIR/Field.svelte" to field,
-        "$COMPONENTS_DIR/DateInput.svelte" to renderTemplate("components/DateInput.svelte", input),
-        "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
-        "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
-        "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
-        "$COMPONENTS_DIR/ErrorPage.svelte" to errorPage(daisy, messages),
-    )
+    val switches =
+        buildMap {
+            if (daisy) put("$COMPONENTS_DIR/ThemeToggle.svelte", renderTemplate("components/ThemeToggle.svelte"))
+            if (spec.i18n != null) {
+                val classes = mapOf("select" to if (daisy) "select select-sm" else "ktor-svelte-locale-switch")
+                put("$COMPONENTS_DIR/LocaleSwitch.svelte", renderTemplate("components/LocaleSwitch.svelte", classes))
+            }
+        }
+    return switches +
+        mapOf(
+            "$COMPONENTS_DIR/Field.svelte" to field,
+            "$COMPONENTS_DIR/DateInput.svelte" to renderTemplate("components/DateInput.svelte", input),
+            "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
+            "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
+            "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
+            "$COMPONENTS_DIR/ErrorPage.svelte" to errorPage(daisy, messages),
+        )
 }
 
 internal fun iconSources(
