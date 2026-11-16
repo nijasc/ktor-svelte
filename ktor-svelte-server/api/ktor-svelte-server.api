@@ -115,6 +115,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getApiDocsPath ()Ljava/lang/String;
 	public final fun getBuildHeader ()Z
 	public final fun getDefaultFavicon ()Z
+	public final fun getDefaultTimeZone ()Ljava/lang/String;
 	public final fun getGenerateTs ()Z
 	public final fun getGenerateTsOutput ()Ljava/lang/String;
 	public final fun getHealthEndpoint ()Z
@@ -144,6 +145,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setApiDocsPath (Ljava/lang/String;)V
 	public final fun setBuildHeader (Z)V
 	public final fun setDefaultFavicon (Z)V
+	public final fun setDefaultTimeZone (Ljava/lang/String;)V
 	public final fun setGenerateTs (Z)V
 	public final fun setGenerateTsOutput (Ljava/lang/String;)V
 	public final fun setHealthEndpoint (Z)V
@@ -266,6 +268,10 @@ public final class io/github/nijasc/ktor/svelte/SvelteTransportConfig {
 	public static synthetic fun json$default (Lio/github/nijasc/ktor/svelte/SvelteTransportConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun negotiation (Lkotlin/jvm/functions/Function1;)V
 	public final fun xml ()V
+}
+
+public final class io/github/nijasc/ktor/svelte/TimeZonesKt {
+	public static final fun getTimeZone (Lio/ktor/server/application/ApplicationCall;)Ljava/time/ZoneId;
 }
 
 public abstract interface class io/github/nijasc/ktor/svelte/Validated {

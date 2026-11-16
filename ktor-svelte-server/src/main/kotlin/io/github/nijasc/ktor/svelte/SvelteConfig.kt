@@ -52,6 +52,7 @@ public class SvelteConfig internal constructor() {
     public var requestIds: Boolean = true
     public var accessLog: Boolean = false
     public var publicBuildInfo: Boolean = false
+    public var defaultTimeZone: String = "UTC"
     public var defaultFavicon: Boolean = true
     public var sitemap: Boolean = true
     public var siteUrl: String? = null
