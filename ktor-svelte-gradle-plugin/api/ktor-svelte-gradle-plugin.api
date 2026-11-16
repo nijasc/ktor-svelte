@@ -468,6 +468,16 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyLoad
 	public final fun verify ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyMessagesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getKotlinSources ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	public abstract fun getLocales ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getMessagesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
+	public final fun verify ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyRoutesTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getFix ()Lorg/gradle/api/provider/Property;
