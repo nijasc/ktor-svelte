@@ -164,7 +164,7 @@ private fun i18nSource(
         } else {
             "    location.reload();\n"
         }
-    val localizeBody = if (urlPrefix) "`/${'$'}{getLocale()}${'$'}{path}`" else "path"
+    val localizeBody = if (urlPrefix) "path === '/' ? `/${'$'}{getLocale()}` : `/${'$'}{getLocale()}${'$'}{path}`" else "path"
     val prefixCookie =
         if (urlPrefix) {
             "    document.cookie = `$LOCALE_COOKIE=${'$'}{getLocale()}; path=/; max-age=31536000; samesite=lax`;\n"
