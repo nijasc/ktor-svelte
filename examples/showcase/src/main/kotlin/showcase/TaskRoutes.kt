@@ -2,8 +2,10 @@ package showcase
 
 import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.navigateTo
+import io.github.nijasc.ktor.svelte.receiveUploads
 import io.github.nijasc.ktor.svelte.ToastKind
 import io.github.nijasc.ktor.svelte.toast
+import io.github.nijasc.ktor.svelte.uploadRules
 import io.github.nijasc.ktor.svelte.validate
 import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
@@ -12,11 +14,8 @@ import io.ktor.http.ContentDisposition
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.content.PartData
-import io.ktor.http.content.forEachPart
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
-import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
@@ -27,8 +26,6 @@ import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
-import io.ktor.utils.io.readRemaining
-import kotlinx.io.readByteArray
 import java.nio.file.Files
 
 private const val DEFAULT_PAGE_SIZE = 10
@@ -142,31 +139,14 @@ fun Route.taskRoutes(
             post("/attachments") {
                 val task = tasks.find(call.id()) ?: return@post call.respondMissingTask()
                 val uploader = call.currentUser(users)
-                val stored = mutableListOf<Attachment>()
-                var refused: Problem? = null
-                call.receiveMultipart().forEachPart { part ->
-                    if (part is PartData.FileItem && refused == null) {
-                        val content = part.provider().readRemaining(MAX_UPLOAD_BYTES + 1).readByteArray()
-                        val contentType = part.contentType?.withoutParameters()?.toString().orEmpty()
-                        when {
-                            content.size > MAX_UPLOAD_BYTES -> refused = Problem(call.messages.problemFileTooLarge())
-                            contentType !in INLINE_TYPES && contentType !in DOWNLOAD_TYPES -> refused = Problem(call.messages.problemFileType())
-                            else -> stored += tasks.attach(task.id, uploader, cleanFileName(part.originalFileName), contentType, content)
-                        }
+                val attachments: List<Attachment> =
+                    call.receiveUploads().map { file ->
+                        tasks.attach(task.id, uploader, cleanFileName(file.fileName), file.contentType, file.bytes)
                     }
-                    part.dispose()
-                }
-                val problem = refused
-                if (problem != null) {
-                    stored.forEach { tasks.detach(it.id) }
-                    return@post call.respond(HttpStatusCode.UnprocessableEntity, problem)
-                }
-                val attachments: List<Attachment> = stored
                 call.respond(HttpStatusCode.Created, attachments)
-            }.describe {
+            }.uploadRules(maxSize = MAX_UPLOAD_BYTES, types = (INLINE_TYPES + DOWNLOAD_TYPES).toList()).describe {
                 summary = "Uploads files to a task."
                 description = "Send the files as multipart form data. Images, PDF, text, CSV and ZIP files up to 5 MiB are accepted."
-                requestBody { ContentType.MultiPart.FormData() }
             }
         }
     }
