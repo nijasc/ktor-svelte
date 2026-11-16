@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 4 | Flag `window.fetch` in `load` |  |
+| 5 | Fold repeated stack traces |  |
 
 ### In review
 
@@ -36,6 +36,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 3 | Dead link check | #212 |
 | 91 | Rename a page safely | #213 |
 | 103 | Editor-time lint rules | #214 |
+| 4 | Flag `window.fetch` in `load` | # |
 
 ### Next up
 
@@ -64,7 +65,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 5 | Fold repeated stack traces | Small | 2 |
 | 6 | `svelteDoctor --fix` | Medium | 2 |
 | 7 | i18n message check | Medium | 2 |
 | 8 | Retry with backoff | Small | 2 |
