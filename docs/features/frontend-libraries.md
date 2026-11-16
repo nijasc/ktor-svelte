@@ -167,6 +167,8 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 
 `toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](./calling-the-api.md#show-errors-automatically).
 
+`toasts { reloadPrompt() }` also offers a reload when the server runs a newer build than the page. See [Reload after a deploy](./calling-the-api.md#reload-after-a-deploy).
+
 ## Routes
 
 `routes()` turns every page into a typed constant in TypeScript and Kotlin, for links and redirects that always point to a real page. See [Typed routes](./routes.md).

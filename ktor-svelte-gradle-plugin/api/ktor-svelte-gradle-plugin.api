@@ -190,6 +190,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public abstract fun getRoutesSettings ()Lio/github/nijasc/ktor/svelte/gradle/RoutesSettings;
 	public abstract fun getTailwindSettings ()Lio/github/nijasc/ktor/svelte/gradle/TailwindSettings;
 	public abstract fun getToastsEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getToastsSettings ()Lio/github/nijasc/ktor/svelte/gradle/ToastsSettings;
 	public final fun i18n (Lorg/gradle/api/Action;)V
 	public final fun images ()V
 	public final fun lucide ()V
@@ -200,6 +201,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public final fun tailwind (Lorg/gradle/api/Action;)V
 	public static synthetic fun tailwind$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
 	public final fun toasts ()V
+	public final fun toasts (Lorg/gradle/api/Action;)V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/TailwindSettings {
@@ -210,6 +212,13 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/TailwindSettings {
 	public abstract fun getTypographyPlugin ()Lorg/gradle/api/provider/Property;
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 	public final fun typography ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/ToastsSettings {
+	public fun <init> ()V
+	public abstract fun getReloadPromptEnabled ()Lorg/gradle/api/provider/Property;
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
+	public final fun reloadPrompt ()V
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec : java/io/Serializable {
@@ -243,6 +252,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec : java
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : java/io/Serializable {
 	public final fun component1 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
 	public final fun component10 ()Z
+	public final fun component11 ()Z
 	public final fun component2 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun component3 ()Z
 	public final fun component4 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
@@ -259,6 +269,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun getI18n ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
 	public final fun getImages ()Z
 	public final fun getLucide ()Z
+	public final fun getReloadPrompt ()Z
 	public final fun getRoutes ()Z
 	public final fun getTailwind ()Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
 	public final fun getToasts ()Z

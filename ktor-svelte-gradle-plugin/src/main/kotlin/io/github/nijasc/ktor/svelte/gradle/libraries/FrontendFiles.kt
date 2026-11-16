@@ -36,7 +36,7 @@ internal fun frontendFiles(
         if (spec.routes && routes != null) put("$GENERATED_DIR/routes.ts", routesSource(routes, spec.i18n))
         if (spec.toasts) {
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
-            put("src/hooks.client.ts", renderTemplate("hooks.client.ts"))
+            put("src/hooks.client.ts", renderTemplate("hooks.client.ts", mapOf("reloadPrompt" to spec.reloadPrompt.toString())))
         }
         if (spec.lucide || keys.any { it.startsWith("$GENERATED_DIR/") }) {
             put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
