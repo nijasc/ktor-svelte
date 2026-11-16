@@ -391,6 +391,38 @@ After a change elsewhere on the page, `bind:this` the table and call its `reload
 
 The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
 
+### ErrorPage
+
+`components()` also writes `src/routes/+error.svelte`, the page SvelteKit shows when a page cannot be shown. It is three lines around `<ErrorPage />`, which shows:
+
+- the status, such as 404
+- the message: the one the server sent in the error body when a call failed, the one you passed to `error(...)`, and otherwise a sentence for 404, 403, 401 or anything else
+- the request ID for a status of 500 and above, so a visitor can quote it and you can find the request in the log
+- a link back to the start page, `home="/"` unless you pass another
+
+A `load` function no longer has to translate a failed call into a page error. Let it throw:
+
+```ts no-check
+export const load: PageLoad = async (event) => {
+    return { note: await apiWith(event).notes.get(event.params.id) };
+};
+```
+
+When the server answers 404 with `{ "message": "That note does not exist." }`, the error page shows 404 and that message. This works through `handleError` in `src/hooks.client.ts`, which `svelteSync` writes. It puts the status, message, request ID and [error code](calling-the-api.md#error-codes) of a failed call into `page.error`, typed through `App.Error`, so your own components can read `page.error.code` too.
+
+The sentences are English until your messages have their keys. With `i18n` on, add the ones you want translated and run `svelteSync`:
+
+| Key | Default |
+|---|---|
+| `error-not-found` | This page does not exist. |
+| `error-forbidden` | You are not allowed to see this page. |
+| `error-sign-in` | Sign in to see this page. |
+| `error-failed` | Something went wrong. Please try again. |
+| `error-request-id` | Request ID: |
+| `error-home` | Back to the start page |
+
+Your own files win. If `src/routes/+error.svelte` exists and is not the generated one, it is left alone, and you can use `<ErrorPage />` inside it or not. To change the generated one, remove its first line, and it is yours. The same goes for `src/hooks.client.ts` when `toasts()` is off: keep your own and add `export { handleError } from '#lib/ktor-svelte/errors.ts';` to it.
+
 ## Modals
 
 A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:
