@@ -137,6 +137,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("libraries.lucide", libraries.lucideEnabled.map { it.toString() }.orElse("false"))
             settings.put("libraries.images", libraries.imagesEnabled.map { it.toString() }.orElse("false"))
             settings.put("libraries.toasts", libraries.toastsEnabled.map { it.toString() }.orElse("false"))
+            settings.put("libraries.routes", libraries.routesEnabled.map { it.toString() }.orElse("false"))
             settings.put(
                 "libraries.i18n",
                 libraries.i18nSettings.enabled
@@ -183,6 +184,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 lucide = libraries.lucideEnabled.getOrElse(false),
                 images = libraries.imagesEnabled.getOrElse(false),
                 toasts = libraries.toastsEnabled.getOrElse(false),
+                routes = libraries.routesEnabled.getOrElse(false),
                 allIcons = libraries.lucideSettings.allIconsEnabled.getOrElse(false),
                 i18n =
                     libraries.i18nSettings.takeIf { it.enabled.getOrElse(false) }?.let { i18n ->
@@ -212,6 +214,9 @@ public class KtorSveltePlugin : Plugin<Project> {
         val messages =
             extension.libraries.i18nSettings.messagesDir
                 .convention(extension.frontendDir.dir("messages"))
+        val routes =
+            extension.libraries.routesSettings.dir
+                .convention(extension.frontendDir.dir("src/routes"))
         val hasLibraries = librarySpec.map { !it.isEmpty }
         val sync =
             project.tasks.register("svelteSync", SvelteSyncTask::class.java) { task ->
@@ -219,6 +224,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.description = "Installs configured frontend libraries and writes their generated files."
                 task.spec.set(librarySpec)
                 task.messagesDirectory.set(messages)
+                task.routesDirectory.set(routes)
                 task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
                 task.onlyIf("libraries are configured") { hasLibraries.get() }
             }
@@ -228,6 +234,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.description = "Fails if frontend libraries do not match the Gradle configuration."
                 task.spec.set(librarySpec)
                 task.messagesDirectory.set(messages)
+                task.routesDirectory.set(routes)
                 task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
                 task.mustRunAfter(sync)
                 task.onlyIf("libraries are configured") { hasLibraries.get() && !skipFrontend }
@@ -240,6 +247,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.dependsOn(sync)
             task.spec.set(librarySpec)
             task.messagesDirectory.set(messages)
+            task.routesDirectory.set(routes)
             task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
         }
         project.tasks.matching { it.name == "svelteDevAll" }.configureEach { it.dependsOn(sync) }
@@ -258,6 +266,12 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.hasRuntimeDependency.set(extension.addRuntimeDependency)
                 task.iconsFile.from(extension.frontendDir.file("src/lib/ktor-svelte/icons.json"))
                 task.messagesDirectory.set(extension.libraries.i18nSettings.messagesDir)
+                task.routesDirectory.set(extension.libraries.routesSettings.dir)
+                task.routeFiles.from(
+                    librarySpec.zip(extension.libraries.routesSettings.dir) { spec, dir ->
+                        if (spec.routes) dir.asFileTree.matching { it.include("**/+page*") } else emptyList<Any>()
+                    },
+                )
                 task.messageFiles.from(
                     extension.libraries.i18nSettings.messagesDir
                         .map { it.asFileTree },

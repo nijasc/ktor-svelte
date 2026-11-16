@@ -171,7 +171,13 @@ public abstract class SvelteDevTask : SvelteLibraryTask() {
     @TaskAction
     public fun dev() {
         val tool = tool()
-        val watcher = if (spec.orNull?.i18n != null) watchMessages() else null
+        val current = spec.orNull
+        val watched =
+            listOfNotNull(
+                messagesDirectory.get().asFile.takeIf { current?.i18n != null },
+                routesDirectory.get().asFile.takeIf { current?.routes == true },
+            )
+        val watcher = if (watched.isEmpty()) null else watchSources(watched)
         try {
             runTool(tool, tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort")))
         } finally {
@@ -179,21 +185,20 @@ public abstract class SvelteDevTask : SvelteLibraryTask() {
         }
     }
 
-    private fun watchMessages(): Thread {
-        val directory = messagesDirectory.get().asFile
+    private fun watchSources(directories: List<File>): Thread {
         val frontend = frontendDir.get().asFile
-        return thread(isDaemon = true, name = "ktor-svelte-messages") {
-            val detector = ChangeDetector(fingerprintOf(listOf(directory)), MESSAGES_SETTLE_MILLIS)
+        return thread(isDaemon = true, name = "ktor-svelte-sources") {
+            val detector = ChangeDetector(fingerprintOf(directories), MESSAGES_SETTLE_MILLIS)
             while (!Thread.currentThread().isInterrupted) {
                 try {
                     Thread.sleep(MESSAGES_POLL_MILLIS)
                 } catch (_: InterruptedException) {
                     return@thread
                 }
-                if (!detector.hasSettledChange(fingerprintOf(listOf(directory)), System.currentTimeMillis())) continue
+                if (!detector.hasSettledChange(fingerprintOf(directories), System.currentTimeMillis())) continue
                 runCatching { refreshGeneratedFiles(frontend, expectedFiles()) }
                     .onSuccess { changed ->
-                        changed.forEach { logger.lifecycle("ktor-svelte: updated $it from the message files.") }
+                        changed.forEach { logger.lifecycle("ktor-svelte: updated $it.") }
                     }.onFailure { logger.warn("ktor-svelte: ${it.message}") }
             }
         }

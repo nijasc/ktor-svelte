@@ -1,6 +1,6 @@
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, Lucide, i18n, image optimization, error toasts and typed routes, configured in Gradle with typed helpers on both sides.
 
 Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
 
@@ -26,6 +26,7 @@ svelte {
         lucide()
         images()
         toasts()
+        routes()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -166,6 +167,10 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 
 `toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](./calling-the-api.md#show-errors-automatically).
 
+## Routes
+
+`routes()` turns every page into a typed constant in TypeScript and Kotlin, for links and redirects that always point to a real page. See [Typed routes](./routes.md).
+
 ## i18n
 
 Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. `svelteInit` creates an empty file for every locale you configured, and never touches one that is already there. Files are flat, and `{name}` is a parameter:
@@ -208,8 +213,8 @@ Choose how the language is picked with `strategy`:
 | Strategy | URLs | Best for | Trade-off |
 |---|---|---|---|
 | `Cookie` (default) | `/about` | Apps behind a login | Prerendered pages hold the default language and switch on load, so others can flash briefly, and search engines mostly see one language |
-| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or pages won't be prerendered per language |
+| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or `href` from [typed routes](./routes.md), or pages won't be prerendered per language |
 
-On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy.
+On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy, and `call.localizeHref` does the same for redirects from Ktor.
 
 Parameters are plain text replacements. Plurals and date formatting aren't built in yet.

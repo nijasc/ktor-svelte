@@ -61,8 +61,9 @@ public data class LibrarySpec internal constructor(
     val images: Boolean = false,
     val toasts: Boolean = false,
     val allIcons: Boolean = false,
+    val routes: Boolean = false,
 ) : Serializable {
-    internal val isEmpty: Boolean get() = tailwind == null && daisy == null && !lucide && i18n == null && !images && !toasts
+    internal val isEmpty: Boolean get() = tailwind == null && daisy == null && !lucide && i18n == null && !images && !toasts && !routes
     internal val usesCss: Boolean get() = tailwind != null || daisy != null
     internal val usesHooks: Boolean get() = daisy != null || i18n != null
 

@@ -143,6 +143,7 @@ export default defineConfig({
                     { text: 'Runtime config', link: '/features/runtime-config' },
                     { text: 'Built-in endpoints', link: '/features/endpoints' },
                     { text: 'Frontend libraries', link: '/features/frontend-libraries' },
+                    { text: 'Typed routes', link: '/features/routes' },
                     { text: 'Security', link: '/security' }
                 ]
             },

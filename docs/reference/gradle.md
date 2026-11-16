@@ -33,7 +33,7 @@ svelte {
 | `bunVersion` | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. Unset by default. See [Pin Bun](#pin-bun) |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
-| `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](../features/frontend-libraries.md) |
+| `libraries` | Tailwind, DaisyUI, Lucide, i18n and typed routes. See [Frontend libraries](../features/frontend-libraries.md) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
