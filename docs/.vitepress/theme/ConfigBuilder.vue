@@ -24,6 +24,7 @@ const c = reactive({
     urlPrefix: false,
     images: false,
     toasts: true,
+    routes: true,
     pinBun: false,
     bunVersion: '1.3.14',
     sourceMaps: false,
@@ -77,6 +78,7 @@ const gradle = computed(() => {
     if (c.lucide) libraries.push(...(c.allIcons ? ['lucide {', '    allIcons()', '}'] : ['lucide()']));
     if (c.images) libraries.push('images()');
     if (c.toasts) libraries.push('toasts()');
+    if (c.routes) libraries.push('routes()');
     if (c.i18n && locales.value.length > 0) {
         libraries.push(
             'i18n {',
@@ -135,6 +137,7 @@ const recommendations = computed<Recommendation[]>(() => {
         !c.generateTs && { area: 'Developer experience', text: 'Generate a typed TypeScript client from your routes.', apply: () => (c.generateTs = true) },
         c.generateTs &&
             !c.toasts && { area: 'Developer experience', text: 'Show failed API calls as toasts, without error handling code.', apply: () => (c.toasts = true) },
+        !c.routes && { area: 'Developer experience', text: 'Check links and redirects to your pages at compile time.', apply: () => (c.routes = true) },
         !c.apiDocs && { area: 'Developer experience', text: 'Browse and try your API in Swagger UI while developing.', apply: () => (c.apiDocs = true) },
         !c.pinBun && { area: 'Operations', text: 'Pin Bun so CI and new laptops build without installing anything.', apply: () => (c.pinBun = true) },
         !c.healthEndpoint && { area: 'Operations', text: 'Add a health endpoint for Docker, Kubernetes or a load balancer.', apply: () => (c.healthEndpoint = true) },
@@ -187,6 +190,7 @@ async function copy(name: string, text: string) {
                 <label v-if="c.i18n" class="nested"><input v-model="c.urlPrefix" type="checkbox" /> Language in the URL, for SEO</label>
                 <label><input v-model="c.images" type="checkbox" /> Optimized images</label>
                 <label><input v-model="c.toasts" type="checkbox" /> Error toasts</label>
+                <label><input v-model="c.routes" type="checkbox" /> Typed routes</label>
             </fieldset>
             <fieldset>
                 <legend>Build <span>svelte { }</span></legend>

@@ -196,10 +196,20 @@ public abstract class LucideSettings {
     ): Nothing = throw unknownSetting(LucideSettings::class.java, "lucide", name)
 }
 
+public abstract class RoutesSettings {
+    public abstract val dir: DirectoryProperty
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(RoutesSettings::class.java, "routes", name)
+}
+
 public abstract class SvelteLibraries {
     public abstract val lucideEnabled: Property<Boolean>
     public abstract val imagesEnabled: Property<Boolean>
     public abstract val toastsEnabled: Property<Boolean>
+    public abstract val routesEnabled: Property<Boolean>
     public abstract val generatedPackage: Property<String>
 
     @get:Nested
@@ -213,6 +223,9 @@ public abstract class SvelteLibraries {
 
     @get:Nested
     public abstract val lucideSettings: LucideSettings
+
+    @get:Nested
+    public abstract val routesSettings: RoutesSettings
 
     public abstract val overrides: MapProperty<String, String>
 
@@ -231,6 +244,15 @@ public abstract class SvelteLibraries {
 
     public fun toasts() {
         toastsEnabled.set(true)
+    }
+
+    public fun routes() {
+        routesEnabled.set(true)
+    }
+
+    public fun routes(action: Action<RoutesSettings>) {
+        routesEnabled.set(true)
+        action.execute(routesSettings)
     }
 
     public fun tailwind(action: Action<TailwindSettings> = Action { }) {

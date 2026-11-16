@@ -367,25 +367,41 @@ class LibrariesTest {
                     lucide()
                     daisyUi()
                     i18n { locales("en", "de") }
+                    routes()
+                }
+            }
+
+            kotlin {
+                compilerOptions {
+                    allWarningsAsErrors = true
                 }
             }
             """.trimIndent(),
         )
         addLucide(project)
         messages(project)
+        listOf("", "notes/[id]", "(app)/docs/[[lang]]/[...path]").forEach { route ->
+            project.frontend
+                .resolve("src/routes/$route/+page.svelte")
+                .apply { parentFile.mkdirs() }
+                .writeText("")
+        }
         project.run("svelteSync")
+        assertContains(project.frontend.resolve("src/lib/ktor-svelte/routes.ts").readText(), "notesId: '/notes/[id]'")
         assertContains(project.frontend.resolve("src/lib/ktor-svelte/icons.json").readText(), "Icon3dRotate")
         val source = dir.resolve("src/main/kotlin/App.kt")
         source.parentFile.mkdirs()
         source.writeText(
             """
             import io.github.nijasc.ktorsvelte.AppTheme
+            import io.github.nijasc.ktorsvelte.FrontendRoutes
             import io.github.nijasc.ktorsvelte.LucideIcon
             import io.github.nijasc.ktorsvelte.Messages
 
             val icon = LucideIcon.ArrowRight
             val theme = AppTheme.Light
             val text = Messages.forLocale("de").hello("Nils")
+            val links = listOf(FrontendRoutes.home, FrontendRoutes.notesId("1"), FrontendRoutes.docsLangPath(path = "a/b"))
             """.trimIndent(),
         )
 

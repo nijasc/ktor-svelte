@@ -14,6 +14,7 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.kotlinFiles
 import io.github.nijasc.ktor.svelte.gradle.libraries.readMessages
 import io.github.nijasc.ktor.svelte.gradle.libraries.rootLayout
 import io.github.nijasc.ktor.svelte.gradle.libraries.runtimeProperties
+import io.github.nijasc.ktor.svelte.gradle.libraries.scanRoutes
 import io.github.nijasc.ktor.svelte.gradle.libraries.usedIcons
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -63,6 +64,7 @@ internal fun updatedPackageJson(
             if (spec.i18n != null) put("#i18n", "./$GENERATED_DIR/i18n.ts")
             if (spec.daisy != null) put("#theme", "./$GENERATED_DIR/theme.ts")
             if (spec.lucide) put("#icon", "./$GENERATED_DIR/Icon.svelte")
+            if (spec.routes) put("#routes", "./$GENERATED_DIR/routes.ts")
         }
     imports.entries.removeIf { (name, target) -> name !in aliases && target.toString().startsWith("./$GENERATED_DIR/") }
     imports.putAll(aliases)
@@ -91,6 +93,9 @@ public abstract class SvelteLibraryTask : SvelteToolTask() {
 
     @get:Internal
     public abstract val messagesDirectory: DirectoryProperty
+
+    @get:Internal
+    public abstract val routesDirectory: DirectoryProperty
 
     @get:Internal
     public abstract val kotlinSources: ConfigurableFileCollection
@@ -128,7 +133,8 @@ public abstract class SvelteLibraryTask : SvelteToolTask() {
         val current = spec.get()
         current.validate()
         val catalog = current.i18n?.let { readMessages(messagesDirectory.get().asFile, it.locales) }
-        return frontendFiles(current, catalog, frontend.resolve(USER_VITE_CONFIG).isFile)
+        val routes = if (current.routes) scanRoutes(routesDirectory.get().asFile) else null
+        return frontendFiles(current, catalog, frontend.resolve(USER_VITE_CONFIG).isFile, routes)
     }
 }
 
@@ -266,6 +272,13 @@ public abstract class SvelteGenerateSourcesTask : DefaultTask() {
     @get:Internal
     public abstract val messagesDirectory: DirectoryProperty
 
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    public abstract val routeFiles: ConfigurableFileCollection
+
+    @get:Internal
+    public abstract val routesDirectory: DirectoryProperty
+
     @get:OutputDirectory
     public abstract val kotlinDirectory: DirectoryProperty
 
@@ -294,7 +307,8 @@ public abstract class SvelteGenerateSourcesTask : DefaultTask() {
         val packagePath = current.generatedPackage.replace('.', '/')
         val kotlinRoot = kotlinDirectory.get().asFile
         kotlinRoot.deleteRecursively()
-        kotlinFiles(current, icons, catalog, hasRuntimeDependency.get()).forEach { (name, content) ->
+        val routes = if (current.routes) scanRoutes(routesDirectory.get().asFile) else null
+        kotlinFiles(current, icons, catalog, hasRuntimeDependency.get(), routes).forEach { (name, content) ->
             val file = kotlinRoot.resolve("$packagePath/$name")
             file.parentFile.mkdirs()
             file.writeText(content)

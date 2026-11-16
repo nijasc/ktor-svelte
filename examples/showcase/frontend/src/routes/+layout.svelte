@@ -5,6 +5,7 @@
     import Icon from '#icon';
     import '#lib/ktor-svelte/app.css';
     import { getLocale, locales, m, setLocale, type Locale } from '#i18n';
+    import { routes } from '#routes';
     import { loadSession, session, signOut } from '#lib/session.svelte.ts';
     import { defaultTheme, getTheme, setTheme, themes, type ThemeName } from '#theme';
 
@@ -37,7 +38,7 @@
 <a class="btn btn-sm sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50" href="#content">{m.skipToContent()}</a>
 
 <header class="navbar bg-base-100 border-b border-base-300 flex-wrap gap-2 px-4">
-    <a class="btn btn-ghost text-lg" href="/"><Icon name="Rocket" size={20} /> {appName}</a>
+    <a class="btn btn-ghost text-lg" href={routes.home()}><Icon name="Rocket" size={20} /> {appName}</a>
     <nav class="flex flex-1 flex-wrap gap-1" aria-label={m.navMain()}>
         {#each links as link (link.href)}
             <a class="btn btn-ghost btn-sm" href={link.href} aria-current={page.url.pathname === link.href ? 'page' : undefined}>
@@ -58,7 +59,7 @@
         <span id="signed-in-as" class="hidden text-sm sm:inline">{session.user.name}</span>
         <button class="btn btn-outline btn-sm" type="button" onclick={signOut}><Icon name="LogOut" size={16} /> {m.navSignOut()}</button>
     {:else if session.ready}
-        <a class="btn btn-primary btn-sm" href="/login"><Icon name="LogIn" size={16} /> {m.navSignIn()}</a>
+        <a class="btn btn-primary btn-sm" href={routes.login()}><Icon name="LogIn" size={16} /> {m.navSignIn()}</a>
     {/if}
 </header>
 

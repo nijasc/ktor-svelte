@@ -8,7 +8,8 @@
         "#lib/*": "./src/lib/*",
         "#i18n": "./src/lib/ktor-svelte/i18n.ts",
         "#theme": "./src/lib/ktor-svelte/theme.ts",
-        "#icon": "./src/lib/ktor-svelte/Icon.svelte"
+        "#icon": "./src/lib/ktor-svelte/Icon.svelte",
+        "#routes": "./src/lib/ktor-svelte/routes.ts"
     },
     "scripts": {
         "dev": "vite dev",

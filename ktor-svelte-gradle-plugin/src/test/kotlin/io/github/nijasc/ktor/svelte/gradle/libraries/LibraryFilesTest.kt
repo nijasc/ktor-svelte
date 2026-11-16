@@ -128,6 +128,7 @@ class LibraryFilesTest {
         assertContains(i18n, "location.pathname.split('/')[1]")
         assertContains(i18n, "document.documentElement.lang = getLocale();")
         assertContains(i18n, "ktor_svelte_locale=\${getLocale()}; path=/")
+        assertContains(i18n, "return path === '/' ? `/\${getLocale()}` : `/\${getLocale()}\${path}`;")
     }
 
     @Test

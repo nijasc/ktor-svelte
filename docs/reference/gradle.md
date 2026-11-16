@@ -33,7 +33,7 @@ svelte {
 | `bunVersion` | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. Unset by default. See [Pin Bun](#pin-bun) |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
-| `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](../features/frontend-libraries.md) |
+| `libraries` | Tailwind, DaisyUI, Lucide, i18n and typed routes. See [Frontend libraries](../features/frontend-libraries.md) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
@@ -57,14 +57,14 @@ Scores
   Security              [#########-]  90%  10 of 11
   Performance           [##########] 100%  4 of 4
   Operations            [#######---]  66%  2 of 3
-  Developer experience  [##########] 100%  4 of 4
+  Developer experience  [##########] 100%  5 of 5
 
 Suggestions
   - [Security] Set maxJsonStringLength = 100_000, or the longest text your API accepts.
   - [Operations] Set healthEndpoint = true and point your orchestrator at /_ktor-svelte/health.
 ```
 
-The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
+The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts, typed routes and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
 
 ## Pin Bun
 

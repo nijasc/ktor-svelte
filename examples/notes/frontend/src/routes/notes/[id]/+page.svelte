@@ -2,7 +2,8 @@
     import { goto } from '$app/navigation';
     import { api, field, isValidationError, NoteInput } from '#api';
     import Icon from '#icon';
-    import { localizeHref, m } from '#i18n';
+    import { m } from '#i18n';
+    import { routes } from '#routes';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();
@@ -32,11 +33,11 @@
 
     async function remove() {
         await api.notes.delete(data.note.id);
-        await goto(localizeHref('/notes'));
+        await goto(routes.notes());
     }
 </script>
 
-<a class="btn btn-ghost btn-sm" href={localizeHref('/notes')}><Icon name="ArrowLeft" size={16} /> {m.actionBack()}</a>
+<a class="btn btn-ghost btn-sm" href={routes.notes()}><Icon name="ArrowLeft" size={16} /> {m.actionBack()}</a>
 <h1 class="my-4 flex items-center gap-2 text-3xl font-bold"><Icon name={data.note.icon} /> {title}</h1>
 
 <form class="grid gap-2" onsubmit={save}>

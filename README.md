@@ -47,6 +47,7 @@ No CORS setup, no second server in production, no hand-written API types driftin
 - **Transport in one place.** JSON, XML and compression are configured inside `install(Svelte)`.
 - **Sensible production defaults.** Immutable caching for hashed assets, ETags, precompressed files, compressed API responses, SPA fallback, real 404s for stale chunks, and a generated `sitemap.xml` and `robots.txt`.
 - **Frontend libraries from Kotlin.** Turn on Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts in Gradle, with typed icons, themes and messages on both sides.
+- **Typed page routes.** Every SvelteKit page becomes a constant in TypeScript and Kotlin, so links and redirects to pages that don't exist fail to compile.
 - **Bring your package manager.** Bun, pnpm, npm or Yarn, picked from your lockfile.
 - **Run configurations for IntelliJ.** One click starts Vite and Ktor together.
 

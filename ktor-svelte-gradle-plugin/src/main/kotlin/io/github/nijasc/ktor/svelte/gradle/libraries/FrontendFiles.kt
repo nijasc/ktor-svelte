@@ -16,6 +16,7 @@ internal fun frontendFiles(
     spec: LibrarySpec,
     messages: MessageCatalog?,
     hasUserViteConfig: Boolean,
+    routes: List<FrontendRoute>? = null,
 ): Map<String, String> =
     buildMap {
         put("vite.config.ts", viteConfig(spec, hasUserViteConfig))
@@ -28,6 +29,7 @@ internal fun frontendFiles(
             put("src/hooks.server.ts", HOOKS_SERVER)
         }
         if (spec.i18n?.strategy == LocaleStrategy.UrlPrefix) put("src/hooks.ts", universalHooks(spec.i18n))
+        if (spec.routes && routes != null) put("$GENERATED_DIR/routes.ts", routesSource(routes, spec.i18n))
         if (spec.toasts) {
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
             put("src/hooks.client.ts", renderTemplate("hooks.client.ts"))
@@ -164,7 +166,7 @@ private fun i18nSource(
         } else {
             "    location.reload();\n"
         }
-    val localizeBody = if (urlPrefix) "`/${'$'}{getLocale()}${'$'}{path}`" else "path"
+    val localizeBody = if (urlPrefix) "path === '/' ? `/${'$'}{getLocale()}` : `/${'$'}{getLocale()}${'$'}{path}`" else "path"
     val prefixCookie =
         if (urlPrefix) {
             "    document.cookie = `$LOCALE_COOKIE=${'$'}{getLocale()}; path=/; max-age=31536000; samesite=lax`;\n"

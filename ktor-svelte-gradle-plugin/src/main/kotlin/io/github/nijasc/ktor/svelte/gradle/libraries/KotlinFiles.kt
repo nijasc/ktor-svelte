@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
+import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
 import io.github.nijasc.ktor.svelte.gradle.renderTemplate
 
 private const val MAX_GENERATED_LINE_LENGTH = 140
@@ -28,11 +29,13 @@ internal fun kotlinFiles(
     iconConstants: List<String>,
     messages: MessageCatalog?,
     hasRuntimeDependency: Boolean,
+    routes: List<FrontendRoute>? = null,
 ): Map<String, String> =
     buildMap {
         if (spec.lucide) put("LucideIcon.kt", lucideEnum(spec.generatedPackage, iconConstants))
         if (spec.daisy != null) put("AppTheme.kt", themeEnum(spec.generatedPackage, spec.daisy))
         if (spec.i18n != null && messages != null) put("Messages.kt", messagesClass(spec, messages))
+        if (spec.routes && routes != null) put("FrontendRoutes.kt", routesObject(spec.generatedPackage, routes))
         if (hasRuntimeDependency && (spec.daisy != null || spec.i18n != null)) {
             put("CallExtensions.kt", callExtensions(spec))
         }
@@ -143,4 +146,13 @@ private fun callExtensions(spec: LibrarySpec): String =
         if (spec.daisy != null) {
             append("public val ApplicationCall.theme: AppTheme get() = AppTheme.fromCssName(svelteTheme) ?: AppTheme.default\n")
         }
+        if (spec.i18n != null) append(localizeHref(spec.i18n))
+    }
+
+private fun localizeHref(i18n: I18nSpec): String =
+    if (i18n.strategy == LocaleStrategy.UrlPrefix) {
+        "\npublic fun ApplicationCall.localizeHref(path: String): String =\n" +
+            "    if (path == \"/\") \"/${'$'}svelteLocale\" else \"/${'$'}svelteLocale${'$'}path\"\n"
+    } else {
+        "\npublic fun ApplicationCall.localizeHref(path: String): String = path\n"
     }

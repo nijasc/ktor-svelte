@@ -2,6 +2,7 @@
     import { goto } from '$app/navigation';
     import { api, isValidationError, TaskInput } from '#api';
     import { m } from '#i18n';
+    import { routes } from '#routes';
     import TaskForm from '#lib/components/TaskForm.svelte';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
@@ -19,7 +20,7 @@
         try {
             const task = await api.tasks.create(draft);
             toast(m.taskCreated(), { kind: 'success' });
-            await goto(`/tasks/${task.id}`);
+            await goto(routes.tasksId({ id: task.id }));
         } catch (error) {
             if (!isValidationError(error)) throw error;
             errors = error.body.fields;
