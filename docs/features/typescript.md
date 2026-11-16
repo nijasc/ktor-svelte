@@ -157,6 +157,20 @@ export const notesCreate = (body: NoteInput, options?: RequestOptions) => ...
 
 The path is the file's package folder and name, so it is the same on every machine. The line number is left out on purpose: it would change the generated file every time you edit above a route. To jump to the exact line, use the route list at `/_ktor-svelte/routes` while the app runs in development.
 
+## Routes nothing calls
+
+A call to a route that no longer exists does not compile. The other direction needs a task: `svelteVerifyApiRoutes` lists the API routes that nothing in the frontend calls, so you can see what is safe to remove:
+
+```bash
+./gradlew svelteVerifyApiRoutes
+```
+
+```text
+GET /api/notes/export  ->  nothing in the frontend calls api.notes.export
+```
+
+A route counts as called when `api.notes.export`, a client from `apiWith`, the `notes` object or the `notesExport` function is used anywhere outside the generated folders, even when it is only passed along. The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service. Add `--strict` to fail the build instead.
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.
