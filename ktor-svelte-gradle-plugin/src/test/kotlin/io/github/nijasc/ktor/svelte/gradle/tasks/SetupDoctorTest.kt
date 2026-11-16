@@ -21,9 +21,24 @@ class SetupDoctorTest {
         dir.resolve("bun.lock").writeText("")
         dir.resolve("tsconfig.json").writeText("""{"extends":"${'$'}app/tsconfig"}""")
         dir.resolve("vite.config.ts").writeText("adapter({ fallback: '200.html' })")
-        dir.resolve("node_modules").mkdirs()
+        installPackage("@sveltejs/kit", """{"exports":{".":{"types":"./types/index.d.ts","import":"./src/index.js"}}}""", "src/index.js")
+        installPackage("@sveltejs/adapter-static", """{"main":"index.js"}""", "index.js")
         dir.resolve("src/routes").mkdirs()
         dir.resolve("src/routes/+page.ts").writeText("import { x } from '#lib/x.js';")
+    }
+
+    private fun installPackage(
+        name: String,
+        manifest: String,
+        vararg files: String,
+    ) {
+        val root = dir.resolve("node_modules/$name")
+        root.mkdirs()
+        root.resolve("package.json").writeText(manifest)
+        files.forEach { path ->
+            root.resolve(path).parentFile.mkdirs()
+            root.resolve(path).writeText("")
+        }
     }
 
     private fun bundleFrontend(manifestSize: Long = 5) {
@@ -41,6 +56,7 @@ class SetupDoctorTest {
         packageManager: PackageManager = PackageManager.Auto,
         node: String? = "v22.12.0",
         outputDir: String = "build",
+        environment: Map<String, String> = emptyMap(),
     ) = SetupDoctor(
         dir,
         packageManager,
@@ -50,6 +66,7 @@ class SetupDoctorTest {
         findExecutable = { if (toolFound) File(it) else null },
         isPortFree = { portFree },
         nodeVersion = { node },
+        environment = { environment[it] },
     ).examine()
 
     private fun List<Finding>.messagesAt(severity: Severity) = filter { it.severity == severity }.map { it.message }
@@ -180,5 +197,57 @@ class SetupDoctorTest {
         healthyProject()
         dir.resolve("package.json").writeText(goodManifest.replace("#api", "#other"))
         assertEquals(2, examine(portFree = false).messagesAt(Severity.WARN).size)
+    }
+
+    @Test
+    fun `packages that lost their files are an error naming the cache command`() {
+        healthyProject()
+        installPackage("picomatch", """{"main":"index.js"}""")
+        installPackage(
+            "rolldown",
+            """{"exports":{".":"./dist/index.mjs","./parseAst":"./dist/parse-ast-index.mjs"}}""",
+            "dist/shared/chunk.mjs",
+        )
+        installPackage("@types/estree", """{"main":"","types":"index.d.ts"}""")
+        val error = examine().messagesAt(Severity.ERROR).single()
+        assertTrue(error.contains("3 installed package(s) are missing their files (@types/estree, picomatch, rolldown)"), error)
+        assertTrue(error.contains("bun pm cache rm"), error)
+    }
+
+    @Test
+    fun `packages without declared entry files or with wildcard exports are not judged`() {
+        healthyProject()
+        installPackage("only-data", """{"name":"only-data"}""")
+        installPackage("wildcards", """{"exports":{"./*":"./dist/*.js"}}""")
+        installPackage("extensionless", """{"main":"lib/index"}""", "lib/index.js")
+        installPackage("folder-main", """{"main":"lib"}""", "lib/index.js")
+        assertEquals(emptyList(), examine().filter { it.severity != Severity.OK })
+    }
+
+    @Test
+    fun `a declared dependency that is not installed is a warning`() {
+        healthyProject()
+        dir.resolve("node_modules/@sveltejs/adapter-static").deleteRecursively()
+        val warning = examine().messagesAt(Severity.WARN).single()
+        assertTrue(warning.contains("@sveltejs/adapter-static in package.json is not installed"), warning)
+    }
+
+    @Test
+    fun `missing node_modules is a warning`() {
+        healthyProject()
+        dir.resolve("node_modules").deleteRecursively()
+        assertTrue(examine().messagesAt(Severity.WARN).single().contains("not installed yet"))
+    }
+
+    @Test
+    fun `extra certificates that do not exist are a warning`() {
+        healthyProject()
+        val missing = dir.resolve("corp-root.pem")
+        val warning = examine(environment = mapOf("NODE_EXTRA_CA_CERTS" to missing.path)).messagesAt(Severity.WARN).single()
+        assertTrue(warning.contains("NODE_EXTRA_CA_CERTS points to ${missing.path}, which does not exist"), warning)
+        missing.writeText("certificate")
+        val findings = examine(environment = mapOf("NODE_EXTRA_CA_CERTS" to missing.path))
+        assertEquals(emptyList(), findings.filter { it.severity != Severity.OK })
+        assertTrue(findings.any { it.message == "NODE_EXTRA_CA_CERTS file exists" })
     }
 }

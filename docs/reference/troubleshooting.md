@@ -36,6 +36,10 @@ The plugin needs to own `vite.config.ts` and the hooks files once frontend libra
 
 The frontend uses TypeScript 7, which SvelteKit 3 cannot load yet. It usually arrives through an automatic dependency update. Set `"typescript": "^6.0.0"` in `frontend/package.json` and install again. To keep it from coming back, tell your update bot to ignore major versions of `typescript`.
 
+### Cannot find module 'rolldown/parseAst', or another package that is installed
+
+The install was cut short: the package's folder exists in `node_modules`, but its files do not, and the package manager still reported success. `./gradlew svelteDoctor` names the packages that lost their files. Run `./gradlew svelteClean` and install again. If the same packages come back empty, the package manager's cache is the cause, so clear it with the command `svelteDoctor` prints, such as `bun pm cache rm`, and install once more.
+
 ### The frontend build failed with exit code 1
 
 ktor-svelte hides the package manager and Vite output while it succeeds and prints all of it when it fails, above this message. To see it every time, add `-Psvelte.verbose=true`.
