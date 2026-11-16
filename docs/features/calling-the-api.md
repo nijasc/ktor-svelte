@@ -591,6 +591,32 @@ try {
 
 With retries on, the client waits and sends the call again by itself, once, when the wait is no longer than `maxDelay`, which is five seconds unless you change it. That also applies to writes: a call the rate limit refused never reached your route, so sending it again cannot do the work twice. A longer wait is not sat out, and the error reaches you at once.
 
+### Writes that are safe to send twice
+
+A `GET` can be repeated without harm. A `POST` cannot: when the answer is lost on the way back, the browser does not know whether the order was placed, and sending it again may place it twice. That is why only `GET` requests are retried above.
+
+An idempotency key removes the doubt. The generated client adds a header, `Idempotency-Key`, with a fresh random value to every write, and uses the same value when it sends that call again. Turn on the server side, and a repeated key is answered with the stored first answer instead of doing the work again:
+
+```kotlin
+install(Svelte) {
+    idempotency()
+}
+```
+
+Now a write can be retried, when the call asks for it:
+
+```ts no-check
+await api.orders.create(order, { retry: true });
+```
+
+- The repeat gets the same status, body and headers as the first answer, plus `Idempotency-Replayed: true`. [Toasts and navigation from the server](#toasts-from-the-server) are repeated with it, since the first ones never arrived.
+- An answer with a status of 500 and above is not kept, so the retry does the work. A repeat that arrives while the first is still running is answered with 409 and the code `idempotency.inProgress`, which the client waits for and retries.
+- A key counts for one caller (the same `Authorization` and `Cookie` headers), one method and one path. Somebody else sending the same key gets their own result.
+- Answers are kept for ten minutes, at most 10,000 of them, in memory: `idempotency { ttl = 30.minutes; maxEntries = 50_000 }`. With several instances of the app behind a load balancer, a repeat only finds the answer on the instance that gave it.
+- Streamed answers and answers above 1 MiB are not kept. Reads and routes outside the API prefixes are not looked at.
+
+`retry` in `apiConfig` still applies to reads only. A write is retried when its own call says `retry`, so the decision stays next to the routes where you know the server side is on. To stop sending the header, set `apiConfig.idempotencyKeys = false`.
+
 ## The visitor's time zone
 
 The server usually runs in UTC, and the visitor does not. The generated client sends the browser's time zone with every call to your app, and a route reads it as `call.timeZone`:

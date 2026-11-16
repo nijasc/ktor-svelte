@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 72 | Idempotency keys |  |
+| 37 | Declared environment variables |  |
 
 ### In review
 
@@ -39,6 +39,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 95 | File drop zone | #288 |
 | 86 | Query parameters as a data class | #289 |
 | 92 | Exposed helpers | #290 |
+| 72 | Idempotency keys | #291 |
 
 ### Next up
 
@@ -133,7 +134,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 37 | Declared environment variables | Medium | 6 |
 | 46 | Secret leak check | Medium | 6 |
 | 82 | Deploy presets | Medium | 6 |
 | 49 | Plurals in messages | Medium | 7 |

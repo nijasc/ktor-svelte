@@ -280,6 +280,8 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getSpaFallback ()Ljava/lang/String;
 	public final fun getStatusEndpoint ()Z
 	public final fun healthCheck (Lkotlin/jvm/functions/Function1;)V
+	public final fun idempotency (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun idempotency$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun internalAccess (Lkotlin/jvm/functions/Function1;)V
 	public final fun paramRoutes ([Ljava/lang/String;)V
 	public final fun rateLimit (Lkotlin/jvm/functions/Function1;)V
@@ -335,6 +337,13 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun setSlowApiCall-BwNAW2A (Lkotlin/time/Duration;)V
 	public final fun setStartupTiming (Z)V
 	public final fun setUrl (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteIdempotencyConfig {
+	public final fun getMaxEntries ()I
+	public final fun getTtl-UwyO8pc ()J
+	public final fun setMaxEntries (I)V
+	public final fun setTtl-LRDsOJo (J)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteInternalAccessConfig {

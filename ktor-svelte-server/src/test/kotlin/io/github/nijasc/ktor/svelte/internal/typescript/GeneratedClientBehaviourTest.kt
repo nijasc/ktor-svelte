@@ -255,4 +255,15 @@ class GeneratedClientBehaviourTest {
         )
         assertEquals("upload.tooMany", forms.getValue("refused").jsonPrimitive.content)
     }
+
+    @Test
+    fun `every write carries one key, also across its retries, and a write is only retried when the call asks for it`() {
+        val idempotency = runHarness().getValue("idempotency").jsonObject
+        assertEquals("true", idempotency.getValue("writeHasKey").toString())
+        assertEquals("[null]", idempotency.getValue("readHasNone").toString())
+        assertEquals("""["ok",3,1]""", idempotency.getValue("retried").toString())
+        assertEquals("""["503",1]""", idempotency.getValue("notRetriedByDefault").toString())
+        assertEquals("""["mine"]""", idempotency.getValue("ownKey").toString())
+        assertEquals("""["503",[null]]""", idempotency.getValue("switchedOff").toString())
+    }
 }

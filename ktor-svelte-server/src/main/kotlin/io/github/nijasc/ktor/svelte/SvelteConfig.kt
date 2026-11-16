@@ -32,6 +32,7 @@ public class SvelteConfig internal constructor() {
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
     internal val constantHolders: MutableList<Any> = mutableListOf()
+    internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
     internal val typedCookies: MutableList<TypedCookie<*>> = mutableListOf()
     internal var errorCodeSet: ErrorCodeSet? = null
         private set
@@ -122,6 +123,13 @@ public class SvelteConfig internal constructor() {
 
     public fun constants(vararg holders: Any) {
         constantHolders.addAll(holders)
+    }
+
+    public fun idempotency(configure: SvelteIdempotencyConfig.() -> Unit = {}) {
+        idempotencyConfig.enabled = true
+        idempotencyConfig.configure()
+        require(idempotencyConfig.ttl.isPositive()) { "idempotency: ttl must be above zero, but is ${idempotencyConfig.ttl}." }
+        require(idempotencyConfig.maxEntries >= 1) { "idempotency: maxEntries must be at least 1, but is ${idempotencyConfig.maxEntries}." }
     }
 
     public fun rateLimit(configure: SvelteRateLimitConfig.() -> Unit) {

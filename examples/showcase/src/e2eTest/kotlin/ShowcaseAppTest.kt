@@ -293,6 +293,23 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `a write that is sent twice with one key creates one task`() {
+        val key = "e2e-" + System.nanoTime()
+        val title = "Once $key"
+        val first = member.send("POST", "/api/tasks", """{"title":"$title"}""", "Idempotency-Key" to key)
+        val again = member.send("POST", "/api/tasks", """{"title":"$title"}""", "Idempotency-Key" to key)
+        assertEquals(201, first.statusCode())
+        assertEquals(201, again.statusCode())
+        assertEquals(id(first), id(again))
+        assertEquals("true", again.headers().firstValue("Idempotency-Replayed").orElse(""))
+        assertEquals(first.headers().firstValue("X-Ktor-Svelte-Navigate"), again.headers().firstValue("X-Ktor-Svelte-Navigate"))
+        assertEquals(1, Regex(""""title":"$title"""").findAll(member.send("GET", "/api/tasks?search=$key").body()).count())
+
+        val other = admin.send("POST", "/api/tasks", """{"title":"$title by someone else"}""", "Idempotency-Key" to key)
+        assertEquals(false, id(other) == id(first))
+    }
+
+    @Test
     fun `an id that is a value class in Kotlin is its own type in the generated client`() {
         val types = File("frontend/src/lib/api/types.ts").readText().replace("\r\n", "\n")
         assertContains(types, "export type AttachmentId = number & { readonly [brand]: 'AttachmentId' };")
