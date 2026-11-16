@@ -131,6 +131,14 @@ class LibraryFilesTest {
     }
 
     @Test
+    fun `in development the messages note which texts are the same as in the default language`() {
+        val i18n = frontendFiles(spec(i18n = cookieI18n), catalog, false).getValue("$GENERATED_DIR/i18n.ts")
+        assertContains(i18n, "if (import.meta.env.DEV && locale !== defaultLocale && typeof document !== 'undefined'")
+        assertContains(i18n, "text === messages[defaultLocale][key]")
+        assertContains(i18n, "(globalThis.__ktorSvelteUntranslated ??= new Map()).set(result, { key, locale });")
+    }
+
+    @Test
     fun `url prefix adds reroute prerender entries and path based locale`() {
         val files = frontendFiles(spec(i18n = urlI18n), catalog, false)
         assertContains(files.getValue("src/hooks.ts"), "export const reroute")
