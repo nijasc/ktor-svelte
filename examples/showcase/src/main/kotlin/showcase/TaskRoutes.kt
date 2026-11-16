@@ -1,9 +1,11 @@
 package showcase
 
 import io.github.nijasc.ktor.svelte.Page
+import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.ToastKind
 import io.github.nijasc.ktor.svelte.toast
 import io.github.nijasc.ktor.svelte.validate
+import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
 import io.github.nijasc.ktorsvelte.theme
 import io.ktor.http.ContentDisposition
@@ -77,6 +79,8 @@ fun Route.taskRoutes(
             val input = call.receive<TaskInput>()
             call.checkAssignee(users, input)
             val task: Task = tasks.create(input, call.currentUser(users))
+            call.toast(call.messages.taskCreated(), ToastKind.Success)
+            call.navigateTo(FrontendRoutes.tasksId(task.id.toString()))
             call.respond(HttpStatusCode.Created, task)
         }
 

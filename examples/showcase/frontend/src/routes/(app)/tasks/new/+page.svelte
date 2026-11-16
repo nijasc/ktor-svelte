@@ -1,11 +1,8 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
     import { api, TaskInput } from '#api';
     import { m } from '#i18n';
-    import { routes } from '#routes';
     import { formState } from '#lib/api/form-state.svelte.ts';
     import TaskForm from '#lib/components/TaskForm.svelte';
-    import { toast } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();
@@ -16,10 +13,7 @@
     );
 
     async function create() {
-        const task = await form.submit((draft) => api.tasks.create(draft));
-        if (!task) return;
-        toast(m.taskCreated(), { kind: 'success' });
-        await goto(routes.tasksId({ id: task.id }));
+        await form.submit((draft) => api.tasks.create(draft));
     }
 </script>
 
