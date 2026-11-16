@@ -518,9 +518,12 @@ public class KtorSveltePlugin : Plugin<Project> {
         registerFormatTasks(project, extension, install)
         project.tasks.register("svelteGitHooks", SvelteGitHooksTask::class.java) { task ->
             task.group = TASK_GROUP
-            task.description = "Installs a pre-commit hook that checks formatting and generated files. Add --remove to take it out."
+            task.description =
+                "Installs a pre-commit hook that checks formatting and generated files, " +
+                "and keeps generated files out of merge conflicts. Add --remove to take it out."
             task.projectDirectory.set(project.layout.projectDirectory)
             task.hookTasks.set(listOf("formatCheck", "svelteVerifySync"))
+            task.regenerateTasks.set(project.provider { listOf("svelteSync", "svelteGenerateTs").filter { it in project.tasks.names } })
         }
         project.tasks.register("svelteCheck", SvelteCheckTask::class.java) { task ->
             configureToolTask(task, extension)
