@@ -70,6 +70,8 @@ class UserStore {
         return row?.toUser()?.takeIf { matches && it.active }
     }
 
+    suspend fun isTaken(email: String): Boolean = query { Users.selectAll().where { Users.email eq normalize(email) }.any() }
+
     suspend fun create(
         email: String,
         name: String,

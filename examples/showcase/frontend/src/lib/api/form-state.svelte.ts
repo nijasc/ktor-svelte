@@ -1,16 +1,22 @@
-import { errorMessage, isValidationError } from './client.js';
+import { untrack } from 'svelte';
+import { errorMessage, isValidationError, type RequestOptions } from './client.js';
 
 export type FieldErrors = Record<string, string[]>;
+
+export type FieldCheckRoute = (query: { value: string }, options?: RequestOptions) => Promise<{ message?: string | null }>;
 
 export interface FormStateOptions<T> {
     validate?: (draft: T) => FieldErrors | null | undefined;
     resetOnSuccess?: boolean;
+    checks?: Partial<Record<keyof T & string, FieldCheckRoute>>;
+    checkDelay?: number;
 }
 
 export interface FormState<T> {
     draft: T;
     readonly dirty: boolean;
     readonly submitting: boolean;
+    readonly checking: boolean;
     readonly errors: FieldErrors;
     readonly error: unknown;
     readonly message: string;
@@ -25,7 +31,51 @@ export function formState<T extends object>(initial: T, options: FormStateOption
     let submitting = $state(false);
     let errors = $state.raw<FieldErrors>({});
     let failure = $state.raw<unknown>(undefined);
+    let checked = $state.raw<FieldErrors>({});
+    let checking = $state(0);
     const dirty = $derived(JSON.stringify(draft) !== baseline);
+    const shown = $derived.by(() => {
+        const merged: FieldErrors = { ...errors };
+        for (const [name, messages] of Object.entries(checked)) merged[name] = [...(merged[name] ?? []), ...messages];
+        return merged;
+    });
+
+    function textOf(holder: T, name: string): string {
+        return String((holder as Record<string, unknown>)[name] ?? '');
+    }
+
+    function watch(name: string, ask: FieldCheckRoute) {
+        $effect(() => {
+            const value = textOf(draft, name);
+            untrack(() => {
+                if (!(name in checked)) return;
+                const rest = { ...checked };
+                delete rest[name];
+                checked = rest;
+            });
+            if (value === '' || value === textOf(saved, name)) return;
+            const controller = new AbortController();
+            const timer = setTimeout(() => {
+                checking += 1;
+                ask({ value }, { signal: controller.signal, silent: true })
+                    .then((answer) => {
+                        if (!controller.signal.aborted && answer.message) checked = { ...checked, [name]: [answer.message] };
+                    })
+                    .catch(() => undefined)
+                    .finally(() => {
+                        checking -= 1;
+                    });
+            }, options.checkDelay ?? 300);
+            return () => {
+                clearTimeout(timer);
+                controller.abort();
+            };
+        });
+    }
+
+    for (const [name, ask] of Object.entries(options.checks ?? {})) {
+        if (ask) watch(name, ask as FieldCheckRoute);
+    }
 
     function settle(value: T) {
         saved = $state.snapshot(value) as T;
@@ -36,6 +86,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         if (next !== undefined) settle(next);
         draft = $state.snapshot(saved) as T;
         errors = {};
+        checked = {};
         failure = undefined;
     }
 
@@ -49,6 +100,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
             return undefined;
         }
         errors = {};
+        if (Object.keys(checked).length > 0) return undefined;
         submitting = true;
         try {
             const result = await send(sending);
@@ -77,8 +129,11 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         get submitting() {
             return submitting;
         },
+        get checking() {
+            return checking > 0;
+        },
         get errors() {
-            return errors;
+            return shown;
         },
         get error() {
             return failure;

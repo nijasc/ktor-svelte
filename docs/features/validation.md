@@ -145,3 +145,46 @@ After a successful submit the sent values are the saved ones, so the form is no 
 `submit` never throws: a failed call ends up in `errors` or `error`. The failure still reaches `apiConfig.onError`, so with [toasts](calling-the-api.md#show-errors-automatically) on, the user sees it without any markup of yours.
 
 The helper uses runes, so it is a module of its own and not part of `#api`. The draft should be plain data, the kind that goes into a JSON body. `dirty` compares it as JSON.
+
+## Checks only the server can make
+
+Whether an email address is taken, or a coupon code exists, cannot be decided in the browser. Without help, the visitor learns it after sending the whole form. A check route answers the question for one value:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.fieldCheck
+
+routing {
+    fieldCheck("/api/checks/email") { email ->
+        if (email == "ada@example.com") "That email address already has an account." else null
+    }
+}
+```
+
+The block gets the value and returns what is wrong with it, or null when it is fine. It runs inside the route, so `call` is there for the current user or the language. The route is a `GET` with the value in the query, never cached, and part of the generated client like any other.
+
+`formState` asks it while the visitor types:
+
+```svelte no-check
+<script lang="ts">
+    import { api, field, Registration } from '#api';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<Registration>(Registration.empty(), {
+        validate: Registration.validate,
+        checks: { email: api.checks.getEmail }
+    });
+</script>
+
+<input type="email" bind:value={form.draft.email} use:field={{ errors: form.errors.email }} />
+```
+
+- The call waits until typing has paused for 300 ms (`checkDelay`), and an answer that arrives for an older value is dropped.
+- The answer is part of `form.errors.email`, next to the errors from `validate` and from a 422, so it shows up the same way with no extra markup.
+- While a check says no, `form.submit` does not send. `form.checking` is true while an answer is awaited.
+- An empty value and the value the form started with are not checked. A profile form does not tell its owner that their own email is taken.
+- A check that fails, because the server is unreachable or answers with an error, says nothing. The real answer comes when the form is sent.
+
+A check does not replace the rule in the route that saves: two people can pass the check at the same moment. Keep the rule there and treat the check as the earlier, friendlier message.
+
+A check route also tells anyone who asks whether a value exists. For email addresses that reveals who has an account, so put the route under a [rate limit](calling-the-api.md#rate-limits), as you would the sign-in route.
+

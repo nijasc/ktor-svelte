@@ -120,6 +120,33 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the server says while typing that an email is taken, and stops saying it when it changes`() {
+        page.openWhenInteractive("/register")
+        val asked = java.util.concurrent.CopyOnWriteArrayList<String>()
+        page.onRequest { request -> if ("/api/checks/email" in request.url()) asked += request.url().substringAfter("value=") }
+        val email = page.getByLabel("Email")
+        val alert = page.getByRole(AriaRole.ALERT)
+
+        email.pressSequentially(ADMIN_EMAIL)
+        assertThat(alert).hasText("That email address already has an account.")
+        assertThat(email).hasAttribute("aria-invalid", "true")
+        assertEquals(listOf(ADMIN_EMAIL.replace("@", "%40")), asked.toList())
+
+        page.getByLabel("Name").fill("Somebody")
+        page.getByLabel("Password").fill("registered-password")
+        page.button("Create account").click()
+        assertThat(alert).hasText("That email address already has an account.")
+        assertThat(page).hasURL(Pattern.compile(".*/register$"))
+
+        email.fill(unique("free").replace(" ", ".").lowercase() + "@example.com")
+        assertThat(alert).hasCount(0)
+        page.waitForCondition { asked.size == 2 }
+        assertThat(alert).hasCount(0)
+        page.button("Create account").click()
+        assertThat(page).hasURL(BOARD)
+    }
+
+    @Test
     fun `text typed before the page is interactive is kept`() {
         val held = mutableListOf<Route>()
         var holding = true

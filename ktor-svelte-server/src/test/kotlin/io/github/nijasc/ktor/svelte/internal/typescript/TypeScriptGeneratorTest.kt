@@ -862,7 +862,7 @@ class TypeScriptGeneratorTest {
         val files = generate()
         val helper = files.getValue("form-state.svelte.ts")
         assertContains(helper, "export function formState<T extends object>(initial: T, options: FormStateOptions<T> = {}): FormState<T> {")
-        assertContains(helper, "import { errorMessage, isValidationError } from './client.js';")
+        assertContains(helper, "import { errorMessage, isValidationError, type RequestOptions } from './client.js';")
         assertContains(helper, "let draft = \$state(")
         assertFalse("svelte" in files.getValue("index.ts"), "importing #api must not need the Svelte compiler")
         assertContains(files.getValue(".gitattributes"), "form-state.svelte.ts text eol=lf linguist-generated")

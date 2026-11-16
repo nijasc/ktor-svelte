@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 71 | Server checks while typing |  |
+| 31 | Branded ID types |  |
 
 ### In review
 
@@ -64,6 +64,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 69 | Typed error pages | #279 |
 | 94 | Theme and language switches | #280 |
 | 106 | Navigation progress bar | #281 |
+| 71 | Server checks while typing | #282 |
 
 ### Next up
 
@@ -124,7 +125,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 31 | Branded ID types | Medium | 6 |
 | 32 | Decimal and duration types | Medium | 6 |
 | 33 | Version conflicts | Medium | 6 |
 | 43 | `Patch<T>` partial updates | Medium | 6 |

@@ -144,6 +144,16 @@ export const CommentInput = {
     },
 };
 
+export interface FieldCheckAnswer {
+    message?: string | null;
+}
+
+export const FieldCheckAnswer = {
+    empty: (): FieldCheckAnswer => ({
+        message: null,
+    }),
+};
+
 export interface Greeting {
     message: string;
     locale: string;

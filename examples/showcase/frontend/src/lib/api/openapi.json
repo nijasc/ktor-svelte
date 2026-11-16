@@ -327,6 +327,53 @@
                 ]
             }
         },
+        "/api/checks/email": {
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "value",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FieldCheckAnswer"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/greeting": {
             "get": {
                 "summary": "",
@@ -1498,6 +1545,18 @@
                     },
                     "theme": {
                         "type": "string"
+                    }
+                }
+            },
+            "FieldCheckAnswer": {
+                "type": "object",
+                "title": "FieldCheckAnswer",
+                "properties": {
+                    "message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 }
             },
