@@ -391,6 +391,42 @@ After a change elsewhere on the page, `bind:this` the table and call its `reload
 
 The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
 
+### FileDrop
+
+A drop area with a file input for an [upload route](../recipes/uploads.md). Files can be dropped on it or chosen, and each one is shown while it travels: a preview for images, the name and size, a progress bar, and the reason when it was refused.
+
+```svelte no-check
+<script lang="ts">
+    import { api, uploadRules } from '#api';
+    import FileDrop from '#components/FileDrop.svelte';
+
+    let documents = $state<StoredFile[]>([]);
+</script>
+
+<FileDrop
+    label="Add documents"
+    hint="PDF or images, up to 5 MiB each."
+    multiple
+    rules={uploadRules['documents.create']}
+    upload={(file, options) => api.documents.create({ file }, options)}
+    onuploaded={(stored) => (documents = [...documents, stored])}
+/>
+```
+
+| Prop | Meaning |
+|---|---|
+| `upload` | Sends one file. Pass the route's generated function, and hand it the `options` it is given: they carry the progress. |
+| `label` | The label of the file input. |
+| `rules` | The route's entry in `uploadRules`. Its types become the input's `accept`. |
+| `hint` | A line under the input. |
+| `multiple` | Takes several files. They are sent one after another, each in its own request. |
+| `onuploaded` | Called with the route's answer and the file, after each one that went through. |
+| `problem` | Turns a failed upload into the text to show, for your own wording or language. Without it the server's message is shown. |
+| `uploading` | The start of the progress bar's accessible name, `Uploading` unless given. |
+| `disabled`, `id`, `class` | As on an input. |
+
+The route's rules are checked before a file is sent, as with any call to the generated function, so a file that is too large or of the wrong type is refused at once and nothing is uploaded. A file that went through leaves the list, and one that failed stays with its reason until the next files are chosen.
+
 ### ErrorPage
 
 `components()` also writes `src/routes/+error.svelte`, the page SvelteKit shows when a page cannot be shown. It is three lines around `<ErrorPage />`, which shows:
