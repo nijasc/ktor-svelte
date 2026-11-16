@@ -24,6 +24,7 @@ internal class SlowCallLog(
     private val threshold: Duration,
     private val resolver: RequestResolver,
     private val clock: () -> Long = System::nanoTime,
+    private val sensitive: SensitiveFields? = null,
 ) {
     private val sources = ConcurrentHashMap<RoutingNode, Any>()
     private val unknown = Any()
@@ -52,7 +53,8 @@ internal class SlowCallLog(
     ): String {
         val source = call.attributes.getOrNull(MatchedRoute)?.let(::sourceFor)
         val where = source?.let { " (${it.file}:${it.line})" }.orEmpty()
-        return "ktor-svelte: slow API call ${call.request.httpMethod.value} ${call.request.uri} took ${took.inWholeMilliseconds} ms$where"
+        val uri = sensitive?.maskQuery(call.request.uri) ?: call.request.uri
+        return "ktor-svelte: slow API call ${call.request.httpMethod.value} $uri took ${took.inWholeMilliseconds} ms$where"
     }
 
     private fun sourceFor(node: RoutingNode): SourceLocation? = sources.getOrPut(node) { handlerSource(node) ?: unknown } as? SourceLocation
