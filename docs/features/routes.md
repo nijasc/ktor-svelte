@@ -26,10 +26,10 @@ A folder is a page when it holds a `+page.svelte`, `+page.ts`, `+page.js` or `+p
 </script>
 
 <a href={href(routes.home)}>Home</a>
-<a href={href(routes.notesId, { id: note.id })}>{note.title}</a>
+<a href={href(routes.notesId, { id: String(note.id) })}>{note.title}</a>
 ```
 
-The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Since `href` goes through `resolve()`, a base path and relative prerender links work as usual. You can also pass a route to `resolve()` yourself, as in `resolve(routes.notesId, { id })`.
+The values in `routes` are SvelteKit route IDs, such as `/(app)/notes/[id]`, so use `href` whenever you need a URL. The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Since `href` goes through `resolve()`, a base path and relative prerender links work as usual. You can also pass a route to `resolve()` yourself, as in `resolve(routes.notesId, { id })`.
 
 With [i18n](./frontend-libraries.md#i18n) and `strategy = LocaleStrategy.UrlPrefix`, `href` also puts the current language in front, such as `/de/notes/1`, so every language gets prerendered without calling `localizeHref` by hand. With the `Cookie` strategy, or without i18n, it is plain `resolve()`.
 
