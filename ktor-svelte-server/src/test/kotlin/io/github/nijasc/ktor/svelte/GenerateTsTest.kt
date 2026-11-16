@@ -4,6 +4,7 @@ import io.github.nijasc.ktor.svelte.internal.typescript.findFrontendRoot
 import io.github.nijasc.ktor.svelte.internal.typescript.staleFiles
 import io.github.nijasc.ktor.svelte.internal.typescript.writeIfChanged
 import io.ktor.http.HttpStatusCode
+import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.application.install
 import io.ktor.server.request.receive
@@ -38,8 +39,12 @@ data class Todo(
 )
 
 @Serializable
+@JsonSchema.Description("What is needed to create a todo.")
 data class NewTodo(
+    @JsonSchema.Description("Shown in the list.")
     val title: String,
+    @JsonSchema.DeprecatedSchema
+    val color: String? = null,
 )
 
 @Serializable
@@ -115,7 +120,9 @@ class GenerateTsTest {
         assertContains(types, "id: number;")
         assertContains(types, "title: string;")
         assertContains(types, "tags?: string[];")
-        assertContains(types, "export interface NewTodo {")
+        assertContains(types, "/** What is needed to create a todo. */\nexport interface NewTodo {")
+        assertContains(types, "    /** Shown in the list. */\n    title: string;")
+        assertContains(types, "    /** @deprecated */\n    color?: string")
 
         val services = output.resolve("services.ts").readText()
         assertContains(services, "export const todos = {")
