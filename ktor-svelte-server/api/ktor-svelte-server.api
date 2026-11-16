@@ -312,6 +312,21 @@ public final class io/github/nijasc/ktor/svelte/TimeZonesKt {
 	public static final fun getTimeZone (Lio/ktor/server/application/ApplicationCall;)Ljava/time/ZoneId;
 }
 
+public final class io/github/nijasc/ktor/svelte/ToastKind : java/lang/Enum {
+	public static final field Error Lio/github/nijasc/ktor/svelte/ToastKind;
+	public static final field Info Lio/github/nijasc/ktor/svelte/ToastKind;
+	public static final field Success Lio/github/nijasc/ktor/svelte/ToastKind;
+	public static final field Warning Lio/github/nijasc/ktor/svelte/ToastKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/ToastKind;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/ToastKind;
+}
+
+public final class io/github/nijasc/ktor/svelte/ToastsKt {
+	public static final fun toast (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/ToastKind;)V
+	public static synthetic fun toast$default (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Lio/github/nijasc/ktor/svelte/ToastKind;ILjava/lang/Object;)V
+}
+
 public abstract interface annotation class io/github/nijasc/ktor/svelte/Trim : java/lang/annotation/Annotation {
 }
 
