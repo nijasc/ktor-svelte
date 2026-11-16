@@ -26,13 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 56 | Git pre-commit hook |  |
+| 57 | Reload data after restart |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 55 | One format command | #229 |
+| 56 | Git pre-commit hook | #230 |
 
 ### Next up
 
@@ -73,12 +73,12 @@ Features of this plan that are merged:
 | 36 | Unused endpoints report | #226 |
 | 45 | Rate limit aware client | #227 |
 | 53 | Build info on both sides | #228 |
+| 55 | One format command | #229 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 57 | Reload data after restart | Small | 2 |
 | 68 | Visitor time zone on the server | Small | 2 |
 | 70 | Refresh page data after writes | Small | 2 |
 | 76 | Starter page with next steps | Small | 2 |

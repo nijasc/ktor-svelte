@@ -11,12 +11,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 internal const val BUILD_INFO_RESOURCE = "ktor-svelte/build-info.properties"
 private const val UNSPECIFIED_VERSION = "unspecified"
-private const val GIT_TIMEOUT_SECONDS = 10L
 
 internal fun buildInfoProperties(
     version: String?,
@@ -34,19 +31,12 @@ internal abstract class GitOutputSource : ValueSource<String, GitOutputSource.Pa
     }
 
     override fun obtain(): String? =
-        try {
-            val process =
-                ProcessBuilder(listOf("git") + parameters.arguments.get())
-                    .directory(parameters.directory.get().asFile)
-                    .redirectErrorStream(true)
-                    .start()
-            val output = process.inputStream.bufferedReader().readText()
-            val finished = process.waitFor(GIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            if (!finished) process.destroyForcibly()
-            output.trim().takeIf { finished && process.exitValue() == 0 && it.isNotEmpty() }
-        } catch (_: IOException) {
-            null
-        }
+        gitOutput(
+            parameters.directory
+                .get()
+                .asFile,
+            *parameters.arguments.get().toTypedArray(),
+        )
 }
 
 @CacheableTask

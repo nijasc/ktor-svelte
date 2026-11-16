@@ -15,6 +15,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteFormatTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateSourcesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGitHooksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteLiveTemplatesTask
@@ -487,6 +488,12 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.dependsOn(install)
         }
         registerFormatTasks(project, extension, install)
+        project.tasks.register("svelteGitHooks", SvelteGitHooksTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Installs a pre-commit hook that checks formatting and generated files. Add --remove to take it out."
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.hookTasks.set(listOf("formatCheck", "svelteVerifySync"))
+        }
         project.tasks.register("svelteCheck", SvelteCheckTask::class.java) { task ->
             configureToolTask(task, extension)
             task.description = "Runs the frontend's check script."
