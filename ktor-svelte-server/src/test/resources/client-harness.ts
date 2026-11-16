@@ -51,11 +51,10 @@ await scenario('otherStatusesAreNotRetried', [500], () => request('GET', '/api/n
 await scenario('notFoundIsNotRetried', [404], () => request('GET', '/api/notes/1'), () => (apiConfig.retry = quick));
 await scenario('oneCallCanOptOut', [503], () => request('GET', '/api/notes', { retry: false }), () => (apiConfig.retry = quick));
 await scenario('oneCallCanOptIn', [503, 200], () => request('GET', '/api/notes', { retry: { attempts: 2, delay: 1 } }));
-await scenario('trueUsesTheDefaults', [network(), 200], () => request('GET', '/api/notes', { retry: true }), () => {
-    const original = globalThis.setTimeout;
-    globalThis.setTimeout = ((run: () => void) => original(run, 0)) as typeof setTimeout;
-    queueMicrotask(() => original(() => (globalThis.setTimeout = original), 20));
-});
+const patientTimeout = globalThis.setTimeout;
+globalThis.setTimeout = ((run: () => void) => patientTimeout(run, 0)) as typeof setTimeout;
+await scenario('trueUsesTheDefaults', [network(), 200], () => request('GET', '/api/notes', { retry: true }));
+globalThis.setTimeout = patientTimeout;
 
 let reported = 0;
 await scenario('reportsOnlyTheLastFailure', [503], () => request('GET', '/api/notes'), () => {
