@@ -150,7 +150,7 @@ internal fun routesSource(
     i18n: I18nSpec?,
 ): String {
     val ids = routes.joinToString(",\n") { "    ${it.name}: '${it.id.replace("\\", "\\\\").replace("'", "\'")}'" }
-    val builders = routes.joinToString(",\n") { "    ${it.name}: route(routeIds.${it.name})" }
+    val builders = routes.joinToString(",\n") { "    ${it.name}: link(routeIds.${it.name})" }
     val localized = i18n?.strategy == LocaleStrategy.UrlPrefix
     return buildString {
         append("// $GENERATED_MARKER\n")
@@ -160,6 +160,7 @@ internal fun routesSource(
         append("\nexport const routeIds = {\n$ids\n} as const;\n\n")
         append(ROUTE_TYPES)
         append(if (localized) LOCALIZED_ROUTE else PLAIN_ROUTE)
+        append(ACTIVE_LINKS)
         append("\nexport const routes = {\n$builders\n};\n")
     }
 }
@@ -175,6 +176,42 @@ private val ROUTE_TYPES =
     |          ? [params?: { [K in keyof RouteParams<T>]: RouteParams<T>[K] | number }]
     |          : [params: { [K in keyof RouteParams<T>]: RouteParams<T>[K] | number }];
     |
+    |
+    """.trimMargin()
+
+private val ACTIVE_LINKS =
+    """
+    |
+    |export interface CurrentPage {
+    |    route: { id: string | null };
+    |}
+    |
+    |export interface ActiveOptions {
+    |    below?: boolean;
+    |}
+    |
+    |export interface RouteLink<T extends RouteId> {
+    |    (...args: RouteArgs<T>): string;
+    |    readonly id: T;
+    |    isActive(page: CurrentPage, options?: ActiveOptions): boolean;
+    |    ariaCurrent(page: CurrentPage, options?: ActiveOptions): 'page' | 'true' | undefined;
+    |}
+    |
+    |function withoutGroups(id: string): string {
+    |    return id.replace(/\/\([^/]+\)/g, '') || '/';
+    |}
+    |
+    |function link<T extends RouteId>(id: T): RouteLink<T> {
+    |    const own = withoutGroups(id);
+    |    const isOpen = (page: CurrentPage) => page.route.id !== null && withoutGroups(page.route.id) === own;
+    |    const isAbove = (page: CurrentPage) => own !== '/' && page.route.id !== null && withoutGroups(page.route.id).startsWith(own + '/');
+    |    return Object.assign(route(id), {
+    |        id,
+    |        isActive: (page: CurrentPage, options?: ActiveOptions) => isOpen(page) || (options?.below === true && isAbove(page)),
+    |        ariaCurrent: (page: CurrentPage, options?: ActiveOptions) =>
+    |            isOpen(page) ? ('page' as const) : options?.below === true && isAbove(page) ? ('true' as const) : undefined
+    |    });
+    |}
     |
     """.trimMargin()
 

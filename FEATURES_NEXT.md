@@ -26,13 +26,14 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 88 | Active link helper |  |
+| 90 | Free the dev ports |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
 | 84 | Project guide for coding assistants | #238 |
+| 88 | Active link helper | #239 |
 
 ### Next up
 
@@ -85,7 +86,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 90 | Free the dev ports | Small | 2 |
 | 97 | Input normalisation | Small | 2 |
 | 98 | Startup timing breakdown | Small | 2 |
 | 100 | Restart summary line | Small | 2 |

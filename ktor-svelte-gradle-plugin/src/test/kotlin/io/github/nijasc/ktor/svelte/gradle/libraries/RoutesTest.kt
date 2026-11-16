@@ -1,9 +1,13 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
+import groovy.json.JsonSlurper
 import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
+import io.github.nijasc.ktor.svelte.gradle.locateExecutable
 import org.gradle.api.GradleException
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -11,6 +15,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+
+private const val ROUTE_TYPE_STUBS = "type RouteId = string;\ntype RouteParams<T> = Record<string, string>;"
 
 class RoutesTest {
     @TempDir
@@ -91,7 +97,7 @@ class RoutesTest {
         assertTrue(source.startsWith("// $GENERATED_MARKER\n"))
         assertContains(source, "import { resolve } from '\$app/paths';")
         assertContains(source, "export const routeIds = {\n    home: '/',\n    notesId: '/notes/[id]'\n} as const;")
-        assertContains(source, "export const routes = {\n    home: route(routeIds.home),\n    notesId: route(routeIds.notesId)\n};")
+        assertContains(source, "export const routes = {\n    home: link(routeIds.home),\n    notesId: link(routeIds.notesId)\n};")
         assertContains(source, "RouteParams<T>[K] | number")
         assertContains(source, "(resolve as (id: string, params?: object) => string)(id, ...args)")
         assertFalse(source.contains("getLocale"))
@@ -99,6 +105,31 @@ class RoutesTest {
             source,
             routesSource(listOf(routeOf("/"), routeOf("/notes/[id]")), I18nSpec(listOf("en"), "en", LocaleStrategy.Cookie)),
         )
+    }
+
+    @Test
+    fun `a route knows whether it is the open page or a page above it`() {
+        val bun = locateExecutable("bun")
+        assumeTrue(bun != null, "bun is not on PATH")
+        val ids = listOf("/", "/(app)/notes", "/(app)/notes/[id]", "/(app)/notes/[id]/edit", "/(app)/notebooks", "/about")
+        val source =
+            routesSource(ids.map(::routeOf), null)
+                .replace("import { resolve } from '\$app/paths';", "const resolve = (id: string) => id;")
+                .replace("import type { RouteId, RouteParams } from '\$app/types';", ROUTE_TYPE_STUBS)
+        val routes = dir.resolve("routes.ts").apply { writeText(source) }
+        val harness = File(checkNotNull(javaClass.getResource("/routes-harness.ts")).toURI())
+        val process = ProcessBuilder(bun!!.path, harness.path, routes.path).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertEquals(true, process.waitFor(60, TimeUnit.SECONDS), output)
+        assertEquals(0, process.exitValue(), output)
+        val results = JsonSlurper().parseText(output.lines().last { it.startsWith("{") }) as Map<*, *>
+
+        assertEquals(mapOf("open" to true, "other" to false, "noRoute" to false, "child" to false), results["exact"])
+        assertEquals(mapOf("open" to true, "child" to true, "deeper" to true, "similarName" to false, "other" to false), results["below"])
+        assertEquals(mapOf("open" to true, "anyOtherPage" to false), results["home"])
+        assertEquals(listOf("page", null, "true", null), results["ariaCurrent"])
+        assertEquals(listOf("/(app)/notes", "/(app)/notes/[id]"), results["stillBuildsUrls"])
+        assertEquals("/(app)/notes/[id]", results["id"])
     }
 
     @Test
