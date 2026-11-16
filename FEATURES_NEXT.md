@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 102 | Short task names |  |
+| 104 | Generated files never conflict |  |
 
 ### In review
 
@@ -39,6 +39,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 98 | Startup timing breakdown | #242 |
 | 100 | Restart summary line | #243 |
 | 101 | Highlight your own frames | #244 |
+| 102 | Short task names | #245 |
 
 ### Next up
 
@@ -91,7 +92,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 104 | Generated files never conflict | Medium | 2 |
 | 109 | Protect internal endpoints | Small | 2 |
 | 11 | Draft and form state helper | Medium | 3 |
 | 12 | Replay and copy as curl | Medium | 3 |
