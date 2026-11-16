@@ -89,6 +89,116 @@ const viteOverlay = Promise.race([
 ]);
 
 const features = new URL(import.meta.url).searchParams;
+const plainFetch = window.fetch.bind(window);
+const CONFIG_OVERRIDES = 'ktor-svelte:config-overrides';
+const CONFIG_PATH = '/_ktor-svelte/config.json';
+
+function configOverrides() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(CONFIG_OVERRIDES) ?? '{}');
+        return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    } catch {
+        return {};
+    }
+}
+
+function saveConfigOverrides(overrides) {
+    if (Object.keys(overrides).length === 0) localStorage.removeItem(CONFIG_OVERRIDES);
+    else localStorage.setItem(CONFIG_OVERRIDES, JSON.stringify(overrides));
+}
+
+function overridePublicConfig() {
+    const overrides = configOverrides();
+    if (Object.keys(overrides).length === 0) return;
+    const inline = document.getElementById('ktor-svelte-config');
+    if (inline?.textContent) {
+        try {
+            inline.textContent = JSON.stringify({ ...JSON.parse(inline.textContent), ...overrides });
+        } catch {
+            inline.textContent = inline.textContent;
+        }
+    }
+    const send = window.fetch;
+    window.fetch = async function (input, init) {
+        const response = await send.call(this, input, init);
+        try {
+            const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+            if (new URL(url, location.href).pathname !== CONFIG_PATH || !response.ok) return response;
+            const headers = new Headers(response.headers);
+            headers.delete('content-length');
+            headers.delete('content-encoding');
+            const merged = { ...(await response.clone().json()), ...overrides };
+            return new Response(JSON.stringify(merged), { status: response.status, headers });
+        } catch {
+            return response;
+        }
+    };
+}
+
+function configEditor(root) {
+    const section = root.querySelector('.config');
+    const rows = root.querySelector('.config-rows');
+    const note = root.querySelector('.config-note');
+    const overrides = configOverrides();
+    const drafts = new Map();
+    let loaded = false;
+
+    function row(name, value) {
+        const line = document.createElement('label');
+        line.className = name in overrides ? 'config-row overridden' : 'config-row';
+        const label = document.createElement('span');
+        label.textContent = name;
+        const input = document.createElement('input');
+        input.value = JSON.stringify(name in overrides ? overrides[name] : value);
+        input.setAttribute('aria-label', name);
+        input.spellcheck = false;
+        input.addEventListener('input', () => drafts.set(name, input.value));
+        line.append(label, input);
+        return line;
+    }
+
+    async function load() {
+        if (loaded) return;
+        loaded = true;
+        try {
+            const response = await plainFetch(CONFIG_PATH, { headers: { accept: 'application/json' } });
+            if (!response.ok) throw new Error(String(response.status));
+            const base = await response.json();
+            const names = [...new Set([...Object.keys(base), ...Object.keys(overrides)])];
+            rows.replaceChildren(...names.map((name) => row(name, base[name])));
+            note.textContent = names.length === 0 ? 'The public config is empty.' : 'Values are JSON. They change for this browser only.';
+            section.dataset.base = JSON.stringify(base);
+        } catch {
+            note.textContent = 'This app has no publicConfig.';
+        }
+    }
+
+    section.addEventListener('toggle', () => void load());
+    root.querySelector('.config-apply').addEventListener('click', () => {
+        const base = JSON.parse(section.dataset.base ?? '{}');
+        const next = { ...overrides };
+        for (const [name, text] of drafts) {
+            let value;
+            try {
+                value = JSON.parse(text);
+            } catch {
+                note.textContent = `${name} is not valid JSON. Put text in double quotes.`;
+                return;
+            }
+            if (JSON.stringify(value) === JSON.stringify(base[name])) delete next[name];
+            else next[name] = value;
+        }
+        saveConfigOverrides(next);
+        location.reload();
+    });
+    root.querySelector('.config-reset').addEventListener('click', () => {
+        saveConfigOverrides({});
+        location.reload();
+    });
+    const count = Object.keys(overrides).length;
+    root.querySelector('.config-count').textContent = count === 0 ? '' : ` (${count} changed)`;
+    root.querySelector('.overrides').hidden = count === 0;
+}
 const kitClient = /@sveltejs\/kit\/src\/runtime\/client\/client\.js(\?|$)/;
 const kitEntry = /["'`]([^"'`]*@sveltejs\/kit\/src\/runtime\/client\/)entry\.js[^"'`]*["'`]/;
 
@@ -157,6 +267,16 @@ button.path:hover { text-decoration: underline; }
 .sql { grid-column: 2 / -1; color: #aaa; }
 .sql .repeated { color: #f3c969; }
 .empty { padding: 10px; color: #aaa; font-family: system-ui, sans-serif; }
+.overrides { padding: 2px 6px; border-radius: 999px; background: #f3c969; color: #1f1b3a; }
+.overrides[hidden] { display: none; }
+.config { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.config summary { padding: 6px 10px; cursor: pointer; }
+.config-row { display: grid; grid-template-columns: minmax(80px, 1fr) 2fr; gap: 8px; padding: 3px 10px; align-items: center; }
+.config-row input { min-width: 0; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
+.config-row.overridden span { color: #f3c969; }
+.config-note { margin: 0; padding: 4px 10px; color: #aaa; }
+.config-actions { display: flex; gap: 8px; padding: 6px 10px 10px; }
+.config-actions button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
 `;
 
 const seenCalls = new Map();
@@ -266,9 +386,18 @@ function startPanel() {
     host.setAttribute('data-ktor-svelte-panel', '');
     const root = host.attachShadow({ mode: 'open' });
     root.innerHTML = `<style>${panelStyles}</style>
-        <button class="toggle" type="button" aria-expanded="false">API <span class="count">0</span></button>
+        <button class="toggle" type="button" aria-expanded="false">API <span class="count">0</span><span class="overrides" hidden>config changed</span></button>
         <section class="panel" hidden aria-label="API requests">
             <div class="head"><strong>API requests</strong><button type="button" class="clear">Clear</button></div>
+            <details class="config">
+                <summary>Public config<span class="config-count"></span></summary>
+                <div class="config-rows"></div>
+                <p class="config-note">Loading...</p>
+                <div class="config-actions">
+                    <button type="button" class="config-apply">Apply and reload</button>
+                    <button type="button" class="config-reset">Reset all</button>
+                </div>
+            </details>
             <div class="list"><div class="empty">No API calls yet.</div></div>
         </section>`;
     const toggle = root.querySelector('.toggle');
@@ -341,6 +470,7 @@ function startPanel() {
         entries = [];
         draw();
     });
+    configEditor(root);
     const source = new EventSource('/_ktor-svelte/dev/requests');
     source.onopen = () => {
         entries = [];
@@ -357,6 +487,7 @@ function startPanel() {
 }
 
 if (features.has('panel')) {
+    overridePublicConfig();
     rememberCalls();
     if (document.body) startPanel();
     else document.addEventListener('DOMContentLoaded', startPanel);
