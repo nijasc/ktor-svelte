@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-Sixty-two features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+Sixty-nine features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## Scope
 
@@ -72,6 +72,13 @@ Sixty-two features is far more than one release holds. The [order](#order) puts 
 | 60 | Multiple frontends | Server and Gradle plugin | Large | |
 | 61 | Emails from Svelte components | Gradle plugin and server | Large | |
 | 62 | Typed cookies | Server and generated client | Medium | |
+| 63 | Field component | Generated files | Medium | 11 |
+| 64 | Inputs for dates and enums | Generated files | Medium | |
+| 65 | Data table for paged routes | Generated files | Medium | 9 |
+| 66 | Inline page data | Server and Gradle plugin | Large | 28 |
+| 67 | Session expiry warning | Server and generated client | Small | 21 |
+| 68 | Visitor time zone on the server | Server and generated client | Small | |
+| 69 | Typed error pages | Generated files | Small | |
 
 ## What each one does
 
@@ -203,22 +210,36 @@ Sixty-two features is far more than one release holds. The [order](#order) puts 
 61. **Emails from Svelte components.** Email templates are written as Svelte components. The build renders them to HTML, and Kotlin gets a typed function per template that fills in the values, with the same theme and messages as the app.
 62. **Typed cookies.** A cookie is declared once in Kotlin with its type and options, and read and written with the same name and type on both sides, as the theme and locale cookies already are internally.
 
+### Generated UI building blocks
+
+63. **Field component.** A generated `<Field>` renders label, input, hint and validation errors for one DTO field, with bounds from the schema and DaisyUI or plain styling. It uses the existing `field` action underneath.
+64. **Inputs for dates and enums.** `<DateInput>`, `<DateTimeInput>` and `<EnumSelect>` bind directly to the generated `IsoDate` types and enum objects, so no page converts strings by hand.
+65. **Data table for paged routes.** A generated table component wired to `pages()`: typed columns, load more or page buttons, and loading and empty states, for any route that returns `Page<T>`.
+69. **Typed error pages.** A generated `+error.svelte` shows the right message for 404, 403 and 500, the request ID for server errors, and uses the typed error body, in the app's theme and languages.
+
+### Speed, sessions and time
+
+66. **Inline page data.** In production the server puts the answers to a page's first API calls into the HTML it sends, as it already does for `publicConfig`, so the page renders with data and without a second round trip.
+67. **Session expiry warning.** The frontend knows when the session ends, warns shortly before, and can extend it with one call, instead of the user losing a half-filled form to a sudden 401.
+68. **Visitor time zone on the server.** The visitor's time zone reaches Kotlin with every request as `call.timeZone`, so emails, exports and formatted dates use the user's zone and not the server's.
+
 ## Order
 
 1. The route check group (1, 2, 3), because all three build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57). Each is a self-contained pull request.
+2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68). Each is a self-contained pull request.
 3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51, 58).
 4. The server talks to the UI (25, 26, 27), shared constants (20) and typed cookies (62). They share one mechanism: the server says something once, and the generated client acts on it.
-5. Richer shared types (31, 32, 33, 43, 44) and declared environment variables (37), then the secret leak check (46), which reads that declaration.
-6. Languages (49, 50), self-hosted fonts (59) and the API change report (48).
-7. One login (21, then 24, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
-8. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16) and generated page loads (28). All of them change how a route or a page is described, so they are designed together.
-9. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30) and the accessibility check (47), which runs on the test kit's browser.
-10. The installable app (52) and emails from Svelte components (61). Both add a second kind of build output next to the pages.
-11. Multiple frontends (60). It changes the one-frontend, one-manifest assumption the whole project rests on, so it is a candidate for 2.0 and not for a minor release.
-12. `svelteUpgrade` (17) last.
+5. Generated UI building blocks (63, 64, 65, 69). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
+6. Richer shared types (31, 32, 33, 43, 44) and declared environment variables (37), then the secret leak check (46), which reads that declaration.
+7. Languages (49, 50), self-hosted fonts (59) and the API change report (48).
+8. One login (21, then 24, 67, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
+9. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16), generated page loads (28) and inline page data (66). All of them change how a route or a page is described, so they are designed together.
+10. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30) and the accessibility check (47), which runs on the test kit's browser.
+11. The installable app (52) and emails from Svelte components (61). Both add a second kind of build output next to the pages.
+12. Multiple frontends (60). It changes the one-frontend, one-manifest assumption the whole project rests on, so it is a candidate for 2.0 and not for a minor release.
+13. `svelteUpgrade` (17) last.
 
-Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list. Groups 5 to 10 are enough for 1.3.0 and 1.4.0, and any of them can move there without rework.
+Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list. Groups 5 to 11 are enough for 1.3.0 through 1.5.0, and any of them can move there without rework.
 
 ## Open decisions
 
@@ -261,6 +282,12 @@ Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list
 | Multiple frontends | Does it fit a minor release? | Probably not. The manifest, the request resolver, the dev proxy and every Gradle task assume one frontend. It needs a design note first and is likely a 2.0 feature. |
 | Emails from Svelte components | How are components rendered without a browser? | Open. It needs a second build step that renders components on the server side and inlines their CSS, which the plugin does not have today. It needs a design note before any code. |
 | Typed cookies | What about `HttpOnly` cookies? | They stay server-only. The frontend half is generated only for cookies declared readable by scripts. |
+| Generated UI building blocks | Does every app get components it did not ask for? | No. They are a library like the others, turned on with `libraries { components() }`, and the files are generated and owned by the plugin. An app that needs a different look writes its own on top of the same helpers. |
+| Generated UI building blocks | Does this make ktor-svelte a component library? | It must not. The set stays at the pieces that exist only because of the generated types: a field, typed inputs, a paged table and an error page. Buttons, dialogs and layout stay with DaisyUI or the app. |
+| Typed error pages | What if the app already has a `+error.svelte`? | It is left alone. The page is written once when there is none, like the root layout. |
+| Inline page data | Whose data is inlined? | Open. The answers depend on the visitor's session, so nothing may be cached or shared between visitors, and the server must make the calls as that visitor. It is designed together with generated page loads (28), which provides the list of calls. |
+| Session expiry warning | How does the frontend learn the expiry time? | From the typed current user endpoint, which returns it next to the user. The app supplies it, because ktor-svelte does not own the session. |
+| Visitor time zone | How does it reach the server? | A cookie the dev and production client sets from the browser's zone. The first request of a new visitor has none, so `call.timeZone` then falls back to a configured default. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -282,6 +309,10 @@ These were offered and not chosen for 1.2.0:
 - Dev loop: frontend type errors in the dev log, a locale and theme switcher in the dev panel.
 - Setup and editors: adding setup features to an existing project, VS Code configurations.
 - Server: redirect rules, a typed Kotlin test client.
+- Generated UI: a command palette built from the routes.
+- Speed and reach: preload headers, an offline write queue, a publishable client package.
+- Sessions and tracing: trace context from the browser to the server, a "report a problem" helper.
+- Bigger bets and upkeep: shared Kotlin logic compiled for the browser, undo for destructive actions, a deprecation report.
 
 ## Release
 
