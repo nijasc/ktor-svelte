@@ -11,6 +11,7 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
 | `openapi.json` | The OpenAPI document itself |
+| `.gitattributes` | Marks these files as generated and keeps their line endings the same on every machine, so Git on Windows does not warn about them and GitHub folds them in diffs |
 
 To see the output for your own API before installing anything, paste its OpenAPI document into the [generator playground](./playground).
 
