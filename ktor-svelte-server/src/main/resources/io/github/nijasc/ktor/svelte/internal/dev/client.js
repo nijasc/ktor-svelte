@@ -106,13 +106,108 @@ const panelStyles = `
 .panel[hidden] { display: none; }
 .head { position: sticky; top: 0; display: flex; justify-content: space-between; padding: 8px 10px; background: #2b2650; font-family: system-ui, sans-serif; }
 .head button { border: 0; background: none; color: #bbb; cursor: pointer; font: inherit; }
-.row { display: grid; grid-template-columns: 52px 1fr 40px 64px; gap: 8px; padding: 4px 10px; border-top: 1px solid #2b2650; }
+.row { display: grid; grid-template-columns: 52px 1fr 40px 64px auto; gap: 8px; padding: 4px 10px; border-top: 1px solid #2b2650; }
+.tools { display: flex; gap: 6px; }
+.tools button { padding: 0 4px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.tools button:disabled { opacity: .4; cursor: default; }
 .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ok { color: #7bd88f; } .warn { color: #f3c969; } .bad { color: #ff7b72; }
 .ms { text-align: right; color: #aaa; }
 .fields { grid-column: 2 / -1; color: #f3c969; white-space: pre-wrap; }
 .empty { padding: 10px; color: #aaa; font-family: system-ui, sans-serif; }
 `;
+
+const seenCalls = new Map();
+const KEPT_CALLS = 200;
+const REQUEST_ID = 'x-request-id';
+
+function rememberCalls() {
+    const send = window.fetch;
+    window.fetch = function (input, init) {
+        try {
+            const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+            const id = headers.get(REQUEST_ID);
+            if (id) {
+                const body = init?.body;
+                seenCalls.set(id, {
+                    headers: [...headers].filter(([name]) => name !== REQUEST_ID),
+                    body: typeof body === 'string' ? body : undefined,
+                    bodyNotKept: body != null && typeof body !== 'string'
+                });
+                if (seenCalls.size > KEPT_CALLS) seenCalls.delete(seenCalls.keys().next().value);
+            }
+        } catch {
+            return send.call(this, input, init);
+        }
+        return send.call(this, input, init);
+    };
+}
+
+function canRepeat(entry) {
+    const seen = seenCalls.get(entry.id);
+    if (seen) return !seen.bodyNotKept;
+    return entry.method === 'GET' || entry.method === 'HEAD';
+}
+
+function replay(entry) {
+    const seen = seenCalls.get(entry.id);
+    const headers = new Headers(seen?.headers ?? [['accept', 'application/json']]);
+    headers.set(REQUEST_ID, crypto.randomUUID());
+    return window.fetch(entry.path, { method: entry.method, headers, body: seen?.body, credentials: 'same-origin' }).catch(() => undefined);
+}
+
+function quoted(text) {
+    return `'${text.replaceAll("'", `'\\''`)}'`;
+}
+
+function curlCommand(entry) {
+    const seen = seenCalls.get(entry.id);
+    const parts = ['curl', '-X', entry.method, quoted(location.origin + entry.path)];
+    for (const [name, value] of seen?.headers ?? []) parts.push('-H', quoted(`${name}: ${value}`));
+    if (entry.id) parts.push('-H', quoted(`X-Request-Id: ${entry.id}`));
+    if (seen?.body !== undefined) parts.push('--data-raw', quoted(seen.body));
+    return parts.join(' ');
+}
+
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        document.body.append(area);
+        area.select();
+        const copied = document.execCommand('copy');
+        area.remove();
+        return copied;
+    }
+}
+
+function toolButton(label, title, run) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.title = title;
+    button.addEventListener('click', () => run(button));
+    return button;
+}
+
+function rowTools(entry) {
+    const tools = document.createElement('span');
+    tools.className = 'tools';
+    const repeatable = canRepeat(entry);
+    const why = 'This page did not see the body of this call, so it cannot be repeated from here.';
+    const again = toolButton('Replay', repeatable ? 'Send this call again' : why, () => void replay(entry));
+    again.disabled = !repeatable;
+    const curl = toolButton('curl', repeatable ? 'Copy this call as a curl command' : why, async (button) => {
+        button.textContent = (await copyText(curlCommand(entry))) ? 'Copied' : 'Failed';
+        setTimeout(() => (button.textContent = 'curl'), 1500);
+    });
+    curl.disabled = !repeatable;
+    tools.append(again, curl);
+    return tools;
+}
 
 function statusClass(status) {
     if (status >= 500) return 'bad';
@@ -160,6 +255,7 @@ function startPanel() {
                 cell.className = className;
                 row.append(cell);
             }
+            row.append(rowTools(entry));
             if (entry.fields) {
                 const fields = document.createElement('span');
                 fields.className = 'fields';
@@ -193,6 +289,7 @@ function startPanel() {
 }
 
 if (features.has('panel')) {
+    rememberCalls();
     if (document.body) startPanel();
     else document.addEventListener('DOMContentLoaded', startPanel);
 }
