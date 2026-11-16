@@ -27,14 +27,45 @@ function route<T extends RouteId>(id: T): (...args: RouteArgs<T>) => string {
     return (...args) => (resolve as (id: string, params?: object) => string)(id, ...args);
 }
 
+export interface CurrentPage {
+    route: { id: string | null };
+}
+
+export interface ActiveOptions {
+    below?: boolean;
+}
+
+export interface RouteLink<T extends RouteId> {
+    (...args: RouteArgs<T>): string;
+    readonly id: T;
+    isActive(page: CurrentPage, options?: ActiveOptions): boolean;
+    ariaCurrent(page: CurrentPage, options?: ActiveOptions): 'page' | 'true' | undefined;
+}
+
+function withoutGroups(id: string): string {
+    return id.replace(/\/\([^/]+\)/g, '') || '/';
+}
+
+function link<T extends RouteId>(id: T): RouteLink<T> {
+    const own = withoutGroups(id);
+    const isOpen = (page: CurrentPage) => page.route.id !== null && withoutGroups(page.route.id) === own;
+    const isAbove = (page: CurrentPage) => own !== '/' && page.route.id !== null && withoutGroups(page.route.id).startsWith(own + '/');
+    return Object.assign(route(id), {
+        id,
+        isActive: (page: CurrentPage, options?: ActiveOptions) => isOpen(page) || (options?.below === true && isAbove(page)),
+        ariaCurrent: (page: CurrentPage, options?: ActiveOptions) =>
+            isOpen(page) ? ('page' as const) : options?.below === true && isAbove(page) ? ('true' as const) : undefined
+    });
+}
+
 export const routes = {
-    home: route(routeIds.home),
-    admin: route(routeIds.admin),
-    board: route(routeIds.board),
-    settings: route(routeIds.settings),
-    tasksId: route(routeIds.tasksId),
-    tasksNew: route(routeIds.tasksNew),
-    about: route(routeIds.about),
-    login: route(routeIds.login),
-    register: route(routeIds.register)
+    home: link(routeIds.home),
+    admin: link(routeIds.admin),
+    board: link(routeIds.board),
+    settings: link(routeIds.settings),
+    tasksId: link(routeIds.tasksId),
+    tasksNew: link(routeIds.tasksNew),
+    about: link(routeIds.about),
+    login: link(routeIds.login),
+    register: link(routeIds.register)
 };
