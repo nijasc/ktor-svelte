@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-Ninety-two features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+One hundred and five features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## What matters most
 
@@ -12,11 +12,11 @@ The most important thing is to make what a developer does a hundred times easier
 
 | Done a hundred times | Features |
 |---|---|
-| Writing a route | Typed path parameters (35), query parameters as a data class (86), `call.user` (87), `respondPage` (9) |
-| Writing a form or a button | Draft and form state helper (11), confirm helper (89), field component (63), refresh page data after writes (70) |
+| Writing a route | Typed path parameters (35), query parameters as a data class (86), input normalisation (97), `call.user` (87), `respondPage` (9) |
+| Writing a form or a button | Draft and form state helper (11), confirm helper (89), dialog helper (93), field component (63), refresh page data after writes (70) |
 | Linking and navigating | `svelteVerifyRoutes --fix` (2), active link helper (88), server-directed navigation (26) |
-| Waiting on the dev loop | Reload data after restart (57), free the dev ports (90), fold repeated stack traces (5) |
-| Keeping things tidy | One format command (55), git pre-commit hook (56), rename a page safely (91) |
+| Waiting on and reading the dev loop | Reload data after restart (57), free the dev ports (90), short task names (102), restart summary line (100), fold repeated stack traces (5), highlight your own frames (101) |
+| Keeping things tidy | Editor-time lint rules (103), generated files never conflict (104), one format command (55), git pre-commit hook (56), rename a page safely (91) |
 
 ## Scope
 
@@ -114,6 +114,19 @@ The most important thing is to make what a developer does a hundred times easier
 | 90 | Free the dev ports | Gradle plugin | Small | |
 | 91 | Rename a page safely | Gradle plugin | Medium | 2 |
 | 92 | Exposed helpers | New optional module | Medium | 9 |
+| 93 | Dialog helper | Generated files | Small | |
+| 94 | Theme and language switches | Generated files | Small | |
+| 95 | File drop zone | Generated files | Medium | 27, 44 |
+| 96 | Relative time | Generated files | Small | 50 |
+| 97 | Input normalisation | Server | Small | |
+| 98 | Startup timing breakdown | Server | Small | |
+| 99 | Sensitive fields | Server | Medium | |
+| 100 | Restart summary line | Dev log | Small | |
+| 101 | Highlight your own frames | Dev log | Small | 5 |
+| 102 | Short task names | Gradle plugin | Small | |
+| 103 | Editor-time lint rules | Generated files | Medium | 4, #202 |
+| 104 | Generated files never conflict | Gradle plugin | Medium | #205 |
+| 105 | HTTPS in development | Server and Gradle plugin | Medium | |
 
 ## What each one does
 
@@ -305,23 +318,48 @@ The most important thing is to make what a developer does a hundred times easier
 91. **Rename a page safely.** `svelteRename --page=notes/[id] --to=memos/[id]` moves the folder and updates every typed route call in Svelte and Kotlin.
 92. **Exposed helpers.** Optional helpers for apps that use Exposed: map a row to a DTO by column name, and page a query by cursor straight into `Page<T>`.
 
+### Ready-made pieces
+
+93. **Dialog helper.** `const dialog = modal()` gives `open()`, `close()`, a result promise and the attributes for a `<dialog>`, so a DaisyUI modal needs no `bind:this` and `showModal()` by hand.
+94. **Theme and language switches.** `<ThemeToggle>` and `<LocaleSwitch>` components over the theme and i18n helpers the plugin already generates, so a new app has both on day one.
+95. **File drop zone.** A drop area and file input bound to a typed upload route, with preview, the route's allowed types and size, and upload progress.
+96. **Relative time.** `timeAgo(note.createdAt)` prints "3 minutes ago" in the visitor's language and keeps itself current while the page is open.
+
+### The Kotlin side day to day
+
+97. **Input normalisation.** `@Trim`, `@Lowercase` and `@EmptyAsNull` on DTO fields are applied when a request body is received, before validation, so no route cleans up strings by hand.
+98. **Startup timing breakdown.** In development the app logs what its startup time was spent on, so a slow restart can be fixed at the right place.
+99. **Sensitive fields.** `@Sensitive` on a DTO field masks its value in the dev panel, the dev log and frontend error reports, so passwords and tokens never show up there.
+
+### Reading the dev log
+
+100. **Restart summary line.** Each restart prints one line: which file caused it, how long compile and startup took, and whether the generated client changed.
+101. **Highlight your own frames.** In stack traces the frames from the app's own code are printed first and are clickable in the IDE console, and library frames are dimmed.
+
+### Typing less and fewer snags
+
+102. **Short task names.** `./gradlew dev`, `sync`, `doctor` and `gen` as aliases for `svelteDevAll`, `svelteSync`, `svelteDoctor` and `svelteGenerateTs`.
+103. **Editor-time lint rules.** ESLint rules shipped with the generated files flag string links to pages, API calls in `load` without `{ fetch }` and reading `error.body.message` directly, as you type and not only in a Gradle task.
+104. **Generated files never conflict.** A git merge driver for the generated folders: on a merge or a rebase the files are regenerated instead of producing conflicts.
+105. **HTTPS in development.** `dev { https = true }` serves the dev app over HTTPS with a locally trusted certificate, for secure cookies, service workers and sign-in providers that require it.
+
 ## Order
 
-1. The route check group (1, 2, 3), then renaming a page (91), because all of them build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68, 70, 76, 83, 84, 88, 90). Each is a self-contained pull request.
-3. The client helper and the dev panel group (11 to 14, then 89, 38, 39, 40, 51, 58, 74, 75, 78, 80).
+1. The route check group (1, 2, 3), then renaming a page (91) and the editor-time lint rules (103), because all of them build on the matcher from #202.
+2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68, 70, 76, 83, 84, 88, 90, 97, 98, 100, 101, 102, 104). Each is a self-contained pull request.
+3. The client helper and the dev panel group (11 to 14, then 89, 93, 38, 39, 40, 51, 58, 74, 75, 78, 80, 99).
 4. The server talks to the UI (25, 26, 27), shared constants (20), typed error codes (73) and typed cookies (62), then the cookie inspector (79) and the consent helper (85), which read the declared cookies. They share one mechanism: the server says something once, and the generated client acts on it.
-5. Generated UI building blocks (63, 64, 65, 69) and server checks while typing (71). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
-6. Richer shared types (31, 32, 33, 43, 44), query parameters as a data class (86), the Exposed helpers (92), idempotency keys (72) and declared environment variables (37), then the secret leak check (46) and the deploy presets (82), which read that declaration.
-7. Languages (49, 50), self-hosted fonts (59), the API change report (48) and the production smoke test (81).
+5. Generated UI building blocks (63, 64, 65, 69, 94) and server checks while typing (71). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
+6. Richer shared types (31, 32, 33, 43, 44), the file drop zone (95), query parameters as a data class (86), the Exposed helpers (92), idempotency keys (72) and declared environment variables (37), then the secret leak check (46) and the deploy presets (82), which read that declaration.
+7. Languages (49, 50, 96), self-hosted fonts (59), the API change report (48) and the production smoke test (81).
 8. One login (21, then 87, 24, 67, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
 9. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16), page metadata for sharing (77), generated page loads (28) and inline page data (66). All of them change how a route or a page is described, so they are designed together.
 10. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30) and the accessibility check (47), which runs on the test kit's browser.
-11. The installable app (52) and emails from Svelte components (61). Both add a second kind of build output next to the pages.
+11. HTTPS in development (105), the installable app (52), which needs it for testing, and emails from Svelte components (61).
 12. Multiple frontends (60). It changes the one-frontend, one-manifest assumption the whole project rests on, so it is a candidate for 2.0 and not for a minor release.
 13. `svelteUpgrade` (17) last.
 
-Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list. Groups 5 to 11 are enough for 1.3.0 through 1.6.0, and any of them can move there without rework.
+Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 11 are enough for 1.3.0 through 1.7.0, and any of them can move there without rework.
 
 ## Open decisions
 
@@ -389,6 +427,14 @@ Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list
 | Free the dev ports | Which processes may it stop? | Only ones it started itself, which it recognises by a record written at start. Any other process is named with its ID and left alone. |
 | Rename a page safely | What about links from outside the app? | The task prints the old path, so the app can add a redirect. It does not commit anything, and it stops when the working tree has unsaved changes to the files it would touch. |
 | Exposed helpers | Does the runtime gain a dependency on Exposed? | No. They ship as a separate small module, `ktor-svelte-exposed`, so `ktor-svelte-server` stays free of it. |
+| Ready-made pieces | Are the switches, the dialog helper and the drop zone part of the components library? | Yes. They are generated with `libraries { components() }` and follow the same rule: only pieces that exist because of something the plugin already generates. |
+| Input normalisation | When does it run? | In the same step that receives the body, before the validation rules, and the docs state that order. The value the route sees is the normalised one. |
+| Startup timing breakdown | How does ktor-svelte know what the app did? | It can time its own phases and the gaps between Ktor's application events. Anything finer needs the app to wrap a step in `startupPhase("database") { }`. |
+| Sensitive fields | Does it change what the API returns? | No. It only masks values where ktor-svelte itself shows or logs them. Keeping a field out of a response stays the app's job. |
+| Short task names | What if a name is taken? | Each alias is only registered when its name is free, and `svelte { shortTaskNames = false }` turns them all off. |
+| Editor-time lint rules | How do they reach the editor? | As a small local ESLint plugin in the generated folder. New projects get it wired into `eslint.config.js`, and existing ones add one line, because the plugin never edits that file. The rules share their logic with tasks 4 and `svelteVerifyRoutes`, so both always agree. |
+| Generated files never conflict | Can that be committed? | Only half. `.gitattributes` names the merge driver, but git reads the driver itself from each clone's own config, so a task installs it per clone, together with the pre-commit hook (56). Without it, git behaves as it does today. |
+| HTTPS in development | Who trusts the certificate? | Open. The plugin can create a local certificate authority in the user's home folder, but adding it to the system trust store needs the user's approval, and on a managed machine it may not be allowed. The task must explain the step, not perform it silently. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -424,6 +470,12 @@ These were offered and not chosen for 1.2.0:
 - Writing routes: routes that return their answer, error shortcuts such as `notFound()`, endpoint scaffolding.
 - Loading and calling: a load helper that runs calls together, an action helper with pending and error state.
 - Dev loop: holding requests during a restart, messages created on first use, copying a request as a client call, live templates for the new helpers.
+- Small frontend helpers: a persisted state rune, debounce and throttle runes, a pack of common actions, a select filled from the API.
+- Kotlin side: a transaction per request in the Exposed module.
+- Dev log: filters and levels, a summary of what changed in the generated client.
+- Dev panel: filtering and searching requests, the call site of each request, a response diff after a change, a keyboard shortcut and remembered layout.
+- Renames and cleanup: renaming a message key, removing unused messages, sorted locale files, a report of unused pages and components.
+- When something goes wrong: doctor checks on task failure, a response shape check in development, the closest route on an API 404, a warning for unhandled API errors.
 
 ## Release
 
