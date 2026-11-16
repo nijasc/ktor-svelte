@@ -204,6 +204,101 @@ function routeMap(root) {
     filter.addEventListener('input', draw);
 }
 
+const A11Y_PROBLEM = 'data-ktor-svelte-a11y';
+const AXE_MODULE = '/node_modules/axe-core/axe.min.js';
+
+function accessibilityHints(root) {
+    const section = root.querySelector('.a11y');
+    const rows = root.querySelector('.a11y-rows');
+    const note = root.querySelector('.a11y-note');
+    const again = root.querySelector('.a11y-check');
+    let checking = false;
+
+    const style = document.createElement('style');
+    style.textContent = `[${A11Y_PROBLEM}] { outline: 3px solid #ff5a52 !important; outline-offset: 2px; }`;
+    document.head.append(style);
+
+    function clearHighlight() {
+        document.querySelectorAll(`[${A11Y_PROBLEM}]`).forEach((element) => element.removeAttribute(A11Y_PROBLEM));
+    }
+
+    function highlight(violation) {
+        clearHighlight();
+        const elements = violation.nodes.flatMap((node) => {
+            try {
+                return [...document.querySelectorAll(node.target.join(' '))];
+            } catch {
+                return [];
+            }
+        });
+        elements.forEach((element) => element.setAttribute(A11Y_PROBLEM, violation.id));
+        elements[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    async function axe() {
+        if (!window.axe) await import(/* @vite-ignore */ AXE_MODULE);
+        return window.axe;
+    }
+
+    async function check() {
+        if (checking) return;
+        checking = true;
+        clearHighlight();
+        note.textContent = 'Checking...';
+        try {
+            let engine;
+            try {
+                engine = await axe();
+            } catch {
+                engine = undefined;
+            }
+            if (!engine) {
+                rows.replaceChildren();
+                note.textContent = 'This needs axe-core in the frontend. Add it as a dev dependency, such as with: bun add -d axe-core';
+                return;
+            }
+            const result = await engine.run(document, { resultTypes: ['violations'] }).catch(() => undefined);
+            const violations = (result?.violations ?? [])
+                .map((violation) => ({
+                    ...violation,
+                    nodes: violation.nodes.filter((node) => !node.target.some((part) => String(part).includes('ktor-svelte')))
+                }))
+                .filter((violation) => violation.nodes.length > 0);
+            root.querySelector('.a11y-count').textContent = ` (${violations.length})`;
+            note.textContent = violations.length === 0 ? 'axe found no problems on this page.' : 'Click a problem to see where it is.';
+            rows.replaceChildren(
+                ...violations.map((violation) => {
+                    const row = document.createElement('button');
+                    row.type = 'button';
+                    row.className = `a11y-row ${violation.impact ?? 'minor'}`;
+                    row.title = violation.description;
+                    const impact = document.createElement('span');
+                    impact.textContent = violation.impact ?? 'minor';
+                    const help = document.createElement('span');
+                    help.textContent = `${violation.help} (${violation.nodes.length})`;
+                    const rule = document.createElement('a');
+                    rule.href = violation.helpUrl;
+                    rule.target = '_blank';
+                    rule.rel = 'noreferrer';
+                    rule.textContent = violation.id;
+                    rule.addEventListener('click', (event) => event.stopPropagation());
+                    row.append(impact, help, rule);
+                    row.addEventListener('click', () => highlight(violation));
+                    return row;
+                })
+            );
+        } finally {
+            checking = false;
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void check();
+        else clearHighlight();
+    });
+    again.addEventListener('click', () => void check());
+}
+
 const UNTRANSLATED = 'data-ktor-svelte-untranslated';
 const OUTLINE_UNTRANSLATED = 'ktor-svelte:outline-untranslated';
 
@@ -429,6 +524,15 @@ button.path:hover { text-decoration: underline; }
 .routes-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aaa; text-align: left; }
 button.routes-file { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
 button.routes-file:hover { text-decoration: underline; }
+.a11y { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.a11y summary { padding: 6px 10px; cursor: pointer; }
+.a11y-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; color: #aaa; }
+.a11y-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.a11y-row { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; width: 100%; padding: 3px 10px; border: 0; background: none; color: #eee; font: inherit; text-align: left; cursor: pointer; }
+.a11y-row:hover { background: #2b2650; }
+.a11y-row span:first-child { color: #f3c969; }
+.a11y-row.critical span:first-child, .a11y-row.serious span:first-child { color: #ff7b72; }
+.a11y-row a { color: #9ecbff; }
 .untranslated { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .untranslated[hidden] { display: none; }
 .untranslated summary { padding: 6px 10px; cursor: pointer; }
@@ -651,6 +755,11 @@ function startPanel() {
                 </div>
                 <div class="routes-rows"></div>
             </details>
+            <details class="a11y">
+                <summary>Accessibility<span class="a11y-count"></span></summary>
+                <div class="a11y-tools"><button type="button" class="a11y-check">Check again</button><span class="a11y-note"></span></div>
+                <div class="a11y-rows"></div>
+            </details>
             <details class="untranslated" hidden>
                 <summary>Not translated<span class="untranslated-count"></span></summary>
                 <label><input type="checkbox" class="untranslated-outline" /> Outline them on the page</label>
@@ -740,6 +849,7 @@ function startPanel() {
     root.querySelector('.save').addEventListener('click', saveFixtures);
     configEditor(root);
     routeMap(root);
+    accessibilityHints(root);
     untranslatedTexts(root);
     const source = new EventSource('/_ktor-svelte/dev/requests');
     source.onopen = () => {
