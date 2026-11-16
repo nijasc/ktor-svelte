@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -295,7 +296,13 @@ class DevModeBrowserTest {
         assertTrue(command.startsWith("curl -X POST '$APP/api/session'"), command)
         assertContains(command, "-H 'content-type: application/json'")
         assertContains(command, "-H 'X-Request-Id: ")
-        assertContains(command, "--data-raw '{\"email\":\"$ADMIN_EMAIL\",\"password\":\"not-the-password\"}'")
+        assertContains(command, "--data-raw '{\"email\":\"$ADMIN_EMAIL\",\"password\":\"***\"}'")
+        assertFalse("not-the-password" in command, "a field marked @Sensitive must not reach the clipboard")
+
+        val download = page.waitForDownload { panel.locator(".save").click() }
+        val saved = download.path().toFile().readText()
+        assertContains(saved, "\"password\": \"***\"")
+        assertFalse("not-the-password" in saved, "nor a saved fixture")
 
         failed.getByText("Replay").click()
         waitFor("the replayed call in the list", 20) { refused.count() == before + 1 }
