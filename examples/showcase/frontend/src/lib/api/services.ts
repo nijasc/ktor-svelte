@@ -1,5 +1,5 @@
 import { ApiError, request, codeMessages, errorCode, type RequestOptions } from './client.js';
-import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, Greeting, Login, PasswordChange, Problem, ProfileInput, PublicConfig, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
+import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, FieldCheckAnswer, Greeting, Login, PasswordChange, Problem, ProfileInput, PublicConfig, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
 
 /** @see showcase/Auth.kt */
 export const adminGetUsers = (options?: RequestOptions) => request<User[]>('GET', '/api/admin/users', { ...options, operation: 'admin.getUsers' });
@@ -27,6 +27,14 @@ export const attachments = {
     get: attachmentsGet,
     /** @see showcase/TaskRoutes.kt */
     delete: attachmentsDelete,
+};
+
+/** @see showcase/Auth.kt */
+export const checksGetEmail = (query: { value: string }, options?: RequestOptions) => request<FieldCheckAnswer>('GET', '/api/checks/email', { ...options, query, operation: 'checks.getEmail' });
+
+export const checks = {
+    /** @see showcase/Auth.kt */
+    getEmail: checksGetEmail,
 };
 
 /** @see showcase/TaskRoutes.kt */
@@ -158,6 +166,7 @@ export interface ApiErrors {
     'admin.putUsersRole': Problem;
     'attachments.get': Problem;
     'attachments.delete': Problem;
+    'checks.getEmail': Problem;
     'greeting.list': Problem;
     'me.list': Problem;
     'me.update': Problem;
@@ -186,6 +195,7 @@ const errorStatuses: Record<string, number[]> = {
     'admin.putUsersRole': [401, 403, 404],
     'attachments.get': [401, 403, 404],
     'attachments.delete': [401, 403, 404],
+    'checks.getEmail': [401, 403],
     'greeting.list': [401, 403],
     'me.list': [401, 403],
     'me.update': [401, 403, 404],
@@ -240,7 +250,7 @@ export function loadPublicConfig(options?: RequestOptions): Promise<PublicConfig
     return publicConfig;
 }
 
-export const api = { admin, attachments, greeting, me, members, session, stats, tasks, users };
+export const api = { admin, attachments, checks, greeting, me, members, session, stats, tasks, users };
 
 function bindFetch<T extends object>(target: T, fetch: typeof globalThis.fetch): T {
     const bound: Record<string, unknown> = {};
