@@ -685,6 +685,34 @@ button.routes-file:hover { text-decoration: underline; }
 `;
 
 const seenCalls = new Map();
+const MASK = '***';
+let sensitiveNames = new Set();
+
+async function learnSensitiveNames() {
+    try {
+        const response = await plainFetch('/_ktor-svelte/dev/sensitive', { headers: { accept: 'application/json' } });
+        if (response.ok) sensitiveNames = new Set((await response.json()).map((name) => name.toLowerCase()));
+    } catch {
+        return;
+    }
+}
+
+function masked(value) {
+    if (sensitiveNames.size === 0 || value === null || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return value.map(masked);
+    return Object.fromEntries(
+        Object.entries(value).map(([name, inner]) => [name, sensitiveNames.has(name.toLowerCase()) && inner != null ? MASK : masked(inner)])
+    );
+}
+
+function maskedText(text) {
+    if (text === undefined || sensitiveNames.size === 0) return text;
+    try {
+        return JSON.stringify(masked(JSON.parse(text)));
+    } catch {
+        return text;
+    }
+}
 const KEPT_CALLS = 200;
 const REQUEST_ID = 'x-request-id';
 
@@ -768,13 +796,14 @@ function fixtures() {
             method: call.method,
             path: call.path,
             status: call.status,
-            ...(call.body === undefined ? {} : { request: jsonOrText(call.body) }),
-            ...(call.answer === undefined ? {} : { response: call.answer })
+            ...(call.body === undefined ? {} : { request: masked(jsonOrText(call.body)) }),
+            ...(call.answer === undefined ? {} : { response: masked(call.answer) })
         }));
     return { recorded: new Date().toISOString(), calls };
 }
 
-function saveFixtures() {
+async function saveFixtures() {
+    await learnSensitiveNames();
     const file = new Blob([JSON.stringify(fixtures(), null, 4) + '\n'], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(file);
@@ -812,7 +841,7 @@ function curlCommand(entry) {
     const parts = ['curl', '-X', entry.method, quoted(location.origin + entry.path)];
     for (const [name, value] of seen?.headers ?? []) parts.push('-H', quoted(`${name}: ${value}`));
     if (entry.id) parts.push('-H', quoted(`X-Request-Id: ${entry.id}`));
-    if (seen?.body !== undefined) parts.push('--data-raw', quoted(seen.body));
+    if (seen?.body !== undefined) parts.push('--data-raw', quoted(maskedText(seen.body)));
     return parts.join(' ');
 }
 
@@ -848,6 +877,7 @@ function rowTools(entry) {
     const again = toolButton('Replay', repeatable ? 'Send this call again' : why, () => void replay(entry));
     again.disabled = !repeatable;
     const curl = toolButton('curl', repeatable ? 'Copy this call as a curl command' : why, async (button) => {
+        await learnSensitiveNames();
         button.textContent = (await copyText(curlCommand(entry))) ? 'Copied' : 'Failed';
         setTimeout(() => (button.textContent = 'curl'), 1500);
     });
@@ -1001,7 +1031,7 @@ function startPanel() {
         seenCalls.clear();
         draw();
     });
-    root.querySelector('.save').addEventListener('click', saveFixtures);
+    root.querySelector('.save').addEventListener('click', () => void saveFixtures());
     configEditor(root);
     routeMap(root);
     statusView(root);
@@ -1023,6 +1053,9 @@ function startPanel() {
     document.body.append(host);
 }
 
+void learnSensitiveNames();
+setInterval(() => void learnSensitiveNames(), 15000);
+
 if (features.has('panel')) {
     overridePublicConfig();
     rememberCalls();
@@ -1035,11 +1068,12 @@ function describe(value) {
     if (value instanceof Error) return value.stack ?? `${value.name}: ${value.message}`;
     try {
         const seen = new WeakSet();
-        return JSON.stringify(value, (_, item) => {
+        return JSON.stringify(value, (name, item) => {
             if (typeof item === 'object' && item !== null) {
                 if (seen.has(item)) return '[circular]';
                 seen.add(item);
             }
+            if (name !== '' && item != null && sensitiveNames.has(name.toLowerCase())) return MASK;
             return typeof item === 'bigint' ? `${item}n` : item;
         });
     } catch {

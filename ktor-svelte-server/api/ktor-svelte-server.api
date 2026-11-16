@@ -108,6 +108,13 @@ public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/E
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 }
 
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Sensitive : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Sensitive$Impl : io/github/nijasc/ktor/svelte/Sensitive {
+	public fun <init> ()V
+}
+
 public final class io/github/nijasc/ktor/svelte/StartupStepsKt {
 	public static final fun recordStartupStep (Lio/ktor/server/application/Application;Ljava/lang/String;J)V
 	public static final fun startupStep (Lio/ktor/server/application/Application;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;

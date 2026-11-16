@@ -1,6 +1,7 @@
 package showcase
 
 import io.github.nijasc.ktor.svelte.Lowercase
+import io.github.nijasc.ktor.svelte.Sensitive
 import io.github.nijasc.ktor.svelte.Trim
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
@@ -59,6 +60,7 @@ data class UserRef(
 @Serializable
 data class Login(
     val email: String,
+    @Sensitive
     val password: String,
 )
 
@@ -72,6 +74,7 @@ data class Registration(
     @JsonSchema.MinLength(1)
     @JsonSchema.MaxLength(MAX_NAME_LENGTH)
     val name: String,
+    @Sensitive
     @JsonSchema.MinLength(MIN_PASSWORD_LENGTH)
     @JsonSchema.MaxLength(MAX_PASSWORD_LENGTH)
     val password: String,

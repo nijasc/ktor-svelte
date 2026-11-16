@@ -37,6 +37,7 @@ internal const val DEV_REQUESTS_PATH = "/_ktor-svelte/dev/requests"
 internal const val DEV_OPEN_PATH = "/_ktor-svelte/dev/open"
 internal const val DEV_ROUTE_MAP_PATH = "/_ktor-svelte/dev/routes"
 internal const val DEV_STATUS_PATH = "/_ktor-svelte/dev/status"
+internal const val DEV_SENSITIVE_PATH = "/_ktor-svelte/dev/sensitive"
 private const val KEPT_REQUESTS = 100
 
 private val RequestStartedAt = AttributeKey<Long>("KtorSvelteDevRequestStartedAt")
@@ -50,6 +51,7 @@ internal class DevRequestLog(
     private val clock: () -> Long = System::nanoTime,
     private val wallClock: () -> Long = System::currentTimeMillis,
     val sourceFiles: SourceFiles = SourceFiles(),
+    val sensitive: SensitiveFields = SensitiveFields(),
 ) {
     private val sources = ConcurrentHashMap<RoutingNode, Any>()
     private val unknown = Any()
@@ -107,7 +109,7 @@ internal class DevRequestLog(
         val entry =
             buildJsonObject {
                 put("method", call.request.httpMethod.value)
-                put("path", call.request.uri)
+                put("path", sensitive.maskQuery(call.request.uri))
                 put("status", status.value)
                 put("ms", (clock() - startedAt) / 1_000_000.0)
                 put("at", wallClock())
@@ -157,6 +159,21 @@ internal fun Route.devRequestRoutes(
     routeMap: () -> JsonObject,
     status: suspend (ApplicationCall) -> JsonObject,
 ) {
+    get(DEV_SENSITIVE_PATH) {
+        if (!allowRemote && !isLocalCall(call)) {
+            call.respondText("The ktor-svelte dev client only answers this machine.", status = HttpStatusCode.Forbidden)
+            return@get
+        }
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        call.respondText(
+            JsonArray(
+                log.sensitive.names
+                    .sorted()
+                    .map(::JsonPrimitive),
+            ).toString(),
+            ContentType.Application.Json,
+        )
+    }
     get(DEV_STATUS_PATH) {
         if (!allowRemote && !isLocalCall(call)) {
             call.respondText("The ktor-svelte dev client only answers this machine.", status = HttpStatusCode.Forbidden)

@@ -267,6 +267,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         if (devRequests != null) {
             devRequests.install(application)
+            devRequests.sensitive.install(application)
             devRequests.countSql(application)
             onCall { call -> devRequests.started(call) }
             on(ResponseSent) { call -> devRequests.finished(call) }
@@ -280,7 +281,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         val slowApiCall = pluginConfig.devConfig.slowApiCall
         if (slowApiCall != null && application.developmentMode) {
-            val slowCalls = SlowCallLog(slowApiCall, resolver)
+            val slowCalls = SlowCallLog(slowApiCall, resolver, sensitive = devRequests?.sensitive)
             slowCalls.install(application)
             onCall { call -> slowCalls.started(call) }
             on(ResponseSent) { call -> slowCalls.finished(call) }
