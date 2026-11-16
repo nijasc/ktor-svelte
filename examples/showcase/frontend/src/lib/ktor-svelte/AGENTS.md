@@ -32,6 +32,7 @@ Ready-made components are in `#components/`. Use them before writing the same ma
 - `ThemeToggle.svelte`: lets the visitor pick one of the configured themes and remembers it.
 - `LocaleSwitch.svelte`: lets the visitor pick one of the configured languages.
 - `NavigationProgress.svelte`: a bar at the top while a page loads. It belongs in the root layout, once.
+- `FileDrop.svelte`: a drop area and file input for an upload route, with previews, progress and the route's refusals, such as `<FileDrop label="Files" rules={uploadRules['files.create']} upload={(file, options) => api.files.create({ file }, options)} />`.
 - `ErrorPage.svelte`: the page behind `src/routes/+error.svelte`. A failed API call in a `load` function shows it with the call's status and message, so do not catch `ApiError` there only to call `error(...)`.
 - `EnumSelect.svelte`: a `<select>` over a generated enum object, such as `<EnumSelect label="Status" options={Status} bind:value={status} />`.
 

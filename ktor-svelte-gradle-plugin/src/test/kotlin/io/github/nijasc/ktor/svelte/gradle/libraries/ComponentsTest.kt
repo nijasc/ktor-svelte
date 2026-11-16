@@ -27,6 +27,7 @@ class ComponentsTest {
                 "EnumSelect.svelte",
                 "ErrorPage.svelte",
                 "Field.svelte",
+                "FileDrop.svelte",
                 "NavigationProgress.svelte",
             ),
             files.keys
@@ -180,6 +181,29 @@ class ComponentsTest {
         val themed = componentFiles(spec(components = true, withDaisy = true)).getValue("$COMPONENTS_DIR/NavigationProgress.svelte")
         assertContains(themed, "background: var(--ktor-svelte-progress, var(--color-primary));")
         assertFalse("{{" in themed)
+    }
+
+    @Test
+    fun `the file drop sends each file through the route's own function and shows what came of it`() {
+        val drop = componentFiles(spec(components = true, withDaisy = true)).getValue("$COMPONENTS_DIR/FileDrop.svelte")
+        assertContains(drop, "<script lang=\"ts\" generics=\"T\">")
+        assertContains(drop, "upload: (file: File, options: RequestOptions) => Promise<T>;")
+        assertContains(drop, "const accept = \$derived(rules?.types?.join(','));")
+        assertContains(drop, "onUploadProgress: ({ loaded, total }) => change(item, { progress: total ? loaded / total : 0 })")
+        assertContains(drop, "preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,")
+        assertContains(
+            drop,
+            "<input id={inputId} class=\"file-input w-full\" type=\"file\" {multiple} {accept} {disabled} onchange={picked} />",
+        )
+        assertContains(
+            drop,
+            "class={['border-base-300 rounded-box grid gap-2 border-2 border-dashed p-4', over && 'border-primary bg-base-200', className]}",
+        )
+        assertFalse("<style>" in drop)
+        val plain = componentFiles(spec(components = true)).getValue("$COMPONENTS_DIR/FileDrop.svelte")
+        assertContains(plain, "class={['ktor-svelte-drop', over && 'ktor-svelte-drop-over', className]}")
+        assertContains(plain, ".ktor-svelte-drop-over {")
+        assertFalse("{{" in plain)
     }
 
     @Test

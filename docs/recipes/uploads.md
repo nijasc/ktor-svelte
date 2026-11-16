@@ -67,6 +67,10 @@ try {
 
 The server checks the type the browser declares and the file name, as the browser does. Neither proves what the bytes are, so treat stored files as untrusted when you serve them.
 
+## A drop zone without the code
+
+With `libraries { components() }`, the generated [`<FileDrop>`](../features/frontend-libraries.md#filedrop) is the input, the drop area, the previews, the progress bars and the refusals for an upload route, in one component.
+
 ## A form with named fields
 
 With `uploadRules`, the generated function takes a `FormData`, and nothing checks the field names in it. When an upload comes with other values, or the field names matter, declare the form:
