@@ -42,6 +42,7 @@ svelte {
             prefersDark(DaisyTheme.ShadcnDark)
         }
         lucide()
+        routes()
         images()
         toasts()
         i18n {
