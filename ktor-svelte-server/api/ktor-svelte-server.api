@@ -63,6 +63,39 @@ public final class io/github/nijasc/ktor/svelte/ErrorCodesKt {
 	public static synthetic fun respondError$default (Lio/ktor/server/application/ApplicationCall;Ljava/lang/Enum;Lio/ktor/http/HttpStatusCode;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
+public final class io/github/nijasc/ktor/svelte/FieldCheckAnswer {
+	public static final field Companion Lio/github/nijasc/ktor/svelte/FieldCheckAnswer$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/FieldCheckAnswer;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/FieldCheckAnswer;Ljava/lang/String;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/FieldCheckAnswer;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/FieldCheckAnswer$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/FieldCheckAnswer$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lio/github/nijasc/ktor/svelte/FieldCheckAnswer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lio/github/nijasc/ktor/svelte/FieldCheckAnswer;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/FieldCheckAnswer$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/FieldChecksKt {
+	public static final fun fieldCheck (Lio/ktor/server/routing/Route;Ljava/lang/String;Lkotlin/jvm/functions/Function3;)Lio/ktor/server/routing/Route;
+}
+
 public final class io/github/nijasc/ktor/svelte/LibrariesKt {
 	public static final fun getSvelteLocale (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
 	public static final fun getSvelteTheme (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
