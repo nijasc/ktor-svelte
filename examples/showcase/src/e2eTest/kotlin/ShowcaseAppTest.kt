@@ -240,6 +240,14 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `deleting a task asks the browser to show a toast in the visitor's language`() {
+        val english = createTask(admin, unique("Toast"))
+        val answer = admin.send("DELETE", "/api/tasks/$english")
+        assertEquals(204, answer.statusCode())
+        assertEquals("success:Task%20deleted.", answer.headers().firstValue("X-Ktor-Svelte-Toast").orElse(null))
+    }
+
+    @Test
     fun `invalid input is refused with one message per field`() {
         val blank = admin.send("POST", "/api/tasks", """{"title":"  "}""")
         assertEquals(422, blank.statusCode())

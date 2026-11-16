@@ -96,9 +96,7 @@
             cancel: m.actionCancel(),
             danger: true
         });
-        if (!deleted) return;
-        toast(m.taskDeleted(), { kind: 'success' });
-        await goto(routes.board());
+        if (deleted) await goto(routes.board());
     }
 
     async function addComment(event: SubmitEvent) {
