@@ -61,6 +61,10 @@ class LibraryFilesTest {
     fun `toasts add a client hook and pick daisy alerts when daisy is on`() {
         val plain = frontendFiles(spec(toasts = true), null, false)
         assertContains(plain.getValue("src/hooks.client.ts"), "client.apiConfig.onError = toastApiError")
+        assertContains(
+            plain.getValue("src/hooks.client.ts"),
+            "if (client?.apiConfig && !client.apiConfig.onToast) client.apiConfig.onToast = (message, kind) => toast(message, { kind });",
+        )
         assertContains(plain.getValue("src/hooks.client.ts"), "import.meta.glob<GeneratedClient>('/src/lib/api/index.ts', { eager: true })")
         assertContains(plain.getValue("$GENERATED_DIR/toasts.ts"), "const daisy = false;")
         val styled = frontendFiles(spec(TailwindSpec(false, false), daisy, toasts = true), null, false)
