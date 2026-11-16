@@ -179,6 +179,13 @@ internal fun componentFiles(
             "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
             "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
             "$COMPONENTS_DIR/ErrorPage.svelte" to errorPage(daisy, messages),
+            "$COMPONENTS_DIR/NavigationProgress.svelte" to
+                renderTemplate(
+                    "components/NavigationProgress.svelte",
+                    mapOf(
+                        "color" to if (daisy) "var(--color-primary)" else "currentColor",
+                    ),
+                ),
         )
 }
 
