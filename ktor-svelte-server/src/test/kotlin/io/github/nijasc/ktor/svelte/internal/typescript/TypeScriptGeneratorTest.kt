@@ -843,6 +843,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client sends the visitor's time zone to its own origin`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    sendTimeZone?: boolean;")
+        assertContains(client, "if (zone && !merged.has('X-Time-Zone')) merged.set('X-Time-Zone', zone);")
+    }
+
+    @Test
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")
