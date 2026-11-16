@@ -3067,6 +3067,17 @@ If your build already has a task called `format` or `formatCheck`, ktor-svelte d
 
 A commit that fails the check is stopped with the command that fixes it. `git commit --no-verify` skips the hook once, and `./gradlew svelteGitHooks --remove` takes it out again. The hook lives in `.git`, which git does not share, so everyone on the team runs the task once. A pre-commit hook that something else installed is never replaced: the task stops and tells you to call the two tasks from your own hook.
 
+### Generated files without merge conflicts
+
+Two branches that both add a page, an icon or an API route both change the same generated files, and git reports a conflict in a file nobody wrote. The same `svelteGitHooks` run ends that in your clone:
+
+- When both sides of a merge or a rebase changed a generated file, git keeps one side and does not stop.
+- Right after the merge or rebase, `svelteSync` and `svelteGenerateTs` run and write the files as they belong to the merged code. If `git status` then shows changes, commit them.
+
+It covers `src/lib/ktor-svelte` and `src/lib/api`, through a `merge=ktor-svelte` attribute in the `.gitattributes` of those folders. Run `svelteSync` and `svelteGenerateTs` once after upgrading so those files get the attribute. In a clone where nobody ran `svelteGitHooks`, git ignores the attribute and merges those files the way it always did.
+
+A merge that stops for a conflict in one of your own files does not regenerate when you finish it. The pre-commit hook and `check` still notice stale generated files, and `./gradlew svelteSync svelteGenerateTs` fixes them. If a `post-merge` or `post-rewrite` hook from another tool is already there, such as Git LFS, it stays, and the task tells you to run those two tasks yourself after such a merge.
+
 ## Short task names
 
 The four tasks you type most have a short name:
@@ -3108,7 +3119,7 @@ A short name that your build or another plugin already uses is left alone, and t
 | `svelteCheck` | Runs your `check` script |
 | `format`, `formatCheck` | [Format, or check the formatting of, Kotlin and the frontend](#format-both-sides) in one go |
 | `svelteFormat`, `svelteFormatCheck` | The frontend half of those: run the `format` and the `lint` script |
-| `svelteGitHooks` | Installs a [pre-commit hook](#check-before-every-commit) that runs `formatCheck` and `svelteVerifySync`. With `--remove` it takes the hook out |
+| `svelteGitHooks` | Installs a [pre-commit hook](#check-before-every-commit) that runs `formatCheck` and `svelteVerifySync`, and keeps [generated files out of merge conflicts](#generated-files-without-merge-conflicts). With `--remove` it takes the hook out |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |
 | `svelteOutdated` | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
