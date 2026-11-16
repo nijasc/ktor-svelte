@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-Sixty-nine features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+Seventy-six features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## Scope
 
@@ -79,6 +79,13 @@ Sixty-nine features is far more than one release holds. The [order](#order) puts
 | 67 | Session expiry warning | Server and generated client | Small | 21 |
 | 68 | Visitor time zone on the server | Server and generated client | Small | |
 | 69 | Typed error pages | Generated files | Small | |
+| 70 | Refresh page data after writes | Generated client | Small | |
+| 71 | Server checks while typing | Server and generated client | Medium | 11 |
+| 72 | Idempotency keys | Server and generated client | Medium | 8 |
+| 73 | Typed error codes | Server and generated client | Medium | |
+| 74 | Duplicate request detection | Dev panel | Small | #201 |
+| 75 | Live accessibility hints | Dev panel | Medium | #201 |
+| 76 | Starter page with next steps | Gradle plugin | Small | |
 
 ## What each one does
 
@@ -223,14 +230,30 @@ Sixty-nine features is far more than one release holds. The [order](#order) puts
 67. **Session expiry warning.** The frontend knows when the session ends, warns shortly before, and can extend it with one call, instead of the user losing a half-filled form to a sudden 401.
 68. **Visitor time zone on the server.** The visitor's time zone reaches Kotlin with every request as `call.timeZone`, so emails, exports and formatted dates use the user's zone and not the server's.
 
+### Forms, writes and errors
+
+70. **Refresh page data after writes.** After a successful POST, PUT, PATCH or DELETE through the generated client, the current page reruns its load functions, so lists and details update without manual refetching. It is one `apiConfig` switch.
+71. **Server checks while typing.** A field can ask the server whether a value is acceptable, such as whether an email is taken, through a typed check route. The call is debounced and the answer is shown like any other validation error.
+72. **Idempotency keys.** The client adds a unique key to each write, and the server answers a repeated key with the first result instead of doing the work twice. This makes retrying writes safe.
+73. **Typed error codes.** A Kotlin enum of error codes such as `NoteLocked` and `QuotaReached` travels in every error body, arrives as a typed union in TypeScript, and maps to an i18n message per code on both sides.
+
+### What the dev panel can tell you
+
+74. **Duplicate request detection.** The dev panel flags the same GET made more than once while one page loads, and names both call sites.
+75. **Live accessibility hints.** The dev panel runs axe on the page you are looking at and lists the problems with the element highlighted, while you develop and not only in CI.
+
+### First steps
+
+76. **Starter page with next steps.** A new project's first page shows what is set up, links to the dev panel, the API docs and the docs for each chosen feature, and suggests what to build first.
+
 ## Order
 
 1. The route check group (1, 2, 3), because all three build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68). Each is a self-contained pull request.
-3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51, 58).
-4. The server talks to the UI (25, 26, 27), shared constants (20) and typed cookies (62). They share one mechanism: the server says something once, and the generated client acts on it.
-5. Generated UI building blocks (63, 64, 65, 69). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
-6. Richer shared types (31, 32, 33, 43, 44) and declared environment variables (37), then the secret leak check (46), which reads that declaration.
+2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68, 70, 76). Each is a self-contained pull request.
+3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51, 58, 74, 75).
+4. The server talks to the UI (25, 26, 27), shared constants (20), typed cookies (62) and typed error codes (73). They share one mechanism: the server says something once, and the generated client acts on it.
+5. Generated UI building blocks (63, 64, 65, 69) and server checks while typing (71). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
+6. Richer shared types (31, 32, 33, 43, 44), idempotency keys (72) and declared environment variables (37), then the secret leak check (46), which reads that declaration.
 7. Languages (49, 50), self-hosted fonts (59) and the API change report (48).
 8. One login (21, then 24, 67, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
 9. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16), generated page loads (28) and inline page data (66). All of them change how a route or a page is described, so they are designed together.
@@ -288,6 +311,12 @@ Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list
 | Inline page data | Whose data is inlined? | Open. The answers depend on the visitor's session, so nothing may be cached or shared between visitors, and the server must make the calls as that visitor. It is designed together with generated page loads (28), which provides the list of calls. |
 | Session expiry warning | How does the frontend learn the expiry time? | From the typed current user endpoint, which returns it next to the user. The app supplies it, because ktor-svelte does not own the session. |
 | Visitor time zone | How does it reach the server? | A cookie the dev and production client sets from the browser's zone. The first request of a new visitor has none, so `call.timeZone` then falls back to a configured default. |
+| Refresh page data after writes | On or off by default? | Off by default, because it changes how many requests an existing app makes. A single call can opt out, and prefetches and silent calls never trigger it. |
+| Server checks while typing | What stops it from leaking which emails exist? | The check route is an ordinary route the app writes, so it is rate limited like any write and the app decides what it reveals. The docs must say so. |
+| Idempotency keys | Where are the first results kept? | In memory with a short lifetime by default, behind a small interface an app can replace with its database. Only routes that opt in are covered. |
+| Typed error codes | Where does the enum live? | In the app, registered once in `install(Svelte)`. `errorMessage()` uses the code's message when there is one, before it falls back to the body's `message`. |
+| Live accessibility hints | Does it add a dependency to every app? | No. It is turned on in `dev { }`, and `svelteSync` adds axe as a development dependency only then. It never reaches the production build. |
+| Starter page | Can it overwrite a real page? | No. It is only written by `svelteInit` and the setup script, into an empty project. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -313,6 +342,9 @@ These were offered and not chosen for 1.2.0:
 - Speed and reach: preload headers, an offline write queue, a publishable client package.
 - Sessions and tracing: trace context from the browser to the server, a "report a problem" helper.
 - Bigger bets and upkeep: shared Kotlin logic compiled for the browser, undo for destructive actions, a deprecation report.
+- Forms and data: draft autosave, sample data builders, development seed data with a reset button, a client split into one file per resource.
+- Dev panel: sequential load detection, mocking a response for one route.
+- Testing and CI: screenshot comparisons in the test kit, a reusable CI action, a component preview page.
 
 ## Release
 
