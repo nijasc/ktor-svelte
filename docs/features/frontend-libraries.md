@@ -423,6 +423,26 @@ The sentences are English until your messages have their keys. With `i18n` on, a
 
 Your own files win. If `src/routes/+error.svelte` exists and is not the generated one, it is left alone, and you can use `<ErrorPage />` inside it or not. To change the generated one, remove its first line, and it is yours. The same goes for `src/hooks.client.ts` when `toasts()` is off: keep your own and add `export { handleError } from '#lib/ktor-svelte/errors.ts';` to it.
 
+### ThemeToggle and LocaleSwitch
+
+The theme and i18n helpers already know the themes and languages you configured. These two components put them on the page, so a new app has both switches from the start:
+
+```svelte no-check
+<script lang="ts">
+    import LocaleSwitch from '#components/LocaleSwitch.svelte';
+    import ThemeToggle from '#components/ThemeToggle.svelte';
+</script>
+
+<ThemeToggle />
+<LocaleSwitch />
+```
+
+`ThemeToggle` is generated when `daisyUi` is on. With two themes it is a button that flips between them, with more it is a `<select>`. It applies the theme at once and remembers it, as `setTheme` does.
+
+`LocaleSwitch` is generated when `i18n` is on. It lists each language under its own name, such as English and Deutsch, and switches with `setLocale`.
+
+Both take `label` for the accessible name (`Theme` and `Language` unless given, so pass a translated one), `labels` to name single entries yourself, such as `labels={{ dracula: 'Dark' }}`, and `class` and `id`.
+
 ## Modals
 
 A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:
