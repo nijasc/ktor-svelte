@@ -224,17 +224,32 @@ Some errors are left to you, because a toast would be the wrong answer:
 - 401, which `apiConfig.onUnauthorized` handles.
 - Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
 
-The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
+The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, give one a button with `action: { label: 'Undo', run: restore }`, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
 
 ## Reload after a deploy
 
-Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API:
+Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API.
 
-```ts
+The toasts library has that prompt ready. Turn it on in Gradle and run `svelteSync`:
+
+```kotlin
+svelte {
+    libraries {
+        toasts { reloadPrompt() }
+    }
+}
+```
+
+After a deploy, the next API call shows "A new version is available." with a Reload button. The toast stays until the visitor reloads or closes it, and it shows once, not after every call. Change the texts through `toastMessages.newBuild` and `toastMessages.reload`.
+
+To do something else, set the handler yourself. Your handler wins over the prompt:
+
+```ts no-check
 import { apiConfig } from '#api';
+import { toast } from '#lib/ktor-svelte/toasts';
 
 apiConfig.onNewBuild = () => {
-    showToast('A new version is available.', { action: 'Reload', onAction: () => location.reload() });
+    toast('We just shipped an update.', { duration: 0, action: { label: 'Reload', run: () => location.reload() } });
 };
 ```
 
