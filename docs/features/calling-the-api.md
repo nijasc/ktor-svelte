@@ -155,6 +155,34 @@ To refresh the files without your dev server, for example in CI, run the task be
 ./gradlew svelteGenerateTs
 ```
 
+## In load functions
+
+Inside a SvelteKit `load` function, pass the `fetch` it gives you as the last argument of every call:
+
+```ts no-check
+import { api } from '#api';
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ fetch, params }) => {
+    const note = await api.notes.get(params.id, { fetch });
+    return { note };
+};
+```
+
+With its own `fetch`, SvelteKit knows which requests a page depends on, reuses a response it already has during hydration, and can rerun the load when you invalidate it. Without it, the call still works, but the browser console warns with `window_fetch_in_load`.
+
+`svelteVerifyLoads` finds the calls that forgot. It reads every `+page.ts`, `+page.js`, `+layout.ts` and `+layout.js`, and fails with the file, the line and the call:
+
+```bash
+./gradlew svelteVerifyLoads
+```
+
+```text
+src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  pass { fetch } as the last argument
+```
+
+It is not part of `check`. The [lint rule](./frontend-libraries.md#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.
+
 ## Show errors automatically
 
 Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:
