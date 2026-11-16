@@ -27,6 +27,8 @@ They are generated. An edit is overwritten, and `./gradlew check` fails when the
 
 Ready-made components are in `#components/`. Use them before writing the same markup by hand.
 - `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as `<Field label="Title" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.
+- `DateInput.svelte` and `DateTimeInput.svelte`: the same for `IsoDate` and `IsoDateTime` values, without converting text by hand.
+- `EnumSelect.svelte`: a `<select>` over a generated enum object, such as `<EnumSelect label="Status" options={Status} bind:value={status} />`.
 
 ## Pages and links
 

@@ -73,7 +73,14 @@ internal fun componentFiles(spec: LibrarySpec): Map<String, String> {
                 "style" to if (daisy) "" else PLAIN_FIELD_STYLE,
             ),
         )
-    return mapOf("$COMPONENTS_DIR/Field.svelte" to field)
+    val input = mapOf("input" to if (daisy) "input w-full" else "ktor-svelte-field-input")
+    val select = mapOf("select" to if (daisy) "select w-full" else "ktor-svelte-field-input")
+    return mapOf(
+        "$COMPONENTS_DIR/Field.svelte" to field,
+        "$COMPONENTS_DIR/DateInput.svelte" to renderTemplate("components/DateInput.svelte", input),
+        "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
+        "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
+    )
 }
 
 internal fun iconSources(

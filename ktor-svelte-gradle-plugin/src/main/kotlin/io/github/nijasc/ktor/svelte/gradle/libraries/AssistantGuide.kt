@@ -56,6 +56,12 @@ internal fun assistantGuide(
                 "- `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as " +
                     "`<Field label=\"Title\" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.",
             )
+            appendLine(
+                "- `DateInput.svelte` and `DateTimeInput.svelte`: the same for `IsoDate` and `IsoDateTime` values, without converting text by hand.",
+            )
+            appendLine(
+                "- `EnumSelect.svelte`: a `<select>` over a generated enum object, such as `<EnumSelect label=\"Status\" options={Status} bind:value={status} />`.",
+            )
         }
         if (spec.routes) {
             appendLine()

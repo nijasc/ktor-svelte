@@ -19,7 +19,13 @@ class ComponentsTest {
     fun `components are generated only when the library is on`() {
         assertFalse(frontendFiles(spec(components = false), null, false).keys.any { it.startsWith(COMPONENTS_DIR) })
         val files = frontendFiles(spec(components = true), null, false)
-        assertEquals(listOf("$COMPONENTS_DIR/Field.svelte"), files.keys.filter { it.startsWith(COMPONENTS_DIR) })
+        assertEquals(
+            listOf("DateInput.svelte", "DateTimeInput.svelte", "EnumSelect.svelte", "Field.svelte"),
+            files.keys
+                .filter { it.startsWith(COMPONENTS_DIR) }
+                .map { it.substringAfterLast('/') }
+                .sorted(),
+        )
         assertTrue(GENERATED_GIT_ATTRIBUTES in files)
         assertFalse(spec(components = true).isEmpty)
     }
@@ -27,7 +33,7 @@ class ComponentsTest {
     @Test
     fun `the field uses the field action, binds its value and passes the rest to the input`() {
         val field = componentFiles(spec(components = true)).getValue("$COMPONENTS_DIR/Field.svelte")
-        assertContains(field, "import { field, type FieldBounds } from '#api';")
+        assertContains(field, "import { field, type FieldBounds, type FieldOptions } from '#api';")
         assertContains(field, "value = \$bindable()")
         assertContains(field, "<label class=\"ktor-svelte-field-label\" for={inputId}>{label}</label>")
         assertContains(field, "<input id={inputId} class=\"ktor-svelte-field-input\" bind:value use:field={options} {...rest} />")
@@ -45,6 +51,33 @@ class ComponentsTest {
         assertContains(field, "errorClass: 'text-error text-sm'")
         assertFalse("<style>" in field)
         assertFalse("ktor-svelte-field" in field)
+    }
+
+    @Test
+    fun `the date and enum inputs are fields with their own control`() {
+        val files = componentFiles(spec(components = true, withDaisy = true))
+        val field = files.getValue("$COMPONENTS_DIR/Field.svelte")
+        assertContains(field, "control?: Snippet<[{ id: string; options: FieldOptions }]>;")
+        assertContains(field, "{@render control({ id: inputId, options })}")
+
+        val date = files.getValue("$COMPONENTS_DIR/DateInput.svelte")
+        assertContains(date, "<script lang=\"ts\" generics=\"T extends string = string\">")
+        assertContains(date, "bind:value={() => value ?? '', (text) => (value = text === '' ? null : (text as T))}")
+        assertContains(date, "class=\"input w-full\"")
+
+        val dateTime = files.getValue("$COMPONENTS_DIR/DateTimeInput.svelte")
+        assertContains(dateTime, "type=\"datetime-local\"")
+        assertContains(dateTime, "date.toISOString() as T")
+        assertContains(dateTime, "if (local) return current.slice(0, 16);")
+
+        val select = files.getValue("$COMPONENTS_DIR/EnumSelect.svelte")
+        assertContains(select, "options: Readonly<Record<string, T>>;")
+        assertContains(select, "<select id={inputId} class=\"select w-full\" bind:value use:field={fieldOptions} {...rest}>")
+        assertContains(select, "{#each Object.values(options) as option (option)}")
+        files.values.forEach { assertFalse("{{" in it) }
+        componentFiles(spec(components = true)).filterKeys { !it.endsWith("Field.svelte") }.values.forEach {
+            assertContains(it, "class=\"ktor-svelte-field-input\"")
+        }
     }
 
     @Test
