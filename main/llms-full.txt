@@ -848,6 +848,36 @@ method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8
 
 Each line has the method, the path without its query string, the status, how long the app took in milliseconds, and the request ID that the browser also shows for a failed call. The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again. Requests for build assets under `/_app/` are not logged.
 
+## Build info
+
+Every build knows what it is. The Gradle plugin writes the project's `version`, the git commit and the time of that commit into the JAR, and the app reads them without any setup:
+
+```kotlin
+get("/api/about") {
+    val build = call.application.buildInfo
+    call.respondText("Version ${build.version} (${build.shortCommit})")
+}
+```
+
+`buildInfo.version`, `commit` and `time` are `null` when the build could not know them: no `version` in `build.gradle.kts`, or no git repository. The time is the commit's, not the clock's, so building the same commit twice gives the same JAR.
+
+The browser can read the same values once you allow it:
+
+```kotlin
+install(Svelte) {
+    publicBuildInfo = true
+}
+```
+
+```ts
+import { loadBuildInfo } from '#api';
+
+const build = await loadBuildInfo();
+const label = `${build.version ?? 'dev'} (${build.commit?.slice(0, 7) ?? 'no commit'})`;
+```
+
+It is off by default, because it tells every visitor which version and commit is running. For values only signed-in users or admins should see, leave it off and return `buildInfo` from a route of your own.
+
 ## Checklist
 
 - The JAR was built without `-Psvelte.skip=true` or `-Psvelte.dev=true`.
@@ -1077,6 +1107,33 @@ post("/api/notes/{id}/attachments") { /* ... */ }.describe {
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
 ```
 
+Types and their fields are documented the same way. Put Ktor's `@JsonSchema.Description` on a class or a property, and it becomes JSDoc on the interface or the field. `@JsonSchema.DeprecatedSchema` on a property, or `deprecated = true` in `describe { }` on a route, becomes `@deprecated`, which editors show struck through at every use:
+
+```kotlin
+@Serializable
+@JsonSchema.Description("A note with its tags and its icon.")
+data class Note(
+    val id: Int,
+    @JsonSchema.Description("Lowercase words the list can be filtered by.")
+    val tags: List<String>,
+    @JsonSchema.DeprecatedSchema
+    val color: String? = null,
+)
+```
+
+```ts
+/** A note with its tags and its icon. */
+export interface Note {
+    id: number;
+    /** Lowercase words the list can be filtered by. */
+    tags: string[];
+    /** @deprecated */
+    color?: string | null;
+}
+```
+
+Kotlin's own documentation comments and `@Deprecated` do not exist at runtime, where the schema is read, so they cannot be picked up. The annotations are the way to say it once for both sides.
+
 Every generated function also names the Kotlin file its route is declared in, as an `@see` line, whether you describe the route or not:
 
 ```ts
@@ -1085,6 +1142,20 @@ export const notesCreate = (body: NoteInput, options?: RequestOptions) => ...
 ```
 
 The path is the file's package folder and name, so it is the same on every machine. The line number is left out on purpose: it would change the generated file every time you edit above a route. To jump to the exact line, use the route list at `/_ktor-svelte/routes` while the app runs in development.
+
+## Routes nothing calls
+
+A call to a route that no longer exists does not compile. The other direction needs a task: `svelteVerifyApiRoutes` lists the API routes that nothing in the frontend calls, so you can see what is safe to remove:
+
+```bash
+./gradlew svelteVerifyApiRoutes
+```
+
+```text
+GET /api/notes/export  ->  nothing in the frontend calls api.notes.export
+```
+
+A route counts as called when `api.notes.export`, a client from `apiWith`, the `notes` object or the `notesExport` function is used anywhere outside the generated folders, even when it is only passed along. The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service. Add `--strict` to fail the build instead.
 
 ## Sealed classes
 
@@ -1429,6 +1500,27 @@ const report = await api.reports.get(id, { retry: { attempts: 2 } });
 ```
 
 `delay` doubles after every attempt until it reaches `maxDelay`. A call that is aborted through its `signal` stops waiting at once, and each attempt gets the full `timeout`.
+
+### Rate limits
+
+When the server refuses a call with 429, the error says how long to wait. `isRateLimitError` narrows it, and `retryAfter` is the wait in milliseconds, read from the `Retry-After` header:
+
+```ts
+import { api, isRateLimitError } from '#api';
+
+let notice = '';
+
+try {
+    await api.notes.create({ title: 'Buy milk' });
+} catch (error) {
+    if (isRateLimitError(error)) {
+        const seconds = Math.ceil((error.retryAfter ?? 60_000) / 1000);
+        notice = `Too many requests. Try again in ${seconds} seconds.`;
+    }
+}
+```
+
+With retries on, the client waits and sends the call again by itself, once, when the wait is no longer than `maxDelay`, which is five seconds unless you change it. That also applies to writes: a call the rate limit refused never reached your route, so sending it again cannot do the work twice. A longer wait is not sat out, and the error reaches you at once.
 
 ## Search as you type
 
@@ -2561,6 +2653,7 @@ install(Svelte) {
     buildHeader = true
     requestIds = true
     accessLog = false
+    publicBuildInfo = false
     allowedOrigins()
     maxApiBodySize = 1048576
     maxJsonDepth = 64
@@ -2627,6 +2720,7 @@ install(Svelte) {
 | `siteUrl` | Public address used in the sitemap, such as `https://example.com`. `null` takes it from the request |
 | `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](https://nijasc.github.io/ktor-svelte/main/features/endpoints#default-favicon) |
 | `accessLog` | Logs one line per request in production to the `ktor-svelte.access` logger: `method=GET path=/api/notes status=200 ms=12 id=...`. The query string is left out, because it can hold secrets, and requests for build assets under `/_app/` are skipped. Development mode never logs these, since the dev log and the API panel already show requests. Off by default |
+| `publicBuildInfo` | Serves the app's [build info](https://nijasc.github.io/ktor-svelte/main/guide/deployment#build-info) at `/_ktor-svelte/build.json`, for `loadBuildInfo()` in the browser. Off by default, because it tells every visitor the version and the commit |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](https://nijasc.github.io/ktor-svelte/main/security#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](https://nijasc.github.io/ktor-svelte/main/features/transport#api-compression) |
@@ -2654,6 +2748,19 @@ A route of yours such as `get("/{slug}")` beats the frontend. That is intended, 
 ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`. `.zst` files next to them, for example from a Vite compression plugin, are bundled too and preferred for browsers that accept `zstd`, since they decompress faster.
 
 If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
+
+## Path parameters
+
+`call.pathParameter<T>(name)` reads a path parameter in the type you need, so a route does not parse it by hand:
+
+```kotlin
+get("/api/notes/{id}") {
+    val id = call.pathParameter<Int>("id")
+    call.respond(store.create(Note(id, "x")))
+}
+```
+
+It reads `String`, `Int`, `Long`, `UUID` and enums, which match by name in any case. A value that does not fit, such as `/api/notes/abc`, ends the request with Ktor's `NotFoundException`: the address names nothing, so the answer is 404, through your `StatusPages` if you have one. Asking for a parameter the route's path does not have, or for a type it cannot read, is a mistake in the route and fails with a 500 that says so.
 
 Source: https://nijasc.github.io/ktor-svelte/main/reference/gradle
 
@@ -2744,6 +2851,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteSync` | Installs configured libraries and writes their generated files |
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
+| `svelteBuildInfo` | Writes the version, the git commit and its time into the build, for [`buildInfo`](https://nijasc.github.io/ktor-svelte/main/guide/deployment#build-info). Runs before resources are processed |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
 | `svelteInstall`, `svelteBuild`, `svelteBundle` | Install the frontend dependencies from the lockfile, build the frontend, and copy the build into the JAR's resources with its manifest. They run as part of `jar` and `processResources`, so you rarely call them yourself |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, with the [typed route](https://nijasc.github.io/ktor-svelte/main/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
@@ -2757,6 +2865,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
+| `svelteVerifyApiRoutes` | Lists [API routes that nothing in the frontend calls](https://nijasc.github.io/ktor-svelte/main/features/typescript#routes-nothing-calls). With `--strict` it fails when it finds one |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](https://nijasc.github.io/ktor-svelte/main/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
 | `svelteCheck` | Runs your `check` script |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |
