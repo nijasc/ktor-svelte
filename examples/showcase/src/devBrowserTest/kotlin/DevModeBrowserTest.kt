@@ -184,6 +184,33 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `an open page loads its data again after the app restarts, without a reload`() {
+        val routes = File(project, "src/main/kotlin/showcase/TaskRoutes.kt")
+        page.navigate("/login")
+        page.getByLabel("Email").fill(ADMIN_EMAIL)
+        page.getByLabel("Password").fill(ADMIN_PASSWORD)
+        page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
+        assertThat(page).hasURL(Pattern.compile(".*/board$"))
+        assertThat(page.locator("#tasks > li").first()).isVisible()
+        val loads = java.util.concurrent.CopyOnWriteArrayList<String>()
+        page.onRequest { request -> if ("/api/tasks" in request.url()) loads += request.url() }
+        page.evaluate("window.keptAcrossRestart = true")
+        try {
+            change(routes) { it.replace("?: \"Ktor\"", "?: \"restarted Kotlin\"") }
+            waitFor("the app to restart with the new route", CHANGE_SECONDS) { "Hello restarted Kotlin" in get("/api/greeting")?.body().orEmpty() }
+            waitFor("the board to load its tasks again", 60) {
+                page.waitForTimeout(250.0)
+                loads.isNotEmpty()
+            }
+            assertEquals(true, page.evaluate("window.keptAcrossRestart === true"))
+            assertThat(page.locator("#tasks > li").first()).isVisible()
+        } finally {
+            restore(routes)
+        }
+        waitFor("the app to restart with the old route", CHANGE_SECONDS) { "Hello Ktor" in get("/api/greeting")?.body().orEmpty() }
+    }
+
+    @Test
     fun `signing in works through the dev proxy and the board loads its data`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login$"))
