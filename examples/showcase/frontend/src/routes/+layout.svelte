@@ -18,12 +18,12 @@
     const links = $derived(
         session.user
             ? [
-                  { href: '/board', label: m.navBoard(), icon: 'LayoutDashboard' as const },
-                  { href: '/tasks/new', label: m.navNewTask(), icon: 'Plus' as const },
-                  ...(session.user.role === Role.ADMIN ? [{ href: '/admin', label: m.navAdmin(), icon: 'ShieldCheck' as const }] : []),
-                  { href: '/settings', label: m.navSettings(), icon: 'Settings' as const }
+                  { to: routes.board, label: m.navBoard(), icon: 'LayoutDashboard' as const },
+                  { to: routes.tasksNew, label: m.navNewTask(), icon: 'Plus' as const },
+                  ...(session.user.role === Role.ADMIN ? [{ to: routes.admin, label: m.navAdmin(), icon: 'ShieldCheck' as const }] : []),
+                  { to: routes.settings, label: m.navSettings(), icon: 'Settings' as const }
               ]
-            : [{ href: '/about', label: m.navAbout(), icon: 'Info' as const }]
+            : [{ to: routes.about, label: m.navAbout(), icon: 'Info' as const }]
     );
 
     onMount(async () => {
@@ -40,8 +40,8 @@
 <header class="navbar bg-base-100 border-b border-base-300 flex-wrap gap-2 px-4">
     <a class="btn btn-ghost text-lg" href={routes.home()}><Icon name="Rocket" size={20} /> {appName}</a>
     <nav class="flex flex-1 flex-wrap gap-1" aria-label={m.navMain()}>
-        {#each links as link (link.href)}
-            <a class="btn btn-ghost btn-sm" href={link.href} aria-current={page.url.pathname === link.href ? 'page' : undefined}>
+        {#each links as link (link.to.id)}
+            <a class="btn btn-ghost btn-sm" href={link.to()} aria-current={link.to.ariaCurrent(page)}>
                 <Icon name={link.icon} size={16} />
                 {link.label}
             </a>
