@@ -20,6 +20,7 @@ class RouteLinksTest {
             "/docs/[[lang]]/[...path]",
             "/files/[name].json",
             "/wiki/[...path]",
+            "/shop/[[lang]]/item/[id]",
         ).map(::routeOf)
 
     private fun suggestions(source: String) = findStringLinks(source, routes).map { it.suggestion }
@@ -81,6 +82,58 @@ class RouteLinksTest {
             <a href="/data-nodes/1/2/3">Too deep</a>
             """.trimIndent()
         assertEquals(emptyList(), findStringLinks(source, routes))
+    }
+
+    private fun kotlinSuggestions(source: String) = findKotlinStringLinks(source, routes).map { it.suggestion }
+
+    @Test
+    fun `kotlin redirects to static pages name a constant`() {
+        assertEquals(listOf("FrontendRoutes.home"), kotlinSuggestions("""call.respondRedirect("/")"""))
+        assertEquals(listOf("FrontendRoutes.dataNodes"), kotlinSuggestions("""call.respondRedirect("/data-nodes", permanent = true)"""))
+        assertEquals(
+            listOf("FrontendRoutes.dataNodesDefinition"),
+            kotlinSuggestions("""call.respondRedirect(url = "/data-nodes/definition")"""),
+        )
+    }
+
+    @Test
+    fun `kotlin string templates and concatenation become arguments`() {
+        assertEquals(listOf("FrontendRoutes.dataNodesId(id)"), kotlinSuggestions("call.respondRedirect(\"/data-nodes/\$id\")"))
+        assertEquals(
+            listOf("FrontendRoutes.dataNodesDefinitionId(node.id)"),
+            kotlinSuggestions("call.respondRedirect(\"/data-nodes/definition/\${node.id}?saved=1\")"),
+        )
+        assertEquals(
+            listOf("FrontendRoutes.dataNodesId(created.id)"),
+            kotlinSuggestions("""call.respondRedirect("/data-nodes/" + created.id)"""),
+        )
+        assertEquals(listOf("FrontendRoutes.dataNodesId(\"42\")"), kotlinSuggestions("""call.respondRedirect("/data-nodes/42")"""))
+        assertEquals(listOf("FrontendRoutes.filesNameJson(...)"), kotlinSuggestions("call.respondRedirect(\"/files/\$name.json\")"))
+    }
+
+    @Test
+    fun `kotlin arguments are named when an optional parameter is left out`() {
+        assertEquals(
+            listOf("FrontendRoutes.docsLangPath(\"guide\", \"intro\")"),
+            kotlinSuggestions("""call.respondRedirect("/docs/guide/intro")"""),
+        )
+        assertEquals(listOf("FrontendRoutes.shopLangItemId(id = id)"), kotlinSuggestions("call.respondRedirect(\"/shop/item/\$id\")"))
+        assertEquals(
+            listOf("FrontendRoutes.shopLangItemId(\"de\", \"5\")"),
+            kotlinSuggestions("""call.respondRedirect("/shop/de/item/5")"""),
+        )
+    }
+
+    @Test
+    fun `kotlin redirects elsewhere are left alone`() {
+        val source =
+            """
+            call.respondRedirect("/api/docs")
+            call.respondRedirect("https://example.com/data-nodes")
+            call.respondRedirect(FrontendRoutes.dataNodes)
+            call.respondText("/data-nodes")
+            """.trimIndent()
+        assertEquals(emptyList(), findKotlinStringLinks(source, routes))
     }
 
     @Test

@@ -18,9 +18,19 @@ private sealed interface LinkSegment {
     ) : LinkSegment
 }
 
+private data class Argument(
+    val text: String,
+    val literal: Boolean,
+)
+
 private data class RouteMatch(
-    val arguments: Map<String, String?>,
+    val arguments: Map<String, Argument?>,
     val literalSegments: Int,
+)
+
+private data class MatchedRoute(
+    val route: FrontendRoute,
+    val arguments: Map<String, Argument?>,
 )
 
 private const val EXPRESSION_MARK = '\u0000'
@@ -29,8 +39,11 @@ private val LINK_SOURCE_EXTENSIONS = setOf("svelte", "ts", "js")
 private val HREF = Regex("""\bhref=\{?\s*(["'`])(/[^"'`]*)\1""")
 private val NAVIGATION =
     Regex("""\b(?:goto|redirect)\(\s*(?:\d+\s*,\s*)?(["'`])(/[^"'`]*)\1(?:\s*\+\s*([\w.$?\[\]]+)(?=\s*[,)]))?\s*\)?""")
+private val KOTLIN_REDIRECT =
+    Regex("""\brespondRedirect\(\s*(?:url\s*=\s*)?"(/[^"]*)"(?:\s*\+\s*([\w.?\[\]()]+)(?=\s*[,)]))?\s*\)?""")
 private val TEMPLATE_EXPRESSION = Regex("""\$\{([^}]*)}""")
 private val MARKUP_EXPRESSION = Regex("""\{([^}]*)}""")
+private val KOTLIN_EXPRESSION = Regex("""\$\{([^}]*)}|\$(\w+)""")
 
 internal fun linkSourceFiles(
     sourceDirectory: File,
@@ -43,6 +56,11 @@ internal fun linkSourceFiles(
         .sortedBy { it.invariantSeparatorsPath }
         .toList()
 
+internal fun kotlinLinkSourceFiles(sourceDirectories: Collection<File>): List<File> =
+    sourceDirectories
+        .flatMap { directory -> directory.walkTopDown().filter { it.isFile && it.extension == "kt" } }
+        .sortedBy { it.invariantSeparatorsPath }
+
 internal fun findStringLinks(
     source: String,
     routes: List<FrontendRoute>,
@@ -53,21 +71,55 @@ internal fun findStringLinks(
             val quote = match.groupValues[1]
             val path = match.groupValues[2]
             val appended = match.groupValues.getOrNull(3).orEmpty()
-            if (path.startsWith("//")) return@mapNotNull null
-            val suggestion = suggestionFor(linkSegments(path, quote, appended), routes) ?: return@mapNotNull null
-            StringLink(source.substring(0, match.range.first).count { it == '\n' } + 1, match.value, suggestion)
+            val expressions = if (quote == "`") TEMPLATE_EXPRESSION else MARKUP_EXPRESSION
+            val matched = matchedRoute(path, expressions, appended, routes) ?: return@mapNotNull null
+            StringLink(lineOf(source, match), match.value, svelteSuggestion(matched))
         }.toList()
+
+internal fun findKotlinStringLinks(
+    source: String,
+    routes: List<FrontendRoute>,
+): List<StringLink> =
+    KOTLIN_REDIRECT
+        .findAll(source)
+        .mapNotNull { match ->
+            val matched = matchedRoute(match.groupValues[1], KOTLIN_EXPRESSION, match.groupValues[2], routes) ?: return@mapNotNull null
+            StringLink(lineOf(source, match), match.value, kotlinSuggestion(matched))
+        }.toList()
+
+private fun lineOf(
+    source: String,
+    match: MatchResult,
+): Int = source.substring(0, match.range.first).count { it == '\n' } + 1
+
+private fun matchedRoute(
+    path: String,
+    expressions: Regex,
+    appended: String,
+    routes: List<FrontendRoute>,
+): MatchedRoute? {
+    if (path.startsWith("//")) return null
+    val link = linkSegments(path, expressions, appended)
+    return routes
+        .mapNotNull { route -> matchRoute(route.segments, link)?.let { route to it } }
+        .maxByOrNull { (_, match) -> match.literalSegments }
+        ?.let { (route, match) -> MatchedRoute(route, match.arguments) }
+}
 
 private fun linkSegments(
     path: String,
-    quote: String,
+    expressionPattern: Regex,
     appended: String,
 ): List<LinkSegment> {
     val expressions = mutableListOf<String>()
-    val pattern = if (quote == "`") TEMPLATE_EXPRESSION else MARKUP_EXPRESSION
     val marked =
-        pattern.replace(path) { match ->
-            expressions += match.groupValues[1].trim()
+        expressionPattern.replace(path) { match ->
+            expressions +=
+                match.groupValues
+                    .drop(1)
+                    .firstOrNull { it.isNotEmpty() }
+                    .orEmpty()
+                    .trim()
             EXPRESSION_MARK.toString()
         }
     val pathOnly = marked.substringBefore('?').substringBefore('#')
@@ -87,22 +139,47 @@ private fun linkSegments(
     return if (pathOnly.endsWith("/")) segments + LinkSegment.Dynamic(appended) else segments.dropLast(1) + LinkSegment.Dynamic(null)
 }
 
-private fun suggestionFor(
-    link: List<LinkSegment>,
-    routes: List<FrontendRoute>,
-): String? {
-    val best =
-        routes
-            .mapNotNull { route -> matchRoute(route.segments, link)?.let { route to it } }
-            .maxByOrNull { (_, match) -> match.literalSegments }
-            ?: return null
-    val (route, match) = best
-    if (route.params.isEmpty()) return "routes.${route.name}()"
+private fun svelteSuggestion(matched: MatchedRoute): String {
+    val route = matched.route
     val arguments =
         route.params
-            .filter { it.name in match.arguments }
-            .joinToString(", ") { "${it.name}: ${match.arguments[it.name] ?: UNKNOWN_ARGUMENT}" }
+            .filter { it.name in matched.arguments }
+            .joinToString(", ") { param ->
+                val argument = matched.arguments[param.name]
+                val value =
+                    when {
+                        argument == null -> UNKNOWN_ARGUMENT
+                        argument.literal -> "'" + argument.text.replace("\\", "\\\\").replace("'", "\\'") + "'"
+                        else -> argument.text
+                    }
+                "${param.name}: $value"
+            }
     return if (arguments.isEmpty()) "routes.${route.name}()" else "routes.${route.name}({ $arguments })"
+}
+
+private fun kotlinSuggestion(matched: MatchedRoute): String {
+    val route = matched.route
+    val name = "FrontendRoutes.${kotlinName(route.name)}"
+    if (route.params.isEmpty()) return name
+    val given = route.params.filter { it.name in matched.arguments }
+    val positional = given.size == route.params.size
+    val arguments =
+        given.joinToString(", ") { param ->
+            val argument = matched.arguments[param.name]
+            val value =
+                when {
+                    argument == null -> UNKNOWN_ARGUMENT
+                    argument.literal ->
+                        "\"" +
+                            argument.text
+                                .replace("\\", "\\\\")
+                                .replace("\"", "\\\"")
+                                .replace("$", "\\$") + "\""
+                    else -> argument.text
+                }
+            if (positional) value else "${kotlinName(param.name)} = $value"
+        }
+    return "$name($arguments)"
 }
 
 private fun matchRoute(
@@ -130,11 +207,11 @@ private fun matchRoute(
     return withSegment ?: if (only != null && only.optional) matchRoute(route.drop(1), link) else null
 }
 
-private fun restArgument(segments: List<LinkSegment>): String? {
+private fun restArgument(segments: List<LinkSegment>): Argument? {
     val single = segments.singleOrNull()
-    if (single is LinkSegment.Dynamic) return single.expression
+    if (single is LinkSegment.Dynamic) return single.expression?.let { Argument(it, literal = false) }
     if (segments.any { it is LinkSegment.Dynamic }) return null
-    return quoted(segments.joinToString("/") { (it as LinkSegment.Literal).text })
+    return Argument(segments.joinToString("/") { (it as LinkSegment.Literal).text }, literal = true)
 }
 
 private fun matchSegment(
@@ -147,7 +224,10 @@ private fun matchSegment(
         return if (segment == LinkSegment.Literal(text)) RouteMatch(emptyMap(), 1) else null
     }
     return when (segment) {
-        is LinkSegment.Dynamic -> RouteMatch(params.associate { it.name to segment.expression.takeIf { parts.size == 1 } }, 0)
+        is LinkSegment.Dynamic -> {
+            val expression = segment.expression?.takeIf { parts.size == 1 }?.let { Argument(it, literal = false) }
+            RouteMatch(params.associate { it.name to expression }, 0)
+        }
         is LinkSegment.Literal -> {
             val pattern =
                 parts.joinToString("") { part ->
@@ -157,9 +237,7 @@ private fun matchSegment(
                     }
                 }
             val values = Regex(pattern).matchEntire(segment.text)?.groupValues?.drop(1) ?: return null
-            RouteMatch(params.zip(values).associate { (param, value) -> param.name to quoted(value) }, 0)
+            RouteMatch(params.zip(values).associate { (param, value) -> param.name to Argument(value, literal = true) }, 0)
         }
     }
 }
-
-private fun quoted(value: String): String = "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
