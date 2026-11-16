@@ -132,7 +132,7 @@ class DevProxyTest {
                 }
             }
             val page = client.get("/html-page")
-            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js?panel&logs\"></script>"
+            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js?panel&logs&refresh\"></script>"
             val html = "<html><head><title>x</title>$script</head><body>page</body></html>"
             assertEquals(html, page.bodyAsText())
             assertEquals(html.length.toString(), page.headers[HttpHeaders.ContentLength])
@@ -164,7 +164,7 @@ class DevProxyTest {
                 client.prepareGet("/_ktor-svelte/dev/requests").execute { response ->
                     assertContains(response.headers[HttpHeaders.ContentType].orEmpty(), "text/event-stream")
                     val channel = response.bodyAsChannel()
-                    assertEquals(listOf<String?>(": connected", ""), listOf(channel.readUTF8Line(), channel.readUTF8Line()))
+                    assertEquals(listOf<String?>(": connected", "retry: 1000", ""), List(3) { channel.readUTF8Line() })
                     listOf(channel.readUTF8Line(), channel.readUTF8Line(), channel.readUTF8Line())
                 }
             assertContains(lines[0].orEmpty(), "\"method\":\"GET\",\"path\":\"/api/hello\",\"status\":200")
@@ -186,7 +186,7 @@ class DevProxyTest {
                     }
                 }
             }
-            assertContains(client.get("/html-page").bodyAsText(), "src=\"/_ktor-svelte/dev/client.js?logs\"")
+            assertContains(client.get("/html-page").bodyAsText(), "src=\"/_ktor-svelte/dev/client.js?logs&refresh\"")
             assertEquals("vite:/_ktor-svelte/dev/requests", client.get("/_ktor-svelte/dev/requests").bodyAsText())
         }
 
@@ -209,7 +209,7 @@ class DevProxyTest {
                     client.prepareGet("/_ktor-svelte/dev/compile-errors").execute { response ->
                         assertContains(response.headers[HttpHeaders.ContentType].orEmpty(), "text/event-stream")
                         val channel = response.bodyAsChannel()
-                        assertEquals(listOf<String?>(": connected", ""), listOf(channel.readUTF8Line(), channel.readUTF8Line()))
+                        assertEquals(listOf<String?>(": connected", "retry: 1000", ""), List(3) { channel.readUTF8Line() })
                         channel.readUTF8Line()
                     }
                 assertEquals("data: [{\"file\":\"Routes.kt\",\"line\":3,\"column\":5,\"message\":\"Unresolved reference 'x'.\"}]", first)

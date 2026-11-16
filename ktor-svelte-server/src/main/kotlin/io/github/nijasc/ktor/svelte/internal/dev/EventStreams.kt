@@ -6,7 +6,7 @@ import io.ktor.server.response.respondTextWriter
 import java.io.IOException
 import java.io.Writer
 
-private const val STREAM_OPENED = ": connected\n\n"
+private const val STREAM_OPENED = ": connected\nretry: 1000\n\n"
 
 internal suspend fun ApplicationCall.respondEventStreamUntilDisconnect(events: suspend Writer.() -> Unit) {
     try {

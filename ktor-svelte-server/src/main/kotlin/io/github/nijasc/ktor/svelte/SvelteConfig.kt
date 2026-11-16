@@ -152,6 +152,7 @@ public class SvelteDevConfig internal constructor() {
     public var slowApiCall: Duration? = 500.milliseconds
     public var panel: Boolean = true
     public var browserLogs: Boolean = true
+    public var refreshAfterRestart: Boolean = true
 }
 
 @KtorDsl
