@@ -27,6 +27,7 @@ export interface ApiConfig {
     onNewBuild?: (build: string) => void;
     onError?: (error: unknown) => void;
     retry?: boolean | RetryConfig;
+    sendTimeZone?: boolean;
 }
 
 export function isTimeoutError(error: unknown): boolean {
@@ -220,6 +221,19 @@ async function withRetry<T>(
     }
 }
 
+let ownTimeZone: string | undefined | null = null;
+
+function timeZone(): string | undefined {
+    if (ownTimeZone === null) {
+        try {
+            ownTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+        } catch {
+            ownTimeZone = undefined;
+        }
+    }
+    return ownTimeZone;
+}
+
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
     const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, ...init } = options;
     const plan = streaming ? undefined : retryPlan(method, retry);
@@ -231,6 +245,8 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
     const merged = new Headers(apiConfig.headers);
     merged.set('Accept', accept);
     if (!merged.has('X-Request-Id') && isSameOrigin(url)) merged.set('X-Request-Id', newRequestId());
+    const zone = apiConfig.sendTimeZone === false || !isSameOrigin(url) ? undefined : timeZone();
+    if (zone && !merged.has('X-Time-Zone')) merged.set('X-Time-Zone', zone);
     new Headers(headers).forEach((value, key) => merged.set(key, value));
     let payload: BodyInit | undefined;
     if (body !== undefined) {

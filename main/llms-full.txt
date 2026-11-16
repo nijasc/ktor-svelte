@@ -1524,6 +1524,21 @@ try {
 
 With retries on, the client waits and sends the call again by itself, once, when the wait is no longer than `maxDelay`, which is five seconds unless you change it. That also applies to writes: a call the rate limit refused never reached your route, so sending it again cannot do the work twice. A longer wait is not sat out, and the error reaches you at once.
 
+## The visitor's time zone
+
+The server usually runs in UTC, and the visitor does not. The generated client sends the browser's time zone with every call to your app, and a route reads it as `call.timeZone`:
+
+```kotlin
+get("/api/report") {
+    val today = java.time.LocalDate.now(call.timeZone)
+    call.respondText("Report for $today")
+}
+```
+
+It is a `java.time.ZoneId`, such as `Europe/Zurich`, taken from the `X-Time-Zone` header. A request without the header, or with a name the JDK does not know, gets `defaultTimeZone` from `install(Svelte)`, which is `UTC` unless you change it. That covers requests the client does not make, such as a plain link to a download.
+
+The header only goes to your own origin, never to a `baseUrl` on another host. To stop sending it, set `apiConfig.sendTimeZone = false`.
+
 ## Search as you type
 
 When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:
@@ -2656,6 +2671,7 @@ install(Svelte) {
     requestIds = true
     accessLog = false
     publicBuildInfo = false
+    defaultTimeZone = "UTC"
     allowedOrigins()
     maxApiBodySize = 1048576
     maxJsonDepth = 64
@@ -2724,6 +2740,7 @@ install(Svelte) {
 | `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](https://nijasc.github.io/ktor-svelte/main/features/endpoints#default-favicon) |
 | `accessLog` | Logs one line per request in production to the `ktor-svelte.access` logger: `method=GET path=/api/notes status=200 ms=12 id=...`. The query string is left out, because it can hold secrets, and requests for build assets under `/_app/` are skipped. Development mode never logs these, since the dev log and the API panel already show requests. Off by default |
 | `publicBuildInfo` | Serves the app's [build info](https://nijasc.github.io/ktor-svelte/main/guide/deployment#build-info) at `/_ktor-svelte/build.json`, for `loadBuildInfo()` in the browser. Off by default, because it tells every visitor the version and the commit |
+| `defaultTimeZone` | What [`call.timeZone`](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#the-visitors-time-zone) returns when a request does not say which zone the visitor is in. `UTC` by default |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](https://nijasc.github.io/ktor-svelte/main/security#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](https://nijasc.github.io/ktor-svelte/main/features/transport#api-compression) |
