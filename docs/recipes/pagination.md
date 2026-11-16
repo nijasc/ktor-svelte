@@ -1,6 +1,16 @@
 # Page through long lists
 
-Return `Page<T>` with a `cursor` query parameter, and `pages` reads it one page at a time:
+Declare the route with `getPage`, return a `Page<T>`, and `pages` reads it one page at a time:
+
+```kotlin
+route("/api/users") {
+    getPage<User> { request -> users.page(request.cursor, request.limit) }
+}
+```
+
+`getPage` reads the `cursor` and `limit` query parameters for you. A missing or unreadable `limit` becomes 50, and the limit never leaves the range from 1 to 100. Change both with `getPage<User>(defaultLimit = 20, maxLimit = 200)`. It also describes the route, so the generated client knows the parameters and the `Page<User>` it returns, even without Ktor's compiler plugin.
+
+A paged route that reads more query parameters, such as a filter, is written by hand. `getPage` only does what these lines do:
 
 ```kotlin
 get("/api/users") {

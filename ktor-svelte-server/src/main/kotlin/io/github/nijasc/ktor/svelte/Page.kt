@@ -1,9 +1,54 @@
 package io.github.nijasc.ktor.svelte
 
+import io.ktor.http.HttpStatusCode
+import io.ktor.openapi.jsonSchema
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.RoutingContext
+import io.ktor.server.routing.get
+import io.ktor.server.routing.openapi.describe
+import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.Serializable
+
+public const val DEFAULT_PAGE_LIMIT: Int = 50
+public const val LARGEST_PAGE_LIMIT: Int = 100
 
 @Serializable
 public data class Page<T>(
     val items: List<T>,
     val next: String? = null,
 )
+
+public data class PageRequest(
+    val cursor: String?,
+    val limit: Int,
+)
+
+@PublishedApi
+internal fun ApplicationCall.pageRequest(
+    defaultLimit: Int,
+    maxLimit: Int,
+): PageRequest {
+    val asked = request.queryParameters["limit"]?.toIntOrNull() ?: defaultLimit
+    return PageRequest(request.queryParameters["cursor"]?.takeIf { it.isNotEmpty() }, asked.coerceIn(1, maxLimit))
+}
+
+@OptIn(ExperimentalKtorApi::class)
+public inline fun <reified T : Any> Route.getPage(
+    path: String = "",
+    defaultLimit: Int = DEFAULT_PAGE_LIMIT,
+    maxLimit: Int = LARGEST_PAGE_LIMIT,
+    noinline body: suspend RoutingContext.(PageRequest) -> Page<T>,
+): Route {
+    require(maxLimit >= 1) { "maxLimit must be at least 1, but is $maxLimit." }
+    return get(path) { call.respond(body(call.pageRequest(defaultLimit, maxLimit))) }.describe {
+        parameters {
+            query("cursor") { required = false }
+            query("limit") { required = false }
+        }
+        responses {
+            HttpStatusCode.OK { schema = jsonSchema<Page<T>>() }
+        }
+    }
+}

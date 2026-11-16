@@ -1,6 +1,6 @@
 package notes
 
-import io.github.nijasc.ktor.svelte.Page
+import io.github.nijasc.ktor.svelte.getPage
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
@@ -34,12 +34,7 @@ fun Route.noteRoutes(store: NoteStore) {
             call.respond(HttpStatusCode.Created, store.create(input))
         }
 
-        get("/feed") {
-            val cursor = call.queryParameters["cursor"]
-            val limit = call.queryParameters["limit"]?.toIntOrNull() ?: 20
-            val page: Page<Note> = store.page(cursor, limit)
-            call.respond(page)
-        }
+        getPage<Note>("/feed", defaultLimit = 20) { request -> store.page(request.cursor, request.limit) }
 
         get("/export") {
             call.respond(NotesExport(store.list(search = null, tag = null)))
