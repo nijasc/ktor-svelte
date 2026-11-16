@@ -41,6 +41,7 @@ internal fun frontendFiles(
         if (spec.lucide || keys.any { it.startsWith("$GENERATED_DIR/") }) {
             put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
             put(GENERATED_LINT_RULES, lintRulesSource(routes.takeIf { spec.routes }))
+            put(ASSISTANT_GUIDE, assistantGuide(spec, routes.takeIf { spec.routes }))
         }
     }
 
