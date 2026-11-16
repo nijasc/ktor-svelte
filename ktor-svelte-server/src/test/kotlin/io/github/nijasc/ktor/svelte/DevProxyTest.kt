@@ -25,6 +25,11 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.readUTF8Line
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
@@ -132,7 +137,7 @@ class DevProxyTest {
                 }
             }
             val page = client.get("/html-page")
-            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js?panel&logs&refresh\"></script>"
+            val script = "<script type=\"module\" src=\"/_ktor-svelte/dev/client.js?panel&logs&refresh&errors\"></script>"
             val html = "<html><head><title>x</title>$script</head><body>page</body></html>"
             assertEquals(html, page.bodyAsText())
             assertEquals(html.length.toString(), page.headers[HttpHeaders.ContentLength])
@@ -213,6 +218,46 @@ class DevProxyTest {
             assertEquals(HttpStatusCode.BadRequest, client.get("$open?file=/etc/passwd&line=1").status)
             val remote = client.get("$open?file=$here&line=3") { header(HttpHeaders.XForwardedFor, "203.0.113.9") }
             assertEquals(HttpStatusCode.Forbidden, remote.status)
+        }
+
+    @Test
+    fun `a call that fails on the server carries the exception and a trimmed stack trace`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.Always
+                    }
+                }
+                routing {
+                    get("/api/broken") { throw IllegalStateException("No such note", IllegalArgumentException("id was -1")) }
+                }
+            }
+            assertEquals(HttpStatusCode.InternalServerError, client.get("/api/broken").status)
+            val entry =
+                client.prepareGet("/_ktor-svelte/dev/requests").execute { response ->
+                    val channel = response.bodyAsChannel()
+                    repeat(3) { channel.readUTF8Line() }
+                    Json.parseToJsonElement(channel.readUTF8Line().orEmpty().removePrefix("data: ")).jsonObject
+                }
+            val error = entry.getValue("error").jsonObject
+            assertEquals("java.lang.IllegalStateException", error.getValue("type").jsonPrimitive.content)
+            assertEquals("No such note", error.getValue("message").jsonPrimitive.content)
+            val lines = error.getValue("lines").jsonArray.map { it.jsonObject }
+            val own = lines.first { "path" in it }
+            assertContains(own.getValue("text").jsonPrimitive.content, "DevProxyTest")
+            assertTrue(
+                own
+                    .getValue("path")
+                    .jsonPrimitive.content
+                    .endsWith("/io/github/nijasc/ktor/svelte/DevProxyTest.kt"),
+            )
+            assertTrue(own.getValue("line").jsonPrimitive.int > 0)
+            val texts = lines.map { it.getValue("text").jsonPrimitive.content }
+            assertContains(texts, "Caused by: java.lang.IllegalArgumentException: id was -1")
+            assertTrue(texts.none { "io.netty." in it || "kotlinx.coroutines." in it }, texts.toString())
+            assertTrue(texts.any { it.endsWith("more frames, see the server log") })
         }
 
     @Test
