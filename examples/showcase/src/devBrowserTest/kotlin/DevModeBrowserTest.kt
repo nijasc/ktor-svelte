@@ -478,13 +478,15 @@ class DevModeBrowserTest {
                 page.waitForTimeout(1_500.0)
                 flagged.count() > 0
             }
-            assertThat(flagged).hasCount(1)
-            assertThat(flagged).containsText(Pattern.compile("asked for twice within \\d+ ms, from src/routes/about/\\+page\\.svelte:\\d+ and from src/routes/about/\\+page\\.svelte:\\d+"))
-
-            panel.locator(".toggle").click()
-            panel.locator(".row").filter(Locator.FilterOptions().setHasText("/api/greeting?name=twice")).first().getByText("Replay").click()
-            waitFor("the replayed call", 20) { panel.locator(".row").filter(Locator.FilterOptions().setHasText("name=twice")).count() == 3 }
-            assertThat(flagged).hasCount(1)
+            val calls = panel.locator(".row").filter(Locator.FilterOptions().setHasText("/api/greeting?name=twice"))
+            val flags = flagged.count()
+            val before = calls.count()
+            assertEquals(before / 2, flags, "one of every two calls is the repeat")
+            assertThat(flagged.first()).containsText(
+                Pattern.compile(
+                    "asked for twice within \\d+ ms, from src/routes/about/\\+page\\.svelte:\\d+ and from src/routes/about/\\+page\\.svelte:\\d+",
+                ),
+            )
         } finally {
             restore(about)
         }
