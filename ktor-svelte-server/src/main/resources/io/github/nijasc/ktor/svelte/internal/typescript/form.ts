@@ -11,6 +11,7 @@ export interface FieldOptions {
     bounds?: FieldBounds;
     errors?: string[];
     errorClass?: string;
+    describedBy?: string;
 }
 
 type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -56,7 +57,7 @@ export function field(node: FieldElement, options: FieldOptions = {}) {
     message.setAttribute('role', 'alert');
     const applied = new Set<string>();
 
-    function apply({ bounds = {}, errors = [], errorClass = 'field-error' }: FieldOptions) {
+    function apply({ bounds = {}, errors = [], errorClass = 'field-error', describedBy }: FieldOptions) {
         applied.forEach((name) => node.removeAttribute(name));
         applied.clear();
         for (const [name, value] of Object.entries(bounds)) {
@@ -69,12 +70,13 @@ export function field(node: FieldElement, options: FieldOptions = {}) {
         message.textContent = text;
         if (text === '') {
             node.removeAttribute('aria-invalid');
-            node.removeAttribute('aria-describedby');
+            if (describedBy) node.setAttribute('aria-describedby', describedBy);
+            else node.removeAttribute('aria-describedby');
             message.remove();
             return;
         }
         node.setAttribute('aria-invalid', 'true');
-        node.setAttribute('aria-describedby', message.id);
+        node.setAttribute('aria-describedby', describedBy ? `${describedBy} ${message.id}` : message.id);
         if (!message.isConnected) node.after(message);
     }
 
