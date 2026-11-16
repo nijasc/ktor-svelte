@@ -240,6 +240,15 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `creating a task tells the browser which page to open`() {
+        val created = admin.send("POST", "/api/tasks", """{"title":"${unique("Navigate")}"}""")
+        assertEquals(201, created.statusCode())
+        val id = Regex(""""id":\s*(\d+)""").find(created.body())!!.groupValues[1]
+        assertEquals("/tasks/$id", created.headers().firstValue("X-Ktor-Svelte-Navigate").orElse(null))
+        assertEquals("success:Task%20created.", created.headers().firstValue("X-Ktor-Svelte-Toast").orElse(null))
+    }
+
+    @Test
     fun `deleting a task asks the browser to show a toast in the visitor's language`() {
         val english = createTask(admin, unique("Toast"))
         val answer = admin.send("DELETE", "/api/tasks/$english")

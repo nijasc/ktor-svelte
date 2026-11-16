@@ -61,6 +61,7 @@ class LibraryFilesTest {
     fun `toasts add a client hook and pick daisy alerts when daisy is on`() {
         val plain = frontendFiles(spec(toasts = true), null, false)
         assertContains(plain.getValue("src/hooks.client.ts"), "client.apiConfig.onError = toastApiError")
+        assertContains(plain.getValue("src/hooks.client.ts"), "client.apiConfig.onNavigate = (path) => void goto(path);")
         assertContains(
             plain.getValue("src/hooks.client.ts"),
             "if (client?.apiConfig && !client.apiConfig.onToast) client.apiConfig.onToast = (message, kind) => toast(message, { kind });",

@@ -139,4 +139,16 @@ class GeneratedClientBehaviourTest {
         assertEquals(emptyList(), list("toastFromAnotherOrigin"))
         assertEquals(emptyList(), list("noToastHeader"))
     }
+
+    @Test
+    fun `the client goes where the server says after a successful call, inside the app only`() {
+        val results = runHarness()
+
+        fun list(name: String) = results.getValue(name).jsonArray.map { it.jsonPrimitive.content }
+        assertEquals(listOf("the call returned", "/notes/7?tab=files"), list("navigates"), "the caller's own code runs first")
+        assertEquals(listOf("the call returned"), list("noNavigationHeader"))
+        assertEquals(listOf("the call returned"), list("noNavigationAfterAFailure"))
+        assertEquals(List(4) { "the call returned" }, list("otherSitesAreNotFollowed"))
+        assertEquals(listOf("the call returned"), list("noNavigationFromAnotherOrigin"))
+    }
 }
