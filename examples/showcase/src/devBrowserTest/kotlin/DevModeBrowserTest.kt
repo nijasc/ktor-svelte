@@ -410,6 +410,35 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `texts that are the same as in the default language are listed and can be outlined`() {
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        assertThat(panel.locator(".untranslated")).isHidden()
+
+        context.addCookies(listOf(com.microsoft.playwright.options.Cookie("ktor_svelte_locale", "de").setUrl(APP)))
+        page.reload()
+        val heading = page.locator("th").first()
+        assertThat(heading).hasText("Feature")
+        panel.locator(".toggle").click()
+        panel.locator(".untranslated summary").click()
+        val listed = panel.locator(".untranslated-row").filter(Locator.FilterOptions().setHasText("about-feature"))
+        assertThat(listed).containsText("Feature")
+        assertThat(heading).not().hasAttribute("data-ktor-svelte-untranslated", "about-feature")
+
+        panel.locator(".untranslated-outline").check()
+        assertThat(heading).hasAttribute("data-ktor-svelte-untranslated", "about-feature")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).not().hasAttribute("data-ktor-svelte-untranslated", Pattern.compile(".*"))
+        page.reload()
+        assertThat(heading).hasAttribute("data-ktor-svelte-untranslated", "about-feature")
+
+        panel.locator(".toggle").click()
+        panel.locator(".untranslated summary").click()
+        panel.locator(".untranslated-outline").uncheck()
+        assertThat(page.locator("[data-ktor-svelte-untranslated]")).hasCount(0)
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
