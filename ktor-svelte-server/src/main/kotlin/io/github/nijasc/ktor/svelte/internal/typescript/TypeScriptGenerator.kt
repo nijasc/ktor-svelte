@@ -1,6 +1,5 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
-import io.github.nijasc.ktor.svelte.UPLOAD_EXTENSION
 import io.github.nijasc.ktor.svelte.internal.validation.ConstraintMessages
 import io.github.nijasc.ktor.svelte.internal.validation.formatNumber
 import kotlinx.serialization.json.Json
@@ -733,7 +732,7 @@ internal class TypeScriptGenerator(
         val references = mutableSetOf<String>()
         val groups = linkedMapOf<String, MutableList<Endpoint>>()
         val errors = mutableListOf<ErrorEntry>()
-        val uploads = sortedMapOf<String, String>()
+        val uploads = mutableMapOf<String, String>()
         paths.forEach { (path, item) ->
             val pathItem = item.jsonObject
             HTTP_METHODS.forEach { method ->
@@ -773,7 +772,7 @@ internal class TypeScriptGenerator(
             append(errorsSource(errors))
             if (uploads.isNotEmpty()) {
                 append("export const uploadRules = {\n")
-                uploads.forEach { (operation, rules) -> append("    '$operation': $rules,\n") }
+                uploads.entries.sortedBy { it.key }.forEach { (operation, rules) -> append("    '$operation': $rules,\n") }
                 append("} as const;\n\n")
             }
             if (publicConfigSchema != null) append(typeScriptTemplate("public-config.ts"))
@@ -1112,6 +1111,7 @@ private fun hasDateFormat(element: JsonElement): Boolean =
 
 private const val LUCIDE_TYPE = "LucideIcon"
 internal const val GIT_ATTRIBUTES_FILE = ".gitattributes"
+internal const val UPLOAD_EXTENSION = "x-ktor-svelte-upload"
 internal const val FORM_STATE_FILE = "form-state.svelte.ts"
 private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated merge=ktor-svelte"
 private val SERVICES_MODULE_NAMES =

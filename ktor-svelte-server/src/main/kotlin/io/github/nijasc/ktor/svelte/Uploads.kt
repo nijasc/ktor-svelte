@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.typescript.UPLOAD_EXTENSION
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
@@ -16,7 +17,6 @@ import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
 import java.util.Locale
 
-internal const val UPLOAD_EXTENSION = "x-ktor-svelte-upload"
 private const val KIBIBYTE = 1024.0
 private val UploadRulesKey = AttributeKey<UploadRules>("KtorSvelteUploadRules")
 
