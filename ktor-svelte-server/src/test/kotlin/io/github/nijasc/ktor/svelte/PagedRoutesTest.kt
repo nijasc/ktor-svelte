@@ -1,9 +1,12 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.typescript.SourceLocation
+import io.github.nijasc.ktor.svelte.internal.typescript.routeSources
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.install
+import io.ktor.server.routing.RoutingNode
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
@@ -122,6 +125,18 @@ class PagedRoutesTest {
         assertContains(services, "items: Entry[];")
         assertContains(output.resolve("types.ts").readText(), "export interface Entry {")
     }
+
+    @Test
+    fun `a paged route is found in the file that declares it`() =
+        testApplication {
+            var source: SourceLocation? = null
+            application {
+                val root = routing { getPage<Entry>("/api/entries") { pageAfter(it) } }
+                source = routeSources(root as RoutingNode)["GET /api/entries"]
+            }
+            startApplication()
+            assertEquals("io/github/nijasc/ktor/svelte/PagedRoutesTest.kt", source?.file)
+        }
 
     @Test
     fun `a largest limit below one is refused when the route is declared`() {

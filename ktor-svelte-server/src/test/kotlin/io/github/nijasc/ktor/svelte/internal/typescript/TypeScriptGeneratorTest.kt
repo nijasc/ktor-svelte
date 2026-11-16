@@ -782,6 +782,22 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `a service names the Kotlin file that defines its route`() {
+        val openApi =
+            """
+            {"paths":{"/api/notes":{"get":{"summary":"Lists notes.","responses":{"200":{"description":"ok"}}},
+            "post":{"responses":{"201":{"description":"ok"}}}},
+            "/api/notes/{id}":{"delete":{"responses":{"204":{"description":"ok"}}}}}}
+            """.trimIndent()
+        val files = mapOf("GET /api/notes" to "notes/Routes.kt", "POST /api/notes" to "notes/Routes.kt")
+        val services = TypeScriptGenerator(listOf("/api")).generate(openApi, files).getValue("services.ts")
+        assertContains(services, "/**\n * Lists notes.\n *\n * @see notes/Routes.kt\n */\nexport const notesList =")
+        assertContains(services, "/** @see notes/Routes.kt */\nexport const notesCreate =")
+        assertContains(services, "});\nexport const notesDelete =")
+        assertFalse(TypeScriptGenerator(listOf("/api")).generate(openApi).getValue("services.ts").contains("@see"))
+    }
+
+    @Test
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")

@@ -121,6 +121,15 @@ post("/api/notes/{id}/attachments") { /* ... */ }.describe {
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
 ```
 
+Every generated function also names the Kotlin file its route is declared in, as an `@see` line, whether you describe the route or not:
+
+```ts no-check
+/** @see notes/Routes.kt */
+export const notesCreate = (body: NoteInput, options?: RequestOptions) => ...
+```
+
+The path is the file's package folder and name, so it is the same on every machine. The line number is left out on purpose: it would change the generated file every time you edit above a route. To jump to the exact line, use the route list at `/_ktor-svelte/routes` while the app runs in development.
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.

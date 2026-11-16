@@ -53,7 +53,20 @@ private fun parameterSegment(
     suffix: String?,
 ): String = "/${prefix.orEmpty()}{$name}${suffix.orEmpty()}"
 
-internal fun sourceOf(handler: Any): SourceLocation? {
+private const val OWN_PACKAGE = "io.github.nijasc.ktor.svelte"
+
+private fun handlerOfTheApp(handler: Any): Any {
+    if (handler.javaClass.packageName != OWN_PACKAGE) return handler
+    return handler.javaClass.declaredFields.firstNotNullOfOrNull { field ->
+        runCatching {
+            field.isAccessible = true
+            field.get(handler)?.takeIf { it is Function<*> }
+        }.getOrNull()
+    } ?: handler
+}
+
+internal fun sourceOf(routeHandler: Any): SourceLocation? {
+    val handler = handlerOfTheApp(routeHandler)
     val type = handler.javaClass
     val bytes = type.classLoader?.getResourceAsStream(type.name.replace('.', '/') + ".class")?.use { it.readBytes() } ?: return null
     val (file, line) = runCatching { readSourceAndFirstLine(bytes) }.getOrNull() ?: return null

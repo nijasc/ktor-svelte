@@ -1,102 +1,154 @@
 import { ApiError, request, type RequestOptions } from './client.js';
 import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, Greeting, Login, PasswordChange, Problem, ProfileInput, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef, PublicConfig } from './types.js';
 
+/** @see showcase/Auth.kt */
 export const adminGetUsers = (options?: RequestOptions) => request<User[]>('GET', '/api/admin/users', { ...options, operation: 'admin.getUsers' });
+/** @see showcase/Auth.kt */
 export const adminPutUsersActive = (id: string | number, body: ActiveChange, options?: RequestOptions) => request<User>('PUT', `/api/admin/users/${encodeURIComponent(id)}/active`, { ...options, body, operation: 'admin.putUsersActive' });
+/** @see showcase/Auth.kt */
 export const adminPutUsersRole = (id: string | number, body: RoleChange, options?: RequestOptions) => request<User>('PUT', `/api/admin/users/${encodeURIComponent(id)}/role`, { ...options, body, operation: 'admin.putUsersRole' });
 
 export const admin = {
+    /** @see showcase/Auth.kt */
     getUsers: adminGetUsers,
+    /** @see showcase/Auth.kt */
     putUsersActive: adminPutUsersActive,
+    /** @see showcase/Auth.kt */
     putUsersRole: adminPutUsersRole,
 };
 
+/** @see showcase/TaskRoutes.kt */
 export const attachmentsGet = (id: string | number, options?: RequestOptions) => request<string>('GET', `/api/attachments/${encodeURIComponent(id)}`, { ...options, operation: 'attachments.get' });
+/** @see showcase/TaskRoutes.kt */
 export const attachmentsDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/attachments/${encodeURIComponent(id)}`, { ...options, operation: 'attachments.delete' });
 
 export const attachments = {
+    /** @see showcase/TaskRoutes.kt */
     get: attachmentsGet,
+    /** @see showcase/TaskRoutes.kt */
     delete: attachmentsDelete,
 };
 
+/** @see showcase/TaskRoutes.kt */
 export const greetingList = (query?: { name?: string }, options?: RequestOptions) => request<Greeting>('GET', '/api/greeting', { ...options, query, operation: 'greeting.list' });
 
 export const greeting = {
+    /** @see showcase/TaskRoutes.kt */
     list: greetingList,
 };
 
+/** @see showcase/Auth.kt */
 export const meList = (options?: RequestOptions) => request<User>('GET', '/api/me', { ...options, operation: 'me.list' });
+/** @see showcase/Auth.kt */
 export const meUpdate = (body: ProfileInput, options?: RequestOptions) => request<User>('PUT', '/api/me', { ...options, body, operation: 'me.update' });
+/** @see showcase/Auth.kt */
 export const mePutPassword = (body: PasswordChange, options?: RequestOptions) => request<void>('PUT', '/api/me/password', { ...options, body, operation: 'me.putPassword' });
 
 export const me = {
+    /** @see showcase/Auth.kt */
     list: meList,
+    /** @see showcase/Auth.kt */
     update: meUpdate,
+    /** @see showcase/Auth.kt */
     putPassword: mePutPassword,
 };
 
+/** @see showcase/TaskRoutes.kt */
 export const membersList = (options?: RequestOptions) => request<UserRef[]>('GET', '/api/members', { ...options, operation: 'members.list' });
 
 export const members = {
+    /** @see showcase/TaskRoutes.kt */
     list: membersList,
 };
 
+/** @see showcase/Auth.kt */
 export const sessionCreate = (body: Login, options?: RequestOptions) => request<User>('POST', '/api/session', { ...options, body, operation: 'session.create' });
+/** @see showcase/Auth.kt */
 export const sessionDelete = (options?: RequestOptions) => request<void>('DELETE', '/api/session', { ...options, operation: 'session.delete' });
 
 export const session = {
+    /** @see showcase/Auth.kt */
     create: sessionCreate,
+    /** @see showcase/Auth.kt */
     delete: sessionDelete,
 };
 
+/** @see showcase/TaskRoutes.kt */
 export const statsList = (options?: RequestOptions) => request<BoardStats>('GET', '/api/stats', { ...options, operation: 'stats.list' });
 
 export const stats = {
+    /** @see showcase/TaskRoutes.kt */
     list: statsList,
 };
 
+/** @see showcase/TaskRoutes.kt */
 export const tasksList = (query?: { search?: string; status?: string; label?: string; mine?: string; limit?: string; cursor?: string }, options?: RequestOptions) => request<{
     items: Task[];
     next?: string | null;
 }>('GET', '/api/tasks', { ...options, query, operation: 'tasks.list' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksCreate = (body: TaskInput, options?: RequestOptions) => request<Task>('POST', '/api/tasks', { ...options, body, operation: 'tasks.create' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksGet = (id: string | number, options?: RequestOptions) => request<Task>('GET', `/api/tasks/${encodeURIComponent(id)}`, { ...options, operation: 'tasks.get' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksUpdate = (id: string | number, body: TaskInput, options?: RequestOptions) => request<Task>('PUT', `/api/tasks/${encodeURIComponent(id)}`, { ...options, body, operation: 'tasks.update' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/tasks/${encodeURIComponent(id)}`, { ...options, operation: 'tasks.delete' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksGetActivity = (id: string | number, options?: RequestOptions) => request<Activity[]>('GET', `/api/tasks/${encodeURIComponent(id)}/activity`, { ...options, operation: 'tasks.getActivity' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksGetAttachments = (id: string | number, options?: RequestOptions) => request<Attachment[]>('GET', `/api/tasks/${encodeURIComponent(id)}/attachments`, { ...options, operation: 'tasks.getAttachments' });
 /**
  * Uploads files to a task.
  *
  * Send the files as multipart form data. Images, PDF, text, CSV and ZIP files up to 5 MiB are accepted.
+ *
+ * @see showcase/TaskRoutes.kt
  */
 export const tasksAttachments = (id: string | number, body: FormData, options?: RequestOptions) => request<Attachment[]>('POST', `/api/tasks/${encodeURIComponent(id)}/attachments`, { ...options, body, operation: 'tasks.attachments' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksGetComments = (id: string | number, options?: RequestOptions) => request<Comment[]>('GET', `/api/tasks/${encodeURIComponent(id)}/comments`, { ...options, operation: 'tasks.getComments' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksComments = (id: string | number, body: CommentInput, options?: RequestOptions) => request<Comment>('POST', `/api/tasks/${encodeURIComponent(id)}/comments`, { ...options, body, operation: 'tasks.comments' });
+/** @see showcase/TaskRoutes.kt */
 export const tasksStatus = (id: string | number, body: StatusChange, options?: RequestOptions) => request<Task>('POST', `/api/tasks/${encodeURIComponent(id)}/status`, { ...options, body, operation: 'tasks.status' });
 
 export const tasks = {
+    /** @see showcase/TaskRoutes.kt */
     list: tasksList,
+    /** @see showcase/TaskRoutes.kt */
     create: tasksCreate,
+    /** @see showcase/TaskRoutes.kt */
     get: tasksGet,
+    /** @see showcase/TaskRoutes.kt */
     update: tasksUpdate,
+    /** @see showcase/TaskRoutes.kt */
     delete: tasksDelete,
+    /** @see showcase/TaskRoutes.kt */
     getActivity: tasksGetActivity,
+    /** @see showcase/TaskRoutes.kt */
     getAttachments: tasksGetAttachments,
     /**
      * Uploads files to a task.
      *
      * Send the files as multipart form data. Images, PDF, text, CSV and ZIP files up to 5 MiB are accepted.
+     *
+     * @see showcase/TaskRoutes.kt
      */
     attachments: tasksAttachments,
+    /** @see showcase/TaskRoutes.kt */
     getComments: tasksGetComments,
+    /** @see showcase/TaskRoutes.kt */
     comments: tasksComments,
+    /** @see showcase/TaskRoutes.kt */
     status: tasksStatus,
 };
 
+/** @see showcase/Auth.kt */
 export const usersCreate = (body: Registration, options?: RequestOptions) => request<User>('POST', '/api/users', { ...options, body, operation: 'users.create' });
 
 export const users = {
+    /** @see showcase/Auth.kt */
     create: usersCreate,
 };
 
