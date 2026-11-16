@@ -26,20 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 55 | One format command |  |
+| 56 | Git pre-commit hook |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 9 | `respondPage` helper | #221 |
-| 10 | Production access log | #222 |
-| 18 | Jump from TypeScript to Kotlin | #223 |
-| 19 | Field docs and deprecations | #224 |
-| 35 | Typed path parameters | #225 |
-| 36 | Unused endpoints report | #226 |
-| 45 | Rate limit aware client | #227 |
-| 53 | Build info on both sides | #228 |
+| 55 | One format command | #229 |
 
 ### Next up
 
@@ -72,12 +65,19 @@ Features of this plan that are merged:
 | 6 | `svelteDoctor --fix` | #217 |
 | 7 | i18n message check | #218 |
 | 8 | Retry with backoff | #219 |
+| 9 | `respondPage` helper | #221 |
+| 10 | Production access log | #222 |
+| 18 | Jump from TypeScript to Kotlin | #223 |
+| 19 | Field docs and deprecations | #224 |
+| 35 | Typed path parameters | #225 |
+| 36 | Unused endpoints report | #226 |
+| 45 | Rate limit aware client | #227 |
+| 53 | Build info on both sides | #228 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 56 | Git pre-commit hook | Small | 2 |
 | 57 | Reload data after restart | Small | 2 |
 | 68 | Visitor time zone on the server | Small | 2 |
 | 70 | Refresh page data after writes | Small | 2 |
