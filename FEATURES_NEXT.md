@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 25 | Server-sent toasts |  |
+| 26 | Server-directed navigation |  |
 
 ### In review
 
@@ -50,6 +50,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 78 | Theme editor | #264 |
 | 80 | Status view | #265 |
 | 99 | Sensitive fields | #267 |
+| 25 | Server-sent toasts | #268 |
 
 ### Next up
 
@@ -110,7 +111,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 26 | Server-directed navigation | Small | 4 |
 | 27 | Upload rules shared | Medium | 4 |
 | 20 | Shared constants | Medium | 4 |
 | 73 | Typed error codes | Medium | 4 |
