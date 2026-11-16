@@ -6,10 +6,11 @@
         CommentInput,
         field,
         isValidationError,
-        readPublicConfig,
+        isUploadError,
         Role,
         Status,
         TaskInput,
+        uploadRules,
         type Attachment,
         type Comment,
         type Task
@@ -20,7 +21,7 @@
     import TaskForm from '#lib/components/TaskForm.svelte';
     import { formatBytes, formatDate, formatDateTime } from '#lib/format.ts';
     import { confirmed } from '#lib/ktor-svelte/confirm.ts';
-    import { toast } from '#lib/ktor-svelte/toasts.ts';
+    import { toast, toastApiError } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
 
     const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
@@ -40,7 +41,6 @@
     let busy = $state(false);
 
     const statusLabels: Record<Status, () => string> = { TODO: m.statusTodo, DOING: m.statusDoing, DONE: m.statusDone };
-    const maxUploadBytes = readPublicConfig()?.maxUploadBytes ?? 5 * 1024 * 1024;
     const canDelete = $derived(data.user.role === Role.ADMIN || data.user.id === task.creator.id);
 
     function describe(entry: Activity): string {
@@ -118,19 +118,18 @@
         const files = [...(input.files ?? [])];
         input.value = '';
         for (const file of files) {
-            if (file.size > maxUploadBytes) {
-                toast(m.problemFileTooLarge(), { kind: 'error' });
-                continue;
-            }
             const form = new FormData();
             form.append('file', file);
             progress = 0;
             try {
                 const stored = await api.tasks.attachments(task.id, form, {
+                    silent: true,
                     onUploadProgress: ({ loaded, total }) => (progress = total ? loaded / total : 0)
                 });
                 attachments = [...attachments, ...stored];
-            } catch {
+            } catch (error) {
+                if (!isUploadError(error)) toastApiError(error);
+                else toast(error.body.code === 'upload.tooLarge' ? m.problemFileTooLarge() : m.problemFileType(), { kind: 'error' });
                 continue;
             } finally {
                 progress = undefined;
@@ -214,7 +213,7 @@
     </ul>
     <label class="mt-3 grid gap-1" for="upload">
         <span>{m.attachmentsAdd()}</span>
-        <input id="upload" class="file-input w-full" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,application/zip" onchange={upload} />
+        <input id="upload" class="file-input w-full" type="file" multiple accept={uploadRules['tasks.attachments'].types.join(',')} onchange={upload} />
     </label>
     {#if progress !== undefined}
         <progress class="progress mt-2 w-full" value={progress} max="1" aria-label={m.attachmentsUploading()}></progress>

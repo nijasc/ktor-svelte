@@ -105,7 +105,7 @@ export const tasksGetAttachments = (id: string | number, options?: RequestOption
  *
  * @see showcase/TaskRoutes.kt
  */
-export const tasksAttachments = (id: string | number, body: FormData, options?: RequestOptions) => request<Attachment[]>('POST', `/api/tasks/${encodeURIComponent(id)}/attachments`, { ...options, body, operation: 'tasks.attachments' });
+export const tasksAttachments = (id: string | number, body: FormData, options?: RequestOptions) => request<Attachment[]>('POST', `/api/tasks/${encodeURIComponent(id)}/attachments`, { ...options, body, upload: { maxBytes: 5242880, types: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip'] }, operation: 'tasks.attachments' });
 /** @see showcase/TaskRoutes.kt */
 export const tasksGetComments = (id: string | number, options?: RequestOptions) => request<Comment[]>('GET', `/api/tasks/${encodeURIComponent(id)}/comments`, { ...options, operation: 'tasks.getComments' });
 /** @see showcase/TaskRoutes.kt */
@@ -201,7 +201,7 @@ const errorStatuses: Record<string, number[]> = {
     'tasks.delete': [401, 403, 404],
     'tasks.getActivity': [401, 403, 404],
     'tasks.getAttachments': [401, 403, 404],
-    'tasks.attachments': [401, 403, 404, 422],
+    'tasks.attachments': [401, 403, 404],
     'tasks.getComments': [401, 403, 404],
     'tasks.comments': [401, 403, 404],
     'tasks.status': [401, 403, 404],
@@ -211,6 +211,10 @@ const errorStatuses: Record<string, number[]> = {
 export function isApiError<K extends keyof ApiErrors>(error: unknown, operation: K): error is ApiError<ApiErrors[K]> {
     return error instanceof ApiError && error.operation === operation && (errorStatuses[operation] ?? []).includes(error.status);
 }
+
+export const uploadRules = {
+    'tasks.attachments': { maxBytes: 5242880, types: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip'] },
+} as const;
 
 let publicConfig: Promise<PublicConfig> | undefined;
 

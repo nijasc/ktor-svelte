@@ -321,9 +321,9 @@ class ShowcaseAppTest {
         assertContains(admin.bytes("/api/attachments/${id(csv)}").headers().firstValue("Content-Disposition").orElse(""), "attachment")
 
         val svg = member.upload("/api/tasks/$id/attachments", "x.svg", "image/svg+xml", "<svg onload=\"alert(1)\"/>".toByteArray())
-        assertEquals(422, svg.statusCode())
-        assertContains(svg.body(), "Only images, PDF, text, CSV and ZIP files can be attached.")
-        assertEquals(422, member.upload("/api/tasks/$id/attachments", "page.html", "text/html", "<script>alert(1)</script>".toByteArray()).statusCode())
+        assertEquals(415, svg.statusCode())
+        assertEquals("""{"message":"x.svg is not an accepted file type.","code":"upload.type","file":"x.svg"}""", svg.body())
+        assertEquals(415, member.upload("/api/tasks/$id/attachments", "page.html", "text/html", "<script>alert(1)</script>".toByteArray()).statusCode())
 
         val tooLarge = member.upload("/api/tasks/$id/attachments", "big.png", "image/png", ByteArray(MAX_UPLOAD_BYTES + 128 * 1024))
         assertEquals(413, tooLarge.statusCode())

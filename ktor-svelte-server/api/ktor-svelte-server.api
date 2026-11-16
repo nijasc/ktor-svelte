@@ -338,6 +338,28 @@ public final synthetic class io/github/nijasc/ktor/svelte/Trim$Impl : io/github/
 	public fun <init> ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/UploadRuleException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/ktor/http/HttpStatusCode;Ljava/lang/String;)V
+	public final fun getCode ()Ljava/lang/String;
+	public final fun getFile ()Ljava/lang/String;
+	public final fun getStatus ()Lio/ktor/http/HttpStatusCode;
+}
+
+public final class io/github/nijasc/ktor/svelte/UploadedFile {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[B)V
+	public final fun getBytes ()[B
+	public final fun getContentType ()Ljava/lang/String;
+	public final fun getField ()Ljava/lang/String;
+	public final fun getFileName ()Ljava/lang/String;
+	public final fun getSize ()I
+}
+
+public final class io/github/nijasc/ktor/svelte/UploadsKt {
+	public static final fun receiveUploads (Lio/ktor/server/application/ApplicationCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun uploadRules (Lio/ktor/server/routing/Route;Ljava/lang/Long;Ljava/util/List;Ljava/lang/Integer;)Lio/ktor/server/routing/Route;
+	public static synthetic fun uploadRules$default (Lio/ktor/server/routing/Route;Ljava/lang/Long;Ljava/util/List;Ljava/lang/Integer;ILjava/lang/Object;)Lio/ktor/server/routing/Route;
+}
+
 public abstract interface class io/github/nijasc/ktor/svelte/Validated {
 	public abstract fun rules (Lio/github/nijasc/ktor/svelte/Validator;)V
 }
