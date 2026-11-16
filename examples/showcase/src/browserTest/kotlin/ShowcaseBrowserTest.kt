@@ -461,6 +461,35 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the generated error page shows the status and message of what failed`() {
+        val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/no-such-page")
+        assertThat(heading).hasText("404")
+        assertThat(page.locator("#error-message")).hasText("This page does not exist.")
+        assertThat(page.locator("#error-request-id")).hasCount(0)
+
+        page.navigate("/tasks/999999")
+        assertThat(heading).hasText("404")
+        assertThat(page.locator("#error-message")).hasText("That task does not exist.")
+        assertThat(page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName("Back to the start page"))).hasAttribute("href", "/")
+
+        page.route("**/api/tasks/424242**") { route ->
+            route.fulfill(
+                Route
+                    .FulfillOptions()
+                    .setStatus(500)
+                    .setHeaders(mapOf("content-type" to "application/json", "x-request-id" to "req-424242"))
+                    .setBody("{}"),
+            )
+        }
+        page.navigate("/tasks/424242")
+        assertThat(heading).hasText("500")
+        assertThat(page.locator("#error-message")).hasText("Something went wrong.")
+        assertThat(page.locator("#error-request-id")).hasText("Request ID: req-424242")
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")
