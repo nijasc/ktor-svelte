@@ -448,6 +448,24 @@ public final class io/github/nijasc/ktor/svelte/TypedCookie {
 	public final fun getSecure ()Z
 }
 
+public final class io/github/nijasc/ktor/svelte/UploadForm {
+	public final fun file (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/UploadedFile;
+	public final fun fileOrNull (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/UploadedFile;
+	public final fun files (Ljava/lang/String;)Ljava/util/List;
+	public final fun getAllFiles ()Ljava/util/List;
+	public final fun text (Ljava/lang/String;)Ljava/lang/String;
+	public final fun textOrNull (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/UploadFormBuilder {
+	public final fun file (Ljava/lang/String;Z)V
+	public static synthetic fun file$default (Lio/github/nijasc/ktor/svelte/UploadFormBuilder;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun files (Ljava/lang/String;Z)V
+	public static synthetic fun files$default (Lio/github/nijasc/ktor/svelte/UploadFormBuilder;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun text (Ljava/lang/String;Z)V
+	public static synthetic fun text$default (Lio/github/nijasc/ktor/svelte/UploadFormBuilder;Ljava/lang/String;ZILjava/lang/Object;)V
+}
+
 public final class io/github/nijasc/ktor/svelte/UploadRuleException : java/lang/RuntimeException {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/ktor/http/HttpStatusCode;Ljava/lang/String;)V
 	public final fun getCode ()Ljava/lang/String;
@@ -465,7 +483,10 @@ public final class io/github/nijasc/ktor/svelte/UploadedFile {
 }
 
 public final class io/github/nijasc/ktor/svelte/UploadsKt {
+	public static final fun receiveForm (Lio/ktor/server/application/ApplicationCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun receiveUploads (Lio/ktor/server/application/ApplicationCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun uploadForm (Lio/ktor/server/routing/Route;Ljava/lang/Long;Ljava/util/List;Ljava/lang/Integer;Lkotlin/jvm/functions/Function1;)Lio/ktor/server/routing/Route;
+	public static synthetic fun uploadForm$default (Lio/ktor/server/routing/Route;Ljava/lang/Long;Ljava/util/List;Ljava/lang/Integer;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/ktor/server/routing/Route;
 	public static final fun uploadRules (Lio/ktor/server/routing/Route;Ljava/lang/Long;Ljava/util/List;Ljava/lang/Integer;)Lio/ktor/server/routing/Route;
 	public static synthetic fun uploadRules$default (Lio/ktor/server/routing/Route;Ljava/lang/Long;Ljava/util/List;Ljava/lang/Integer;ILjava/lang/Object;)Lio/ktor/server/routing/Route;
 }

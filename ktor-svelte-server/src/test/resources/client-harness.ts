@@ -295,6 +295,35 @@ results.patches = [
     patchOf({ ...noteBefore, dueOn: null }, { ...noteBefore, dueOn: null }),
     applyPatch(noteBefore, { dueOn: null, stars: 5 })
 ];
+const sentForms: string[] = [];
+apiConfig.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const sent = init?.body;
+    const headers = new Headers(init?.headers);
+    if (sent instanceof FormData) {
+        const fields = [...sent.entries()].map(([name, value]) => (typeof value === 'string' ? `${name}=${value}` : `${name}=<${value.name}:${value.size}>`));
+        sentForms.push(`${headers.has('content-type') ? 'typed' : 'untyped'} ${fields.join(' ')}`);
+    } else {
+        sentForms.push(`not a form: ${String(sent)}`);
+    }
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+const cover = new File(['abcd'], 'cover.txt', { type: 'text/plain' });
+const pages = [new File(['a'], 'one.txt', { type: 'text/plain' }), new File(['bb'], 'two.txt', { type: 'text/plain' })];
+await request('POST', '/api/documents', { body: { title: 'Report', note: undefined, count: 3, cover, pages }, multipart: true } as RequestOptions);
+const ready = new FormData();
+ready.append('title', 'Ready made');
+await request('POST', '/api/documents', { body: ready, multipart: true } as RequestOptions);
+const refusedForm = await request('POST', '/api/documents', {
+    body: { cover, pages },
+    multipart: true,
+    upload: { maxFiles: 2 }
+} as RequestOptions).then(
+    () => 'sent',
+    (error: unknown) => (isUploadError(error) ? error.body.code : String(error))
+);
+results.forms = { sent: sentForms, refused: refusedForm };
+apiConfig.fetch = undefined;
+
 results.conflicts = [
     isVersionConflict(new ApiError(409, { message: 'x', code: 'version.conflict', current: { version: 2 } }, '/api/n')),
     isVersionConflict(new ApiError(409, { message: 'x', code: 'EmailTaken' }, '/api/n')),
