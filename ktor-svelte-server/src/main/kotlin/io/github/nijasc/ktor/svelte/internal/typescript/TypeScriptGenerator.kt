@@ -234,7 +234,13 @@ internal class TypeScriptGenerator(
             } else {
                 ""
             }
-        val body = listOfNotNull(typeScriptTemplate("dates.ts").takeIf { usesDates }, declarations.ifEmpty { null }).joinToString("\n")
+        val brands = schemas.values.any { isBrand(it.jsonObject) }
+        val body =
+            listOfNotNull(
+                BRAND_SYMBOL.takeIf { brands },
+                typeScriptTemplate("dates.ts").takeIf { usesDates },
+                declarations.ifEmpty { null },
+            ).joinToString("\n")
         return iconImport + body.ifEmpty { "export {};\n" }
     }
 
@@ -248,6 +254,11 @@ internal class TypeScriptGenerator(
         val enumValues = enumValues(schema)
         if (enumValues != null && schema["enum"]?.jsonArray?.none { it is JsonNull } == true) {
             return docs + enumDeclaration(name, enumValues)
+        }
+        if (isBrand(schema)) {
+            val plain = tsType(schema, references)
+            return docs + "export type $name = $plain & { readonly [brand]: '$name' };\n\n" +
+                "export const $name = (value: $plain): $name => value as $name;\n"
         }
         if (hasEmptyFactory(schema)) {
             return docs + "export interface $name ${objectBody(schema, references, indent = "")}\n\n" +
@@ -590,6 +601,11 @@ internal class TypeScriptGenerator(
         val property: String,
     )
 
+    private fun isBrand(schema: JsonObject): Boolean =
+        (schema["type"] as? JsonPrimitive)?.contentOrNull in BRANDED_TYPES &&
+            schema["title"] != null &&
+            schema.keys.all { it == "type" || it == "title" }
+
     private fun hasEmptyFactory(schema: JsonObject): Boolean = schema.objectAt("properties") != null && schema["allOf"] == null
 
     private fun emptyObject(
@@ -618,6 +634,7 @@ internal class TypeScriptGenerator(
             val raw = reference.substringAfterLast('/')
             val target = schemas[raw] as? JsonObject ?: return "null"
             if (hasEmptyFactory(target)) return "${typeName(raw)}.empty()"
+            if (isBrand(target)) return "${typeName(raw)}(${emptyValue(target, schemas, indent, visiting + raw)})"
             if (raw in visiting) return "null"
             return emptyValue(target, schemas, indent, visiting + raw)
         }
@@ -1162,6 +1179,8 @@ private fun hasDateFormat(element: JsonElement): Boolean =
 
 private const val LUCIDE_TYPE = "LucideIcon"
 internal const val GIT_ATTRIBUTES_FILE = ".gitattributes"
+private const val BRAND_SYMBOL = "declare const brand: unique symbol;\n"
+private val BRANDED_TYPES = setOf("string", "integer", "number")
 internal const val UPLOAD_EXTENSION = "x-ktor-svelte-upload"
 private const val ERROR_CODE_TYPE = "ErrorCode"
 private val ERROR_CODE_HELPERS =
