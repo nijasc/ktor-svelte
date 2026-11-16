@@ -19,6 +19,7 @@
     import { routes } from '#routes';
     import TaskForm from '#lib/components/TaskForm.svelte';
     import { formatBytes, formatDate, formatDateTime } from '#lib/format.ts';
+    import { confirmed } from '#lib/ktor-svelte/confirm.ts';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
 
@@ -37,7 +38,6 @@
     let commentErrors = $state<Record<string, string[]>>({});
     let progress = $state<number | undefined>(undefined);
     let busy = $state(false);
-    let confirmDelete = $state<HTMLDialogElement | undefined>(undefined);
 
     const statusLabels: Record<Status, () => string> = { TODO: m.statusTodo, DOING: m.statusDoing, DONE: m.statusDone };
     const maxUploadBytes = readPublicConfig()?.maxUploadBytes ?? 5 * 1024 * 1024;
@@ -90,7 +90,13 @@
     }
 
     async function remove() {
-        await api.tasks.delete(task.id);
+        const deleted = await confirmed(m.taskDeleteQuestion(), () => api.tasks.delete(task.id).then(() => true), {
+            details: m.taskDeleteWarning(),
+            confirm: m.actionDelete(),
+            cancel: m.actionCancel(),
+            danger: true
+        });
+        if (!deleted) return;
         toast(m.taskDeleted(), { kind: 'success' });
         await goto(routes.board());
     }
@@ -158,7 +164,7 @@
         <div class="flex gap-2">
             <button class="btn btn-sm" type="button" onclick={startEditing}><Icon name="Pencil" size={14} /> {m.taskEdit()}</button>
             {#if canDelete}
-                <button class="btn btn-sm btn-error" type="button" onclick={() => confirmDelete?.showModal()}>
+                <button class="btn btn-sm btn-error" type="button" onclick={remove}>
                     <Icon name="Trash" size={14} />
                     {m.actionDelete()}
                 </button>
@@ -252,14 +258,3 @@
         {/each}
     </ol>
 </section>
-
-<dialog class="modal" bind:this={confirmDelete} aria-labelledby="delete-title">
-    <div class="modal-box">
-        <h2 id="delete-title" class="text-lg font-semibold">{m.taskDeleteQuestion()}</h2>
-        <p class="py-2">{m.taskDeleteWarning()}</p>
-        <div class="modal-action">
-            <button class="btn" type="button" onclick={() => confirmDelete?.close()}>{m.actionCancel()}</button>
-            <button id="confirm-delete" class="btn btn-error" type="button" onclick={remove}>{m.actionDelete()}</button>
-        </div>
-    </div>
-</dialog>
