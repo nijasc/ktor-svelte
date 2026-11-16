@@ -46,7 +46,7 @@ svelte {
         lucide()
         routes()
         images()
-        toasts()
+        toasts { reloadPrompt() }
         i18n {
             locales("en", "de")
             defaultLocale = "en"
