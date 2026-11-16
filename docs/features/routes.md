@@ -16,22 +16,24 @@ A folder is a page when it holds a `+page.svelte`, `+page.ts`, `+page.js` or `+p
 
 ## In Svelte
 
-`#routes` exports `routes`, an object with one entry per page, and `href`, which turns a route into a link through SvelteKit's `resolve()` from `$app/paths`:
+`#routes` exports `routes`, an object with one function per page. Each one returns the page's URL through SvelteKit's `resolve()` from `$app/paths`:
 
 ```svelte
 <script lang="ts">
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
 
     let { note } = $props();
 </script>
 
-<a href={href(routes.home)}>Home</a>
-<a href={href(routes.notesId, { id: String(note.id) })}>{note.title}</a>
+<a href={routes.home()}>Home</a>
+<a href={routes.notesId({ id: note.id })}>{note.title}</a>
 ```
 
-The values in `routes` are SvelteKit route IDs, such as `/(app)/notes/[id]`, so use `href` whenever you need a URL. The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Since `href` goes through `resolve()`, a base path and relative prerender links work as usual. You can also pass a route to `resolve()` yourself, as in `resolve(routes.notesId, { id })`.
+The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Numbers are accepted too, so an ID needs no `String()`. Since every call goes through `resolve()`, a base path and relative prerender links work as usual, and the same functions work with `goto`.
 
-With [i18n](./frontend-libraries.md#i18n) and `strategy = LocaleStrategy.UrlPrefix`, `href` also puts the current language in front, such as `/de/notes/1`, so every language gets prerendered without calling `localizeHref` by hand. With the `Cookie` strategy, or without i18n, it is plain `resolve()`.
+`routeIds` holds the raw SvelteKit route IDs under the same names, such as `routeIds.notesId` for `/notes/[id]`. Use it to compare with `page.route.id`, or to call `resolve()` yourself.
+
+With [i18n](./frontend-libraries.md#i18n) and `strategy = LocaleStrategy.UrlPrefix`, every route also puts the current language in front, such as `/de/notes/1`, so every language gets prerendered without calling `localizeHref` by hand. With the `Cookie` strategy, or without i18n, it is plain `resolve()`.
 
 ## In Kotlin
 

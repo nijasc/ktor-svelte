@@ -149,28 +149,44 @@ internal fun routesSource(
     routes: List<FrontendRoute>,
     i18n: I18nSpec?,
 ): String {
-    val entries = routes.joinToString(",\n") { "    ${it.name}: '${it.id.replace("\\", "\\\\").replace("'", "\\'")}'" }
+    val ids = routes.joinToString(",\n") { "    ${it.name}: '${it.id.replace("\\", "\\\\").replace("'", "\'")}'" }
+    val builders = routes.joinToString(",\n") { "    ${it.name}: route(routeIds.${it.name})" }
     val localized = i18n?.strategy == LocaleStrategy.UrlPrefix
     return buildString {
         append("// $GENERATED_MARKER\n")
         append("import { resolve } from '\$app/paths';\n")
-        append("import type { RouteParams } from '\$app/types';\n")
+        append("import type { RouteId, RouteParams } from '\$app/types';\n")
         if (localized) append("import { getLocale } from './i18n.js';\n")
-        append("\nexport const routes = {\n$entries\n} as const;\n\n")
-        append("export type AppRoute = (typeof routes)[keyof typeof routes];\n\n")
-        append("export type HrefArgs<T extends AppRoute> =\n")
-        append("    RouteParams<T> extends Record<string, never> ? [route: T] : [route: T, params: RouteParams<T>];\n\n")
-        if (localized) {
-            append(LOCALIZED_HREF)
-        } else {
-            append("export function href<T extends AppRoute>(...args: HrefArgs<T>): string {\n")
-            append("    return (resolve as (...args: unknown[]) => string)(...args);\n")
-            append("}\n")
-        }
+        append("\nexport const routeIds = {\n$ids\n} as const;\n\n")
+        append(ROUTE_TYPES)
+        append(if (localized) LOCALIZED_ROUTE else PLAIN_ROUTE)
+        append("\nexport const routes = {\n$builders\n};\n")
     }
 }
 
-private val LOCALIZED_HREF =
+private val ROUTE_TYPES =
+    """
+    |export type RouteName = keyof typeof routeIds;
+    |
+    |export type RouteArgs<T extends RouteId> =
+    |    RouteParams<T> extends Record<string, never>
+    |        ? []
+    |        : Partial<RouteParams<T>> extends RouteParams<T>
+    |          ? [params?: { [K in keyof RouteParams<T>]: RouteParams<T>[K] | number }]
+    |          : [params: { [K in keyof RouteParams<T>]: RouteParams<T>[K] | number }];
+    |
+    |
+    """.trimMargin()
+
+private val PLAIN_ROUTE =
+    """
+    |function route<T extends RouteId>(id: T): (...args: RouteArgs<T>) => string {
+    |    return (...args) => (resolve as (id: string, params?: object) => string)(id, ...args);
+    |}
+    |
+    """.trimMargin()
+
+private val LOCALIZED_ROUTE =
     """
     |const PART = /\[(?:x\+([0-9a-f]{2})|u\+([0-9a-f-]+)|\[?(?:\.\.\.)?(\w+)(?:=\w+)?\]?)\]/gi;
     |
@@ -189,10 +205,11 @@ private val LOCALIZED_HREF =
     |        .join('/');
     |}
     |
-    |export function href<T extends AppRoute>(...args: HrefArgs<T>): string {
-    |    const [route, params] = args as [string, Record<string, unknown>?];
-    |    const path = fill(route, params);
-    |    return (resolve as (pathname: string) => string)(path ? `${'$'}{getLocale()}/${'$'}{path}` : getLocale());
+    |function route<T extends RouteId>(id: T): (...args: RouteArgs<T>) => string {
+    |    return (...args) => {
+    |        const path = fill(id, args[0] as Record<string, unknown> | undefined);
+    |        return (resolve as (pathname: string) => string)(path ? `${'$'}{getLocale()}/${'$'}{path}` : getLocale());
+    |    };
     |}
     |
     """.trimMargin()

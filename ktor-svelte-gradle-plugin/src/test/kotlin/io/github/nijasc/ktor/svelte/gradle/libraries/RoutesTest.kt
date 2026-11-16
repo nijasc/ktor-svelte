@@ -86,13 +86,14 @@ class RoutesTest {
     }
 
     @Test
-    fun `typescript lists routes as const and resolves them`() {
+    fun `typescript has route ids and a resolving function per route`() {
         val source = routesSource(listOf(routeOf("/"), routeOf("/notes/[id]")), null)
         assertTrue(source.startsWith("// $GENERATED_MARKER\n"))
         assertContains(source, "import { resolve } from '\$app/paths';")
-        assertContains(source, "    home: '/',\n    notesId: '/notes/[id]'\n} as const;")
-        assertContains(source, "RouteParams<T> extends Record<string, never> ? [route: T] : [route: T, params: RouteParams<T>]")
-        assertContains(source, "return (resolve as (...args: unknown[]) => string)(...args);")
+        assertContains(source, "export const routeIds = {\n    home: '/',\n    notesId: '/notes/[id]'\n} as const;")
+        assertContains(source, "export const routes = {\n    home: route(routeIds.home),\n    notesId: route(routeIds.notesId)\n};")
+        assertContains(source, "RouteParams<T>[K] | number")
+        assertContains(source, "(resolve as (id: string, params?: object) => string)(id, ...args)")
         assertFalse(source.contains("getLocale"))
         assertEquals(
             source,
