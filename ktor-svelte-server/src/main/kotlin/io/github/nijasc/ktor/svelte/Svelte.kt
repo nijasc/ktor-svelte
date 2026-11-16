@@ -8,6 +8,7 @@ import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
 import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
+import io.github.nijasc.ktor.svelte.internal.StartupTiming
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
@@ -37,6 +38,7 @@ import io.github.nijasc.ktor.svelte.internal.installApiCompression
 import io.github.nijasc.ktor.svelte.internal.installConfigReport
 import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
+import io.github.nijasc.ktor.svelte.internal.jvmStartIfFirstApplication
 import io.github.nijasc.ktor.svelte.internal.onOwn
 import io.github.nijasc.ktor.svelte.internal.security.BodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
@@ -56,6 +58,8 @@ import io.github.nijasc.ktor.svelte.internal.security.respondWithoutDetails
 import io.github.nijasc.ktor.svelte.internal.settingsSummary
 import io.github.nijasc.ktor.svelte.internal.shadowedPages
 import io.github.nijasc.ktor.svelte.internal.startupLine
+import io.github.nijasc.ktor.svelte.internal.startupSteps
+import io.github.nijasc.ktor.svelte.internal.subscribeWhileRunning
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -69,6 +73,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationPlugin
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.PluginBuilder
+import io.ktor.server.application.ServerReady
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.hooks.CallFailed
 import io.ktor.server.application.hooks.ResponseSent
@@ -111,6 +116,7 @@ private val BODY_LIMIT_CONFLICT_MESSAGE =
 
 public val Svelte: ApplicationPlugin<SvelteConfig> =
     createApplicationPlugin("Svelte", ::SvelteConfig) {
+        val startupTiming = StartupTiming(jvmStartIfFirstApplication(), System.currentTimeMillis())
         val store = createStore(pluginConfig.source, application)
         val resolver =
             RequestResolver(pluginConfig.apiPrefixList, pluginConfig.spaFallback, pluginConfig.notFoundPage, pluginConfig.paramRouteList)
@@ -190,6 +196,12 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         }
 
         val summary = if (application.developmentMode) settingsSummary(pluginConfig, devUrl.takeIf { devProxy != null }) else emptyList()
+        if (application.developmentMode && pluginConfig.devConfig.startupTiming) {
+            application.onOwn(ApplicationStarted) { startupTiming.modulesEnded = System.currentTimeMillis() }
+            application.subscribeWhileRunning(ServerReady, { it === application.environment }) {
+                application.log.info(startupTiming.line(System.currentTimeMillis(), application.startupSteps().toList()))
+            }
+        }
         application.onOwn(ApplicationStarted) {
             if (summary.isNotEmpty()) application.log.info("ktor-svelte settings:\n" + summary.joinToString("\n") { "  $it" })
             val manifest = store.manifest()
@@ -344,6 +356,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 }
             }
         }
+        startupTiming.installEnded = System.currentTimeMillis()
     }
 
 public fun Route.svelte(public: List<String> = emptyList()) {
