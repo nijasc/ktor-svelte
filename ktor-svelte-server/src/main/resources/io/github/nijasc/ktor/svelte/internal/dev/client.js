@@ -406,6 +406,7 @@ button.path:hover { text-decoration: underline; }
 .ms { text-align: right; color: #aaa; }
 .fields { grid-column: 2 / -1; color: #f3c969; white-space: pre-wrap; }
 .sql { grid-column: 2 / -1; color: #aaa; }
+.duplicate { grid-column: 2 / -1; color: #f3c969; white-space: normal; }
 .sql .repeated { color: #f3c969; }
 .empty { padding: 10px; color: #aaa; font-family: system-ui, sans-serif; }
 .overrides { padding: 2px 6px; border-radius: 999px; background: #f3c969; color: #1f1b3a; }
@@ -461,6 +462,28 @@ async function recordAnswer(call, response) {
     if (text.length <= LONGEST_RECORDED_BODY) call.answer = jsonOrText(text);
 }
 
+const DUPLICATE_WINDOW = 2000;
+const NOT_A_CALL_SITE = ['/_ktor-svelte/', '/src/lib/api/', '/node_modules/', '/@fs/', '/.vite/', '/@vite/', '/.svelte-kit/'];
+const SOURCE_FRAME = /https?:\/\/[^\s/)]+(\/[^\s?:)]+)(?:\?[^\s:)]*)?:(\d+):\d+/;
+let replaying = false;
+
+function callSite(stack) {
+    for (const line of (stack ?? '').split('\n').slice(1)) {
+        const frame = SOURCE_FRAME.exec(line);
+        if (!frame || NOT_A_CALL_SITE.some((part) => frame[1].includes(part))) continue;
+        return `${decodeURIComponent(frame[1]).replace(/^\//, '')}:${frame[2]}`;
+    }
+    return undefined;
+}
+
+function sameCallJustBefore(call) {
+    if (call.method !== 'GET' || replaying) return undefined;
+    const earlier = [...seenCalls.values()]
+        .reverse()
+        .find((other) => other.method === 'GET' && other.path === call.path && call.at - other.at < DUPLICATE_WINDOW);
+    return earlier ? { ms: Math.round(call.at - earlier.at), first: earlier.site, second: call.site } : undefined;
+}
+
 function rememberCalls() {
     const send = window.fetch;
     window.fetch = function (input, init) {
@@ -476,8 +499,11 @@ function rememberCalls() {
                     path: url.pathname + url.search,
                     headers: [...headers].filter(([name]) => name !== REQUEST_ID),
                     body: typeof body === 'string' ? body : undefined,
-                    bodyNotKept: body != null && typeof body !== 'string'
+                    bodyNotKept: body != null && typeof body !== 'string',
+                    at: performance.now(),
+                    site: callSite(new Error().stack)
                 };
+                call.duplicate = sameCallJustBefore(call);
                 seenCalls.set(id, call);
                 if (seenCalls.size > KEPT_CALLS) seenCalls.delete(seenCalls.keys().next().value);
             }
@@ -524,7 +550,12 @@ function replay(entry) {
     const seen = seenCalls.get(entry.id);
     const headers = new Headers(seen?.headers ?? [['accept', 'application/json']]);
     headers.set(REQUEST_ID, crypto.randomUUID());
-    return window.fetch(entry.path, { method: entry.method, headers, body: seen?.body, credentials: 'same-origin' }).catch(() => undefined);
+    replaying = true;
+    try {
+        return window.fetch(entry.path, { method: entry.method, headers, body: seen?.body, credentials: 'same-origin' }).catch(() => undefined);
+    } finally {
+        replaying = false;
+    }
 }
 
 function quoted(text) {
@@ -665,6 +696,14 @@ function startPanel() {
                 row.append(cell);
             }
             row.append(rowTools(entry));
+            const twice = seenCalls.get(entry.id)?.duplicate;
+            if (twice) {
+                const note = document.createElement('span');
+                note.className = 'duplicate';
+                const sites = twice.first && twice.second ? `, from ${twice.first} and from ${twice.second}` : '';
+                note.textContent = `asked for twice within ${twice.ms} ms${sites}`;
+                row.append(note);
+            }
             if (entry.sql) {
                 const sql = document.createElement('span');
                 sql.className = 'sql';
