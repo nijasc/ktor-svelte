@@ -207,7 +207,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.publicConfigSchema,
             pluginConfig.declaredErrorList.toList(),
             pluginConfig.constantHolders.map(::sharedHolder),
+            pluginConfig.errorCodeSet?.names.orEmpty(),
         )
+        pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
         if (pluginConfig.buildHeader) {
             val build = BuildFingerprint(store)
@@ -295,6 +297,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (cause is ValidationException) {
                 devRequests?.validationFailed(call, cause.fields)
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
+                return@on
+            }
+            if (cause is ApiException && !call.response.isCommitted) {
+                call.respondError(cause.code, cause.status, cause.message.takeUnless { it == cause.code.name })
                 return@on
             }
             if (cause is UploadRuleException && !call.response.isCommitted) {

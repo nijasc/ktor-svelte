@@ -33,6 +33,7 @@ internal class TypeScriptGenerator(
     iconNames: List<String> = emptyList(),
     private val declaredErrors: List<DeclaredError> = emptyList(),
     private val constants: List<SharedHolder> = emptyList(),
+    private val errorCodes: List<String> = emptyList(),
 ) {
     private val iconNames = iconNames.toSet()
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
@@ -63,6 +64,9 @@ internal class TypeScriptGenerator(
                     .orEmpty()
                     .keys
                     .map(::groupName) + SERVICES_MODULE_NAMES
+        check(errorCodes.isEmpty() || ERROR_CODE_TYPE !in taken) {
+            "errorCodes would be exported as '$ERROR_CODE_TYPE', which a class of your API is already called. Rename that class."
+        }
         constants.firstOrNull { it.name in taken }?.let { holder ->
             error(
                 "constants(${holder.name}) would be exported as '${holder.name}', which the generated client already uses. Rename the object.",
@@ -72,7 +76,10 @@ internal class TypeScriptGenerator(
             "client.ts" to typeScriptTemplate("client.ts"),
             "form.ts" to typeScriptTemplate("form.ts"),
             FORM_STATE_FILE to typeScriptTemplate(FORM_STATE_FILE),
-            "types.ts" to types + validationHelpers.sorted().joinToString("") { "\n" + it.source },
+            "types.ts" to
+                (if (errorCodes.isEmpty()) types else types.removeSuffix("export {};\n")) +
+                validationHelpers.sorted().joinToString("") { "\n" + it.source } +
+                errorCodeType(),
             "services.ts" to
                 servicesSource(
                     filtered.objectAt("paths").orEmpty(),
@@ -776,14 +783,17 @@ internal class TypeScriptGenerator(
                 "$exports\nexport const $group = {\n$members\n};\n"
             }
         val typeImports = references.sorted().filter { name -> name in schemaNames.map(::typeName) }
-        val clientImports = if (groups.values.flatten().any { it.streaming }) "ApiError, request, stream" else "ApiError, request"
+        val base = if (groups.values.flatten().any { it.streaming }) "ApiError, request, stream" else "ApiError, request"
+        val clientImports = if (errorCodes.isEmpty()) base else "$base, codeMessages, errorCode"
         return buildString {
             append("import { $clientImports, type RequestOptions } from './client.js';\n")
-            val imports = if (publicConfigSchema != null) typeImports + "PublicConfig" else typeImports
+            val withConfig = if (publicConfigSchema != null) typeImports + "PublicConfig" else typeImports
+            val imports = if (errorCodes.isEmpty()) withConfig else (withConfig + ERROR_CODE_TYPE).sorted()
             if (imports.isNotEmpty()) append("import type { ${imports.joinToString()} } from './types.js';\n")
             append("\n")
             serviceBlocks.forEach { block -> append(block).append("\n") }
             append(errorsSource(errors))
+            if (errorCodes.isNotEmpty()) append(ERROR_CODE_HELPERS)
             if (uploads.isNotEmpty()) {
                 append("export const uploadRules = {\n")
                 uploads.entries.sortedBy { it.key }.forEach { (operation, rules) -> append("    '$operation': $rules,\n") }
@@ -808,6 +818,13 @@ internal class TypeScriptGenerator(
                 rules["maxFiles"]?.jsonPrimitive?.intOrNull?.let { "maxFiles: $it" },
             )
         return "{ ${parts.joinToString()} }"
+    }
+
+    private fun errorCodeType(): String {
+        if (errorCodes.isEmpty()) return ""
+        val union = errorCodes.joinToString(" | ") { quoted(it) }
+        val members = errorCodes.joinToString("") { "    ${propertyKey(it)}: ${quoted(it)},\n" }
+        return "\nexport type $ERROR_CODE_TYPE = $union;\n\nexport const $ERROR_CODE_TYPE = {\n$members} as const;\n"
     }
 
     private fun errorsSource(errors: List<ErrorEntry>): String {
@@ -1126,10 +1143,35 @@ private fun hasDateFormat(element: JsonElement): Boolean =
 private const val LUCIDE_TYPE = "LucideIcon"
 internal const val GIT_ATTRIBUTES_FILE = ".gitattributes"
 internal const val UPLOAD_EXTENSION = "x-ktor-svelte-upload"
+private const val ERROR_CODE_TYPE = "ErrorCode"
+private val ERROR_CODE_HELPERS =
+    """
+    |export function hasErrorCode<C extends ErrorCode>(error: unknown, code: C): error is ApiError<{ message: string; code: C }> {
+    |    return errorCode(error) === code;
+    |}
+    |
+    |export function setCodeMessages(messages: Partial<Record<ErrorCode, string | (() => string)>>): void {
+    |    Object.assign(codeMessages, messages);
+    |}
+    |
+    |
+    """.trimMargin()
 internal const val FORM_STATE_FILE = "form-state.svelte.ts"
 private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated merge=ktor-svelte"
 private val SERVICES_MODULE_NAMES =
-    setOf("api", "request", "stream", "ApiError", "errorStatuses", "isApiError", "publicConfig", "loadPublicConfig", "uploadRules")
+    setOf(
+        "api",
+        "request",
+        "stream",
+        "ApiError",
+        "errorStatuses",
+        "isApiError",
+        "publicConfig",
+        "loadPublicConfig",
+        "uploadRules",
+        "hasErrorCode",
+        "setCodeMessages",
+    )
 private val ENDPOINT_ARGUMENTS = setOf("body", "query", "options", "encodeURIComponent")
 private val RESERVED_WORDS =
     setOf(
