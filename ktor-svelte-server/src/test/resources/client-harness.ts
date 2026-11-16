@@ -1,4 +1,4 @@
-import { ApiError, apiConfig, isRateLimitError, request } from './client.ts';
+import { ApiError, apiConfig, fixtureFetch, isRateLimitError, request, type ApiFixtures } from './client.ts';
 
 type Outcome = number | Error | { status: number; retryAfter: string };
 
@@ -149,5 +149,34 @@ server([200]);
 results.brokenHandlerDoesNotFailTheCall = await outcomeOf(() => request('POST', '/api/notes', { body: {} }));
 await new Promise((resolve) => realTimeout(resolve, 20));
 apiConfig.onWrite = undefined;
+
+const recordedCalls: ApiFixtures = {
+    recorded: '2026-11-16T12:00:00.000Z',
+    calls: [
+        { method: 'GET', path: '/api/notes?page=1', status: 200, response: { items: ['first'] } },
+        { method: 'POST', path: '/api/notes', status: 201, request: { title: 'New' }, response: { id: 7 } },
+        { method: 'GET', path: '/api/notes?page=1', status: 200, response: { items: ['first', 'New'] } },
+        { method: 'delete', path: '/api/notes/7', status: 204 },
+        { method: 'GET', path: '/api/notes/9', status: 404, response: { message: 'That note does not exist.' } },
+        { method: 'GET', path: '/api/greeting', status: 200, response: 'hello' }
+    ]
+};
+apiConfig.retry = undefined;
+apiConfig.onError = undefined;
+apiConfig.baseUrl = '';
+apiConfig.headers = {};
+apiConfig.fetch = fixtureFetch(recordedCalls);
+results.fixtures = [
+    await outcomeOf(() => request('GET', '/api/notes', { query: { page: 1 } })),
+    await outcomeOf(() => request('POST', '/api/notes', { body: { title: 'New' } })),
+    await outcomeOf(() => request('GET', '/api/notes', { query: { page: 1 } })),
+    await outcomeOf(() => request('GET', '/api/notes', { query: { page: 1 } })),
+    await outcomeOf(() => request('DELETE', '/api/notes/7')),
+    await outcomeOf(() => request('GET', '/api/notes/9')),
+    await outcomeOf(() => request('GET', '/api/greeting'))
+];
+results.missingFixture = await request('GET', '/api/other').catch((error: Error) => error.message);
+apiConfig.fetch = fixtureFetch(recordedCalls);
+results.eachFetchStartsOver = await outcomeOf(() => request('GET', '/api/notes', { query: { page: 1 } }));
 
 console.log(JSON.stringify(results));
