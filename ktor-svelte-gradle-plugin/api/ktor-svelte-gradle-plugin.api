@@ -438,7 +438,9 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDepe
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyRoutesTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
+	public abstract fun getFix ()Lorg/gradle/api/provider/Property;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getGeneratedPackage ()Lorg/gradle/api/provider/Property;
 	public abstract fun getKotlinSources ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getRoutesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
