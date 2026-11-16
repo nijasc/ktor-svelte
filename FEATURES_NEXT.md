@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 98 | Startup timing breakdown |  |
+| 100 | Restart summary line |  |
 
 ### In review
 
@@ -36,6 +36,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 88 | Active link helper | #239 |
 | 90 | Free the dev ports | #240 |
 | 97 | Input normalisation | #241 |
+| 98 | Startup timing breakdown | #242 |
 
 ### Next up
 
@@ -88,7 +89,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 100 | Restart summary line | Small | 2 |
 | 101 | Highlight your own frames | Small | 2 |
 | 102 | Short task names | Small | 2 |
 | 104 | Generated files never conflict | Medium | 2 |
