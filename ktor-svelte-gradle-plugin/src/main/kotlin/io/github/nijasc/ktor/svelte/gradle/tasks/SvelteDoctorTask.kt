@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.tasks
 
+import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import io.github.nijasc.ktor.svelte.gradle.LOCKFILES
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
@@ -14,6 +15,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
+import org.gradle.api.tasks.options.Option
 import java.io.File
 import java.io.IOException
 import java.net.BindException
@@ -26,7 +28,45 @@ internal enum class Severity { OK, WARN, ERROR }
 internal data class Finding(
     val severity: Severity,
     val message: String,
+    val fix: (() -> String)? = null,
 )
+
+private const val API_IMPORT = "#api"
+private const val API_TARGET = "./src/lib/api/index.ts"
+private const val LIB_IMPORT = "#lib/*"
+private const val LIB_TARGET = "./src/lib/*"
+private const val APP_TSCONFIG = "\$app/tsconfig"
+private val LEGACY_LIB_IMPORT = Regex("""(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(['"])\${'$'}lib(?=[/'"])""")
+private val SOURCE_EXTENSIONS = setOf("ts", "js", "svelte")
+
+private fun parsedObject(file: File): MutableMap<String, Any?>? =
+    runCatching {
+        @Suppress("UNCHECKED_CAST")
+        LinkedHashMap(JsonSlurper().parse(file) as Map<String, Any?>)
+    }.getOrNull()
+
+private fun writeObject(
+    file: File,
+    content: Map<String, Any?>,
+) {
+    file.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(content)) + "\n")
+}
+
+private fun addSubpathImport(
+    packageJson: File,
+    name: String,
+    target: String,
+): Boolean {
+    val manifest = parsedObject(packageJson) ?: return false
+
+    @Suppress("UNCHECKED_CAST")
+    val imports = LinkedHashMap((manifest["imports"] as? Map<String, Any?>).orEmpty())
+    if (name in imports) return false
+    imports[name] = target
+    manifest["imports"] = imports
+    writeObject(packageJson, manifest)
+    return true
+}
 
 internal class SetupDoctor(
     private val frontend: File,
@@ -63,6 +103,8 @@ internal class SetupDoctor(
             port(),
         )
     }
+
+    fun fix(): List<String> = examine().mapNotNull { it.fix?.invoke() }
 
     private fun tool(): Finding {
         if (pinnedBun) return Finding(Severity.OK, "Bun $bunVersion is pinned, and ktor-svelte downloads it when a task needs it")
@@ -185,7 +227,10 @@ internal class SetupDoctor(
             Finding(
                 Severity.WARN,
                 "package.json has no \"#api\" import. Add \"#api\": \"./src/lib/api/index.ts\" to import the generated client.",
-            )
+            ) {
+                addSubpathImport(frontend.resolve("package.json"), API_IMPORT, API_TARGET)
+                "Added the #api import to package.json"
+            }
         }
 
     private fun tsconfig(): Finding {
@@ -193,21 +238,35 @@ internal class SetupDoctor(
         return when {
             !file.isFile -> Finding(Severity.OK, "No tsconfig.json, so type checking is off")
             "\$app/tsconfig" in file.readText() -> Finding(Severity.OK, "tsconfig.json extends \$app/tsconfig")
-            else -> Finding(Severity.WARN, "tsconfig.json should extend \$app/tsconfig on SvelteKit 3.")
+            else ->
+                Finding(
+                    Severity.WARN,
+                    "tsconfig.json should extend \$app/tsconfig on SvelteKit 3.",
+                    parsedObject(file)?.let { config ->
+                        {
+                            writeObject(file, mapOf("extends" to APP_TSCONFIG) + (config - "extends"))
+                            "Made tsconfig.json extend \$app/tsconfig"
+                        }
+                    },
+                )
         }
     }
 
     private fun legacyLibImports(): Finding {
-        val offender =
+        val offenders =
             frontend
                 .resolve("src")
                 .walkTopDown()
-                .filter { it.isFile && it.extension in setOf("ts", "js", "svelte") }
-                .firstOrNull { "from '\$lib" in it.readText() || "from \"\$lib" in it.readText() }
-        return if (offender == null) {
-            Finding(Severity.OK, "No \$lib imports")
-        } else {
-            Finding(Severity.ERROR, "${offender.relativeTo(frontend).invariantSeparatorsPath} imports \$lib. SvelteKit 3 uses #lib.")
+                .filter { it.isFile && it.extension in SOURCE_EXTENSIONS && LEGACY_LIB_IMPORT.containsMatchIn(it.readText()) }
+                .sortedBy { it.invariantSeparatorsPath }
+                .toList()
+        val offender = offenders.firstOrNull() ?: return Finding(Severity.OK, "No \$lib imports")
+        return Finding(Severity.ERROR, "${offender.relativeTo(frontend).invariantSeparatorsPath} imports \$lib. SvelteKit 3 uses #lib.") {
+            offenders.forEach { file ->
+                file.writeText(LEGACY_LIB_IMPORT.replace(file.readText()) { "${it.groupValues[1]}${it.groupValues[2]}#lib" })
+            }
+            addSubpathImport(frontend.resolve("package.json"), LIB_IMPORT, LIB_TARGET)
+            "Rewrote \$lib imports to #lib in ${offenders.size} file(s)"
         }
     }
 
@@ -223,7 +282,10 @@ internal class SetupDoctor(
                 Severity.ERROR,
                 "${incomplete.size} installed package(s) are missing their files (${incomplete.summary()}), " +
                     "so the install was cut short. Run svelteClean and install again.$cache",
-            )
+            ) {
+                modules.deleteRecursively()
+                "Deleted node_modules, so the next task that needs it installs it again"
+            }
         }
         val missing = declaredDependencies(manifest).filterNot { modules.resolve("$it/package.json").isFile }
         if (missing.isNotEmpty()) {
@@ -351,9 +413,14 @@ public abstract class SvelteDoctorTask : DefaultTask() {
     @get:Internal
     public abstract val bundleDirectory: DirectoryProperty
 
+    @get:Input
+    @get:Optional
+    @get:Option(option = "fix", description = "Applies the fixes that are safe to make without asking")
+    public abstract val fix: Property<Boolean>
+
     @TaskAction
     public fun examine() {
-        val findings =
+        val doctor =
             SetupDoctor(
                 frontendDir.get().asFile,
                 packageManager.get(),
@@ -361,8 +428,13 @@ public abstract class SvelteDoctorTask : DefaultTask() {
                 outputDir.get(),
                 bundleDirectory.orNull?.asFile,
                 bunVersion = bunVersion.orNull,
-            ).examine()
+            )
+        val applied = if (fix.getOrElse(false)) doctor.fix() else emptyList()
+        applied.forEach { logger.lifecycle("FIXED $it") }
+        val findings = doctor.examine()
         findings.forEach { finding -> logger.lifecycle("${finding.severity.name.padEnd(5)} ${finding.message}") }
+        val fixable = findings.count { it.fix != null }
+        if (fixable > 0) logger.lifecycle("ktor-svelte: svelteDoctor --fix can fix $fixable of these.")
         val errors = findings.count { it.severity == Severity.ERROR }
         if (errors > 0) throw GradleException("svelteDoctor found $errors problem(s) to fix.")
     }

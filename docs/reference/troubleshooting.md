@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Find the message you see, then its cause and fix. Run `./gradlew svelteDoctor` first: it checks the frontend setup and lists most problems on this page at once.
+Find the message you see, then its cause and fix. Run `./gradlew svelteDoctor` first: it checks the frontend setup and lists most problems on this page at once. Add `--fix` and it repairs the ones that need no decision from you: a missing `#api` import, a `tsconfig.json` that does not extend `$app/tsconfig`, `$lib` imports left over from SvelteKit 2, and a `node_modules` folder whose packages lost their files, which it deletes so the next build installs it again. It prints each change as `FIXED`, and everything else stays a finding for you.
 
 ## Build
 

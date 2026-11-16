@@ -91,7 +91,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteVerifyLinks` | Lists [internal links that lead to no page, no API route and no static file](../features/routes.md#finding-links-that-lead-nowhere). With `--strict` it fails when it finds one |
 | `svelteVerifyLoads` | Fails if an API call inside a `load` function [uses neither `apiWith(event)` nor `{ fetch }`](../features/calling-the-api.md#in-load-functions) |
 | `svelteRename --page=notes/[id] --to=memos/[id]` | [Moves a page](../features/routes.md#renaming-a-page) and rewrites its typed route calls in the frontend and in Kotlin |
-| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix |
+| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix. With `--fix` it repairs what needs no decision |
 | `svelteConfig` | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores security, performance, operations and developer experience, and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |

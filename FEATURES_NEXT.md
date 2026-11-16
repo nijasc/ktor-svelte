@@ -26,14 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 6 | `svelteDoctor --fix` |  |
+| 7 | i18n message check |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 4 | Flag `window.fetch` in `load` | #215 |
-| 5 | Fold repeated stack traces | #216 |
+| 6 | `svelteDoctor --fix` | #217 |
 
 ### Next up
 
@@ -61,12 +60,13 @@ Features of this plan that are merged:
 | 3 | Dead link check | #212 |
 | 91 | Rename a page safely | #213 |
 | 103 | Editor-time lint rules | #214 |
+| 4 | Flag `window.fetch` in `load` | #215 |
+| 5 | Fold repeated stack traces | #216 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 7 | i18n message check | Medium | 2 |
 | 8 | Retry with backoff | Small | 2 |
 | 9 | `respondPage` helper | Small | 2 |
 | 10 | Production access log | Small | 2 |

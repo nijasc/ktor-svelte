@@ -276,6 +276,22 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteDoctor says what it can fix and fixes it when asked`() {
+        val project = project()
+        val manifest = project.frontend.resolve("package.json")
+
+        assertContains(project.runAndFail("svelteDoctor").output, "svelteDoctor --fix can fix 1 of these.")
+        assertEquals("{}", manifest.readText())
+
+        val output = project.runAndFail("svelteDoctor", "--fix").output
+
+        assertContains(output, "FIXED Added the #api import to package.json")
+        assertContains(output, "OK    #api import is configured")
+        assertContains(output, "ERROR @sveltejs/kit is not a dependency")
+        assertContains(manifest.readText(), "\"#api\": \"./src/lib/api/index.ts\"")
+    }
+
+    @Test
     fun `svelteDevAll stops everything when Vite stops`() {
         val project = project()
         project.buildScript(applicationBuild)
