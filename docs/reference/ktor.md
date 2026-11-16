@@ -118,3 +118,16 @@ A route of yours such as `get("/{slug}")` beats the frontend. That is intended, 
 ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`. `.zst` files next to them, for example from a Vite compression plugin, are bundled too and preferred for browsers that accept `zstd`, since they decompress faster.
 
 If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
+
+## Path parameters
+
+`call.pathParameter<T>(name)` reads a path parameter in the type you need, so a route does not parse it by hand:
+
+```kotlin
+get("/api/notes/{id}") {
+    val id = call.pathParameter<Int>("id")
+    call.respond(store.create(Note(id, "x")))
+}
+```
+
+It reads `String`, `Int`, `Long`, `UUID` and enums, which match by name in any case. A value that does not fit, such as `/api/notes/abc`, ends the request with Ktor's `NotFoundException`: the address names nothing, so the answer is 404, through your `StatusPages` if you have one. Asking for a parameter the route's path does not have, or for a type it cannot read, is a mistake in the route and fails with a 500 that says so.
