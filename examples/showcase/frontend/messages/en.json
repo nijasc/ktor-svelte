@@ -104,6 +104,7 @@
   "task-discard": "Discard changes",
   "task-edit": "Edit",
   "task-save": "Save",
+  "task-clear-due": "Remove due date",
   "task-saved": "Saved.",
   "task-deleted": "Task deleted.",
   "task-created-by": "Created by",

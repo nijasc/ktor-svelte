@@ -2,6 +2,7 @@ package showcase
 
 import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.navigateTo
+import io.github.nijasc.ktor.svelte.Patch
 import io.github.nijasc.ktor.svelte.receiveUploads
 import io.github.nijasc.ktor.svelte.respondIfStale
 import io.github.nijasc.ktor.svelte.ToastKind
@@ -24,6 +25,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.describe
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
@@ -93,6 +95,17 @@ fun Route.taskRoutes(
                 call.checkAssignee(users, input)
                 val stored = tasks.find(call.id()) ?: return@put call.respondMissingTask()
                 if (call.respondIfStale(input.version, stored.version, call.messages.problemTaskChanged()) { stored }) return@put
+                val task: Task? = tasks.update(call.id(), input)
+                if (task == null) call.respondMissingTask() else call.respond(task)
+            }
+
+            patch {
+                val patch = call.receive<Patch<TaskInput>>()
+                val stored = tasks.find(call.id()) ?: return@patch call.respondMissingTask()
+                val input = patch.applyTo(stored.toInput())
+                call.checkAssignee(users, input)
+                val sent = input.version.takeIf { TaskInput::version in patch }
+                if (call.respondIfStale(sent, stored.version, call.messages.problemTaskChanged()) { stored }) return@patch
                 val task: Task? = tasks.update(call.id(), input)
                 if (task == null) call.respondMissingTask() else call.respond(task)
             }
@@ -198,3 +211,5 @@ private fun ApplicationCall.id(): Int = parameters["id"]?.toIntOrNull() ?: -1
 private suspend fun ApplicationCall.respondMissingTask() {
     respond(HttpStatusCode.NotFound, Problem(messages.problemMissingTask()))
 }
+
+private fun Task.toInput(): TaskInput = TaskInput(title, description, priority, labels, icon, assignee?.id, dueOn, version)

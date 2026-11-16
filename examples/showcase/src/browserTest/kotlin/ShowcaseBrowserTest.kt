@@ -579,6 +579,25 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `one field is cleared with a patch and the rest of the task stays`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val title = unique("Due")
+        page.navigate("/tasks/new")
+        page.getByLabel("Title").fill(title)
+        page.getByLabel("Due on").fill("2026-12-24")
+        page.getByLabel("Description").fill("Stays as it is.")
+        page.button("Create task").click()
+        assertThat(page.locator("#task-title")).hasText(title)
+        val patched = java.util.function.Predicate<com.microsoft.playwright.Request> { it.method() == "PATCH" && "/api/tasks/" in it.url() }
+
+        val body = page.waitForRequest(patched) { page.locator("#clear-due").click() }.postData()
+        assertEquals("""{"dueOn":null}""", body)
+        assertThat(page.locator("#clear-due")).hasCount(0)
+        assertThat(page.locator("#task-title")).hasText(title)
+        assertThat(page.getByText("Stays as it is.")).isVisible()
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

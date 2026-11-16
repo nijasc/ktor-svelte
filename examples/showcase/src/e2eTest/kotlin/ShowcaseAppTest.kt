@@ -264,6 +264,28 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `a patch changes the fields it names, clears the ones it sets to null and leaves the rest`() {
+        val created = member.send("POST", "/api/tasks", """{"title":"Patched","description":"Keep me","dueOn":"2026-12-24","labels":["a"]}""")
+        val id = id(created)
+        val renamed = member.send("PATCH", "/api/tasks/$id", """{"title":"  Patched twice  "}""")
+        assertEquals(200, renamed.statusCode())
+        assertContains(renamed.body(), """"title":"Patched twice"""")
+        assertContains(renamed.body(), """"description":"Keep me"""")
+        assertContains(renamed.body(), """"dueOn":"2026-12-24"""")
+
+        val cleared = member.send("PATCH", "/api/tasks/$id", """{"dueOn":null}""")
+        assertEquals(200, cleared.statusCode())
+        assertFalse("2026-12-24" in cleared.body())
+        assertContains(cleared.body(), """"labels":["a"]""")
+
+        assertEquals(400, member.send("PATCH", "/api/tasks/$id", """{"titel":"typo"}""").statusCode())
+        assertEquals(400, member.send("PATCH", "/api/tasks/$id", """{"title":null}""").statusCode())
+        assertEquals(422, member.send("PATCH", "/api/tasks/$id", """{"title":"   "}""").statusCode())
+        assertEquals(409, member.send("PATCH", "/api/tasks/$id", """{"title":"Stale","version":1}""").statusCode())
+        assertContains(member.send("GET", "/api/tasks/$id").body(), """"title":"Patched twice"""")
+    }
+
+    @Test
     fun `an id that is a value class in Kotlin is its own type in the generated client`() {
         val types = File("frontend/src/lib/api/types.ts").readText().replace("\r\n", "\n")
         assertContains(types, "export type AttachmentId = number & { readonly [brand]: 'AttachmentId' };")
