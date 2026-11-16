@@ -32,7 +32,6 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 4 | Flag `window.fetch` in `load` | # |
 | 4 | Flag `window.fetch` in `load` | #215 |
 
 ### Next up
