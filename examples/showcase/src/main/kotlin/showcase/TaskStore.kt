@@ -252,6 +252,7 @@ class TaskStore(
                 updatedAt = instant(row[Tasks.updatedAt]),
                 comments = commentCounts[id] ?: 0,
                 attachments = fileCounts[id] ?: 0,
+                version = row[Tasks.updatedAt],
             )
         }
     }

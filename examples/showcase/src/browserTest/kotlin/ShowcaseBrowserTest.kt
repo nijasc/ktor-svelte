@@ -548,6 +548,37 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `someone else's change is noticed on save, and can be loaded or overwritten`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val title = unique("Contested")
+        val id = page.createTask(title)
+        val conflict = page.locator("#conflict")
+
+        fun changeElsewhere(to: String) {
+            val response = page.request().put("/api/tasks/$id", com.microsoft.playwright.options.RequestOptions.create().setData(mapOf("title" to to)))
+            assertEquals(200, response.status())
+        }
+
+        page.button("Edit").click()
+        page.getByLabel("Title").fill("$title mine")
+        changeElsewhere("$title theirs")
+        page.button("Save").click()
+        assertThat(conflict).containsText("Someone else changed this task while you were editing it.")
+        assertThat(page.locator(".toast").getByText("Someone else changed this task")).hasCount(0)
+
+        conflict.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Load their version")).click()
+        assertThat(conflict).hasCount(0)
+        assertThat(page.getByLabel("Title")).hasValue("$title theirs")
+
+        page.getByLabel("Title").fill("$title mine again")
+        changeElsewhere("$title theirs again")
+        page.button("Save").click()
+        conflict.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Save mine anyway")).click()
+        assertThat(page.locator("#task-title")).hasText("$title mine again")
+        assertThat(conflict).hasCount(0)
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

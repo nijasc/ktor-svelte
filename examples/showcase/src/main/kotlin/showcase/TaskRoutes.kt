@@ -3,6 +3,7 @@ package showcase
 import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.receiveUploads
+import io.github.nijasc.ktor.svelte.respondIfStale
 import io.github.nijasc.ktor.svelte.ToastKind
 import io.github.nijasc.ktor.svelte.toast
 import io.github.nijasc.ktor.svelte.uploadRules
@@ -90,6 +91,8 @@ fun Route.taskRoutes(
             put {
                 val input = call.receive<TaskInput>()
                 call.checkAssignee(users, input)
+                val stored = tasks.find(call.id()) ?: return@put call.respondMissingTask()
+                if (call.respondIfStale(input.version, stored.version, call.messages.problemTaskChanged()) { stored }) return@put
                 val task: Task? = tasks.update(call.id(), input)
                 if (task == null) call.respondMissingTask() else call.respond(task)
             }

@@ -147,6 +147,7 @@ data class Task(
     val updatedAt: Instant,
     val comments: Int,
     val attachments: Int,
+    val version: Long,
 )
 
 @Serializable
@@ -162,6 +163,7 @@ data class TaskInput(
     val icon: LucideIcon = LucideIcon.SquareCheck,
     val assigneeId: Int? = null,
     val dueOn: String? = null,
+    val version: Long? = null,
 ) : Validated {
     override fun Validator.rules() {
         check(::title, title.isNotBlank()) { "A task needs a title." }
