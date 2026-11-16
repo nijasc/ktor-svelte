@@ -78,6 +78,22 @@ svelte {
 
 The archive is checked against the release's `SHASUMS256.txt` before it is unpacked into `~/.gradle/ktor-svelte/bun/<version>/`, and every later build reuses it. Every task then uses this Bun, even when another one is on `PATH`, so all machines build with the same version. With `packageManager = AUTO`, Bun becomes the package manager. Bun runs Vite itself, so Node is not needed. It works on Windows, macOS and Linux, including Alpine, on x64 and arm64. Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
 
+## Format both sides
+
+One command formats Kotlin and the frontend, and one checks them:
+
+```bash
+./gradlew format
+```
+
+```bash
+./gradlew formatCheck
+```
+
+`format` runs the frontend's `format` script from `package.json`, and `formatCheck` runs its `lint` script. Projects made by the setup script have both, as `prettier --write .` and `prettier --check . && eslint .`. For Kotlin, they run `ktlintFormat` and `ktlintCheck` when the ktlint Gradle plugin is applied, or `spotlessApply` and `spotlessCheck` with Spotless. Without either, Kotlin is left alone and the task says so. A frontend without the script is skipped with a hint.
+
+If your build already has a task called `format` or `formatCheck`, ktor-svelte does not register its own. The frontend half is always there as `svelteFormat` and `svelteFormatCheck`.
+
 ## Gradle tasks
 
 | Task | What it does |
@@ -102,6 +118,8 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteVerifyApiRoutes` | Lists [API routes that nothing in the frontend calls](../features/typescript.md#routes-nothing-calls). With `--strict` it fails when it finds one |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](../features/routes.md#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
 | `svelteCheck` | Runs your `check` script |
+| `format`, `formatCheck` | [Format, or check the formatting of, Kotlin and the frontend](#format-both-sides) in one go |
+| `svelteFormat`, `svelteFormatCheck` | The frontend half of those: run the `format` and the `lint` script |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |
 | `svelteOutdated` | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
