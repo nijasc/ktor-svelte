@@ -52,6 +52,8 @@ When Kotlin stops compiling, the app keeps running its last good version, and th
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
 
+**Save fixtures** in the panel's header downloads the calls this page made, with their answers, as a JSON file that [frontend tests can replay](../features/calling-the-api.md#fixtures-for-frontend-tests) without a backend.
+
 The panel also has a **Public config** section. It lists the values of your [`publicConfig`](../features/runtime-config.md) and lets you change them for this browser only: flip a feature flag, lower a limit, see the page with another name, without editing a config file and without a restart. Values are written as JSON, so text goes in double quotes. **Apply and reload** saves them in the browser's local storage and reloads the page, and from then on `loadPublicConfig()` and `readPublicConfig()` return the changed values in this browser. A yellow "config changed" mark on the API button reminds you, and **Reset all** goes back to what the server sends.
 
 Only the browser is told something different. The server keeps its own values, so a limit the server enforces is still enforced, and nobody else sees the change. It exists in development only, like the rest of the panel.
