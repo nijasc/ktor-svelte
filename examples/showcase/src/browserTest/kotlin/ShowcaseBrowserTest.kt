@@ -323,8 +323,11 @@ class ShowcaseBrowserTest {
         assertThat(preview).hasJSProperty("naturalWidth", 1)
 
         page.getByLabel("Attach files").setInputFiles(FilePayload("drawing.svg", "image/svg+xml", "<svg/>".toByteArray()))
-        assertThat(page.locator(".toast")).containsText("Only images, PDF, text, CSV and ZIP files can be attached.")
+        val refused = page.locator("[data-upload-state=failed]")
+        assertThat(refused).containsText("drawing.svg")
+        assertThat(refused.getByRole(AriaRole.ALERT)).hasText("Only images, PDF, text, CSV and ZIP files can be attached.")
         assertThat(page.locator("#attachments > li")).hasCount(1)
+        assertThat(page.getByLabel("Attach files")).hasAttribute("accept", Pattern.compile("^image/png,.*application/zip$"))
 
         val download = page.waitForDownload { page.locator("#attachments").getByRole(AriaRole.LINK).click() }
         assertEquals("pixel.png", download.suggestedFilename())
@@ -595,6 +598,48 @@ class ShowcaseBrowserTest {
         assertThat(page.locator("#clear-due")).hasCount(0)
         assertThat(page.locator("#task-title")).hasText(title)
         assertThat(page.getByText("Stays as it is.")).isVisible()
+    }
+
+    @Test
+    fun `files dropped on the drop zone are previewed, uploaded with progress and listed`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.createTask(unique("Dropped"))
+        val zone = page.locator("[data-drop-zone]")
+        val held = java.util.concurrent.CopyOnWriteArrayList<Route>()
+        page.route("**/api/tasks/*/attachments") { route -> if (route.request().method() == "POST") held += route else route.resume() }
+
+        val png = java.util.Base64.getEncoder().encodeToString(PNG_PIXEL)
+        val transfer =
+            page.evaluateHandle(
+                """(encoded) => {
+                    const bytes = Uint8Array.from(atob(encoded), (letter) => letter.charCodeAt(0));
+                    const data = new DataTransfer();
+                    data.items.add(new File([bytes], 'dropped.png', { type: 'image/png' }));
+                    data.items.add(new File(['hello'], 'notes.txt', { type: 'text/plain' }));
+                    return data;
+                }""",
+                png,
+            )
+        zone.dispatchEvent("dragover", mapOf("dataTransfer" to transfer))
+        assertThat(zone).hasAttribute("data-over", "true")
+        zone.dispatchEvent("drop", mapOf("dataTransfer" to transfer))
+        assertThat(zone).hasAttribute("data-over", "false")
+
+        val rows = zone.locator("li")
+        assertThat(rows).hasCount(2)
+        assertThat(rows.first()).containsText("dropped.png")
+        assertThat(rows.first().locator("img")).hasJSProperty("naturalWidth", 1)
+        assertThat(rows.first().getByRole(AriaRole.PROGRESSBAR)).hasAttribute("aria-label", "Uploading dropped.png")
+        assertThat(rows.nth(1)).containsText("5 B")
+        assertThat(rows.nth(1)).hasAttribute("data-upload-state", "waiting")
+
+        page.waitForCondition { held.size == 1 }
+        held.first().resume()
+        page.waitForCondition { held.size == 2 }
+        held[1].resume()
+        assertThat(rows).hasCount(0)
+        assertThat(page.locator("#attachments > li")).hasCount(2)
+        assertThat(page.locator("#attachments")).containsText("notes.txt")
     }
 
     @Test

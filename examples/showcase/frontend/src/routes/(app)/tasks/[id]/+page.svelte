@@ -7,6 +7,7 @@
         field,
         isValidationError,
         isVersionConflict,
+        errorMessage,
         isUploadError,
         Role,
         Status,
@@ -19,6 +20,7 @@
     import Icon from '#icon';
     import { m } from '#i18n';
     import { routes } from '#routes';
+    import FileDrop from '#components/FileDrop.svelte';
     import TaskForm from '#lib/components/TaskForm.svelte';
     import { formatBytes, formatDate, formatDateTime } from '#lib/format.ts';
     import { confirmed } from '#lib/ktor-svelte/confirm.ts';
@@ -39,7 +41,6 @@
     let errors = $state<Record<string, string[]>>({});
     let comment = $state(CommentInput.empty());
     let commentErrors = $state<Record<string, string[]>>({});
-    let progress = $state<number | undefined>(undefined);
     let busy = $state(false);
 
     const statusLabels: Record<Status, () => string> = { TODO: m.statusTodo, DOING: m.statusDoing, DONE: m.statusDone };
@@ -135,27 +136,14 @@
         }
     }
 
-    async function upload(event: Event) {
-        const input = event.currentTarget as HTMLInputElement;
-        const files = [...(input.files ?? [])];
-        input.value = '';
-        for (const file of files) {
-            progress = 0;
-            try {
-                const stored = await api.tasks.attachments(task.id, { file }, {
-                    silent: true,
-                    onUploadProgress: ({ loaded, total }) => (progress = total ? loaded / total : 0)
-                });
-                attachments = [...attachments, ...stored];
-            } catch (error) {
-                if (!isUploadError(error)) toastApiError(error);
-                else toast(error.body.code === 'upload.tooLarge' ? m.problemFileTooLarge() : m.problemFileType(), { kind: 'error' });
-                continue;
-            } finally {
-                progress = undefined;
-            }
-        }
-        await refreshActivity();
+    function uploadProblem(error: unknown): string {
+        if (!isUploadError(error)) return errorMessage(error);
+        return error.body.code === 'upload.tooLarge' ? m.problemFileTooLarge() : m.problemFileType();
+    }
+
+    function attached(stored: Attachment[]) {
+        attachments = [...attachments, ...stored];
+        void refreshActivity();
     }
 
     async function detach(attachment: Attachment) {
@@ -246,13 +234,17 @@
             <li>{m.attachmentsEmpty()}</li>
         {/each}
     </ul>
-    <label class="mt-3 grid gap-1" for="upload">
-        <span>{m.attachmentsAdd()}</span>
-        <input id="upload" class="file-input w-full" type="file" multiple accept={uploadRules['tasks.attachments'].types.join(',')} onchange={upload} />
-    </label>
-    {#if progress !== undefined}
-        <progress class="progress mt-2 w-full" value={progress} max="1" aria-label={m.attachmentsUploading()}></progress>
-    {/if}
+    <FileDrop
+        id="upload"
+        class="mt-3"
+        label={m.attachmentsAdd()}
+        uploading={m.attachmentsUploading()}
+        multiple
+        rules={uploadRules['tasks.attachments']}
+        upload={(file, options) => api.tasks.attachments(task.id, { file }, options)}
+        problem={uploadProblem}
+        onuploaded={attached}
+    />
 </section>
 
 <section class="mt-10" aria-labelledby="comments-title">
