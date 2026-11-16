@@ -120,6 +120,8 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
       - run: ./gradlew -p examples/showcase installBrowsers
       - run: ./gradlew -p examples/showcase devBrowserTest
+      - if: failure()
+        run: cat examples/showcase/build/dev-browser-test.log
 
   setup:
     needs: changes
