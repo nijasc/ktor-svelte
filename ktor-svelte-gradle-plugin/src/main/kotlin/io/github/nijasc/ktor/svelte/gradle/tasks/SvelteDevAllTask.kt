@@ -10,8 +10,10 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
+import org.gradle.api.tasks.options.Option
 import org.gradle.jvm.toolchain.JavaLauncher
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -97,12 +99,23 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     @get:Internal
     public abstract val compileErrorsFile: RegularFileProperty
 
+    @get:Input
+    @get:Optional
+    @get:Option(option = "full-stack-traces", description = "Prints every stack trace in full, without hiding framework frames or repeats")
+    public abstract val fullStackTraces: Property<Boolean>
+
     @Transient
     private lateinit var devLog: DevLogFormatter
 
     @TaskAction
     public fun runAll() {
-        devLog = DevLogFormatter(useColor(System.getenv()), projectDirectory.get().asFile, frontendDirectory = frontendDir.get().asFile)
+        devLog =
+            DevLogFormatter(
+                useColor(System.getenv()),
+                projectDirectory.get().asFile,
+                frontendDirectory = frontendDir.get().asFile,
+                foldStackTraces = !fullStackTraces.getOrElse(false),
+            )
         val running = mutableListOf<Process>()
         val banner = ReadyBanner(port.get())
         if (openBrowser.get()) banner.onFirstReady = ::openInBrowser
