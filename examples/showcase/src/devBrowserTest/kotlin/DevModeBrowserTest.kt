@@ -493,6 +493,31 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel checks the open page with axe and shows where a problem is`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".a11y summary").click()
+        assertThat(panel.locator(".a11y-note")).hasText("axe found no problems on this page.")
+        assertThat(panel.locator(".a11y-count")).hasText(" (0)")
+
+        page.evaluate(
+            "document.querySelector('main, article').insertAdjacentHTML('beforeend', '<img id=\"unnamed\" src=\"data:image/gif;base64,R0lGODlhAQABAAAAACw=\" width=\"20\" height=\"20\">')",
+        )
+        panel.locator(".a11y-check").click()
+        val problem = panel.locator(".a11y-row").filter(Locator.FilterOptions().setHasText("image-alt"))
+        assertThat(problem).containsText("critical")
+        assertThat(problem.locator("a")).hasAttribute("href", Pattern.compile("^https://dequeuniversity\\.com/rules/axe/.*image-alt.*"))
+        assertThat(page.locator("#unnamed")).not().hasAttribute("data-ktor-svelte-a11y", "image-alt")
+
+        problem.click()
+        assertThat(page.locator("#unnamed")).hasAttribute("data-ktor-svelte-a11y", "image-alt")
+        panel.locator(".a11y summary").click()
+        assertThat(page.locator("[data-ktor-svelte-a11y]")).hasCount(0)
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
