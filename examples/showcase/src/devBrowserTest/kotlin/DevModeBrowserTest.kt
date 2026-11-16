@@ -554,7 +554,7 @@ class DevModeBrowserTest {
         panel.locator(".status summary").click()
         val rows = panel.locator(".status-row")
 
-        fun row(label: String) = rows.filter(Locator.FilterOptions().setHas(panel.getByText(label, Locator.GetByTextOptions().setExact(true))))
+        fun row(label: String) = rows.filter(Locator.FilterOptions().setHasText(Pattern.compile("^$label"))).first()
         assertThat(row("ktor-svelte")).containsText(Pattern.compile("\\d+\\.\\d+"))
         assertThat(row("Java")).containsText(System.getProperty("java.version").substringBefore('.'))
         assertThat(row("health")).hasText("healthup")
