@@ -4,6 +4,7 @@ import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import com.microsoft.playwright.options.AriaRole
+import com.microsoft.playwright.options.LoadState
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -108,6 +109,35 @@ class DevModeBrowserTest {
             waitFor("the app and Vite", START_SECONDS) { get("/_ktor-svelte/health")?.statusCode() == 200 && get("/")?.statusCode() == 200 }
             playwright = Playwright.create()
             browser = playwright.chromium().launch()
+            visitEveryPageUntilViteIsSettled()
+        }
+
+        private fun visitEveryPageUntilViteIsSettled() {
+            val context = browser.newContext(Browser.NewContextOptions().setBaseURL(APP).setLocale("en-US"))
+            try {
+                val page = context.newPage()
+                waitFor("the first sign in", 120) {
+                    page.navigate("/board")
+                    page.waitForURL(Pattern.compile(".*/login$"), Page.WaitForURLOptions().setTimeout(5_000.0))
+                    page.getByLabel("Email").fill(ADMIN_EMAIL)
+                    page.getByLabel("Password").fill(ADMIN_PASSWORD)
+                    page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
+                    page.waitForURL(Pattern.compile(".*/board$"), Page.WaitForURLOptions().setTimeout(5_000.0))
+                    true
+                }
+                waitFor("Vite to stop optimizing dependencies", 120) {
+                    val seen = log.length()
+                    listOf("/", "/about", "/board").forEach { path ->
+                        page.navigate(path)
+                        page.waitForLoadState(LoadState.NETWORKIDLE)
+                    }
+                    page.waitForTimeout(1_000.0)
+                    val added = log.readBytes().drop(seen.toInt()).toByteArray().decodeToString()
+                    "optimiz" !in added
+                }
+            } finally {
+                context.close()
+            }
         }
 
         @JvmStatic

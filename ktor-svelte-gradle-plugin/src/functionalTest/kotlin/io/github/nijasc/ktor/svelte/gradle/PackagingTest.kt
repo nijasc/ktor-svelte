@@ -125,7 +125,7 @@ class PackagingTest {
         val info = buildInfoIn(dir.resolve("build/libs/sample-1.4.0.jar")).lines()
         assertEquals("version=1.4.0", info[0])
         assertTrue(Regex("commit=[0-9a-f]{40}").matches(info[1]), info[1])
-        assertTrue(Regex("""time=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}""").matches(info[2]), info[2])
+        assertTrue(Regex("""time=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})""").matches(info[2]), info[2])
         assertEquals(TaskOutcome.UP_TO_DATE, project.run("jar").task(":svelteBuildInfo")?.outcome)
     }
 
