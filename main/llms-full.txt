@@ -142,6 +142,8 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 ./gradlew svelteDevAll
 ```
 
+The first page of the new app lists what was set up for the answers you gave, each with a link to its docs, and what to do next.
+
 | Question | Flag | Default | What you get |
 |---|---|---|---|
 | Project name, Kotlin package, package manager | `--name`, `--package`, `--package-manager` | `my-app`, `com.example.app`, first one found | |
@@ -1453,17 +1455,32 @@ Some errors are left to you, because a toast would be the wrong answer:
 - 401, which `apiConfig.onUnauthorized` handles.
 - Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
 
-The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
+The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, give one a button with `action: { label: 'Undo', run: restore }`, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
 
 ## Reload after a deploy
 
-Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API:
+Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API.
+
+The toasts library has that prompt ready. Turn it on in Gradle and run `svelteSync`:
+
+```kotlin
+svelte {
+    libraries {
+        toasts { reloadPrompt() }
+    }
+}
+```
+
+After a deploy, the next API call shows "A new version is available." with a Reload button. The toast stays until the visitor reloads or closes it, and it shows once, not after every call. Change the texts through `toastMessages.newBuild` and `toastMessages.reload`.
+
+To do something else, set the handler yourself. Your handler wins over the prompt:
 
 ```ts
 import { apiConfig } from '#api';
+import { toast } from '#lib/ktor-svelte/toasts';
 
 apiConfig.onNewBuild = () => {
-    showToast('A new version is available.', { action: 'Reload', onAction: () => location.reload() });
+    toast('We just shipped an update.', { duration: 0, action: { label: 'Reload', run: () => location.reload() } });
 };
 ```
 
@@ -1989,6 +2006,8 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 ## Toasts
 
 `toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#show-errors-automatically).
+
+`toasts { reloadPrompt() }` also offers a reload when the server runs a newer build than the page. See [Reload after a deploy](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#reload-after-a-deploy).
 
 ## Routes
 
