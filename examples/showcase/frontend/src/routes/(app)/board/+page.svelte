@@ -7,7 +7,7 @@
     import { toast } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
 
-    const PAGE_SIZE = String(BoardLimits.PAGE_SIZE);
+    const PAGE_SIZE = BoardLimits.PAGE_SIZE;
 
     let { data }: PageProps = $props();
 
@@ -26,7 +26,7 @@
         search: search.trim() || undefined,
         status,
         label,
-        mine: mine ? 'true' : undefined
+        mine
     });
 
     async function refresh() {
