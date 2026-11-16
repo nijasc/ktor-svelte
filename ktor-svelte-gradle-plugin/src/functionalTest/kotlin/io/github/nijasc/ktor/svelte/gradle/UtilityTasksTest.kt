@@ -399,6 +399,44 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `the short task names are the same tasks under another name, options included`() {
+        val project = project()
+        project.buildScript(applicationBuild)
+
+        val tasks = project.run("tasks", "--all").output
+        listOf("dev", "sync", "doctor", "gen").forEach { name ->
+            assertTrue(
+                Regex("^$name - Short for svelte\\w+\\. ", RegexOption.MULTILINE).containsMatchIn(tasks),
+                "$name is missing in: $tasks",
+            )
+        }
+        assertContains(project.run("help", "--task", "doctor").output, "--fix")
+        assertContains(project.run("help", "--task", "dev").output, "--full-stack-traces")
+        assertContains(project.run("gen", "--dry-run").output, ":gen SKIPPED")
+        assertEquals(project.run("svelteSync").task(":svelteSync")?.outcome, project.run("sync").task(":sync")?.outcome)
+    }
+
+    @Test
+    fun `a short name that is taken is left alone, and one setting turns them all off`() {
+        val project = project()
+        project.buildScript(
+            applicationBuild +
+                "\ntasks.register(\"doctor\") { description = \"My own doctor\" }\ntasks.register(\"dev\") { doLast { println(\"my dev\") } }\n",
+        )
+        val tasks = project.run("tasks", "--all").output
+        assertContains(tasks, "doctor - My own doctor")
+        assertContains(tasks, "sync - Short for svelteSync.")
+        assertContains(project.run("dev").output, "my dev")
+
+        project.buildScript(applicationBuild + "\nsvelte { shortTaskNames = false }\n")
+        val without = project.run("tasks", "--all").output
+        listOf("dev", "sync", "doctor", "gen").forEach { name ->
+            assertFalse(Regex("^$name - ", RegexOption.MULTILINE).containsMatchIn(without), "$name should be gone")
+        }
+        assertContains(without, "svelteDoctor - ")
+    }
+
+    @Test
     fun `svelteDevAll stops everything when Vite stops`() {
         val project = project()
         val port = ServerSocket(0).use { it.localPort }

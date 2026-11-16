@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 private const val POLL_MILLIS = 500L
+private const val GENERATED_CLIENT_DIR = "src/lib/api"
 private const val RECORD_EVERY_POLLS = 4
 private const val SETTLE_MILLIS = 1000L
 
@@ -91,6 +92,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     public abstract val classesDirectories: ConfigurableFileCollection
 
     @get:Internal
+    public abstract val sourceDirectories: ConfigurableFileCollection
+
+    @get:Internal
     public abstract val projectDirectory: DirectoryProperty
 
     @get:Input
@@ -110,6 +114,10 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     @Transient
     private lateinit var devLog: DevLogFormatter
 
+    @Transient
+    @Volatile
+    private var pendingRestart: PendingRestart? = null
+
     @TaskAction
     public fun runAll() {
         devLog =
@@ -118,6 +126,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 projectDirectory.get().asFile,
                 frontendDirectory = frontendDir.get().asFile,
                 foldStackTraces = !fullStackTraces.getOrElse(false),
+                sourceDirectories = sourceDirectories.files.toList(),
             )
         val record = DevProcessRecord(compileErrorsFile.get().asFile.resolveSibling("dev-processes"))
         freePorts(record)
@@ -143,6 +152,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
 
             val classes = classesDirectories.files
             val detector = ChangeDetector(fingerprintOf(classes), SETTLE_MILLIS)
+            val sources = sourceDirectories.files
+            val client = frontendDir.get().asFile.resolve(GENERATED_CLIENT_DIR)
+            var lastRestart = System.currentTimeMillis()
             var recorded = emptySet<RecordedProcess>()
             var polls = 0
             while (vite.isAlive) {
@@ -154,6 +166,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 }
                 if (detector.hasSettledChange(fingerprintOf(classes), System.currentTimeMillis())) {
                     logger.lifecycle("ktor-svelte: Kotlin changed, restarting the app.")
+                    val compiledAt = System.currentTimeMillis()
+                    pendingRestart = PendingRestart(changedSince(sources, lastRestart), compiledAt, clientFingerprint(client))
+                    lastRestart = compiledAt
                     stopProcessTree(app)
                     running -= app
                     app = startApp(banner)
@@ -234,7 +249,14 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                     appClasspath.asPath,
                     mainClass.get(),
                 )
-        return start(LogSource.APP, command, projectDirectory.get().asFile) { line -> banner.onAppLine(line)?.let(logger::lifecycle) }
+        val client = frontendDir.get().asFile.resolve(GENERATED_CLIENT_DIR)
+        return start(LogSource.APP, command, projectDirectory.get().asFile) { line ->
+            banner.onAppLine(line)?.let { ready ->
+                logger.lifecycle(ready)
+                pendingRestart?.let { logger.lifecycle(restartSummary(it, System.currentTimeMillis(), clientFingerprint(client))) }
+                pendingRestart = null
+            }
+        }
     }
 
     private fun start(
@@ -247,11 +269,14 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         builder.environment().putAll(System.getenv())
         val process = builder.start()
         thread(isDaemon = true, name = "ktor-svelte-${source.label}") {
-            process.inputStream.bufferedReader().useLines { lines ->
-                lines.forEach { line ->
+            process.inputStream.bufferedReader().use { reader ->
+                while (true) {
+                    val line = reader.readLine() ?: break
                     devLog.format(source, line)?.let(logger::lifecycle)
                     onLine(line)
+                    if (source == LogSource.APP && !reader.ready()) devLog.flushStackTrace()?.let(logger::lifecycle)
                 }
+                if (source == LogSource.APP) devLog.flushStackTrace()?.let(logger::lifecycle)
             }
         }
         return process

@@ -92,3 +92,9 @@ val todos = listOf(Todo("Write docs"))
 val registry: MeterRegistry = SimpleMeterRegistry()
 
 fun env(name: String): String? = System.getenv(name)
+
+fun openDatabase(): String = "connection"
+
+fun runMigrations(connection: String) {
+    check(connection.isNotEmpty())
+}

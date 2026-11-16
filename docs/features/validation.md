@@ -38,6 +38,35 @@ The messages for these bounds are English and are the same in the browser and on
 
 Errors use the JSON name, with paths such as `lines[1].sku` for nested values, `prices[eur].amount` for map values and `[0].sku` for the items of a received list. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
 
+## Cleaning up input
+
+People paste text with spaces around it and type their email address with capitals. Say once, on the field, how it should arrive, and no route cleans up strings by hand:
+
+```kotlin
+@Serializable
+data class SignUp(
+    @Trim @Lowercase
+    val email: String,
+    @Trim
+    @JsonSchema.MinLength(1)
+    val name: String,
+    @Trim @EmptyAsNull
+    val company: String? = null,
+)
+```
+
+| Annotation | What arrives in the route |
+|---|---|
+| `@Trim` | The text without whitespace at both ends |
+| `@Lowercase` | The text in lowercase, independent of the server's locale |
+| `@EmptyAsNull` | `null` when the text is empty, which is what a form sends for a field left blank. The property has to be nullable |
+
+They are applied in that order, so `@Trim @EmptyAsNull` turns a field of only spaces into `null`. This happens when the JSON body is received, before the bounds and your `Validated` rules run, so `@Trim @JsonSchema.MinLength(1)` refuses a name of only spaces without a rule of your own.
+
+On a `List<String>` or a `Map<String, String>` they apply to every item or value. They are found in nested classes, in lists of classes, in sealed subtypes with the default `type` discriminator, and on the property of a value class, so `value class Email(@Trim @Lowercase val value: String)` is clean wherever it is used.
+
+Only JSON request bodies are cleaned up, not query parameters, and the browser does not apply them: `validate()` in the generated TypeScript checks the text as typed. That only matters for a value that is valid after trimming but not before, which the server then accepts.
+
 With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](typescript.md#generated-typescript).
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.

@@ -74,7 +74,7 @@ class TaskStore(
         val id =
             query {
                 Tasks.insert {
-                    it[title] = input.title.trim()
+                    it[title] = input.title
                     it[description] = input.description
                     it[status] = TaskStatus.TODO.name
                     it[priority] = input.priority.name
@@ -96,7 +96,7 @@ class TaskStore(
     ): Task? {
         query {
             Tasks.update({ Tasks.id eq id }) {
-                it[title] = input.title.trim()
+                it[title] = input.title
                 it[description] = input.description
                 it[priority] = input.priority.name
                 it[labels] = encodeLabels(input.labels)
@@ -164,11 +164,11 @@ class TaskStore(
                 Comments.insert {
                     it[Comments.taskId] = taskId
                     it[authorId] = author.id
-                    it[Comments.body] = body.trim()
+                    it[Comments.body] = body
                     it[createdAt] = now
                 } get Comments.id
             }
-        return Comment(id, UserRef(author.id, author.name), body.trim(), instant(now))
+        return Comment(id, UserRef(author.id, author.name), body, instant(now))
     }
 
     suspend fun attachments(taskId: Int): List<Attachment> =

@@ -29,6 +29,21 @@ Stack traces from your app are shortened so the lines that matter stay on screen
 09:28:33  app             java.lang.IllegalStateException: boom  (seen 3 times since 09:28:32, stack trace hidden)
 ```
 
+The frames that come from your own source files are named first, right under the exception, each with a link that opens the file at that line. In the stack trace itself they keep their normal color, and every frame from a library is dimmed:
+
+```
+09:28:32  app      ERROR  Errors Request failed
+09:28:32  app             java.lang.IllegalStateException: No such note
+09:28:32  app                 your code: app.notes.NoteStore.find  file:///home/you/app/src/main/kotlin/app/notes/NoteStore.kt:42
+09:28:32  app                 your code: app.notes.RoutesKt$noteRoutes$1.invokeSuspend  file:///home/you/app/src/main/kotlin/app/notes/Routes.kt:17
+09:28:32  app             	at io.ktor.utils.io.ByteChannel.getClosedCause(ByteChannel.kt:350)
+09:28:32  app             	at app.notes.NoteStore.find(NoteStore.kt:42)
+09:28:32  app             	at app.notes.RoutesKt$noteRoutes$1.invokeSuspend(Routes.kt:17)
+09:28:32  app             	... framework frames hidden
+```
+
+A frame is yours when its file name and package match a file in your main source folders. Up to three are named first, and each `Caused by` gets its own.
+
 An error counts as the same when its log message and its exception line are the same. A restart forgets what was seen, so the first error after a Kotlin change always shows its stack trace. To see everything, run `./gradlew svelteDevAll --full-stack-traces`.
 
 After a Kotlin change the app restarts, and every page you have open loads its data again by itself. Only the `load` functions rerun, through SvelteKit's `refreshAll`, so what you typed into a form and the state of your components stay as they are. If your sessions do not survive a restart, such as with a signing key that is generated at startup, the refreshed page finds you signed out, exactly as a manual reload would. Turn it off with `dev { refreshAfterRestart = false }`.
@@ -88,6 +103,36 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 ```
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
+
+After every restart, `svelteDevAll` sums it up in one line: which file caused it, how long compiling and starting took, and whether the generated API client is different now:
+
+```
+ktor-svelte: restarted in 4.7 s after TaskRoutes.kt changed: 2.2 s to compile, 2.5 s to start. The API client changed: openapi.json, services.ts.
+```
+
+"To compile" runs from the moment the file was saved until the classes were written, so it includes the time Gradle takes to notice the change. When several files changed, the one saved last is named with the number of others. "The API client did not change" tells you the frontend has nothing new to pick up, and the list of files tells you where to look when it has.
+
+Every restart costs you the app's startup time, so in development the app also logs what that time was spent on:
+
+```
+ktor-svelte: started in 2.3 s: 800 ms for the JVM and your code before install(Svelte), 120 ms in install(Svelte), 1.2 s in your code after it, 150 ms to open the port.
+```
+
+Most of it is usually your own module: opening the database, running migrations, loading seed data. Give those parts a name and they are listed, largest first:
+
+```kotlin
+fun Application.module() {
+    val connection = startupStep("Database") { openDatabase() }
+    startupStep("Migrations") { runMigrations(connection) }
+    install(Svelte)
+}
+```
+
+```
+ktor-svelte: started in 2.3 s: ... Steps: Migrations 900 ms, Database 250 ms.
+```
+
+`startupStep` returns what its block returns and costs nothing in production, where the line is not logged. Turn the line off with `dev { startupTiming = false }`.
 
 Open `http://localhost:8080/_ktor-svelte/routes` to see every Ktor route next to every SvelteKit page, with the file and line of each route and a warning on routes that hide a page. Ask for `application/json` to get the same table as JSON. It exists only in development and answers only requests from this machine.
 

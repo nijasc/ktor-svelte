@@ -23,7 +23,8 @@ class DevLogStackTraceTest {
             "\tat io.netty.channel.AbstractChannel.write(Unknown Source)",
         )
 
-    private fun DevLogFormatter.all(lines: List<String>) = lines.mapNotNull { format(LogSource.APP, it) }
+    private fun DevLogFormatter.all(lines: List<String>) =
+        (lines.mapNotNull { format(LogSource.APP, it) } + listOfNotNull(flushStackTrace())).flatMap { it.lines() }
 
     @Test
     fun `framework frames collapse into one line per run and your own frames stay`() {

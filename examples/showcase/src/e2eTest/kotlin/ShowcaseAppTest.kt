@@ -243,7 +243,7 @@ class ShowcaseAppTest {
     fun `invalid input is refused with one message per field`() {
         val blank = admin.send("POST", "/api/tasks", """{"title":"  "}""")
         assertEquals(422, blank.statusCode())
-        assertContains(blank.body(), """"title":["A task needs a title."]""")
+        assertContains(blank.body(), """"title":["Must be at least 1 character.","A task needs a title."]""")
 
         val labels = admin.send("POST", "/api/tasks", """{"title":"Ok","labels":["Not Valid"]}""")
         assertEquals(422, labels.statusCode())
