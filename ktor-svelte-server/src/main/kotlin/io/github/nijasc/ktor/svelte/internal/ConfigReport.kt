@@ -50,6 +50,7 @@ internal fun configReport(config: SvelteConfig): JsonObject =
         put("publicConfig", config.publicConfigProvider != null)
         put("buildHeader", config.buildHeader)
         put("requestIds", config.requestIds)
+        put("accessLog", config.accessLog)
         put("sitemap", config.sitemap)
         put("siteUrl", config.siteUrl)
         put("defaultFavicon", config.defaultFavicon)

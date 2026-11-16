@@ -5,6 +5,7 @@ import io.github.nijasc.ktor.svelte.SvelteConfig
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 
 class SettingsSummaryTest {
@@ -48,5 +49,12 @@ class SettingsSummaryTest {
         assertContains(summary, "SlidingWindow")
         assertContains(summary, "Named rate limits: login 5 per 1m")
         assertContains(summary, "Content-Security-Policy: off")
+    }
+
+    @Test
+    fun `the access log is listed once it is on`() {
+        val lines = settingsSummary(SvelteConfig().apply { accessLog = true }, "http://localhost:5173")
+        assertTrue("Access log: on in production" in lines, lines.toString())
+        assertTrue(settingsSummary(SvelteConfig(), "http://localhost:5173").none { it.startsWith("Access log") })
     }
 }

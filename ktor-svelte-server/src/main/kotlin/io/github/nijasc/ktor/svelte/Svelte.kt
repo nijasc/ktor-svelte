@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte
 
+import io.github.nijasc.ktor.svelte.internal.AccessLog
 import io.github.nijasc.ktor.svelte.internal.BUILD_HEADER
 import io.github.nijasc.ktor.svelte.internal.BuildFingerprint
 import io.github.nijasc.ktor.svelte.internal.DocLink
@@ -226,6 +227,12 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (devRequests != null) {
             onCall { call -> devRequests.started(call) }
             on(ResponseSent) { call -> devRequests.finished(call) }
+        }
+
+        if (pluginConfig.accessLog && !application.developmentMode) {
+            val accessLog = AccessLog()
+            onCall { call -> accessLog.started(call) }
+            on(ResponseSent) { call -> accessLog.finished(call) }
         }
 
         val slowApiCall = pluginConfig.devConfig.slowApiCall

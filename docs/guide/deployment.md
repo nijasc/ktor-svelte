@@ -103,6 +103,23 @@ Most deployments put nginx, Caddy, a cloud load balancer or a platform router in
 - Set `adapter({ precompress: true })` in `frontend/vite.config.ts`, or keep `svelte { precompress = true }`, so files are compressed once at build time instead of on every request.
 - Hashed files under `_app/immutable/` are cached for a year, so returning visitors only download what changed after a deploy.
 
+## Request log
+
+To see every request in your production logs, turn the access log on:
+
+```kotlin
+install(Svelte) {
+    accessLog = true
+}
+```
+
+```text
+method=GET path=/api/notes status=200 ms=12 id=8b0c6a52-5f0e-4a51-9a7e-0e5d6f0c1a2b
+method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8d70
+```
+
+Each line has the method, the path without its query string, the status, how long the app took in milliseconds, and the request ID that the browser also shows for a failed call. The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again. Requests for build assets under `/_app/` are not logged.
+
 ## Checklist
 
 - The JAR was built without `-Psvelte.skip=true` or `-Psvelte.dev=true`.
