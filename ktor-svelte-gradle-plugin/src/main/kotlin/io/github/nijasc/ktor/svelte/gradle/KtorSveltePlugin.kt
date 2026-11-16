@@ -246,6 +246,8 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.frontendDir.set(extension.frontendDir)
             task.routesDirectory.set(routes)
             task.routesEnabled.set(librarySpec.map { it.routes })
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
         }
         install.configure { it.mustRunAfter(sync) }
         build.configure { it.dependsOn(verify) }

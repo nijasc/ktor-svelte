@@ -432,6 +432,32 @@ class LibrariesTest {
     }
 
     @Test
+    fun `svelteVerifyRoutes also lists string redirects in Kotlin`() {
+        val project = project("routes()")
+        listOf("", "notes/[id]").forEach { route ->
+            project.frontend
+                .resolve("src/routes/$route/+page.svelte")
+                .apply { parentFile.mkdirs() }
+                .writeText("")
+        }
+        val routes = dir.resolve("src/main/kotlin/Routes.kt")
+        routes.parentFile.mkdirs()
+        routes.writeText("fun x() {\n    call.respondRedirect(\"/notes/${'$'}{note.id}\")\n    call.respondRedirect(\"/api/docs\")\n}\n")
+
+        val output = project.runAndFail("svelteVerifyRoutes").output
+
+        assertContains(
+            output,
+            "src/main/kotlin/Routes.kt:2  respondRedirect(\"/notes/${'$'}{note.id}\")  ->  FrontendRoutes.notesId(note.id)",
+        )
+        assertContains(output, "1 link(s) to pages are written as strings. Use FrontendRoutes in Kotlin instead.")
+
+        routes.writeText("fun x() {\n    call.respondRedirect(FrontendRoutes.notesId(note.id))\n}\n")
+
+        assertContains(project.run("svelteVerifyRoutes").output, "every link to a page uses a typed route")
+    }
+
+    @Test
     fun `svelteVerifyRoutes has nothing to do without typed routes`() {
         val project = project("lucide()")
         project.frontend.resolve("src/routes").mkdirs()

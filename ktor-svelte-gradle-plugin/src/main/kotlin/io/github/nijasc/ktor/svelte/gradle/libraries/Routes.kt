@@ -239,7 +239,7 @@ internal fun routesObject(
     }
 }
 
-private fun kotlinName(name: String): String = if (name in KOTLIN_KEYWORDS) "`$name`" else name
+internal fun kotlinName(name: String): String = if (name in KOTLIN_KEYWORDS) "`$name`" else name
 
 private fun staticPath(route: FrontendRoute): String =
     "/" +
