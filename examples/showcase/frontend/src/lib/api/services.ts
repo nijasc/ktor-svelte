@@ -124,7 +124,7 @@ export const tasksGetAttachments = (id: string | number, options?: RequestOption
  *
  * @see showcase/TaskRoutes.kt
  */
-export const tasksAttachments = (id: string | number, body: FormData, options?: RequestOptions) => request<Attachment[]>('POST', `/api/tasks/${encodeURIComponent(id)}/attachments`, { ...options, body, upload: { maxBytes: 5242880, types: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip'] }, operation: 'tasks.attachments' });
+export const tasksAttachments = (id: string | number, body: { file: File }, options?: RequestOptions) => request<Attachment[]>('POST', `/api/tasks/${encodeURIComponent(id)}/attachments`, { ...options, body, upload: { maxBytes: 5242880, types: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip'] }, multipart: true, operation: 'tasks.attachments' });
 /** @see showcase/TaskRoutes.kt */
 export const tasksGetComments = (id: string | number, options?: RequestOptions) => request<Comment[]>('GET', `/api/tasks/${encodeURIComponent(id)}/comments`, { ...options, operation: 'tasks.getComments' });
 /** @see showcase/TaskRoutes.kt */

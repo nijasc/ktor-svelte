@@ -850,6 +850,25 @@ internal class TypeScriptGenerator(
         }
     }
 
+    private fun formType(schema: JsonObject): String? {
+        val properties = schema.objectAt("properties")?.takeIf { it.isNotEmpty() } ?: return null
+        val required = schema.stringList("required").toSet()
+
+        fun isFile(field: JsonObject): Boolean = field.stringAt("type") == "string" && field.stringAt("format") == "binary"
+        val fields =
+            properties.entries.joinToString("; ") { (name, field) ->
+                val of = field.jsonObject
+                val type =
+                    when {
+                        isFile(of) -> "File"
+                        of.stringAt("type") == "array" && of.objectAt("items")?.let(::isFile) == true -> "File[]"
+                        else -> "string"
+                    }
+                "${propertyKey(name)}${if (name in required) "" else "?"}: $type"
+            }
+        return "{ $fields }"
+    }
+
     private fun uploadRulesLiteral(rules: JsonObject): String {
         val parts =
             listOfNotNull(
@@ -923,9 +942,16 @@ internal class TypeScriptGenerator(
 
         val requestBody = operation.objectAt("requestBody")
         val bodyContent = requestBody?.objectAt("content")
+        val multipart = bodyContent?.entries?.firstOrNull { it.key.startsWith(MULTIPART_PREFIX) }
+        val formFields =
+            multipart
+                ?.value
+                ?.let { it as? JsonObject }
+                ?.objectAt("schema")
+                ?.let(::formType)
         val bodyType =
-            if (bodyContent?.keys?.any { it.startsWith(MULTIPART_PREFIX) } == true) {
-                "FormData"
+            if (multipart != null) {
+                formFields ?: "FormData"
             } else {
                 bodyContent?.let { preferredSchema(it) }?.let { tsType(it, references) }
             }
@@ -952,6 +978,7 @@ internal class TypeScriptGenerator(
                 if (queryParameters.isNotEmpty()) add("query")
                 if (requestBody != null) add("body")
                 if (upload != null) add("upload: $upload")
+                if (formFields != null) add("multipart: true")
             }
         val returnType = responseType(operation, references)
         val streaming = isEventStream(operation)

@@ -242,4 +242,17 @@ class GeneratedClientBehaviourTest {
             runHarness().getValue("patches").jsonArray.map { it.toString() },
         )
     }
+
+    @Test
+    fun `a typed upload body is sent as a form, field by field, and still checked against the rules`() {
+        val forms = runHarness().getValue("forms").jsonObject
+        assertEquals(
+            listOf(
+                "untyped title=Report count=3 cover=<cover.txt:4> pages=<one.txt:1> pages=<two.txt:2>",
+                "untyped title=Ready made",
+            ),
+            forms.getValue("sent").jsonArray.map { it.jsonPrimitive.content },
+        )
+        assertEquals("upload.tooMany", forms.getValue("refused").jsonPrimitive.content)
+    }
 }

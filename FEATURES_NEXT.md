@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 44 | Typed multipart uploads |  |
+| 95 | File drop zone |  |
 
 ### In review
 
@@ -35,6 +35,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 32 | Decimal and duration types | #284 |
 | 33 | Version conflicts | #285 |
 | 43 | `Patch<T>` partial updates | #286 |
+| 44 | Typed multipart uploads | #287 |
 
 ### Next up
 
@@ -129,7 +130,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 95 | File drop zone | Medium | 6 |
 | 86 | Query parameters as a data class | Medium | 6 |
 | 92 | Exposed helpers | Medium | 6 |
 | 72 | Idempotency keys | Medium | 6 |
