@@ -23,6 +23,11 @@ They are generated. An edit is overwritten, and `./gradlew check` fails when the
 - A failed call throws `ApiError`. Use `isValidationError`, `errorMessage` and the other helpers exported by `#api`.
 - To add or change an endpoint: edit the Kotlin route, then run `./gradlew svelteGenerateTs`. In dev mode this happens on restart.
 
+## Components
+
+Ready-made components are in `#components/`. Use them before writing the same markup by hand.
+- `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as `<Field label="Title" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.
+
 ## Pages and links
 
 Link to pages through `import { routes } from '#routes'`, such as `href={routes.home()}`. Do not write page paths as strings.
