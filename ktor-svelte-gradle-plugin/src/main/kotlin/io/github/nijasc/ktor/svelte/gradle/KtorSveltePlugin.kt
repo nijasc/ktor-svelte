@@ -22,6 +22,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyEndpointsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLoadsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyMessagesTask
@@ -277,6 +278,11 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.messagesDirectory.set(messages)
             task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
             task.locales.set(librarySpec.map { it.i18n?.locales.orEmpty() })
+        }
+        project.tasks.register("svelteVerifyEndpoints", SvelteVerifyEndpointsTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Lists API routes that nothing in the frontend calls. Add --strict to fail on them."
+            task.frontendDir.set(extension.frontendDir)
         }
         project.tasks.register("svelteVerifyLoads", SvelteVerifyLoadsTask::class.java) { task ->
             task.group = TASK_GROUP
