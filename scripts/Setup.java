@@ -147,7 +147,7 @@ public class Setup {
         gradle(directory, "svelteInit", "--package-manager=" + manager, "svelteGenerateRunConfigurations");
         if (liveTemplates) gradle(directory, "svelteLiveTemplates", "--install");
         writeFrontendLinting(directory, tailwind || lucide || i18n);
-        Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth));
+        Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth, generateTs, database));
         if (auth) writeAuthPages(directory, daisy, tailwind, i18n);
         installPackages(directory, manager);
         gradle(directory, "svelteRun", "--script=format");
@@ -656,24 +656,57 @@ public class Setup {
         }
     }
 
-    private static String startPage(boolean daisy, boolean tailwind, boolean lucide, boolean i18n, boolean auth) {
+    private static String startPage(
+        boolean daisy, boolean tailwind, boolean lucide, boolean i18n, boolean auth, boolean generateTs, boolean database) {
         StringBuilder script = new StringBuilder();
         if (lucide) script.append("    import Icon from '#icon';\n");
         if (i18n) script.append(auth ? "    import { getLocale, localizeHref, m } from '#i18n';\n" : "    import { getLocale, m } from '#i18n';\n");
+        if (script.length() > 0) script.append("\n");
+        script.append("    const docs = 'https://nijasc.github.io/ktor-svelte';\n");
         String signIn = !auth ? "" : "    <a" + (daisy ? " class=\"btn mt-4\"" : "") + " href=" + (i18n ? "{localizeHref('/login')}" : "\"/login\"") + ">Sign in</a>\n";
-        String scriptBlock = script.length() == 0 ? "" : "<script lang=\"ts\">\n" + script + "</script>\n\n";
         String title = i18n ? "{m.welcome({ language: getLocale() })}" : "Welcome to your app";
         String icon = lucide ? "<Icon name=\"Rocket\" /> " : "";
         String titleClass = tailwind ? " class=\"flex items-center gap-2 text-3xl font-bold\"" : "";
         String mainClass = tailwind ? " class=\"mx-auto max-w-2xl p-8\"" : "";
         String button = daisy ? " class=\"btn btn-primary mt-4\"" : "";
-        return scriptBlock
+        String heading = tailwind ? " class=\"mt-8 text-xl font-semibold\"" : "";
+        String list = tailwind ? " class=\"mt-2 list-disc pl-6\"" : "";
+        String link = daisy ? " class=\"link\"" : "";
+        List<String> setUp = new ArrayList<>();
+        setUp.add("<a" + link + " href=\"/api/hello\">/api/hello</a> answers from Kotlin, in <code>Application.kt</code>");
+        if (generateTs) setUp.add(docsLink(link, "features/typescript", "A typed client") + " in <code>src/lib/api</code>");
+        if (daisy) setUp.add(docsLink(link, "features/frontend-libraries#daisyui", "DaisyUI") + ", themed from Gradle");
+        if (tailwind && !daisy) setUp.add(docsLink(link, "features/frontend-libraries#tailwind", "Tailwind") + ", set up from Gradle");
+        if (lucide) setUp.add(docsLink(link, "features/frontend-libraries#lucide", "Lucide icons") + ", typed on both sides");
+        if (i18n) setUp.add(docsLink(link, "features/frontend-libraries#i18n", "Messages") + " in <code>messages</code>");
+        if (auth) setUp.add(docsLink(link, "features/auth", "Sign in") + " with sessions and hashed passwords");
+        if (database) setUp.add("Postgres with Exposed. Start it with <code>docker compose up -d</code>");
+        List<String> next = new ArrayList<>();
+        next.add("Add a route in Kotlin and save: the app restarts" + (generateTs ? " and the typed client follows" : ""));
+        next.add("Click the API button in the corner of this page to see every call the app answers");
+        next.add(docsLink(link, "guide/tutorial", "Follow the tutorial") + " to build a first feature");
+        next.add("Run <code>./gradlew svelteDoctor</code> when something looks off");
+        return "<script lang=\"ts\">\n" + script + "</script>\n\n"
             + "<main" + mainClass + ">\n"
             + "    <h1" + titleClass + ">" + icon + title + "</h1>\n"
             + "    <p>Edit <code>frontend/src/routes/+page.svelte</code>. Your API is at <code>/api/hello</code>.</p>\n"
-            + "    <a" + button + " href=\"https://github.com/nijasc/ktor-svelte\">Read the docs</a>\n"
+            + "    <a" + button + " href={docs}>Read the docs</a>\n"
             + signIn
+            + "    <h2" + heading + ">What is set up</h2>\n"
+            + startPageList(list, setUp)
+            + "    <h2" + heading + ">What to do next</h2>\n"
+            + startPageList(list, next)
             + "</main>\n";
+    }
+
+    private static String docsLink(String link, String path, String text) {
+        return "<a" + link + " href=\"{docs}/" + path + "\">" + text + "</a>";
+    }
+
+    private static String startPageList(String list, List<String> items) {
+        return "    <ul" + list + ">\n"
+            + items.stream().map(item -> "        <li>" + item + "</li>\n").collect(Collectors.joining())
+            + "    </ul>\n";
     }
 
     private void gradle(Path directory, String... tasks) throws Exception {
