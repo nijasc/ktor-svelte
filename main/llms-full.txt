@@ -2152,7 +2152,28 @@ A folder is a page when it holds a `+page.svelte`, `+page.ts`, `+page.js` or `+p
 
 The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Numbers are accepted too, so an ID needs no `String()`. Since every call goes through `resolve()`, a base path and relative prerender links work as usual, and the same functions work with `goto`.
 
-`routeIds` holds the raw SvelteKit route IDs under the same names, such as `routeIds.notesId` for `/notes/[id]`. Use it to compare with `page.route.id`, or to call `resolve()` yourself.
+`routeIds` holds the raw SvelteKit route IDs under the same names, such as `routeIds.notesId` for `/notes/[id]`. Use it to call `resolve()` yourself.
+
+### Marking the open page in a menu
+
+Every route can tell whether it is the page that is open, so a menu does not compare path strings:
+
+```svelte
+<script lang="ts">
+    import { page } from '$app/state';
+    import { routes } from '#routes';
+</script>
+
+<a href={routes.home()} aria-current={routes.home.ariaCurrent(page)}>Home</a>
+<a href={routes.notes()} aria-current={routes.notes.ariaCurrent(page, { below: true })}>Notes</a>
+<a href={routes.about()} class:font-bold={routes.about.isActive(page)}>About</a>
+```
+
+- `isActive(page)` is `true` on that page. For a page with parameters, such as `routes.notesId`, that is every note.
+- `{ below: true }` also counts every page below it: `routes.notes` is then active on `/notes`, `/notes/4` and `/notes/4/edit`, but not on `/notebooks`. The home page has everything below it, so for `routes.home` the option changes nothing.
+- `ariaCurrent(page)` gives the value for `aria-current`: `page` on the page itself, `true` on a page below it when `below` is set, and nothing otherwise, so the attribute is left out. Style the open link through it, such as `[aria-current]` in CSS or `aria-[current]:font-bold` in Tailwind.
+
+They compare SvelteKit's route ID, not the URL, so a base path, a language prefix, a trailing slash or a query string cannot get in the way, and route groups such as `(app)` are ignored. `routes.notes.id` is the route ID itself.
 
 With [i18n](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#i18n) and `strategy = LocaleStrategy.UrlPrefix`, every route also puts the current language in front, such as `/de/notes/1`, so every language gets prerendered without calling `localizeHref` by hand. With the `Cookie` strategy, or without i18n, it is plain `resolve()`.
 
