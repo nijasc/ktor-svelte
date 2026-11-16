@@ -2,6 +2,7 @@ package showcase
 
 import io.github.nijasc.ktor.svelte.Svelte
 import io.github.nijasc.ktor.svelte.SvelteRouting
+import io.github.nijasc.ktor.svelte.startupStep
 import io.github.nijasc.ktor.svelte.svelte
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -41,13 +42,13 @@ fun main() {
 
 fun Application.module() {
     val dataDirectory = Path.of(System.getenv("SHOWCASE_DATA") ?: "build/showcase-data")
-    val database = AppDatabase(dataDirectory)
+    val database = startupStep("Database") { AppDatabase(dataDirectory) }
     monitor.subscribe(ApplicationStopped) { database.close() }
     val users = UserStore()
     val tasks = TaskStore(users, dataDirectory.resolve("files"))
     val registrationOpen = System.getenv("SHOWCASE_REGISTRATION") != "closed"
     val loginAttempts = System.getenv("SHOWCASE_LOGIN_ATTEMPTS")?.toIntOrNull() ?: LOGIN_ATTEMPTS_PER_MINUTE
-    runBlocking { seedDemoData(users, tasks, log) }
+    startupStep("Demo data") { runBlocking { seedDemoData(users, tasks, log) } }
 
     configureAuth(users, secureCookies = !developmentMode && System.getenv("SHOWCASE_INSECURE_COOKIES") != "true")
 
