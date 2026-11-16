@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 65 | Data table for paged routes |  |
+| 69 | Typed error pages |  |
 
 ### In review
 
@@ -60,6 +60,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 85 | Cookie consent helper | #275 |
 | 63 | Field component | #276 |
 | 64 | Inputs for dates and enums | #277 |
+| 65 | Data table for paged routes | #278 |
 
 ### Next up
 
@@ -120,7 +121,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 69 | Typed error pages | Small | 5 |
 | 94 | Theme and language switches | Small | 5 |
 | 106 | Navigation progress bar | Small | 5 |
 | 71 | Server checks while typing | Medium | 5 |
