@@ -72,6 +72,20 @@ public final class io/github/nijasc/ktor/svelte/ErrorCodesKt {
 	public static synthetic fun respondError$default (Lio/ktor/server/application/ApplicationCall;Ljava/lang/Enum;Lio/ktor/http/HttpStatusCode;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
+public final class io/github/nijasc/ktor/svelte/ExposedKt {
+	public static final fun pageBy (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Ljava/lang/String;IZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lio/github/nijasc/ktor/svelte/Page;
+	public static synthetic fun pageBy$default (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Ljava/lang/String;IZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Page;
+	public static final fun pageByInt (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Ljava/lang/String;IZLkotlin/jvm/functions/Function1;)Lio/github/nijasc/ktor/svelte/Page;
+	public static synthetic fun pageByInt$default (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Ljava/lang/String;IZLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Page;
+	public static final fun pageByIntRequest (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Lio/github/nijasc/ktor/svelte/PageRequest;ZLkotlin/jvm/functions/Function1;)Lio/github/nijasc/ktor/svelte/Page;
+	public static synthetic fun pageByIntRequest$default (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Lio/github/nijasc/ktor/svelte/PageRequest;ZLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Page;
+	public static final fun pageByLong (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Ljava/lang/String;IZLkotlin/jvm/functions/Function1;)Lio/github/nijasc/ktor/svelte/Page;
+	public static synthetic fun pageByLong$default (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Ljava/lang/String;IZLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Page;
+	public static final fun pageByLongRequest (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Lio/github/nijasc/ktor/svelte/PageRequest;ZLkotlin/jvm/functions/Function1;)Lio/github/nijasc/ktor/svelte/Page;
+	public static synthetic fun pageByLongRequest$default (Lorg/jetbrains/exposed/v1/jdbc/Query;Lorg/jetbrains/exposed/v1/core/Column;Lio/github/nijasc/ktor/svelte/PageRequest;ZLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Page;
+	public static final fun rowToDto (Lorg/jetbrains/exposed/v1/core/ResultRow;Lkotlinx/serialization/KSerializer;Ljava/util/Map;)Ljava/lang/Object;
+}
+
 public final class io/github/nijasc/ktor/svelte/FieldCheckAnswer {
 	public static final field Companion Lio/github/nijasc/ktor/svelte/FieldCheckAnswer$Companion;
 	public fun <init> ()V

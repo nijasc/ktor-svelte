@@ -27,6 +27,7 @@ dependencies {
     compileOnly(libs.ktor.serialization.xml)
     compileOnly(libs.ktor.server.compression.zstd)
     compileOnly(libs.exposed.core)
+    compileOnly(libs.exposed.jdbc)
     compileOnly(libs.ktor.server.sessions)
 
     testImplementation(libs.ktor.server.test.host)

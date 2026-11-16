@@ -1,14 +1,17 @@
 package showcase
 
 import io.github.nijasc.ktor.svelte.Page
+import io.github.nijasc.ktor.svelte.pageBy
 import io.github.nijasc.ktorsvelte.LucideIcon
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.time.Clock
+import kotlin.time.Instant
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.or
@@ -16,10 +19,6 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.time.Clock
-import kotlin.time.Instant
 
 private const val MAX_PAGE_SIZE = 50
 private const val EXCERPT_LENGTH = 80
@@ -50,18 +49,8 @@ class TaskStore(
         limit: Int,
     ): Page<Task> =
         query {
-            val size = limit.coerceIn(1, MAX_PAGE_SIZE)
-            val before = cursor?.toIntOrNull()
-            val condition = if (before == null) filter.condition() else filter.condition() and (Tasks.id less before)
-            val rows =
-                Tasks
-                    .selectAll()
-                    .where { condition }
-                    .orderBy(Tasks.id, SortOrder.DESC)
-                    .limit(size + 1)
-                    .toList()
-            val items = toTasks(rows.take(size))
-            Page(items, items.lastOrNull()?.id?.toString()?.takeIf { rows.size > size })
+            val rows = Tasks.selectAll().where { filter.condition() }.pageBy(Tasks.id, cursor, limit.coerceIn(1, MAX_PAGE_SIZE)) { it }
+            Page(toTasks(rows.items), rows.next)
         }
 
     suspend fun find(id: Int): Task? = query { toTasks(Tasks.selectAll().where { Tasks.id eq id }.toList()).singleOrNull() }

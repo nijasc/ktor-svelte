@@ -1,11 +1,6 @@
 package showcase
 
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
+import io.github.nijasc.ktor.svelte.toDto
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -13,6 +8,12 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import kotlin.time.Clock
 import kotlin.time.Instant
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 
 private const val HASH_ITERATIONS = 210_000
 private const val HASH_BITS = 256
@@ -142,13 +143,5 @@ class UserStore {
 
     private fun normalize(email: String): String = email.trim().lowercase()
 
-    private fun ResultRow.toUser(): User =
-        User(
-            id = this[Users.id],
-            email = this[Users.email],
-            name = this[Users.name],
-            role = Role.valueOf(this[Users.role]),
-            active = this[Users.active],
-            createdAt = Instant.fromEpochMilliseconds(this[Users.createdAt]),
-        )
+    private fun ResultRow.toUser(): User = toDto<User>("createdAt" to Instant.fromEpochMilliseconds(this[Users.createdAt]))
 }
