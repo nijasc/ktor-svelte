@@ -26,20 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 104 | Generated files never conflict |  |
+| 109 | Protect internal endpoints |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 84 | Project guide for coding assistants | #238 |
-| 88 | Active link helper | #239 |
-| 90 | Free the dev ports | #240 |
-| 97 | Input normalisation | #241 |
-| 98 | Startup timing breakdown | #242 |
-| 100 | Restart summary line | #243 |
-| 101 | Highlight your own frames | #244 |
-| 102 | Short task names | #245 |
+| 104 | Generated files never conflict | #246 |
 
 ### Next up
 
@@ -87,12 +80,19 @@ Features of this plan that are merged:
 | 70 | Refresh page data after writes | #233 |
 | 76 | Starter page with next steps | #234 |
 | 83 | Reload prompt after deploy | #235 |
+| 84 | Project guide for coding assistants | #238 |
+| 88 | Active link helper | #239 |
+| 90 | Free the dev ports | #240 |
+| 97 | Input normalisation | #241 |
+| 98 | Startup timing breakdown | #242 |
+| 100 | Restart summary line | #243 |
+| 101 | Highlight your own frames | #244 |
+| 102 | Short task names | #245 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 109 | Protect internal endpoints | Small | 2 |
 | 11 | Draft and form state helper | Medium | 3 |
 | 12 | Replay and copy as curl | Medium | 3 |
 | 13 | Open route in IDE | Small | 3 |
