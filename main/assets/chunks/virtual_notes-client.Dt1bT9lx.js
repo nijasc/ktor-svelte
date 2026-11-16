@@ -55,6 +55,21 @@ export function isValidationError(error: unknown): error is ApiError<ValidationP
     );
 }
 
+export const errorMessages = {
+    network: 'Could not reach the server. Check your connection and try again.',
+    timeout: 'The server took too long to answer. Please try again.',
+    failed: 'Something went wrong. Please try again.'
+};
+
+export function errorMessage(error: unknown): string {
+    if (isTimeoutError(error)) return errorMessages.timeout;
+    if (error instanceof TypeError) return errorMessages.network;
+    if (!(error instanceof ApiError)) return errorMessages.failed;
+    const body = error.body as { message?: unknown } | null | undefined;
+    const message = typeof body === 'object' && body !== null ? body.message : undefined;
+    return typeof message === 'string' && message !== '' ? message : errorMessages.failed;
+}
+
 interface InternalOptions extends RequestOptions {
     query?: Record<string, unknown>;
     body?: unknown;

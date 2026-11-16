@@ -1166,6 +1166,22 @@ try {
 }
 ```
 
+When you only need one line to show, `errorMessage` turns anything a call can throw into text: the `message` of the error body when the server sent one, and otherwise a sentence for a timeout, for a lost connection, or for everything else:
+
+```ts
+import { api, errorMessage } from '#api';
+
+let problem = '';
+
+try {
+    await api.notes.create({ title: 'Buy milk' });
+} catch (error) {
+    problem = errorMessage(error);
+}
+```
+
+To change or translate the three built-in sentences, assign to `errorMessages.network`, `errorMessages.timeout` and `errorMessages.failed` once at startup.
+
 Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
 
 ```kotlin
