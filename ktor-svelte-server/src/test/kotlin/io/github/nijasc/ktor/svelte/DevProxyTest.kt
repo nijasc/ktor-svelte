@@ -169,6 +169,12 @@ class DevProxyTest {
                 }
             assertContains(lines[0].orEmpty(), "\"method\":\"GET\",\"path\":\"/api/hello\",\"status\":200")
             assertContains(lines[0].orEmpty(), "\"id\":\"abc\"")
+            assertContains(lines[0].orEmpty(), "\"source\":{\"file\":\"io/github/nijasc/ktor/svelte/DevProxyTest.kt\",\"line\":")
+            val here =
+                java.io
+                    .File("src/test/kotlin/io/github/nijasc/ktor/svelte/DevProxyTest.kt")
+                    .absoluteFile.invariantSeparatorsPath
+            assertContains(lines[0].orEmpty(), "\"path\":\"$here\"}")
             assertEquals("", lines[1])
             assertContains(lines[2].orEmpty(), "\"path\":\"/api/notes\",\"status\":422")
             assertContains(lines[2].orEmpty(), "\"fields\":{\"title\":[\"Required.\"]}")

@@ -111,6 +111,8 @@ const panelStyles = `
 .tools button { padding: 0 4px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
 .tools button:disabled { opacity: .4; cursor: default; }
 .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.path { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+button.path:hover { text-decoration: underline; }
 .ok { color: #7bd88f; } .warn { color: #f3c969; } .bad { color: #ff7b72; }
 .ms { text-align: right; color: #aaa; }
 .fields { grid-column: 2 / -1; color: #f3c969; white-space: pre-wrap; }
@@ -209,6 +211,11 @@ function rowTools(entry) {
     return tools;
 }
 
+function openInEditor(source) {
+    const file = encodeURIComponent(`${source.path}:${source.line}:1`);
+    return fetch(`/__open-in-editor?file=${file}`).catch(() => undefined);
+}
+
 function statusClass(status) {
     if (status >= 500) return 'bad';
     if (status >= 400) return 'warn';
@@ -242,7 +249,8 @@ function startPanel() {
         for (const entry of [...entries].reverse()) {
             const row = document.createElement('div');
             row.className = 'row';
-            row.title = entry.id ? `X-Request-Id: ${entry.id}` : '';
+            const where = entry.source ? `${entry.source.file}:${entry.source.line}` : '';
+            row.title = [entry.id ? `X-Request-Id: ${entry.id}` : '', where].filter(Boolean).join('\n');
             const cells = [
                 [entry.method, ''],
                 [entry.path, 'path'],
@@ -250,9 +258,15 @@ function startPanel() {
                 [`${entry.ms.toFixed(entry.ms < 10 ? 1 : 0)} ms`, 'ms']
             ];
             for (const [text, className] of cells) {
-                const cell = document.createElement('span');
+                const opens = className === 'path' && entry.source?.path;
+                const cell = document.createElement(opens ? 'button' : 'span');
                 cell.textContent = text;
                 cell.className = className;
+                if (opens) {
+                    cell.type = 'button';
+                    cell.title = `Open ${where} in your editor`;
+                    cell.addEventListener('click', () => openInEditor(entry.source));
+                }
                 row.append(cell);
             }
             row.append(rowTools(entry));
