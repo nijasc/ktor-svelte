@@ -204,6 +204,85 @@ function routeMap(root) {
     filter.addEventListener('input', draw);
 }
 
+const THEME_COLORS = [
+    ['primary', 'primary'],
+    ['secondary', 'secondary'],
+    ['accent', 'accent'],
+    ['neutral', 'neutral'],
+    ['base100', 'base-100'],
+    ['base200', 'base-200'],
+    ['base300', 'base-300'],
+    ['baseContent', 'base-content'],
+    ['info', 'info'],
+    ['success', 'success'],
+    ['warning', 'warning'],
+    ['error', 'error']
+];
+
+function asHex(color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.fillStyle = '#000';
+    context.fillStyle = color;
+    context.fillRect(0, 0, 1, 1);
+    return '#' + [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((part) => part.toString(16).padStart(2, '0')).join('');
+}
+
+function themeEditor(root) {
+    const section = root.querySelector('.theme');
+    const rows = root.querySelector('.theme-rows');
+    const name = root.querySelector('.theme-name');
+    const note = root.querySelector('.theme-note');
+    const page = document.documentElement;
+    const inputs = new Map();
+
+    function current(variable) {
+        return getComputedStyle(page).getPropertyValue(`--color-${variable}`).trim();
+    }
+
+    function fill() {
+        for (const [, variable] of THEME_COLORS) inputs.get(variable).value = asHex(current(variable));
+    }
+
+    function kotlin() {
+        const dark = getComputedStyle(page).colorScheme.includes('dark');
+        const label = (name.value.trim() || 'custom').replaceAll('"', '');
+        const lines = THEME_COLORS.map(([property, variable]) => `    ${property} = "${inputs.get(variable).value}"`);
+        return `customTheme("${label}"${dark ? ', colorScheme = "dark"' : ''}) {\n${lines.join('\n')}\n}`;
+    }
+
+    section.hidden = current('primary') === '';
+    if (section.hidden) return;
+    for (const [property, variable] of THEME_COLORS) {
+        const line = document.createElement('label');
+        line.className = 'theme-row';
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.setAttribute('aria-label', property);
+        input.addEventListener('input', () => page.style.setProperty(`--color-${variable}`, input.value));
+        const label = document.createElement('span');
+        label.textContent = property;
+        line.append(input, label);
+        rows.append(line);
+        inputs.set(variable, input);
+    }
+    section.addEventListener('toggle', () => {
+        if (section.open) fill();
+    });
+    new MutationObserver(() => {
+        if (section.open && page.style.length === 0) fill();
+    }).observe(page, { attributes: true, attributeFilter: ['data-theme'] });
+    root.querySelector('.theme-copy').addEventListener('click', async () => {
+        note.textContent = (await copyText(kotlin())) ? 'Copied. Paste it into daisyUi { } in build.gradle.kts.' : 'Copying did not work.';
+    });
+    root.querySelector('.theme-reset').addEventListener('click', () => {
+        for (const [, variable] of THEME_COLORS) page.style.removeProperty(`--color-${variable}`);
+        fill();
+        note.textContent = '';
+    });
+}
+
 const A11Y_PROBLEM = 'data-ktor-svelte-a11y';
 const AXE_MODULE = '/node_modules/axe-core/axe.min.js';
 
@@ -524,6 +603,15 @@ button.path:hover { text-decoration: underline; }
 .routes-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aaa; text-align: left; }
 button.routes-file { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
 button.routes-file:hover { text-decoration: underline; }
+.theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.theme[hidden] { display: none; }
+.theme summary { padding: 6px 10px; cursor: pointer; }
+.theme-rows { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 8px; padding: 2px 10px 6px; }
+.theme-row { display: flex; gap: 6px; align-items: center; }
+.theme-row input { width: 28px; height: 20px; padding: 0; border: 1px solid #4a447a; background: none; }
+.theme-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 2px 10px 8px; color: #aaa; }
+.theme-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.theme-name { width: 110px; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
 .a11y { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .a11y summary { padding: 6px 10px; cursor: pointer; }
 .a11y-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; color: #aaa; }
@@ -755,6 +843,16 @@ function startPanel() {
                 </div>
                 <div class="routes-rows"></div>
             </details>
+            <details class="theme" hidden>
+                <summary>Theme colors</summary>
+                <div class="theme-rows"></div>
+                <div class="theme-tools">
+                    <input class="theme-name" value="custom" aria-label="Theme name" spellcheck="false" />
+                    <button type="button" class="theme-copy">Copy for Gradle</button>
+                    <button type="button" class="theme-reset">Reset</button>
+                    <span class="theme-note"></span>
+                </div>
+            </details>
             <details class="a11y">
                 <summary>Accessibility<span class="a11y-count"></span></summary>
                 <div class="a11y-tools"><button type="button" class="a11y-check">Check again</button><span class="a11y-note"></span></div>
@@ -849,6 +947,7 @@ function startPanel() {
     root.querySelector('.save').addEventListener('click', saveFixtures);
     configEditor(root);
     routeMap(root);
+    themeEditor(root);
     accessibilityHints(root);
     untranslatedTexts(root);
     const source = new EventSource('/_ktor-svelte/dev/requests');
