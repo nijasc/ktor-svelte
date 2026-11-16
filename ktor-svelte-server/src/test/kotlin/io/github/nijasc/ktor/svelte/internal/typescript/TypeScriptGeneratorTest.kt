@@ -782,6 +782,14 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client can retry GET requests`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    retry?: boolean | RetryConfig;")
+        assertContains(client, "if (method !== 'GET' || !chosen) return undefined;")
+        assertContains(client, "const RETRIED_STATUSES = [502, 503, 504];")
+    }
+
+    @Test
     fun `the client turns any failure into one message to show`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "export function errorMessage(error: unknown): string {")
