@@ -216,7 +216,7 @@ Like the rest of the client, `constants.ts` is checked by `svelteVerifyTs`, so a
 
 A note ID and a user ID are both numbers, so nothing stops code from passing one where the other belongs. In Kotlin a value class prevents that:
 
-```kotlin
+```kotlin no-check
 @JvmInline
 @Serializable
 value class NoteId(val value: Long)
