@@ -2,7 +2,6 @@ package io.github.nijasc.ktor.svelte.internal.dev
 
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
-import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -11,7 +10,6 @@ import io.ktor.server.request.httpMethod
 import io.ktor.server.request.uri
 import io.ktor.server.response.header
 import io.ktor.server.response.respondText
-import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.util.AttributeKey
@@ -92,7 +90,7 @@ internal fun Route.devRequestRoutes(
             return@get
         }
         call.response.header(HttpHeaders.CacheControl, "no-store")
-        call.respondTextWriter(ContentType.Text.EventStream) {
+        call.respondEventStreamUntilDisconnect {
             log.snapshot().forEach { write("data: $it\n\n") }
             flush()
             log.entries.collect { entry ->
