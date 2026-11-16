@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle
 
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -180,6 +181,43 @@ class UtilityTasksTest {
         listOf(":ktlintFormat", ":svelteFormat", ":format", ":ktlintCheck", ":svelteFormatCheck", ":formatCheck").forEach { task ->
             assertContains(planned, "$task SKIPPED")
         }
+    }
+
+    private fun git(vararg arguments: String): Boolean =
+        runCatching {
+            ProcessBuilder(listOf("git", *arguments))
+                .directory(dir)
+                .redirectErrorStream(true)
+                .start()
+                .apply { inputStream.readBytes() }
+                .waitFor() == 0
+        }.getOrDefault(false)
+
+    @Test
+    fun `svelteGitHooks installs, keeps and removes the pre-commit hook of this clone`() {
+        val project = project()
+        assumeTrue(git("init", "-q"))
+        val hook = dir.resolve(".git/hooks/pre-commit")
+
+        assertContains(project.run("svelteGitHooks").output, "Every commit now runs formatCheck and svelteVerifySync first")
+        assertContains(hook.readText(), "./gradlew --quiet formatCheck svelteVerifySync")
+        assertContains(project.run("svelteGitHooks", "--configuration-cache").output, "is up to date")
+
+        assertContains(project.run("svelteGitHooks", "--remove").output, "removed")
+        assertFalse(hook.exists())
+        assertContains(project.run("svelteGitHooks", "--remove").output, "there is no ktor-svelte hook")
+    }
+
+    @Test
+    fun `svelteGitHooks leaves a foreign hook alone and needs a repository`() {
+        val project = project()
+        assertContains(project.runAndFail("svelteGitHooks").output, "is not inside a git repository")
+        assumeTrue(git("init", "-q"))
+        val hook = dir.resolve(".git/hooks/pre-commit")
+        hook.parentFile.mkdirs()
+        hook.writeText("#!/bin/sh\nexit 0\n")
+        assertContains(project.runAndFail("svelteGitHooks").output, "was not written by ktor-svelte")
+        assertEquals("#!/bin/sh\nexit 0\n", hook.readText())
     }
 
     @Test
