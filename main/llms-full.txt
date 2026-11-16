@@ -1970,7 +1970,7 @@ import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.localizeHref
 
 post("/api/notes") {
-    val note = notes.create(call.receive())
+    val note = store.create(call.receive<Note>())
     call.respondRedirect(call.localizeHref(FrontendRoutes.notesId(note.id.toString())))
 }
 
