@@ -1,6 +1,8 @@
 package showcase
 
 import io.github.nijasc.ktor.svelte.Page
+import io.github.nijasc.ktor.svelte.ToastKind
+import io.github.nijasc.ktor.svelte.toast
 import io.github.nijasc.ktor.svelte.validate
 import io.github.nijasc.ktorsvelte.messages
 import io.github.nijasc.ktorsvelte.theme
@@ -98,6 +100,7 @@ fun Route.taskRoutes(
                     return@delete call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemNotYours()))
                 }
                 tasks.delete(task.id)
+                call.toast(call.messages.taskDeleted(), ToastKind.Success)
                 call.respond(HttpStatusCode.NoContent)
             }
 

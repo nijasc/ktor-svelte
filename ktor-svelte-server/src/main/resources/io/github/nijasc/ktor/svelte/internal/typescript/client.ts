@@ -30,7 +30,10 @@ export interface ApiConfig {
     retry?: boolean | RetryConfig;
     sendTimeZone?: boolean;
     onWrite?: () => void;
+    onToast?: (message: string, kind: ServerToastKind) => void;
 }
+
+export type ServerToastKind = 'info' | 'success' | 'warning' | 'error';
 
 export function isTimeoutError(error: unknown): boolean {
     return error instanceof DOMException && error.name === 'TimeoutError';
@@ -273,8 +276,26 @@ function noticeBuild(response: Response) {
     knownBuild = build;
 }
 
+const toastKinds: readonly string[] = ['info', 'success', 'warning', 'error'];
+
+function noticeToasts(response: Response, url: string) {
+    const sent = response.headers.get('x-ktor-svelte-toast');
+    if (!sent || !apiConfig.onToast || typeof document === 'undefined' || !isSameOrigin(url)) return;
+    for (const part of sent.split(',')) {
+        const at = part.indexOf(':');
+        const kind = part.slice(0, at).trim();
+        if (at < 0 || !toastKinds.includes(kind)) continue;
+        try {
+            apiConfig.onToast(decodeURIComponent(part.slice(at + 1).trim()), kind as ServerToastKind);
+        } catch {
+            continue;
+        }
+    }
+}
+
 async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
     noticeBuild(response);
+    noticeToasts(response, url);
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
     if (!response.ok) {
         const requestId = response.headers.get('x-request-id') ?? undefined;

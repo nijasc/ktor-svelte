@@ -242,6 +242,7 @@ class ShowcaseBrowserTest {
 
         page.button("Delete").click()
         question.locator("[data-confirm]").click()
+        assertThat(page.locator(".toast")).containsText("Task deleted.")
         assertThat(page).hasURL(BOARD)
         page.getByLabel("Search tasks").fill(title)
         assertThat(page.locator("#no-tasks")).isVisible()

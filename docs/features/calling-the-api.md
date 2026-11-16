@@ -278,6 +278,27 @@ Some errors are left to you, because a toast would be the wrong answer:
 
 The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, give one a button with `action: { label: 'Undo', run: restore }`, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
 
+## Toasts from the server
+
+Often the route knows best what to tell the user: that the note was saved, that it was the last free seat, that the export will arrive by mail. Say it there:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.ToastKind
+import io.github.nijasc.ktor.svelte.toast
+
+post("/api/notes") {
+    val note = store.create(call.receive<Note>())
+    call.toast("Note saved", ToastKind.Success)
+    call.respond(HttpStatusCode.Created, note)
+}
+```
+
+With `toasts()` on, the browser shows it when the answer arrives, and no component has to know. The kinds are `Info`, `Success`, `Warning` and `Error`. With [i18n](./frontend-libraries.md#i18n), pass a message in the visitor's language, such as `call.toast(call.messages.noteSaved())`.
+
+The toast travels in a response header, so the body and its type stay what they are, and it works with any status, also with an error or an empty 204. Call `toast` before you respond. A response carries up to five toasts of up to 500 characters each.
+
+The generated client reads the header on answers from your own origin only, so another server cannot put words into your app. Without `toasts()`, set `apiConfig.onToast = (message, kind) => ...` to show them your way, and nothing is shown until you do. Calls made on the server during SSR do not show toasts.
+
 ## Reload after a deploy
 
 Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API.
