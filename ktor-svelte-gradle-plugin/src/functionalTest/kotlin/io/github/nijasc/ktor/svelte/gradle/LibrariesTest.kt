@@ -201,6 +201,33 @@ class LibrariesTest {
     }
 
     @Test
+    fun `components bring an error page and its hook, and leave your own versions alone`() {
+        val project = project("components()")
+        val page = project.frontend.resolve("src/routes/+error.svelte")
+        val hooks = project.frontend.resolve("src/hooks.client.ts")
+        project.run("svelteSync")
+        assertContains(page.readText(), "import ErrorPage from '#components/ErrorPage.svelte';")
+        assertContains(hooks.readText(), "export { handleError } from './lib/ktor-svelte/errors';")
+        assertTrue(project.frontend.resolve("src/lib/ktor-svelte/components/ErrorPage.svelte").isFile)
+        assertEquals(TaskOutcome.SUCCESS, project.run("svelteVerifySync").task(":svelteVerifySync")?.outcome)
+
+        page.writeText("<p>mine</p>\n")
+        hooks.writeText("export const mine = true;\n")
+        project.run("svelteSync")
+        assertEquals("<p>mine</p>\n", page.readText())
+        assertEquals("export const mine = true;\n", hooks.readText())
+        assertEquals(TaskOutcome.SUCCESS, project.run("svelteVerifySync").task(":svelteVerifySync")?.outcome)
+
+        page.delete()
+        hooks.delete()
+        project.run("svelteSync")
+        project.buildScript(build("tailwind()"))
+        project.run("svelteSync")
+        assertFalse(page.exists())
+        assertFalse(hooks.exists())
+    }
+
+    @Test
     fun `your own hooks are never overwritten`() {
         val project = project("i18n { locales(\"en\") }")
         project.frontend.resolve("messages").mkdirs()

@@ -29,6 +29,7 @@ Ready-made components are in `#components/`. Use them before writing the same ma
 - `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as `<Field label="Title" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.
 - `DateInput.svelte` and `DateTimeInput.svelte`: the same for `IsoDate` and `IsoDateTime` values, without converting text by hand.
 - `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.
+- `ErrorPage.svelte`: the page behind `src/routes/+error.svelte`. A failed API call in a `load` function shows it with the call's status and message, so do not catch `ApiError` there only to call `error(...)`.
 - `EnumSelect.svelte`: a `<select>` over a generated enum object, such as `<EnumSelect label="Status" options={Status} bind:value={status} />`.
 
 ## Pages and links

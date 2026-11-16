@@ -31,7 +31,7 @@ internal fun assistantGuide(
         append("- `vite.config.ts`")
         if (spec.usesHooks) append(", `src/hooks.server.ts`")
         if (spec.i18n?.strategy == LocaleStrategy.UrlPrefix) append(", `src/hooks.ts`")
-        if (spec.toasts) append(", `src/hooks.client.ts`")
+        if (spec.toasts || spec.components) append(", `src/hooks.client.ts`")
         appendLine(": written by `svelteSync`. Your own Vite settings go in `vite.user.ts`.")
         appendLine("- The frontend packages the libraries need are added to `package.json` by `svelteSync`. Do not remove them.")
         appendLine()
@@ -62,6 +62,10 @@ internal fun assistantGuide(
             appendLine(
                 "- `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, " +
                     "such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.",
+            )
+            appendLine(
+                "- `ErrorPage.svelte`: the page behind `src/routes/+error.svelte`. A failed API call in a `load` function shows it " +
+                    "with the call's status and message, so do not catch `ApiError` there only to call `error(...)`.",
             )
             appendLine(
                 "- `EnumSelect.svelte`: a `<select>` over a generated enum object, such as `<EnumSelect label=\"Status\" options={Status} bind:value={status} />`.",
