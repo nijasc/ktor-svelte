@@ -15,6 +15,7 @@ export interface RequestOptions extends Omit<RequestInit, 'method' | 'body'> {
     timeout?: number;
     silent?: boolean;
     retry?: boolean | RetryConfig;
+    refresh?: boolean;
 }
 
 export interface ApiConfig {
@@ -28,6 +29,7 @@ export interface ApiConfig {
     onError?: (error: unknown) => void;
     retry?: boolean | RetryConfig;
     sendTimeZone?: boolean;
+    onWrite?: () => void;
 }
 
 export function isTimeoutError(error: unknown): boolean {
@@ -235,7 +237,8 @@ function timeZone(): string | undefined {
 }
 
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
-    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, ...init } = options;
+    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, refresh, ...init } =
+        options;
     const plan = streaming ? undefined : retryPlan(method, retry);
     const chosenRetry = retry ?? apiConfig.retry;
     const longestLimitWait = streaming || !chosenRetry ? undefined : ((chosenRetry === true ? undefined : chosenRetry.maxDelay) ?? 5000);
@@ -289,6 +292,21 @@ function report(error: unknown, silent: boolean | undefined) {
     }
 }
 
+let writeNoticed = false;
+
+function noticeWrite(method: string, options: InternalOptions) {
+    if (method === 'GET' || method === 'HEAD' || options.refresh === false || !apiConfig.onWrite || writeNoticed) return;
+    writeNoticed = true;
+    setTimeout(() => {
+        writeNoticed = false;
+        try {
+            apiConfig.onWrite?.();
+        } catch {
+            return;
+        }
+    }, 0);
+}
+
 const inFlight = new Map<string, Promise<unknown>>();
 
 function isShareable(method: string, options: InternalOptions): boolean {
@@ -320,7 +338,9 @@ export async function request<T>(method: string, path: string, options: Internal
     const { url, operation, send, attempt } = prepare(method, path, options, 'application/json');
     const run = async (silent = options.silent) => {
         try {
-            return (await attempt(async () => parseResponse(await checked(await send(), url, operation)))) as T;
+            const result = (await attempt(async () => parseResponse(await checked(await send(), url, operation)))) as T;
+            noticeWrite(method, options);
+            return result;
         } catch (error) {
             report(error, silent);
             throw error;

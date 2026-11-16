@@ -142,6 +142,8 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 ./gradlew svelteDevAll
 ```
 
+The first page of the new app lists what was set up for the answers you gave, each with a link to its docs, and what to do next.
+
 | Question | Flag | Default | What you get |
 |---|---|---|---|
 | Project name, Kotlin package, package manager | `--name`, `--package`, `--package-manager` | `my-app`, `com.example.app`, first one found | |
@@ -1411,6 +1413,27 @@ src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  use apiWith(even
 ```
 
 It is not part of `check`. The [lint rule](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.
+
+## Refresh the page after a write
+
+After you create, change or delete something, the lists and details on the page are out of date. Tell the client what to do after a successful write, once, in your root layout, and every page keeps itself current:
+
+```ts
+import { refreshAll } from '$app/navigation';
+import { apiConfig } from '#api';
+
+apiConfig.onWrite = () => void refreshAll();
+```
+
+`onWrite` runs after every POST, PUT, PATCH and DELETE that succeeds, and `refreshAll` reruns the `load` functions of the page you are on. Writes that finish together, such as three calls in a `Promise.all`, cause one refresh, not three. A failed write does not trigger it, and neither does a read.
+
+A call that should not refresh the page, such as saving a draft while the user types, opts out:
+
+```ts
+await api.notes.update(id, draft, { refresh: false });
+```
+
+The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
 
 ## Show errors automatically
 
