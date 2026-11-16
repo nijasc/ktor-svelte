@@ -461,6 +461,38 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the same GET made twice while a page loads is flagged with both call sites`() {
+        val about = File(project, "frontend/src/routes/about/+page.svelte")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        val flagged = panel.locator(".row").filter(Locator.FilterOptions().setHasText("/api/greeting?name=twice")).locator(".duplicate")
+        try {
+            change(about) {
+                it.replace(
+                    "    import { m } from '#i18n';",
+                    "    import { api } from '#api';\n    import { onMount } from 'svelte';\n    import { m } from '#i18n';\n\n" +
+                        "    onMount(() => {\n        void api.greeting.list({ name: 'twice' });\n        void api.greeting.list({ name: 'twice' });\n    });",
+                )
+            }
+            waitFor("the page that asks twice", 60) {
+                page.navigate("/about")
+                page.waitForTimeout(1_500.0)
+                flagged.count() > 0
+            }
+            val calls = panel.locator(".row").filter(Locator.FilterOptions().setHasText("/api/greeting?name=twice"))
+            val flags = flagged.count()
+            val before = calls.count()
+            assertEquals(before / 2, flags, "one of every two calls is the repeat")
+            assertThat(flagged.first()).containsText(
+                Pattern.compile(
+                    "asked for twice within \\d+ ms, from src/routes/about/\\+page\\.svelte:\\d+ and from src/routes/about/\\+page\\.svelte:\\d+",
+                ),
+            )
+        } finally {
+            restore(about)
+        }
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")

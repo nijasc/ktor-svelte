@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 74 | Duplicate request detection |  |
+| 75 | Live accessibility hints |  |
 
 ### In review
 
@@ -45,6 +45,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 40 | Record requests as fixtures | #259 |
 | 51 | Missing translation highlight | #260 |
 | 58 | Route map in dev panel | #261 |
+| 74 | Duplicate request detection | #262 |
 
 ### Next up
 
@@ -105,7 +106,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 75 | Live accessibility hints | Medium | 3 |
 | 78 | Theme editor | Medium | 3 |
 | 80 | Status view | Small | 3 |
 | 99 | Sensitive fields | Medium | 3 |
