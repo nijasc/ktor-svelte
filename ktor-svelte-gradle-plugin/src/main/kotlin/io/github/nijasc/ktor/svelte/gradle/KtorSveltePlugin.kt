@@ -21,6 +21,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
@@ -249,6 +250,22 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.generatedPackage.set(librarySpec.map { it.generatedPackage })
             task.projectDirectory.set(project.layout.projectDirectory)
             task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
+        }
+        project.tasks.register("svelteVerifyLinks", SvelteVerifyLinksTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Lists internal links that lead to no page, no API route and no static file. Add --strict to fail on them."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
+            task.localePrefixes.set(
+                librarySpec.map { spec ->
+                    spec.i18n
+                        ?.takeIf { it.strategy == LocaleStrategy.UrlPrefix }
+                        ?.locales
+                        .orEmpty()
+                },
+            )
         }
         install.configure { it.mustRunAfter(sync) }
         build.configure { it.dependsOn(verify) }

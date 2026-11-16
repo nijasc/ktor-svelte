@@ -10,6 +10,13 @@ internal data class StringLink(
     val replacement: String? = null,
 )
 
+internal data class UnmatchedLink(
+    val line: Int,
+    val written: String,
+    val path: String,
+    val dynamic: Boolean,
+)
+
 internal data class FixedSource(
     val source: String,
     val fixed: Int,
@@ -44,6 +51,7 @@ private data class MatchedRoute(
 
 private const val EXPRESSION_MARK = '\u0000'
 private const val UNKNOWN_ARGUMENT = "..."
+internal const val DYNAMIC_PART = "{}"
 private val LINK_SOURCE_EXTENSIONS = setOf("svelte", "ts", "js")
 private val HREF = Regex("""\bhref=\{?\s*(["'`])(/[^"'`]*)\1""")
 private val NAVIGATION =
@@ -130,6 +138,60 @@ internal fun findKotlinStringLinks(
                 }
             StringLink(lineOf(source, match), match.value, suggestion, match.range, replacement)
         }.toList()
+
+internal fun findUnmatchedLinks(
+    source: String,
+    routes: List<FrontendRoute>,
+    localePrefixes: List<String> = emptyList(),
+): List<UnmatchedLink> =
+    (HREF.findAll(source) + NAVIGATION.findAll(source))
+        .sortedBy { it.range.first }
+        .mapNotNull { match ->
+            val expressions = if (match.groupValues[1] == "`") TEMPLATE_EXPRESSION else MARKUP_EXPRESSION
+            unmatchedLink(
+                source,
+                match,
+                match.groupValues[2],
+                expressions,
+                match.groupValues.getOrNull(3).orEmpty(),
+                routes,
+                localePrefixes,
+            )
+        }.toList()
+
+internal fun findUnmatchedKotlinLinks(
+    source: String,
+    routes: List<FrontendRoute>,
+    localePrefixes: List<String> = emptyList(),
+): List<UnmatchedLink> =
+    KOTLIN_REDIRECT
+        .findAll(source)
+        .mapNotNull { match ->
+            unmatchedLink(source, match, match.groupValues[1], KOTLIN_EXPRESSION, match.groupValues[2], routes, localePrefixes)
+        }.toList()
+
+private fun unmatchedLink(
+    source: String,
+    match: MatchResult,
+    path: String,
+    expressions: Regex,
+    appended: String,
+    routes: List<FrontendRoute>,
+    localePrefixes: List<String>,
+): UnmatchedLink? {
+    if (path.startsWith("//")) return null
+    val withoutLocale =
+        localePrefixes
+            .firstOrNull { path == "/$it" || path.startsWith("/$it/") }
+            ?.let { path.removePrefix("/$it").ifEmpty { "/" } }
+    if (listOfNotNull(path, withoutLocale).any { matchedRoute(it, expressions, appended, routes) != null }) return null
+    val shown =
+        expressions
+            .replace(path, DYNAMIC_PART)
+            .substringBefore('?')
+            .substringBefore('#') + if (appended.isEmpty()) "" else DYNAMIC_PART
+    return UnmatchedLink(lineOf(source, match), match.value, shown, dynamic = DYNAMIC_PART in shown)
+}
 
 private fun lineOf(
     source: String,

@@ -92,3 +92,20 @@ tasks.check {
     dependsOn("svelteVerifyRoutes")
 }
 ```
+
+## Finding links that lead nowhere
+
+`svelteVerifyLinks` is the opposite check. It reads the same files, and lists every internal link whose path is not one of your pages, not under your API and not a file in `static`, so a typo in an `href` shows up before a visitor finds it:
+
+```bash
+./gradlew svelteVerifyLinks
+```
+
+```text
+src/routes/+page.svelte:14  href="/abuot"  ->  nothing is served at /abuot
+src/main/kotlin/notes/Routes.kt:52  respondRedirect("/notes/${id}/edit")  ->  nothing is served at /notes/{}/edit
+```
+
+It only lists what it finds. Add `--strict` to fail the build instead, for example in CI.
+
+The check works with or without typed routes. Paths under your API are never reported, because the generated client already makes a call to a missing route a compile error. The API roots come from the generated `openapi.json`, or `/api` when there is none. A link that starts with a value, such as `href="/{section}/overview"`, cannot be judged and is skipped, and with `LocaleStrategy.UrlPrefix` a leading language such as `/de` is accepted.
