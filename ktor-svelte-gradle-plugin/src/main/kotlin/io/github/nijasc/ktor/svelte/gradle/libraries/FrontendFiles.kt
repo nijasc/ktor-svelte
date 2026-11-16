@@ -58,6 +58,28 @@ private const val PLAIN_FIELD_STYLE =
         "    .ktor-svelte-field-hint {\n        margin: 0;\n        font-size: 0.875em;\n        opacity: 0.7;\n    }\n" +
         "</style>\n"
 
+private const val PLAIN_TABLE_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-table-wrap {\n        overflow-x: auto;\n    }\n\n" +
+        "    .ktor-svelte-table {\n        width: 100%;\n        border-collapse: collapse;\n        text-align: left;\n    }\n\n" +
+        "    .ktor-svelte-table-pager {\n        display: flex;\n        gap: 0.5rem;\n    }\n" +
+        "</style>\n"
+
+private fun dataTable(daisy: Boolean): String =
+    renderTemplate(
+        "components/DataTable.svelte",
+        mapOf(
+            "wrapper" to if (daisy) "overflow-x-auto" else "ktor-svelte-table-wrap",
+            "table" to if (daisy) "table" else "ktor-svelte-table",
+            "caption" to if (daisy) "text-left font-semibold" else "ktor-svelte-table-caption",
+            "error" to if (daisy) "text-error py-2 text-sm" else "ktor-svelte-table-error",
+            "note" to if (daisy) "py-2 text-sm opacity-70" else "ktor-svelte-table-note",
+            "button" to if (daisy) "btn btn-sm" else "ktor-svelte-table-button",
+            "pager" to if (daisy) "flex gap-2 py-2" else "ktor-svelte-table-pager",
+            "style" to if (daisy) "" else PLAIN_TABLE_STYLE,
+        ),
+    )
+
 internal fun componentFiles(spec: LibrarySpec): Map<String, String> {
     val daisy = spec.daisy != null
     val field =
@@ -80,6 +102,7 @@ internal fun componentFiles(spec: LibrarySpec): Map<String, String> {
         "$COMPONENTS_DIR/DateInput.svelte" to renderTemplate("components/DateInput.svelte", input),
         "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
         "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
+        "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
     )
 }
 

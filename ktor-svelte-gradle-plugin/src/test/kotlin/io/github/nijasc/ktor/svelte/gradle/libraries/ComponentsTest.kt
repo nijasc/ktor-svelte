@@ -20,7 +20,7 @@ class ComponentsTest {
         assertFalse(frontendFiles(spec(components = false), null, false).keys.any { it.startsWith(COMPONENTS_DIR) })
         val files = frontendFiles(spec(components = true), null, false)
         assertEquals(
-            listOf("DateInput.svelte", "DateTimeInput.svelte", "EnumSelect.svelte", "Field.svelte"),
+            listOf("DataTable.svelte", "DateInput.svelte", "DateTimeInput.svelte", "EnumSelect.svelte", "Field.svelte"),
             files.keys
                 .filter { it.startsWith(COMPONENTS_DIR) }
                 .map { it.substringAfterLast('/') }
@@ -75,9 +75,25 @@ class ComponentsTest {
         assertContains(select, "<select id={inputId} class=\"select w-full\" bind:value use:field={fieldOptions} {...rest}>")
         assertContains(select, "{#each Object.values(options) as option (option)}")
         files.values.forEach { assertFalse("{{" in it) }
-        componentFiles(spec(components = true)).filterKeys { !it.endsWith("Field.svelte") }.values.forEach {
+        componentFiles(spec(components = true)).filterKeys { "Input" in it || "Select" in it }.values.forEach {
             assertContains(it, "class=\"ktor-svelte-field-input\"")
         }
+    }
+
+    @Test
+    fun `the data table loads pages through the route's own function and types its columns from the items`() {
+        val table = componentFiles(spec(components = true, withDaisy = true)).getValue("$COMPONENTS_DIR/DataTable.svelte")
+        assertContains(table, "<script lang=\"ts\" generics=\"T, Q extends { cursor?: string } = { cursor?: string }\">")
+        assertContains(table, "load: (query: Q) => Promise<PageOf<T>>;")
+        assertContains(table, "| { key: keyof T & string; label: string; text?: (item: T) => string; class?: string }")
+        assertContains(table, "export function reload(): Promise<void> {")
+        assertContains(table, "<table class=\"table\" aria-busy={busy}>")
+        assertContains(table, "<p class=\"text-error py-2 text-sm\" role=\"alert\">")
+        assertFalse("<style>" in table)
+        val plain = componentFiles(spec(components = true)).getValue("$COMPONENTS_DIR/DataTable.svelte")
+        assertContains(plain, "<table class=\"ktor-svelte-table\" aria-busy={busy}>")
+        assertContains(plain, ".ktor-svelte-table-pager {")
+        assertFalse("{{" in plain)
     }
 
     @Test

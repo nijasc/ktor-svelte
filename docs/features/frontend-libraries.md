@@ -337,6 +337,60 @@ A `<select>` over a generated enum object:
 
 It lists every value of the enum, so a value added in Kotlin appears after the next `svelteGenerateTs`. `labels` gives the text to show, as text or as a function for translations, and a value without one shows its name. With `placeholder` there is a first option that stands for `null`. The bound value has the enum's type, so no cast is needed.
 
+### DataTable
+
+A table over any route that returns [`Page<T>`](../recipes/pagination.md). It loads the pages, and shows a line while it loads, when there is nothing, and when a load failed, with a button to try again.
+
+```svelte no-check
+<script lang="ts">
+    import { api } from '#api';
+    import DataTable from '#components/DataTable.svelte';
+
+    let search = $state('');
+</script>
+
+<input type="search" bind:value={search} aria-label="Search" />
+<DataTable
+    load={api.notes.list}
+    query={{ search, limit: '20' }}
+    key={(note) => note.id}
+    columns={[
+        { key: 'title', label: 'Title' },
+        { key: 'createdAt', label: 'Created', text: (note) => new Date(note.createdAt).toLocaleDateString() },
+        { id: 'size', label: 'Size', text: (note) => `${note.text.length} characters` }
+    ]}
+/>
+```
+
+`load` is the generated function of the route, and the rows have the type it returns. So a column's `key` must be a property of the item, a typo fails `svelteCheck`, and `text` gets the typed item. A column that is not one property has an `id` and a `text` instead.
+
+| Prop | Meaning |
+|---|---|
+| `load` | The generated function of a route that returns `Page<T>`. |
+| `columns` | The headers, and what each cell shows. |
+| `query` | The query parameters besides the cursor. When they change, the table loads again from the start. |
+| `key` | A stable id per row, such as `(note) => note.id`. |
+| `paging` | `'more'` (the default) adds rows with a Load more button. `'pages'` shows one page with Previous and Next. |
+| `first` | A first page that a `load` function already fetched, so the table does not fetch it again. |
+| `caption` | A caption for the table. |
+| `empty`, `loading`, `more`, `previous`, `next`, `retry` | The texts, in English unless given. |
+| `class` | Added to the wrapper. |
+
+For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
+
+```svelte no-check
+<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }, { id: 'open', label: '' }]}>
+    {#snippet row(note)}
+        <td>{note.title}</td>
+        <td><a href={routes.notesId({ id: note.id })}>Open</a></td>
+    {/snippet}
+</DataTable>
+```
+
+After a change elsewhere on the page, `bind:this` the table and call its `reload()`.
+
+The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
+
 ## Modals
 
 A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:

@@ -29,3 +29,8 @@ for await (const users of pages(api.users.list, { limit: '100' })) table.push(..
 
 - Use the ID or sort key of the last item as the cursor, not an offset, so rows added while someone pages do not shift the results.
 - Always cap `limit` on the server.
+
+## A table without the code
+
+With `libraries { components() }`, the generated [`<DataTable>`](../features/frontend-libraries.md#datatable) does all of the above for a table: it takes the route's function and a list of columns, and loads, pages and shows the empty and failed states itself.
+
