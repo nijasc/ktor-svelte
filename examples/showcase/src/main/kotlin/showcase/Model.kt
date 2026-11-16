@@ -1,5 +1,7 @@
 package showcase
 
+import io.github.nijasc.ktor.svelte.Lowercase
+import io.github.nijasc.ktor.svelte.Trim
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
 import io.github.nijasc.ktorsvelte.LucideIcon
@@ -62,8 +64,11 @@ data class Login(
 
 @Serializable
 data class Registration(
+    @Trim
+    @Lowercase
     @JsonSchema.MaxLength(MAX_EMAIL_LENGTH)
     val email: String,
+    @Trim
     @JsonSchema.MinLength(1)
     @JsonSchema.MaxLength(MAX_NAME_LENGTH)
     val name: String,
@@ -79,6 +84,7 @@ data class Registration(
 
 @Serializable
 data class ProfileInput(
+    @Trim
     @JsonSchema.MinLength(1)
     @JsonSchema.MaxLength(MAX_NAME_LENGTH)
     val name: String,
@@ -130,6 +136,7 @@ data class Task(
 
 @Serializable
 data class TaskInput(
+    @Trim
     @JsonSchema.MinLength(1)
     @JsonSchema.MaxLength(MAX_TITLE_LENGTH)
     val title: String,
@@ -165,6 +172,7 @@ data class Comment(
 
 @Serializable
 data class CommentInput(
+    @Trim
     @JsonSchema.MinLength(1)
     @JsonSchema.MaxLength(MAX_COMMENT_LENGTH)
     val body: String,
