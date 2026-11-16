@@ -135,6 +135,78 @@ function overridePublicConfig() {
     };
 }
 
+const UNTRANSLATED = 'data-ktor-svelte-untranslated';
+const OUTLINE_UNTRANSLATED = 'ktor-svelte:outline-untranslated';
+
+function untranslatedTexts(root) {
+    const section = root.querySelector('.untranslated');
+    const rows = root.querySelector('.untranslated-rows');
+    const outline = root.querySelector('.untranslated-outline');
+    const host = root.host;
+    let listed = '';
+    outline.checked = localStorage.getItem(OUTLINE_UNTRANSLATED) === 'on';
+
+    const style = document.createElement('style');
+    style.textContent = `[${UNTRANSLATED}] { outline: 2px dashed #e0a800 !important; outline-offset: 2px; }`;
+    document.head.append(style);
+
+    function mark(texts) {
+        const marked = new Set();
+        if (outline.checked && texts.size > 0) {
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                const found = texts.get(node.nodeValue.trim());
+                const element = node.parentElement;
+                if (!found || !element || host.contains(element)) continue;
+                if (element.getAttribute(UNTRANSLATED) !== found.key) element.setAttribute(UNTRANSLATED, found.key);
+                marked.add(element);
+            }
+        }
+        document.querySelectorAll(`[${UNTRANSLATED}]`).forEach((element) => {
+            if (!marked.has(element)) element.removeAttribute(UNTRANSLATED);
+        });
+    }
+
+    function refresh() {
+        const texts = globalThis.__ktorSvelteUntranslated ?? new Map();
+        const shown = [...texts].map(([text, found]) => `${found.key}\u0000${text}`).join('\u0001');
+        if (shown !== listed) {
+            listed = shown;
+            section.hidden = texts.size === 0;
+            root.querySelector('.untranslated-count').textContent = ` (${texts.size})`;
+            rows.replaceChildren(
+                ...[...texts].map(([text, found]) => {
+                    const row = document.createElement('div');
+                    row.className = 'untranslated-row';
+                    const key = document.createElement('span');
+                    key.textContent = found.key;
+                    const value = document.createElement('span');
+                    value.textContent = text;
+                    row.title = `${found.locale}.json has the same text as the default language`;
+                    row.append(key, value);
+                    return row;
+                })
+            );
+        }
+        mark(texts);
+    }
+
+    outline.addEventListener('change', () => {
+        localStorage.setItem(OUTLINE_UNTRANSLATED, outline.checked ? 'on' : 'off');
+        refresh();
+    });
+    let waiting = false;
+    new MutationObserver(() => {
+        if (waiting) return;
+        waiting = true;
+        setTimeout(() => {
+            waiting = false;
+            refresh();
+        }, 300);
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    refresh();
+}
+
 function configEditor(root) {
     const section = root.querySelector('.config');
     const rows = root.querySelector('.config-rows');
@@ -275,6 +347,12 @@ button.path:hover { text-decoration: underline; }
 .config-row input { min-width: 0; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
 .config-row.overridden span { color: #f3c969; }
 .config-note { margin: 0; padding: 4px 10px; color: #aaa; }
+.untranslated { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.untranslated[hidden] { display: none; }
+.untranslated summary { padding: 6px 10px; cursor: pointer; }
+.untranslated label { display: block; padding: 2px 10px 6px; color: #aaa; }
+.untranslated-row { display: grid; grid-template-columns: minmax(80px, 1fr) 2fr; gap: 8px; padding: 2px 10px; }
+.untranslated-row span:first-child { color: #f3c969; font-family: ui-monospace, monospace; }
 .config-actions { display: flex; gap: 8px; padding: 6px 10px 10px; }
 .config-actions button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
 `;
@@ -452,6 +530,11 @@ function startPanel() {
                     <button type="button" class="config-reset">Reset all</button>
                 </div>
             </details>
+            <details class="untranslated" hidden>
+                <summary>Not translated<span class="untranslated-count"></span></summary>
+                <label><input type="checkbox" class="untranslated-outline" /> Outline them on the page</label>
+                <div class="untranslated-rows"></div>
+            </details>
             <div class="list"><div class="empty">No API calls yet.</div></div>
         </section>`;
     const toggle = root.querySelector('.toggle');
@@ -527,6 +610,7 @@ function startPanel() {
     });
     root.querySelector('.save').addEventListener('click', saveFixtures);
     configEditor(root);
+    untranslatedTexts(root);
     const source = new EventSource('/_ktor-svelte/dev/requests');
     source.onopen = () => {
         entries = [];
