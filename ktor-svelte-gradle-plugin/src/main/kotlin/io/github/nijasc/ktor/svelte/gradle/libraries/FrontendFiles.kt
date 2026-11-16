@@ -6,6 +6,9 @@ import io.github.nijasc.ktor.svelte.gradle.renderTemplate
 
 private const val HEADER = "// $GENERATED_MARKER\n"
 
+internal const val GENERATED_GIT_ATTRIBUTES = "$GENERATED_DIR/.gitattributes"
+private const val GIT_ATTRIBUTES = "# $GENERATED_MARKER\n* text eol=lf linguist-generated\n"
+
 private fun json(value: Any?): String = JsonOutput.toJson(value)
 
 private fun tsArray(values: List<String>): String = json(values).replace('"', '\'')
@@ -34,6 +37,7 @@ internal fun frontendFiles(
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
             put("src/hooks.client.ts", renderTemplate("hooks.client.ts"))
         }
+        if (spec.lucide || keys.any { it.startsWith("$GENERATED_DIR/") }) put(GENERATED_GIT_ATTRIBUTES, GIT_ATTRIBUTES)
     }
 
 internal fun iconSources(
