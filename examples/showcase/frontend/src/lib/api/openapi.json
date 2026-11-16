@@ -1772,7 +1772,8 @@
                     "createdAt",
                     "updatedAt",
                     "comments",
-                    "attachments"
+                    "attachments",
+                    "version"
                 ],
                 "properties": {
                     "id": {
@@ -3895,6 +3896,9 @@
                     },
                     "attachments": {
                         "type": "integer"
+                    },
+                    "version": {
+                        "type": "integer"
                     }
                 }
             },
@@ -5994,6 +5998,12 @@
                     "dueOn": {
                         "type": [
                             "string",
+                            "null"
+                        ]
+                    },
+                    "version": {
+                        "type": [
+                            "integer",
                             "null"
                         ]
                     }

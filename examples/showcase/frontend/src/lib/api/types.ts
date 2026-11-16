@@ -336,6 +336,7 @@ export interface Task {
     updatedAt: IsoDateTime;
     comments: number;
     attachments: number;
+    version: number;
 }
 
 export const Task = {
@@ -354,11 +355,13 @@ export const Task = {
         updatedAt: '' as IsoDateTime,
         comments: 0,
         attachments: 0,
+        version: 0,
     }),
     bounds: {
         id: { required: true },
         comments: { required: true },
         attachments: { required: true },
+        version: { required: true },
     },
 };
 
@@ -416,6 +419,7 @@ export interface TaskInput {
     icon?: LucideIcon;
     assigneeId?: number | null;
     dueOn?: string | null;
+    version?: number | null;
 }
 
 export const TaskInput = {
@@ -427,6 +431,7 @@ export const TaskInput = {
         icon: 'AArrowDown',
         assigneeId: null,
         dueOn: null,
+        version: null,
     }),
     bounds: {
         title: { required: true, minlength: 1, maxlength: 120 },
