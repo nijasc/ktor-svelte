@@ -51,8 +51,9 @@ data class UserSession(
 fun Application.configureAuth(
     users: UserStore,
     secureCookies: Boolean,
+    signKey: String?,
 ) {
-    val signKey = System.getenv("SESSION_SIGN_KEY")?.let(::hex) ?: temporarySignKey()
+    val signKey = signKey?.let(::hex) ?: temporarySignKey()
     install(Sessions) {
         cookie<UserSession>(SESSION_COOKIE) {
             cookie.path = "/"
