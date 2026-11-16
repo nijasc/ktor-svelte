@@ -42,7 +42,7 @@ Then apply it:
 ./gradlew svelteSync
 ```
 
-`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
+`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. The generated folder `src/lib/ktor-svelte` carries its own `.gitattributes`, which marks the files as generated and keeps their line endings the same on every machine. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
 
 **ktor-svelte owns `vite.config.ts`** once any library is on. Put your own Vite settings in `vite.user.ts`, and they are merged in:
 
