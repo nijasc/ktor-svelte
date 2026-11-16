@@ -623,6 +623,34 @@ class LibrariesTest {
     }
 
     @Test
+    fun `svelteVerifyEndpoints lists API routes the frontend never calls`() {
+        val project = project("lucide()")
+        assertContains(project.run("svelteVerifyEndpoints").output, "there is no generated client")
+
+        val api = project.frontend.resolve("src/lib/api").apply { mkdirs() }
+        val list = "request<Note[]>('GET', '/api/notes', { ...options, operation: 'notes.list' })"
+        val export = "request<void>('GET', '/api/notes/export', { ...options, operation: 'notes.export' })"
+        api.resolve("services.ts").writeText(
+            "export const notesList = (options?: RequestOptions) => $list;\n" +
+                "export const notesExport = (options?: RequestOptions) => $export;\n",
+        )
+        val page = project.frontend.resolve("src/routes/+page.svelte")
+        page.parentFile.mkdirs()
+        page.writeText("<script>\n    const notes = api.notes.list();\n</script>\n")
+
+        val output = project.run("svelteVerifyEndpoints").output
+
+        assertContains(output, "GET /api/notes/export  ->  nothing in the frontend calls api.notes.export")
+        assertContains(output, "1 API route(s) are not called by the frontend. Add --strict")
+        val strict = project.runAndFail("svelteVerifyEndpoints", "--strict").output
+        assertContains(strict, "1 API route(s) are not called by the frontend.")
+
+        page.writeText("<script>\n    const notes = api.notes.list();\n    api.notes.export();\n</script>\n")
+
+        assertContains(project.run("svelteVerifyEndpoints", "--strict").output, "the frontend calls every API route")
+    }
+
+    @Test
     fun `svelteVerifyRoutes has nothing to do without typed routes`() {
         val project = project("lucide()")
         project.frontend.resolve("src/routes").mkdirs()
