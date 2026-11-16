@@ -27,9 +27,23 @@ public final class io/github/nijasc/ktor/svelte/DevMode : java/lang/Enum {
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/DevMode;
 }
 
+public abstract interface annotation class io/github/nijasc/ktor/svelte/EmptyAsNull : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/EmptyAsNull$Impl : io/github/nijasc/ktor/svelte/EmptyAsNull {
+	public fun <init> ()V
+}
+
 public final class io/github/nijasc/ktor/svelte/LibrariesKt {
 	public static final fun getSvelteLocale (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
 	public static final fun getSvelteTheme (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
+}
+
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Lowercase : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Lowercase$Impl : io/github/nijasc/ktor/svelte/Lowercase {
+	public fun <init> ()V
 }
 
 public final class io/github/nijasc/ktor/svelte/Page {
@@ -272,6 +286,13 @@ public final class io/github/nijasc/ktor/svelte/SvelteTransportConfig {
 
 public final class io/github/nijasc/ktor/svelte/TimeZonesKt {
 	public static final fun getTimeZone (Lio/ktor/server/application/ApplicationCall;)Ljava/time/ZoneId;
+}
+
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Trim : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Trim$Impl : io/github/nijasc/ktor/svelte/Trim {
+	public fun <init> ()V
 }
 
 public abstract interface class io/github/nijasc/ktor/svelte/Validated {

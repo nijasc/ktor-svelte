@@ -59,6 +59,7 @@ import io.github.nijasc.ktor.svelte.internal.startupLine
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
+import io.github.nijasc.ktor.svelte.internal.validation.installInputNormalisation
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -215,6 +216,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val maxApiBodySize = pluginConfig.maxApiBodySize
         if (maxApiBodySize != null) installBodyLimit(resolver, maxApiBodySize)
         installJsonShapeLimits(application, resolver, pluginConfig.maxJsonDepth, pluginConfig.maxJsonStringLength)
+        installInputNormalisation(application)
         installRateLimits(application, pluginConfig.rateLimitConfig, resolver)
         if (pluginConfig.originCheck) {
             val originCheck = OriginCheck(pluginConfig.allowedOriginList, application.developmentMode)
