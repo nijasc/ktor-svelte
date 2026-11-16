@@ -159,6 +159,7 @@ public class SvelteDevConfig internal constructor() {
     public var panel: Boolean = true
     public var browserLogs: Boolean = true
     public var refreshAfterRestart: Boolean = true
+    public var errorOverlay: Boolean = true
     public var startupTiming: Boolean = true
 }
 

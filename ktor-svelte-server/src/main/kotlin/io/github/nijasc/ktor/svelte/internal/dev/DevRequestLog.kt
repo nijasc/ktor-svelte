@@ -23,6 +23,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -35,6 +36,8 @@ private const val KEPT_REQUESTS = 100
 private val RequestStartedAt = AttributeKey<Long>("KtorSvelteDevRequestStartedAt")
 private val RequestFields = AttributeKey<Map<String, List<String>>>("KtorSvelteDevRequestFields")
 private val RequestRoute = AttributeKey<RoutingNode>("KtorSvelteDevRequestRoute")
+private val RequestError = AttributeKey<JsonObject>("KtorSvelteDevRequestError")
+private val RequestListed = AttributeKey<Boolean>("KtorSvelteDevRequestListed")
 
 internal class DevRequestLog(
     private val resolver: RequestResolver,
@@ -68,14 +71,29 @@ internal class DevRequestLog(
         call.attributes.put(RequestFields, fields)
     }
 
-    fun finished(call: ApplicationCall) {
+    fun failed(
+        call: ApplicationCall,
+        cause: Throwable,
+    ) {
+        call.attributes.put(RequestError, errorSummary(cause, sourceFiles))
+    }
+
+    fun leftUnanswered(call: ApplicationCall) {
+        if (!call.response.isCommitted) finished(call, HttpStatusCode.InternalServerError)
+    }
+
+    fun finished(
+        call: ApplicationCall,
+        status: HttpStatusCode = call.response.status() ?: HttpStatusCode.OK,
+    ) {
         val startedAt = call.attributes.getOrNull(RequestStartedAt) ?: return
-        if (!resolver.isApiPath(decodedPathOrRaw(call))) return
+        if (!resolver.isApiPath(decodedPathOrRaw(call)) || call.attributes.contains(RequestListed)) return
+        call.attributes.put(RequestListed, true)
         val entry =
             buildJsonObject {
                 put("method", call.request.httpMethod.value)
                 put("path", call.request.uri)
-                put("status", (call.response.status() ?: HttpStatusCode.OK).value)
+                put("status", status.value)
                 put("ms", (clock() - startedAt) / 1_000_000.0)
                 put("at", wallClock())
                 (call.request.header(HttpHeaders.XRequestId) ?: call.response.headers[HttpHeaders.XRequestId])?.let { put("id", it) }
@@ -89,6 +107,7 @@ internal class DevRequestLog(
                         },
                     )
                 }
+                call.attributes.getOrNull(RequestError)?.let { put("error", it) }
                 call.attributes.getOrNull(RequestFields)?.let { fields ->
                     put(
                         "fields",

@@ -134,6 +134,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                         "panel".takeIf { pluginConfig.devConfig.panel },
                         "logs".takeIf { pluginConfig.devConfig.browserLogs },
                         "refresh".takeIf { pluginConfig.devConfig.refreshAfterRestart },
+                        "errors".takeIf { pluginConfig.devConfig.panel && pluginConfig.devConfig.errorOverlay },
                     ),
                 )
             } else {
@@ -301,9 +302,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 respondBodyTooLarge(call, maxApiBodySize)
                 return@on
             }
+            devRequests?.failed(call, cause)
             if (hideErrorDetails && mayHideErrorDetails(call)) {
                 respondWithoutDetails(call, cause, resolver.isApiPath(decodedPathOrRaw(call)))
             }
+            devRequests?.leftUnanswered(call)
         }
 
         val automaticRouting = pluginConfig.routing == SvelteRouting.Automatic

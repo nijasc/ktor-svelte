@@ -45,6 +45,44 @@ new MutationObserver(() => {
     if (errors.length > 0 && dismissed !== key(errors) && !document.querySelector(`[${marker}]`)) render();
 }).observe(document.documentElement, { childList: true, subtree: true });
 
+const serverErrorMarker = 'data-ktor-svelte-server-error';
+
+function hideServerError() {
+    document.querySelectorAll(`[${serverErrorMarker}]`).forEach((node) => node.remove());
+}
+
+function showServerError(entry) {
+    hideServerError();
+    if (errors.length > 0 && dismissed !== key(errors)) return;
+    const error = entry.error;
+    const message = `${entry.method} ${entry.path} failed on the server: ${error.type}${error.message ? `: ${error.message}` : ''}`;
+    const stack = error.lines.map((line) => line.text).join('\n');
+    const own = error.lines.find((line) => line.path);
+    const Overlay = customElements.get('vite-error-overlay');
+    let node;
+    if (Overlay) {
+        node = new Overlay({
+            message,
+            stack,
+            plugin: 'ktor-svelte',
+            id: own?.path,
+            loc: own ? { file: own.path, line: own.line, column: 1 } : undefined
+        });
+    } else {
+        node = document.createElement('pre');
+        node.textContent = `${message}\n\n${stack}`;
+        node.style.cssText =
+            'position:fixed;inset:0;z-index:99999;margin:0;padding:24px;overflow:auto;background:rgba(0,0,0,.85);color:#ff8080;font:13px/1.5 monospace;white-space:pre-wrap';
+    }
+    node.setAttribute(serverErrorMarker, '');
+    node.addEventListener('click', hideServerError);
+    document.body.appendChild(node);
+}
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') hideServerError();
+});
+
 const viteOverlay = Promise.race([
     customElements.whenDefined('vite-error-overlay'),
     new Promise((resolve) => setTimeout(resolve, 3000))
@@ -294,7 +332,9 @@ function startPanel() {
         draw();
     };
     source.onmessage = (event) => {
-        entries.push(JSON.parse(event.data));
+        const entry = JSON.parse(event.data);
+        if (features.has('errors') && entry.error && seenCalls.has(entry.id)) showServerError(entry);
+        entries.push(entry);
         if (entries.length > 100) entries.shift();
         draw();
     };
