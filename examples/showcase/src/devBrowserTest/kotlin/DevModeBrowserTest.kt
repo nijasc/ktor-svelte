@@ -546,6 +546,26 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel shows versions, health, the dev proxy and the settings in plain rows`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".status summary").click()
+        val rows = panel.locator(".status-row")
+
+        fun row(label: String) = rows.filter(Locator.FilterOptions().setHas(panel.getByText(label, Locator.GetByTextOptions().setExact(true))))
+        assertThat(row("ktor-svelte")).containsText(Pattern.compile("\\d+\\.\\d+"))
+        assertThat(row("Java")).containsText(System.getProperty("java.version").substringBefore('.'))
+        assertThat(row("health")).hasText("healthup")
+        assertThat(row("health")).hasClass(Pattern.compile("\\bok\\b"))
+        assertThat(row("dev reachable")).containsText("true")
+        assertThat(row("refusals rateLimit")).containsText("0")
+        assertThat(row("API prefixes")).containsText("/api")
+        assertThat(row("Named rate limits")).containsText("login")
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
