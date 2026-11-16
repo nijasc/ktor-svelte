@@ -82,7 +82,8 @@ internal fun assistantGuide(
                 if (spec.i18n != null) {
                     add(
                         "Texts: add the key to every file in `messages/` (${spec.i18n.locales.joinToString { "`$it.json`" }}), run " +
-                            "`./gradlew svelteSync`, then use `m.key()` from `#i18n`. Wrap page links in `localizeHref`. " +
+                            "`./gradlew svelteSync`, then use `m.key()` from `#i18n`. " +
+                            (if (spec.routes) "" else "Wrap page links in `localizeHref`. ") +
                             "Do not put user-visible text into components directly.",
                     )
                 }
