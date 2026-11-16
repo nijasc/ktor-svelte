@@ -798,6 +798,44 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `descriptions and deprecations of schemas and their fields become JSDoc`() {
+        val source =
+            types(
+                """
+                {"Note":{"type":"object","description":"A note someone wrote.","required":["id","title"],"properties":{
+                    "id":{"type":"integer"},
+                    "title":{"type":"string","description":"Shown in lists.\nAt most 80 characters."},
+                    "body":{"type":"string","deprecated":true},
+                    "color":{"type":"string","description":"Use tags instead.","deprecated":true},
+                    "author":{"type":"object","description":"Who wrote it.","properties":{"name":{"type":"string","description":"Display name."}}}
+                }},
+                "Legacy":{"type":"object","deprecated":true,"properties":{"id":{"type":"integer"}}},
+                "Plain":{"type":"object","properties":{"id":{"type":"integer","description":"  "}}}}
+                """.trimIndent(),
+            )
+        assertContains(source, "/** A note someone wrote. */\nexport interface Note {\n    id: number;\n")
+        assertContains(source, "    /**\n     * Shown in lists.\n     * At most 80 characters.\n     */\n    title: string;\n")
+        assertContains(source, "    /** @deprecated */\n    body?: string;\n")
+        assertContains(source, "    /**\n     * Use tags instead.\n     *\n     * @deprecated\n     */\n    color?: string;\n")
+        assertContains(source, "    /** Who wrote it. */\n    author?: {\n        /** Display name. */\n        name?: string;\n    };\n")
+        assertContains(source, "/** @deprecated */\nexport interface Legacy {")
+        assertContains(source, "export interface Plain {\n    id?: number;\n}")
+    }
+
+    @Test
+    fun `a deprecated route is deprecated in the client`() {
+        val source =
+            services(
+                """
+                {"/api/notes":{"get":{"summary":"Lists notes.","deprecated":true,"responses":{"200":{"description":"ok"}}},
+                "post":{"deprecated":false,"responses":{"201":{"description":"ok"}}}}}
+                """.trimIndent(),
+            )
+        assertContains(source, "/**\n * Lists notes.\n *\n * @deprecated\n */\nexport const notesList =")
+        assertContains(source, "});\nexport const notesCreate =")
+    }
+
+    @Test
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")

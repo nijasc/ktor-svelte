@@ -82,10 +82,12 @@ export const Greeting = {
     }),
 };
 
+/** A note with its tags and its icon. */
 export interface Note {
     id: number;
     title: string;
     body: string;
+    /** Lowercase words the list can be filtered by. */
     tags: string[];
     status: Status;
     icon: LucideIcon;

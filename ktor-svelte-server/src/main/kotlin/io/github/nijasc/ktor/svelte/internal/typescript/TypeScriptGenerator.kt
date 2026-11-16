@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -199,17 +200,20 @@ internal class TypeScriptGenerator(
         references: MutableSet<String>,
         schemas: Map<String, JsonElement>,
     ): String {
+        val docs = jsDoc(schemaDocs(schema), "")
         val enumValues = enumValues(schema)
-        if (enumValues != null && schema["enum"]?.jsonArray?.none { it is JsonNull } == true) return enumDeclaration(name, enumValues)
+        if (enumValues != null && schema["enum"]?.jsonArray?.none { it is JsonNull } == true) {
+            return docs + enumDeclaration(name, enumValues)
+        }
         if (hasEmptyFactory(schema)) {
-            return "export interface $name ${objectBody(schema, references, indent = "")}\n\n" +
+            return docs + "export interface $name ${objectBody(schema, references, indent = "")}\n\n" +
                 "export const $name = {\n" +
                 "    empty: (): $name => (${emptyObject(schema, schemas, "    ", emptySet())}),\n" +
                 boundsSource(schema) +
                 validateSource(name, schema, schemas) +
                 "};\n"
         }
-        val union = "export type $name = ${tsType(schema, references)};\n"
+        val union = docs + "export type $name = ${tsType(schema, references)};\n"
         return union + (discriminatedCompanion(name, schema, schemas) ?: "")
     }
 
@@ -622,7 +626,8 @@ internal class TypeScriptGenerator(
         val lines =
             schema.objectAt("properties").orEmpty().map { (name, value) ->
                 val optional = if (name in required) "" else "?"
-                "$indent    ${propertyKey(name)}$optional: ${tsType(value.jsonObject, references, "$indent    ")};"
+                jsDoc(schemaDocs(value.jsonObject), "$indent    ") +
+                    "$indent    ${propertyKey(name)}$optional: ${tsType(value.jsonObject, references, "$indent    ")};"
             }
         return (listOf("{") + lines + "$indent}").joinToString("\n")
     }
@@ -856,7 +861,11 @@ internal class TypeScriptGenerator(
                 listOfNotNull(operation.stringAt("summary"), operation.stringAt("description"))
                     .map(String::trim)
                     .filter(String::isNotEmpty)
-                    .distinct() + listOfNotNull(routeFiles["${method.uppercase()} $path"]?.let { "@see $it" }),
+                    .distinct() +
+                    listOfNotNull(
+                        DEPRECATED_TAG.takeIf { operation.isDeprecated() },
+                        routeFiles["${method.uppercase()} $path"]?.let { "@see $it" },
+                    ),
             parameters = pathParameters,
             source = { key ->
                 val arguments = (extras + "operation: '$key'").joinToString()
@@ -967,6 +976,9 @@ internal class TypeScriptGenerator(
         }
     }
 
+    private fun schemaDocs(schema: JsonObject): List<String> =
+        listOfNotNull(schema.stringAt("description")?.trim()?.ifEmpty { null }, DEPRECATED_TAG.takeIf { schema.isDeprecated() })
+
     private fun jsDoc(
         lines: List<String>,
         indent: String,
@@ -1042,6 +1054,10 @@ private fun quoted(value: String): String =
         }
         append('\'')
     }
+
+private const val DEPRECATED_TAG = "@deprecated"
+
+private fun JsonObject.isDeprecated(): Boolean = (this["deprecated"] as? JsonPrimitive)?.booleanOrNull == true
 
 private fun JsonObject.objectAt(key: String): JsonObject? = this[key] as? JsonObject
 
