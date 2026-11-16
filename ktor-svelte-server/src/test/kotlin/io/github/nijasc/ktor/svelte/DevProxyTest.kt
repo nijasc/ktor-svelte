@@ -261,6 +261,50 @@ class DevProxyTest {
         }
 
     @Test
+    fun `the dev status has versions, health, the status and the settings, for this machine only`() =
+        testApplication {
+            application {
+                install(Svelte) {
+                    healthCheck { false }
+                    dev {
+                        url = viteUrl
+                        mode = DevMode.Always
+                    }
+                }
+            }
+            val response = client.get("/_ktor-svelte/dev/status")
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("no-store", response.headers[HttpHeaders.CacheControl])
+            val status = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val versions = status.getValue("versions").jsonObject
+            assertTrue(
+                versions
+                    .getValue("ktor-svelte")
+                    .jsonPrimitive.content
+                    .isNotEmpty(),
+            )
+            assertEquals(KotlinVersion.CURRENT.toString(), versions.getValue("Kotlin").jsonPrimitive.content)
+            assertEquals(System.getProperty("java.version"), versions.getValue("Java").jsonPrimitive.content)
+            assertEquals("down", status.getValue("health").jsonPrimitive.content)
+            assertEquals(
+                "true",
+                status
+                    .getValue("status")
+                    .jsonObject
+                    .getValue("dev")
+                    .jsonObject
+                    .getValue("proxy")
+                    .jsonPrimitive.content,
+            )
+            val settings = status.getValue("settings").jsonArray.map { it.jsonPrimitive.content }
+            assertTrue(settings.any { it.startsWith("API prefixes: ") }, settings.toString())
+            assertTrue(settings.none { it.startsWith(" ") })
+
+            val remote = client.get("/_ktor-svelte/dev/status") { header(HttpHeaders.XForwardedFor, "203.0.113.9") }
+            assertEquals(HttpStatusCode.Forbidden, remote.status)
+        }
+
+    @Test
     fun `the dev panel can be turned off`() =
         testApplication {
             application {

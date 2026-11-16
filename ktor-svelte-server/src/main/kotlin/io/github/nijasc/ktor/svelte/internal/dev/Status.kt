@@ -3,6 +3,10 @@ package io.github.nijasc.ktor.svelte.internal.dev
 import io.github.nijasc.ktor.svelte.SvelteMetrics
 import io.github.nijasc.ktor.svelte.internal.assets.MANIFEST_FORMAT_VERSION
 import io.github.nijasc.ktor.svelte.internal.assets.Manifest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.security.MessageDigest
@@ -50,3 +54,25 @@ internal suspend fun statusJson(
             },
         )
     }.toString()
+
+internal fun devStatus(
+    status: String,
+    health: Boolean?,
+    settings: List<String>,
+    versions: Map<String, String?>,
+    build: Map<String, String?>,
+): JsonObject =
+    buildJsonObject {
+        put("versions", buildJsonObject { versions.forEach { (name, version) -> if (version != null) put(name, version) } })
+        put("app", buildJsonObject { build.forEach { (name, value) -> if (value != null) put(name, value) } })
+        put(
+            "health",
+            when (health) {
+                null -> "no health checks"
+                true -> "up"
+                false -> "down"
+            },
+        )
+        put("status", Json.parseToJsonElement(status))
+        put("settings", buildJsonArray { settings.forEach { add(JsonPrimitive(it.trim())) } })
+    }
