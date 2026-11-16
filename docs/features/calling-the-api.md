@@ -183,6 +183,27 @@ src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  use apiWith(even
 
 It is not part of `check`. The [lint rule](./frontend-libraries.md#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.
 
+## Refresh the page after a write
+
+After you create, change or delete something, the lists and details on the page are out of date. Tell the client what to do after a successful write, once, in your root layout, and every page keeps itself current:
+
+```ts no-check
+import { refreshAll } from '$app/navigation';
+import { apiConfig } from '#api';
+
+apiConfig.onWrite = () => void refreshAll();
+```
+
+`onWrite` runs after every POST, PUT, PATCH and DELETE that succeeds, and `refreshAll` reruns the `load` functions of the page you are on. Writes that finish together, such as three calls in a `Promise.all`, cause one refresh, not three. A failed write does not trigger it, and neither does a read.
+
+A call that should not refresh the page, such as saving a draft while the user types, opts out:
+
+```ts no-check
+await api.notes.update(id, draft, { refresh: false });
+```
+
+The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
+
 ## Show errors automatically
 
 Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:

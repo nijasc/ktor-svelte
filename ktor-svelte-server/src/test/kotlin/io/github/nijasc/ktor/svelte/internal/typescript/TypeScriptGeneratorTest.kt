@@ -850,6 +850,14 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client reports successful writes to a hook`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "    onWrite?: () => void;")
+        assertContains(client, "    refresh?: boolean;")
+        assertContains(client, "noticeWrite(method, options);")
+    }
+
+    @Test
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")

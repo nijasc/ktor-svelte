@@ -92,4 +92,17 @@ class GeneratedClientBehaviourTest {
         assertEquals("false", result("zoneStaysHome"))
         assertEquals("Asia/Tokyo", result("ownZoneHeaderWins"))
     }
+
+    @Test
+    fun `a successful write is noticed once, so the page can load its data again`() {
+        val results = runHarness()
+
+        fun result(name: String) = results.getValue(name).jsonPrimitive.content
+        assertEquals("1", result("writeIsNoticed"))
+        assertEquals("0", result("readIsNotNoticed"))
+        assertEquals("0", result("failedWriteIsNotNoticed"))
+        assertEquals("0", result("oneCallCanStayQuiet"))
+        assertEquals("1", result("writesTogetherAreNoticedOnce"))
+        assertEquals("ok {\"status\":200}", result("brokenHandlerDoesNotFailTheCall"))
+    }
 }
