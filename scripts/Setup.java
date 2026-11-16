@@ -128,6 +128,7 @@ public class Setup {
         Files.writeString(directory.resolve(".env.example"), envExample(name, auth, database));
         if (auth || database) Files.writeString(directory.resolve(".env"), localEnv(name, auth, database));
         Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker));
+        if (tailwind || lucide || i18n) Files.writeString(directory.resolve("AGENTS.md"), ASSISTANT_NOTES);
         Path source = flatPackages ? directory.resolve("src/main/kotlin") : directory.resolve("src/main/kotlin").resolve(packageName.replace('.', '/'));
         Files.createDirectories(source);
         Files.writeString(source.resolve("Application.kt"), application(packageName, generateTs, auth, database));
@@ -1377,6 +1378,13 @@ public class Setup {
           "plugins": ["prettier-plugin-svelte"],
           "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
         }
+        """;
+
+    private static final String ASSISTANT_NOTES = """
+        # Notes for coding assistants
+
+        Read `frontend/src/lib/ktor-svelte/AGENTS.md` before changing anything. It is generated and always current. It says how the
+        frontend calls the backend, which files are generated and must not be edited, and which commands to run.
         """;
 
     private static final String PRETTIER_IGNORE = """
