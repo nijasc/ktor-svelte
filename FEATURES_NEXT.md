@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 79 | Cookie and session inspector |  |
+| 85 | Cookie consent helper |  |
 
 ### In review
 
@@ -56,6 +56,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 20 | Shared constants | #271 |
 | 73 | Typed error codes | #272 |
 | 62 | Typed cookies | #273 |
+| 79 | Cookie and session inspector | #274 |
 
 ### Next up
 
@@ -116,7 +117,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 85 | Cookie consent helper | Medium | 4 |
 | 63 | Field component | Medium | 5 |
 | 64 | Inputs for dates and enums | Medium | 5 |
 | 65 | Data table for paged routes | Medium | 5 |

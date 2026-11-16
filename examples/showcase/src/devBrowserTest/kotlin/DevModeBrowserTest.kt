@@ -573,6 +573,38 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
+        page.navigate("/board")
+        assertThat(page).hasURL(Pattern.compile(".*/login$"))
+        assertThat(page.getByRole(AriaRole.BANNER).getByRole(AriaRole.LINK).last()).hasText("Sign in")
+        page.getByLabel("Email").fill(ADMIN_EMAIL)
+        page.getByLabel("Password").fill(ADMIN_PASSWORD)
+        page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
+        assertThat(page).hasURL(Pattern.compile(".*/board$"))
+        page.locator("#mine").check()
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".cookies summary").click()
+        val rows = panel.locator(".cookies-row")
+
+        fun row(name: String) = rows.filter(Locator.FilterOptions().setHasText(Pattern.compile("^$name"))).first()
+        assertThat(row("board-mine")).containsText("reads as true")
+        assertThat(row("board-mine")).containsText("true | false; kept 90 days, path /, SameSite=Lax")
+        assertThat(row("showcase_session")).containsText("session: UserSession(")
+        assertThat(panel.locator(".cookies-note")).containsText("sent with each request.")
+
+        row("board-mine").getByRole(AriaRole.BUTTON).click()
+        assertThat(row("board-mine")).containsText("not set, reads as false")
+        assertThat(panel.locator(".cookies-note")).containsText("Reload the page to see it without board-mine.")
+
+        panel.locator(".cookies-clear").click()
+        assertThat(panel.locator(".cookies-note")).containsText("Reload the page to see it without them.")
+        assertThat(row("showcase_session")).hasCount(0)
+        page.reload()
+        assertThat(page).hasURL(Pattern.compile(".*/login$"))
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
