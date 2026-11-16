@@ -81,6 +81,17 @@ export const errorMessages = {
     failed: 'Something went wrong. Please try again.'
 };
 
+export interface VersionConflict<T = unknown> {
+    message: string;
+    code: 'version.conflict';
+    current: T;
+}
+
+export function isVersionConflict<T = unknown>(error: unknown): error is ApiError<VersionConflict<T>> {
+    if (!(error instanceof ApiError) || error.status !== 409 || typeof error.body !== 'object' || error.body === null) return false;
+    return (error.body as { code?: unknown }).code === 'version.conflict' && 'current' in error.body;
+}
+
 export const codeMessages: Record<string, string | (() => string) | undefined> = {};
 
 export function errorCode(error: unknown): string | undefined {

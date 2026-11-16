@@ -6,6 +6,7 @@
         CommentInput,
         field,
         isValidationError,
+        isVersionConflict,
         isUploadError,
         Role,
         Status,
@@ -33,6 +34,7 @@
     let attachments = $derived<Attachment[]>(data.attachments);
     let activity = $derived<Activity[]>(data.activity);
     let editing = $state(false);
+    let theirs = $state<Task | undefined>(undefined);
     let draft = $state<TaskInput>(TaskInput.empty());
     let errors = $state<Record<string, string[]>>({});
     let comment = $state(CommentInput.empty());
@@ -63,10 +65,25 @@
             labels: [...task.labels],
             icon: task.icon,
             assigneeId: task.assignee?.id ?? null,
-            dueOn: task.dueOn ?? null
+            dueOn: task.dueOn ?? null,
+            version: task.version
         };
         errors = {};
+        theirs = undefined;
         editing = true;
+    }
+
+    function loadTheirs() {
+        if (!theirs) return;
+        task = theirs;
+        startEditing();
+    }
+
+    function saveMine() {
+        if (!theirs) return;
+        draft.version = theirs.version;
+        theirs = undefined;
+        return save();
     }
 
     async function save() {
@@ -74,12 +91,13 @@
         if (Object.keys(errors).length > 0) return;
         busy = true;
         try {
-            task = await api.tasks.update(task.id, draft);
+            task = await api.tasks.update(task.id, draft, { silent: true });
             editing = false;
             toast(m.taskSaved(), { kind: 'success' });
         } catch (error) {
-            if (!isValidationError(error)) throw error;
-            errors = error.body.fields;
+            if (isValidationError(error)) errors = error.body.fields;
+            else if (isVersionConflict<Task>(error)) theirs = error.body.current;
+            else toastApiError(error);
         } finally {
             busy = false;
         }
@@ -153,6 +171,13 @@
 
 {#if editing}
     <h1 class="mb-6 text-3xl font-bold">{m.taskEdit()}</h1>
+    {#if theirs}
+        <div id="conflict" class="alert alert-warning mb-4 flex-wrap" role="alert">
+            <span>{m.problemTaskChanged()}</span>
+            <button class="btn btn-sm" type="button" onclick={loadTheirs}>{m.conflictReload()}</button>
+            <button class="btn btn-sm" type="button" onclick={saveMine}>{m.conflictOverwrite()}</button>
+        </div>
+    {/if}
     <TaskForm bind:draft {errors} members={data.members} submitLabel={m.taskSave()} {busy} onsubmit={save} />
     <button class="btn btn-ghost mt-2" type="button" onclick={() => (editing = false)}>{m.actionCancel()}</button>
 {:else}

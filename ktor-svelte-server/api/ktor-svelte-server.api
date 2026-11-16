@@ -465,6 +465,42 @@ public final class io/github/nijasc/ktor/svelte/Validator {
 	public final fun check (Lkotlin/reflect/KProperty0;ZLkotlin/jvm/functions/Function0;)V
 }
 
+public final class io/github/nijasc/ktor/svelte/VersionConflict {
+	public static final field Companion Lio/github/nijasc/ktor/svelte/VersionConflict$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Lio/github/nijasc/ktor/svelte/VersionConflict;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/VersionConflict;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/VersionConflict;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCode ()Ljava/lang/String;
+	public final fun getCurrent ()Ljava/lang/Object;
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/VersionConflict$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public fun <init> (Lkotlinx/serialization/KSerializer;)V
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lio/github/nijasc/ktor/svelte/VersionConflict;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lio/github/nijasc/ktor/svelte/VersionConflict;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/VersionConflict$Companion {
+	public final fun serializer (Lkotlinx/serialization/KSerializer;)Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/VersionsKt {
+	public static final field VERSION_CONFLICT_CODE Ljava/lang/String;
+	public static final field VERSION_CONFLICT_MESSAGE Ljava/lang/String;
+}
+
 public final class io/github/nijasc/ktor/svelte/internal/dev/ExposedSqlCounter : org/jetbrains/exposed/v1/core/statements/GlobalStatementInterceptor {
 	public fun <init> ()V
 	public fun afterCommit (Lorg/jetbrains/exposed/v1/core/Transaction;)V

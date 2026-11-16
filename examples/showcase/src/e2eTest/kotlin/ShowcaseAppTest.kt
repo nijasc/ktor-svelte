@@ -249,6 +249,21 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `saving a task with an old version is answered with the current one`() {
+        val created = member.send("POST", "/api/tasks", """{"title":"Versioned"}""")
+        val id = id(created)
+        val version = Regex(""""version":(\d+)""").find(created.body())!!.groupValues[1]
+        Thread.sleep(5)
+        val first = member.send("PUT", "/api/tasks/$id", """{"title":"Theirs","version":$version}""")
+        assertEquals(200, first.statusCode())
+
+        val stale = member.send("PUT", "/api/tasks/$id", """{"title":"Mine","version":$version}""")
+        assertEquals(409, stale.statusCode())
+        assertContains(stale.body(), """"message":"Someone else changed this task while you were editing it.","code":"version.conflict","current":{"id":$id,"title":"Theirs"""")
+        assertEquals(200, member.send("PUT", "/api/tasks/$id", """{"title":"No version sent"}""").statusCode())
+    }
+
+    @Test
     fun `an id that is a value class in Kotlin is its own type in the generated client`() {
         val types = File("frontend/src/lib/api/types.ts").readText().replace("\r\n", "\n")
         assertContains(types, "export type AttachmentId = number & { readonly [brand]: 'AttachmentId' };")
