@@ -6158,6 +6158,10 @@
                     }
                 }
             },
+            "AttachmentId": {
+                "type": "integer",
+                "title": "AttachmentId"
+            },
             "Attachment": {
                 "type": "object",
                 "title": "Attachment",
@@ -6172,7 +6176,7 @@
                 ],
                 "properties": {
                     "id": {
-                        "type": "integer"
+                        "$ref": "#/components/schemas/AttachmentId"
                     },
                     "taskId": {
                         "type": "integer"
