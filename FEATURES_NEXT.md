@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-One hundred and five features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+One hundred and nine features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## What matters most
 
@@ -127,6 +127,10 @@ The most important thing is to make what a developer does a hundred times easier
 | 103 | Editor-time lint rules | Generated files | Medium | 4, #202 |
 | 104 | Generated files never conflict | Gradle plugin | Medium | #205 |
 | 105 | HTTPS in development | Server and Gradle plugin | Medium | |
+| 106 | Navigation progress bar | Generated files | Small | |
+| 107 | Browser test recorder | Test kit | Medium | 30 |
+| 108 | Charts preset | Gradle plugin | Medium | |
+| 109 | Protect internal endpoints | Server | Small | |
 
 ## What each one does
 
@@ -343,18 +347,25 @@ The most important thing is to make what a developer does a hundred times easier
 104. **Generated files never conflict.** A git merge driver for the generated folders: on a merge or a rebase the files are regenerated instead of producing conflicts.
 105. **HTTPS in development.** `dev { https = true }` serves the dev app over HTTPS with a locally trusted certificate, for secure cookies, service workers and sign-in providers that require it.
 
+### Late additions
+
+106. **Navigation progress bar.** A thin bar at the top of the page while SvelteKit navigates or a load function runs, generated with the app's theme colors.
+107. **Browser test recorder.** Click through the running app and get the steps written as a Kotlin browser test with typed routes, as a starting point to edit.
+108. **Charts preset.** `libraries { charts() }` sets up a Svelte chart library with the DaisyUI theme colors wired in, light and dark, and typed series helpers.
+109. **Protect internal endpoints.** One setting puts the status endpoint, the API docs and metrics behind a token, a role or a private network range, instead of each being open or off.
+
 ## Order
 
 1. The route check group (1, 2, 3), then renaming a page (91) and the editor-time lint rules (103), because all of them build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68, 70, 76, 83, 84, 88, 90, 97, 98, 100, 101, 102, 104). Each is a self-contained pull request.
+2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68, 70, 76, 83, 84, 88, 90, 97, 98, 100, 101, 102, 104, 109). Each is a self-contained pull request.
 3. The client helper and the dev panel group (11 to 14, then 89, 93, 38, 39, 40, 51, 58, 74, 75, 78, 80, 99).
 4. The server talks to the UI (25, 26, 27), shared constants (20), typed error codes (73) and typed cookies (62), then the cookie inspector (79) and the consent helper (85), which read the declared cookies. They share one mechanism: the server says something once, and the generated client acts on it.
-5. Generated UI building blocks (63, 64, 65, 69, 94) and server checks while typing (71). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
+5. Generated UI building blocks (63, 64, 65, 69, 94, 106) and server checks while typing (71). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
 6. Richer shared types (31, 32, 33, 43, 44), the file drop zone (95), query parameters as a data class (86), the Exposed helpers (92), idempotency keys (72) and declared environment variables (37), then the secret leak check (46) and the deploy presets (82), which read that declaration.
-7. Languages (49, 50, 96), self-hosted fonts (59), the API change report (48) and the production smoke test (81).
+7. Languages (49, 50, 96), self-hosted fonts (59), the charts preset (108), the API change report (48) and the production smoke test (81).
 8. One login (21, then 87, 24, 67, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
 9. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16), page metadata for sharing (77), generated page loads (28) and inline page data (66). All of them change how a route or a page is described, so they are designed together.
-10. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30) and the accessibility check (47), which runs on the test kit's browser.
+10. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30), then the test recorder (107) and the accessibility check (47), which run on the test kit's browser.
 11. HTTPS in development (105), the installable app (52), which needs it for testing, and emails from Svelte components (61).
 12. Multiple frontends (60). It changes the one-frontend, one-manifest assumption the whole project rests on, so it is a candidate for 2.0 and not for a minor release.
 13. `svelteUpgrade` (17) last.
@@ -435,6 +446,10 @@ Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 11 are enough for 1.3.0 th
 | Editor-time lint rules | How do they reach the editor? | As a small local ESLint plugin in the generated folder. New projects get it wired into `eslint.config.js`, and existing ones add one line, because the plugin never edits that file. The rules share their logic with tasks 4 and `svelteVerifyRoutes`, so both always agree. |
 | Generated files never conflict | Can that be committed? | Only half. `.gitattributes` names the merge driver, but git reads the driver itself from each clone's own config, so a task installs it per clone, together with the pre-commit hook (56). Without it, git behaves as it does today. |
 | HTTPS in development | Who trusts the certificate? | Open. The plugin can create a local certificate authority in the user's home folder, but adding it to the system trust store needs the user's approval, and on a managed machine it may not be allowed. The task must explain the step, not perform it silently. |
+| Navigation progress bar | Part of the components library? | Yes, generated with `libraries { components() }`. |
+| Browser test recorder | Is the recorder written from scratch? | No. It wraps the recorder of the browser automation library the test kit uses, and only translates the result into the kit's Kotlin calls and typed routes. |
+| Charts preset | Which chart library? | Open. It must support Svelte 5, read colors from CSS variables so the DaisyUI themes apply, and be small. The choice is made when the feature is built, and the plugin pins its version like every other library. |
+| Protect internal endpoints | What is the default? | Nothing changes for existing apps. When turned on, a token from an environment variable is the default, because it works on every host. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -476,6 +491,14 @@ These were offered and not chosen for 1.2.0:
 - Dev panel: filtering and searching requests, the call site of each request, a response diff after a change, a keyboard shortcut and remembered layout.
 - Renames and cleanup: renaming a message key, removing unused messages, sorted locale files, a report of unused pages and components.
 - When something goes wrong: doctor checks on task failure, a response shape check in development, the closest route on an API 404, a warning for unhandled API errors.
+- Sign-in: password reset and email verification flows, social sign-in, login attempt throttling, a nav list that respects permissions.
+- Lists and feedback: infinite scroll for paged routes, CSV export of a paged route, toasts with actions and progress.
+- Look and assets: your own typed SVG icons, a favicon set from one SVG, an app shell scaffold, view transitions.
+- Kotlin side: feature flags, an audit log hook, request context in every log line, signed links.
+- Testing: tests without a frontend build, signing in as a user in tests, API examples taken from tests.
+- Build and delivery: a build cache for the frontend build, assets from a CDN, loading only the visitor's language.
+- Production: graceful shutdown, a JSON logs preset, deprecation headers.
+- Upkeep: upgrade codemods, export and import of translations, a component error boundary, a license report.
 
 ## Release
 
