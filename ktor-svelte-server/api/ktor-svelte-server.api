@@ -108,6 +108,11 @@ public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/E
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 }
 
+public final class io/github/nijasc/ktor/svelte/StartupStepsKt {
+	public static final fun recordStartupStep (Lio/ktor/server/application/Application;Ljava/lang/String;J)V
+	public static final fun startupStep (Lio/ktor/server/application/Application;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+}
+
 public final class io/github/nijasc/ktor/svelte/SvelteCacheConfig {
 	public final fun getHtml ()Ljava/lang/String;
 	public final fun getImmutable ()Ljava/lang/String;
@@ -190,6 +195,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun getPanel ()Z
 	public final fun getRefreshAfterRestart ()Z
 	public final fun getSlowApiCall-FghU774 ()Lkotlin/time/Duration;
+	public final fun getStartupTiming ()Z
 	public final fun getUrl ()Ljava/lang/String;
 	public final fun setAllowRemote (Z)V
 	public final fun setBrowserLogs (Z)V
@@ -197,6 +203,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun setPanel (Z)V
 	public final fun setRefreshAfterRestart (Z)V
 	public final fun setSlowApiCall-BwNAW2A (Lkotlin/time/Duration;)V
+	public final fun setStartupTiming (Z)V
 	public final fun setUrl (Ljava/lang/String;)V
 }
 
