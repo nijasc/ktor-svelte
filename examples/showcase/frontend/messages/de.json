@@ -93,6 +93,7 @@
   "board-moved": "{title} ist jetzt {status}.",
   "task-create": "Aufgabe anlegen",
   "task-created": "Aufgabe angelegt.",
+  "task-discard": "Änderungen verwerfen",
   "task-edit": "Bearbeiten",
   "task-save": "Speichern",
   "task-saved": "Gespeichert.",

@@ -238,6 +238,30 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a form knows when it has changes and can discard them and its errors`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/tasks/new")
+        val discard = page.button("Discard changes")
+        assertThat(discard).isDisabled()
+
+        page.button("Create task").click()
+        assertThat(page.getByRole(AriaRole.ALERT)).hasText("Must be at least 1 character.")
+        assertThat(discard).isDisabled()
+
+        page.getByLabel("Title").fill("Typed and thrown away")
+        assertThat(discard).isEnabled()
+        page.getByLabel("Title").fill("")
+        assertThat(discard).isDisabled()
+
+        page.getByLabel("Title").fill("Typed and thrown away")
+        discard.click()
+        assertThat(page.getByLabel("Title")).hasValue("")
+        assertThat(page.getByRole(AriaRole.ALERT)).hasCount(0)
+        assertThat(discard).isDisabled()
+        assertThat(page).hasURL(Pattern.compile(".*/tasks/new$"))
+    }
+
+    @Test
     fun `a task that does not exist shows the error page`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/tasks/999999")

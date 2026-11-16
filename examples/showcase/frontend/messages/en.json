@@ -93,6 +93,7 @@
   "board-moved": "{title} is now {status}.",
   "task-create": "Create task",
   "task-created": "Task created.",
+  "task-discard": "Discard changes",
   "task-edit": "Edit",
   "task-save": "Save",
   "task-saved": "Saved.",
