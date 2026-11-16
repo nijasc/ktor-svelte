@@ -3312,7 +3312,20 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "multipart/form-data": {}
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "file"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 "responses": {
