@@ -1,5 +1,6 @@
 package showcase
 
+import io.github.nijasc.ktor.svelte.respondError
 import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
 import io.ktor.http.HttpStatusCode
@@ -100,7 +101,7 @@ fun Route.sessionRoutes(
             if (!registrationOpen) return@post call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemRegistrationClosed()))
             val registration = call.receive<Registration>()
             val user: User? = users.create(registration.email, registration.name, registration.password, Role.MEMBER)
-            if (user == null) return@post call.respond(HttpStatusCode.Conflict, Problem(call.messages.problemEmailTaken()))
+            if (user == null) return@post call.respondError(AccountError.EmailTaken, HttpStatusCode.Conflict)
             call.sessions.set(UserSession(user.id))
             call.respond(HttpStatusCode.Created, user)
         }
@@ -129,7 +130,7 @@ fun Route.sessionRoutes(
                 if (users.changePassword(call.currentUser(users).id, change.current, change.next)) {
                     call.respond(HttpStatusCode.NoContent)
                 } else {
-                    call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemWrongPassword()))
+                    call.respondError(AccountError.WrongPassword, HttpStatusCode.Forbidden)
                 }
             }
         }
@@ -158,7 +159,7 @@ fun Route.adminRoutes(users: UserStore) {
                 val target = users.find(call.userId())
                 if (target == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
                 if (target.role == Role.ADMIN && change.role != Role.ADMIN && target.active && users.admins() <= 1) {
-                    return@put call.respond(HttpStatusCode.Conflict, Problem(call.messages.problemLastAdmin()))
+                    return@put call.respondError(AccountError.LastAdmin, HttpStatusCode.Conflict)
                 }
                 val user: User? = users.setRole(target.id, change.role)
                 if (user == null) call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser())) else call.respond(user)
@@ -169,7 +170,7 @@ fun Route.adminRoutes(users: UserStore) {
                 val target = users.find(call.userId())
                 if (target == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
                 if (target.role == Role.ADMIN && target.active && !change.active && users.admins() <= 1) {
-                    return@put call.respond(HttpStatusCode.Conflict, Problem(call.messages.problemLastAdmin()))
+                    return@put call.respondError(AccountError.LastAdmin, HttpStatusCode.Conflict)
                 }
                 val user: User? = users.setActive(target.id, change.active)
                 if (user == null) call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser())) else call.respond(user)

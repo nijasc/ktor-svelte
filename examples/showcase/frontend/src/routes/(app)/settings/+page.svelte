@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { api, field, isApiError, isValidationError, PasswordChange, ProfileInput } from '#api';
+    import { api, ErrorCode, field, hasErrorCode, isValidationError, PasswordChange, ProfileInput } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
@@ -40,7 +40,7 @@
             toast(m.settingsPasswordChanged(), { kind: 'success' });
         } catch (error) {
             if (isValidationError(error)) passwordErrors = error.body.fields;
-            else if (isApiError(error, 'me.putPassword')) passwordErrors = { current: [error.body.message] };
+            else if (hasErrorCode(error, ErrorCode.WrongPassword)) passwordErrors = { current: [error.body.message] };
             else throw error;
         }
     }

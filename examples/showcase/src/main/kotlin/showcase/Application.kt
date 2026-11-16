@@ -4,6 +4,7 @@ import io.github.nijasc.ktor.svelte.Svelte
 import io.github.nijasc.ktor.svelte.SvelteRouting
 import io.github.nijasc.ktor.svelte.startupStep
 import io.github.nijasc.ktor.svelte.svelte
+import io.github.nijasc.ktorsvelte.messages
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
@@ -59,6 +60,13 @@ fun Application.module() {
         healthEndpoint = true
         healthCheck { database.isReachable() }
         constants(BoardLimits)
+        errorCodes<AccountError> { call, code ->
+            when (code) {
+                AccountError.EmailTaken -> call.messages.problemEmailTaken()
+                AccountError.WrongPassword -> call.messages.problemWrongPassword()
+                AccountError.LastAdmin -> call.messages.problemLastAdmin()
+            }
+        }
         siteUrl = System.getenv("SHOWCASE_SITE_URL")
         maxApiBodySize = MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES
         paramRoutes("/tasks/[id]")
