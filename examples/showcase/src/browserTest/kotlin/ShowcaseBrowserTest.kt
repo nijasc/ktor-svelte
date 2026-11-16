@@ -490,6 +490,19 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the generated switches list the themes and name each language in its own words`() {
+        page.navigate("/about")
+        assertThat(page.getByLabel("Language").locator("option")).hasText(arrayOf("English", "Deutsch"))
+        assertThat(page.getByLabel("Language")).hasValue("en")
+        val themes = page.getByLabel("Theme")
+        assertThat(themes.locator("option")).hasCount(5)
+        themes.selectOption("nord")
+        assertThat(page.locator("html")).hasAttribute("data-theme", "nord")
+        page.reload()
+        assertThat(page.getByLabel("Theme")).hasValue("nord")
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

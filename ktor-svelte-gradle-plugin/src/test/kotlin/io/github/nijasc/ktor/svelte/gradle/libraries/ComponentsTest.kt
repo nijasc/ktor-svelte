@@ -135,6 +135,33 @@ class ComponentsTest {
     }
 
     @Test
+    fun `the theme and language switches exist only when there is something to switch`() {
+        val i18n = I18nSpec(listOf("en", "de"), "en", io.github.nijasc.ktor.svelte.gradle.LocaleStrategy.Cookie)
+        val plain = componentFiles(spec(components = true))
+        assertFalse("$COMPONENTS_DIR/ThemeToggle.svelte" in plain)
+        assertFalse("$COMPONENTS_DIR/LocaleSwitch.svelte" in plain)
+
+        val themed = componentFiles(spec(components = true, withDaisy = true))
+        val toggle = themed.getValue("$COMPONENTS_DIR/ThemeToggle.svelte")
+        assertContains(toggle, "import { defaultTheme, getTheme, setTheme, themes, type ThemeName } from '../theme.js';")
+        assertContains(toggle, "{#if all.length === 2}")
+        assertFalse("$COMPONENTS_DIR/LocaleSwitch.svelte" in themed)
+
+        val translated = componentFiles(spec(components = true).copy(i18n = i18n))
+        val switch = translated.getValue("$COMPONENTS_DIR/LocaleSwitch.svelte")
+        assertContains(switch, "import { defaultLocale, getLocale, locales, setLocale, type Locale } from '../i18n.js';")
+        assertContains(switch, "new Intl.DisplayNames([of], { type: 'language' }).of(of) ?? of")
+        assertContains(switch, "class={['ktor-svelte-locale-switch', className]}")
+        assertFalse("$COMPONENTS_DIR/ThemeToggle.svelte" in translated)
+        val both = componentFiles(spec(components = true, withDaisy = true).copy(i18n = i18n))
+        assertContains(both.getValue("$COMPONENTS_DIR/LocaleSwitch.svelte"), "class={['select select-sm', className]}")
+        val guide = assistantGuide(spec(components = true, withDaisy = true).copy(i18n = i18n), null)
+        assertContains(guide, "`ThemeToggle.svelte`")
+        assertContains(guide, "`LocaleSwitch.svelte`")
+        assertFalse("ThemeToggle" in assistantGuide(spec(components = true), null))
+    }
+
+    @Test
     fun `the components folder gets an import alias and a place in the assistant guide`() {
         val imports = updatedPackageJson(emptyMap(), spec(components = true))["imports"] as Map<*, *>
         assertEquals("./src/lib/ktor-svelte/components/*", imports["#components/*"])

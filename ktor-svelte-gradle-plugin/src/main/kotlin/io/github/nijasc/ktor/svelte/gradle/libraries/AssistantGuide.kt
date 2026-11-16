@@ -63,6 +63,12 @@ internal fun assistantGuide(
                 "- `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, " +
                     "such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.",
             )
+            if (spec.daisy !=
+                null
+            ) {
+                appendLine("- `ThemeToggle.svelte`: lets the visitor pick one of the configured themes and remembers it.")
+            }
+            if (spec.i18n != null) appendLine("- `LocaleSwitch.svelte`: lets the visitor pick one of the configured languages.")
             appendLine(
                 "- `ErrorPage.svelte`: the page behind `src/routes/+error.svelte`. A failed API call in a `load` function shows it " +
                     "with the call's status and message, so do not catch `ApiError` there only to call `error(...)`.",
