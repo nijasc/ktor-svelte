@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte.internal
 
 import io.github.nijasc.ktor.svelte.SvelteConfig
 import io.github.nijasc.ktor.svelte.SvelteSource
+import io.github.nijasc.ktor.svelte.internal.security.InternalAccess
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.log
@@ -40,6 +41,7 @@ internal fun configReport(config: SvelteConfig): JsonObject =
         put("apiDocsPath", config.apiDocsPath)
         put("routing", config.routing.name)
         put("statusEndpoint", config.statusEndpoint)
+        put("internalAccess", InternalAccess(config.internalAccessConfig).summary)
         put("healthEndpoint", config.healthEndpoint)
         put("healthChecks", config.healthCheckList.size)
         put("originCheck", config.originCheck)

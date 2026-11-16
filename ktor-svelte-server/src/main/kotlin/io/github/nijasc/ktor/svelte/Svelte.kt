@@ -42,6 +42,7 @@ import io.github.nijasc.ktor.svelte.internal.jvmStartIfFirstApplication
 import io.github.nijasc.ktor.svelte.internal.onOwn
 import io.github.nijasc.ktor.svelte.internal.security.BodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
+import io.github.nijasc.ktor.svelte.internal.security.InternalAccess
 import io.github.nijasc.ktor.svelte.internal.security.OriginCheck
 import io.github.nijasc.ktor.svelte.internal.security.PageContentSecurityPolicy
 import io.github.nijasc.ktor.svelte.internal.security.decodedPathOrRaw
@@ -50,6 +51,7 @@ import io.github.nijasc.ktor.svelte.internal.security.findPayloadTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.installJsonShapeLimits
 import io.github.nijasc.ktor.svelte.internal.security.installRateLimits
 import io.github.nijasc.ktor.svelte.internal.security.mayHideErrorDetails
+import io.github.nijasc.ktor.svelte.internal.security.pathSegments
 import io.github.nijasc.ktor.svelte.internal.security.respondBadRequest
 import io.github.nijasc.ktor.svelte.internal.security.respondBodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.respondJsonMessage
@@ -107,6 +109,7 @@ private const val BUILD_INFO_PATH = "/_ktor-svelte/build.json"
 private const val STATUS_PATH = "/_ktor-svelte/status"
 private const val ROUTES_PATH = "/_ktor-svelte/routes"
 private const val HEALTH_PATH = "/_ktor-svelte/health"
+private const val DOCS_REFUSED_MESSAGE = "The API docs only answer requests from this machine."
 private const val STATUS_REFUSED_MESSAGE = "The ktor-svelte status endpoint only answers requests from this machine."
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
@@ -144,7 +147,17 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val publicConfig = pluginConfig.publicConfigProvider?.let { PublicConfigSource(it, application.developmentMode) }
         val configInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
         val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector)
-        val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && application.developmentMode }
+        val internalAccess = InternalAccess(pluginConfig.internalAccessConfig)
+        val docsOutsideDevelopment = pluginConfig.apiDocs && !application.developmentMode && internalAccess.isConfigured
+        val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && (application.developmentMode || docsOutsideDevelopment) }
+        if (docsPath != null && docsOutsideDevelopment) {
+            val docsSegments = pathSegments(docsPath)
+            onCall { call ->
+                if (pathSegments(decodedPathOrRaw(call)).take(docsSegments.size) == docsSegments) {
+                    internalAccess.allows(call, DOCS_REFUSED_MESSAGE)
+                }
+            }
+        }
         val siteFiles =
             if (pluginConfig.sitemap) {
                 SiteFiles(
@@ -329,10 +342,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
             if (pluginConfig.statusEndpoint) {
                 get(STATUS_PATH) {
-                    if (!isLocalCall(call)) {
-                        call.respondText(STATUS_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
-                        return@get
-                    }
+                    if (!internalAccess.allows(call, STATUS_REFUSED_MESSAGE)) return@get
                     call.response.header(HttpHeaders.CacheControl, "no-store")
                     call.respondText(statusJson(store.manifest(), devProxy, devUrl, metrics), ContentType.Application.Json)
                 }.hide()
