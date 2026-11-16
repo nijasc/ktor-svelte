@@ -42,3 +42,7 @@ In development the function runs on every request for the config and for every p
 ## Keep secrets out
 
 It is served as JSON from `/_ktor-svelte/config.json` to anyone who asks, so **never put secrets in it**. In SvelteKit, call `loadPublicConfig` only in the browser, because prerendering has no server to ask.
+
+## Trying other values in development
+
+To see the frontend with another value, you do not have to change the config: the [dev panel](../guide/dev-workflow.md) can override `publicConfig` values for your browser only.
