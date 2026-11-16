@@ -26,13 +26,14 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 5 | Fold repeated stack traces |  |
+| 6 | `svelteDoctor --fix` |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
 | 4 | Flag `window.fetch` in `load` | #215 |
+| 5 | Fold repeated stack traces | #216 |
 
 ### Next up
 
@@ -65,7 +66,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 6 | `svelteDoctor --fix` | Medium | 2 |
 | 7 | i18n message check | Medium | 2 |
 | 8 | Retry with backoff | Small | 2 |
 | 9 | `respondPage` helper | Small | 2 |
