@@ -115,6 +115,73 @@ class UtilityTasksTest {
         assertEquals("run check", project.calls().last())
     }
 
+    private fun withScripts(project: TestProject) {
+        project.frontend.resolve("package.json").writeText("""{"scripts":{"format":"prettier --write .","lint":"prettier --check ."}}""")
+    }
+
+    @Test
+    fun `format runs the frontend's format script and says when Kotlin has no formatter`() {
+        val project = project()
+        withScripts(project)
+        val output = project.run("format", "--configuration-cache").output
+        assertEquals("run format", project.calls().last())
+        assertContains(output, "neither ktlint nor Spotless is applied, so Kotlin was left as it is")
+    }
+
+    @Test
+    fun `formatCheck runs the frontend's lint script`() {
+        val project = project()
+        withScripts(project)
+        project.run("formatCheck")
+        assertEquals("run lint", project.calls().last())
+    }
+
+    @Test
+    fun `a frontend without the script is left alone with a hint`() {
+        val project = project()
+        val output = project.run("format").output
+        assertContains(output, "package.json has no \"format\" script, so the frontend was not formatted")
+        assertFalse(project.calls().contains("run format"))
+    }
+
+    @Test
+    fun `a format task the build already has is kept`() {
+        val project = project()
+        withScripts(project)
+        project.buildScript(javaBuild + "\n\ntasks.register(\"format\") { doLast { println(\"the build's own format\") } }\n")
+        assertContains(project.run("format").output, "the build's own format")
+        assertFalse(project.calls().contains("run format"))
+        project.run("svelteFormat")
+        assertEquals("run format", project.calls().last())
+    }
+
+    @Test
+    fun `format also formats Kotlin when ktlint is applied`() {
+        val project = project()
+        withScripts(project)
+        project.buildScript(
+            """
+            plugins {
+                java
+                id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
+                id("io.github.nijasc.ktor-svelte")
+            }
+
+            repositories {
+                mavenCentral()
+            }
+
+            svelte {
+                addRuntimeDependency = false
+            }
+            """.trimIndent(),
+        )
+        val planned = project.run("format", "formatCheck", "--dry-run").output
+        listOf(":ktlintFormat", ":svelteFormat", ":format", ":ktlintCheck", ":svelteFormatCheck", ":formatCheck").forEach { task ->
+            assertContains(planned, "$task SKIPPED")
+        }
+    }
+
     @Test
     fun `svelteRun runs the named script`() {
         val project = project()

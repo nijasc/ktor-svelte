@@ -13,6 +13,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteConfigTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevAllTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteFormatTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateSourcesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
@@ -32,9 +33,11 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
+import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaApplication
@@ -56,6 +59,27 @@ import java.util.Properties
 
 private const val TASK_GROUP = "svelte"
 private const val DEFAULT_APP_URL = "http://localhost:8080"
+
+private class KotlinFormatter(
+    val plugin: String,
+    val format: String,
+    val check: String,
+)
+
+private val KOTLIN_FORMATTERS =
+    listOf(
+        KotlinFormatter("org.jlleitschuh.gradle.ktlint", "ktlintFormat", "ktlintCheck"),
+        KotlinFormatter("com.diffplug.spotless", "spotlessApply", "spotlessCheck"),
+    )
+
+private class KotlinFormatterNote(
+    private val missing: Boolean,
+) : Action<Task> {
+    override fun execute(task: Task) {
+        if (missing) task.logger.lifecycle("ktor-svelte: neither ktlint nor Spotless is applied, so Kotlin was left as it is.")
+    }
+}
+
 private val DEEP_CLEAN_FRONTEND_PATHS = listOf("node_modules", ".svelte-kit", ".vite", ".turbo", ".cache", ".eslintcache")
 private val DEEP_CLEAN_PROJECT_PATHS = listOf(".gradle", ".kotlin")
 private const val SKIP_PROPERTY = "svelte.skip"
@@ -315,6 +339,60 @@ public class KtorSveltePlugin : Plugin<Project> {
         project.tasks.matching { it.name == "svelteDevAll" }.configureEach { it.dependsOn(sync) }
     }
 
+    private fun registerFormatTasks(
+        project: Project,
+        extension: SvelteExtension,
+        install: TaskProvider<SvelteInstallTask>,
+    ) {
+        val frontendFormat =
+            project.tasks.register("svelteFormat", SvelteFormatTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.description = "Formats the frontend with its format script."
+                task.script.set("format")
+                task.purpose.set("formatted")
+                task.example.set("prettier --write .")
+                task.dependsOn(install)
+            }
+        val frontendCheck =
+            project.tasks.register("svelteFormatCheck", SvelteFormatTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.description = "Checks the frontend's formatting with its lint script."
+                task.script.set("lint")
+                task.purpose.set("checked")
+                task.example.set("prettier --check .")
+                task.dependsOn(install)
+            }
+        project.afterEvaluate {
+            val kotlinFormatters = KOTLIN_FORMATTERS.filter { project.pluginManager.hasPlugin(it.plugin) }
+            registerIfFree(project, "format", "Formats Kotlin and the frontend.", frontendFormat, kotlinFormatters.map { it.format })
+            registerIfFree(
+                project,
+                "formatCheck",
+                "Fails if Kotlin or the frontend is not formatted.",
+                frontendCheck,
+                kotlinFormatters.map { it.check },
+            )
+        }
+    }
+
+    private fun registerIfFree(
+        project: Project,
+        name: String,
+        description: String,
+        frontend: TaskProvider<SvelteFormatTask>,
+        kotlinTasks: List<String>,
+    ) {
+        if (name in project.tasks.names) return
+        val noKotlinFormatter = kotlinTasks.isEmpty()
+        project.tasks.register(name) { task ->
+            task.group = TASK_GROUP
+            task.description = description
+            task.dependsOn(frontend)
+            task.dependsOn(kotlinTasks)
+            task.doLast(KotlinFormatterNote(noKotlinFormatter))
+        }
+    }
+
     private fun gitOutput(
         project: Project,
         vararg arguments: String,
@@ -408,6 +486,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.description = "Lists outdated frontend dependencies."
             task.dependsOn(install)
         }
+        registerFormatTasks(project, extension, install)
         project.tasks.register("svelteCheck", SvelteCheckTask::class.java) { task ->
             configureToolTask(task, extension)
             task.description = "Runs the frontend's check script."
