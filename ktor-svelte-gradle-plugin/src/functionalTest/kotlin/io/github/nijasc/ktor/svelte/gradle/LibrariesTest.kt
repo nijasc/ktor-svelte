@@ -497,6 +497,36 @@ class LibrariesTest {
     }
 
     @Test
+    fun `svelteVerifyLinks lists dead links and only fails when strict`() {
+        val project = project("i18n { locales(\"en\", \"de\"); strategy = LocaleStrategy.UrlPrefix }")
+        messages(project)
+        val home = project.frontend.resolve("src/routes/+page.svelte")
+        home.parentFile.mkdirs()
+        project.frontend.resolve("src/routes/about").mkdirs()
+        project.frontend.resolve("src/routes/about/+page.svelte").writeText("<a href=\"/de\">Start</a>\n")
+        project.frontend.resolve("static").mkdirs()
+        project.frontend.resolve("static/terms.pdf").writeText("")
+        home.writeText(
+            "<a href=\"/about\">About</a>\n<a href=\"/abuot\">About</a>\n<a href=\"/terms.pdf\">Terms</a>\n<a href=\"/api/docs\">Docs</a>\n",
+        )
+        val routes = dir.resolve("src/main/kotlin/Routes.kt")
+        routes.parentFile.mkdirs()
+        routes.writeText("fun x() {\n    call.respondRedirect(\"/gone\")\n}\n")
+
+        val output = project.run("svelteVerifyLinks").output
+
+        assertContains(output, "src/routes/+page.svelte:2  href=\"/abuot\"  ->  nothing is served at /abuot")
+        assertContains(output, "src/main/kotlin/Routes.kt:2  respondRedirect(\"/gone\")  ->  nothing is served at /gone")
+        assertContains(output, "2 internal link(s) lead to no page, no API route and no static file. Add --strict")
+        assertContains(project.runAndFail("svelteVerifyLinks", "--strict").output, "2 internal link(s) lead to no page")
+
+        home.writeText("<a href=\"/about\">About</a>\n")
+        routes.delete()
+
+        assertContains(project.run("svelteVerifyLinks", "--strict").output, "every internal link leads to a page")
+    }
+
+    @Test
     fun `svelteVerifyRoutes has nothing to do without typed routes`() {
         val project = project("lucide()")
         project.frontend.resolve("src/routes").mkdirs()
