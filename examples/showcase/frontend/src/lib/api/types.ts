@@ -490,3 +490,11 @@ export const PublicConfig = {
 function addError(errors: Record<string, string[]>, field: string, message: string): void {
     (errors[field] ??= []).push(message);
 }
+
+export type ErrorCode = 'EmailTaken' | 'WrongPassword' | 'LastAdmin';
+
+export const ErrorCode = {
+    EmailTaken: 'EmailTaken',
+    WrongPassword: 'WrongPassword',
+    LastAdmin: 'LastAdmin',
+} as const;

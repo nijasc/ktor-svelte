@@ -4,6 +4,7 @@ import io.github.nijasc.ktor.svelte.internal.typescript.DeclaredError
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.KotlinxJsonSchemaInference
+import io.ktor.server.application.ApplicationCall
 import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -31,6 +32,8 @@ public class SvelteConfig internal constructor() {
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
     internal val constantHolders: MutableList<Any> = mutableListOf()
+    internal var errorCodeSet: ErrorCodeSet? = null
+        private set
     internal var publicConfigProvider: (() -> String)? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -88,6 +91,25 @@ public class SvelteConfig internal constructor() {
 
     public fun transport(configure: SvelteTransportConfig.() -> Unit) {
         transportConfig.configure()
+    }
+
+    public inline fun <reified E : Enum<E>> errorCodes(noinline message: ((ApplicationCall, E) -> String?)? = null) {
+        val resolver: ((ApplicationCall, Enum<*>) -> String?)? =
+            message?.let { own -> { call, code -> (code as? E)?.let { own(call, it) } } }
+        setErrorCodes(E::class.java, enumValues<E>().map { it.name }, resolver)
+    }
+
+    @PublishedApi
+    internal fun setErrorCodes(
+        type: Class<*>,
+        names: List<String>,
+        message: ((ApplicationCall, Enum<*>) -> String?)?,
+    ) {
+        require(names.isNotEmpty()) { "errorCodes needs an enum with at least one code." }
+        check(
+            errorCodeSet == null,
+        ) { "errorCodes is already set to ${errorCodeSet?.type?.simpleName}. An app has one enum of error codes." }
+        errorCodeSet = ErrorCodeSet(type, names, message)
     }
 
     public fun constants(vararg holders: Any) {

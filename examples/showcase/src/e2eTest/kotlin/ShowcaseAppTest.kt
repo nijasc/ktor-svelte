@@ -370,6 +370,7 @@ class ShowcaseAppTest {
         val again = register(anonymous(), name.uppercase())
         assertEquals(409, again.statusCode())
         assertContains(again.body(), "already has an account")
+        assertContains(again.body(), """"code":"EmailTaken"""")
     }
 
     @Test
@@ -383,6 +384,7 @@ class ShowcaseAppTest {
         assertContains(admin.send("GET", "/api/admin/users").body(), MEMBER_EMAIL)
         val lastAdmin = admin.send("PUT", "/api/admin/users/1/role", """{"role":"MEMBER"}""")
         assertEquals(409, lastAdmin.statusCode())
+        assertContains(lastAdmin.body(), """"code":"LastAdmin"""")
         assertEquals(409, admin.send("PUT", "/api/admin/users/1/active", """{"active":false}""").statusCode())
         assertEquals(404, admin.send("PUT", "/api/admin/users/999999/role", """{"role":"ADMIN"}""").statusCode())
     }

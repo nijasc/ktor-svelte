@@ -81,10 +81,20 @@ export const errorMessages = {
     failed: 'Something went wrong. Please try again.'
 };
 
+export const codeMessages: Record<string, string | (() => string) | undefined> = {};
+
+export function errorCode(error: unknown): string | undefined {
+    if (!(error instanceof ApiError) || typeof error.body !== 'object' || error.body === null) return undefined;
+    const code = (error.body as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+}
+
 export function errorMessage(error: unknown): string {
     if (isTimeoutError(error)) return errorMessages.timeout;
     if (error instanceof TypeError) return errorMessages.network;
     if (!(error instanceof ApiError)) return errorMessages.failed;
+    const forCode = codeMessages[errorCode(error) ?? ''];
+    if (forCode !== undefined) return typeof forCode === 'function' ? forCode() : forCode;
     const body = error.body as { message?: unknown } | null | undefined;
     const message = typeof body === 'object' && body !== null ? body.message : undefined;
     return typeof message === 'string' && message !== '' ? message : errorMessages.failed;

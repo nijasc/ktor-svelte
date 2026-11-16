@@ -168,4 +168,20 @@ class GeneratedClientBehaviourTest {
             results.getValue("uploads").jsonArray.map { it.jsonPrimitive.content },
         )
     }
+
+    @Test
+    fun `an error's code is read from its body and chooses the message shown`() {
+        val results = runHarness()
+        assertEquals(listOf("NoteLocked", "null", "null", "null"), results.getValue("codes").jsonArray.map { it.toString().trim('"') })
+        assertEquals(
+            listOf(
+                "This note is locked.",
+                "Limit reached at 1970.",
+                "Server wording.",
+                "Something went wrong. Please try again.",
+                "Could not reach the server. Check your connection and try again.",
+            ),
+            results.getValue("codeMessages").jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
 }

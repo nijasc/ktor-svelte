@@ -1,6 +1,9 @@
 import {
     ApiError,
     apiConfig,
+    codeMessages,
+    errorCode,
+    errorMessage,
     fixtureFetch,
     isRateLimitError,
     isUploadError,
@@ -277,5 +280,24 @@ results.uploads = [
     await uploadOutcome([file('photo.png', 'image/png', 6 * 1024 * 1024)], { maxBytes: 5 * 1024 * 1024 }),
     await uploadOutcome([file('a.txt', 'text/plain'), file('b.txt', 'text/plain')], { maxFiles: 1 })
 ];
+
+const coded = (code: unknown, message?: string) => new ApiError(409, { message, code }, '/api/notes/1');
+codeMessages.NoteLocked = 'This note is locked.';
+codeMessages.QuotaReached = () => `Limit reached at ${new Date(0).getUTCFullYear()}.`;
+results.codes = [
+    errorCode(coded('NoteLocked')) ?? null,
+    errorCode(coded(7)) ?? null,
+    errorCode(new ApiError(500, 'plain text', '/api/x')) ?? null,
+    errorCode(new TypeError('offline')) ?? null
+];
+results.codeMessages = [
+    errorMessage(coded('NoteLocked', 'Server wording.')),
+    errorMessage(coded('QuotaReached')),
+    errorMessage(coded('Unlisted', 'Server wording.')),
+    errorMessage(coded('Unlisted')),
+    errorMessage(new TypeError('offline'))
+];
+Reflect.deleteProperty(codeMessages, 'NoteLocked');
+Reflect.deleteProperty(codeMessages, 'QuotaReached');
 
 console.log(JSON.stringify(results));
