@@ -69,6 +69,7 @@ internal fun assistantGuide(
                 appendLine("- `ThemeToggle.svelte`: lets the visitor pick one of the configured themes and remembers it.")
             }
             if (spec.i18n != null) appendLine("- `LocaleSwitch.svelte`: lets the visitor pick one of the configured languages.")
+            appendLine("- `NavigationProgress.svelte`: a bar at the top while a page loads. It belongs in the root layout, once.")
             appendLine(
                 "- `ErrorPage.svelte`: the page behind `src/routes/+error.svelte`. A failed API call in a `load` function shows it " +
                     "with the call's status and message, so do not catch `ApiError` there only to call `error(...)`.",

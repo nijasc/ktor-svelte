@@ -20,7 +20,15 @@ class ComponentsTest {
         assertFalse(frontendFiles(spec(components = false), null, false).keys.any { it.startsWith(COMPONENTS_DIR) })
         val files = frontendFiles(spec(components = true), null, false)
         assertEquals(
-            listOf("DataTable.svelte", "DateInput.svelte", "DateTimeInput.svelte", "EnumSelect.svelte", "ErrorPage.svelte", "Field.svelte"),
+            listOf(
+                "DataTable.svelte",
+                "DateInput.svelte",
+                "DateTimeInput.svelte",
+                "EnumSelect.svelte",
+                "ErrorPage.svelte",
+                "Field.svelte",
+                "NavigationProgress.svelte",
+            ),
             files.keys
                 .filter { it.startsWith(COMPONENTS_DIR) }
                 .map { it.substringAfterLast('/') }
@@ -159,6 +167,19 @@ class ComponentsTest {
         assertContains(guide, "`ThemeToggle.svelte`")
         assertContains(guide, "`LocaleSwitch.svelte`")
         assertFalse("ThemeToggle" in assistantGuide(spec(components = true), null))
+    }
+
+    @Test
+    fun `the navigation bar follows SvelteKit's navigation and takes the theme's color`() {
+        val plain = componentFiles(spec(components = true)).getValue("$COMPONENTS_DIR/NavigationProgress.svelte")
+        assertContains(plain, "import { navigating } from '\$app/state';")
+        assertContains(plain, "if (navigating.to === null) return;")
+        assertContains(plain, "role=\"progressbar\"")
+        assertContains(plain, "background: var(--ktor-svelte-progress, currentColor);")
+        assertContains(plain, "@media (prefers-reduced-motion: reduce) {")
+        val themed = componentFiles(spec(components = true, withDaisy = true)).getValue("$COMPONENTS_DIR/NavigationProgress.svelte")
+        assertContains(themed, "background: var(--ktor-svelte-progress, var(--color-primary));")
+        assertFalse("{{" in themed)
     }
 
     @Test

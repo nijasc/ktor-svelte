@@ -443,6 +443,26 @@ The theme and i18n helpers already know the themes and languages you configured.
 
 Both take `label` for the accessible name (`Theme` and `Language` unless given, so pass a translated one), `labels` to name single entries yourself, an object from theme or language to the text to show, and `class` and `id`.
 
+### NavigationProgress
+
+A thin bar at the top of the page while SvelteKit navigates, which includes the time a `load` function waits for the server. Without it, a click on a link to a slow page looks like nothing happened. Put it in the root layout, once:
+
+```svelte no-check
+<script lang="ts">
+    import NavigationProgress from '#components/NavigationProgress.svelte';
+
+    let { children } = $props();
+</script>
+
+<NavigationProgress />
+{@render children()}
+```
+
+- It appears only when a navigation takes longer than `delay`, 150 ms unless given, so quick ones do not flash.
+- Its color is the theme's primary color with DaisyUI, and the text color otherwise. Set the CSS variable `--ktor-svelte-progress` to choose another.
+- It is announced as a progress bar with the name `label`, `Loading page` unless given.
+- With "reduce motion" set in the visitor's system, it is a still line.
+
 ## Modals
 
 A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:

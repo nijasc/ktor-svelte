@@ -15,6 +15,7 @@
   "problem-missing-task": "That task does not exist.",
   "app-title": "ktor-svelte showcase",
   "skip-to-content": "Skip to content",
+  "nav-loading": "Loading page",
   "settings-password-hint": "At least {min} characters.",
   "consent-text": "This site can remember your board filter in a cookie.",
   "consent-accept": "Remember it",
