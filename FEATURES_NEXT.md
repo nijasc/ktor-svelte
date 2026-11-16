@@ -24,18 +24,20 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 ### In progress
 
-Nothing yet.
+| # | Feature | Pull request |
+|---|---|---|
+| 2 | `svelteVerifyRoutes --fix` |  |
 
 ### In review
 
-Nothing yet.
+| # | Feature | Pull request |
+|---|---|---|
+| 1 | Kotlin redirects in the route check | #208 |
 
 ### Next up
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 1 | Kotlin redirects in the route check | Small | 1 |
-| 2 | `svelteVerifyRoutes --fix` | Medium | 1 |
 | 3 | Dead link check | Medium | 1 |
 
 ### Done
