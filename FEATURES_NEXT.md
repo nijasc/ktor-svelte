@@ -11,7 +11,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 | 3 | Dead link check | Gradle plugin | Medium | #202 |
 | 4 | Flag `window.fetch` in `load` | Gradle plugin | Small | |
 | 5 | Fold repeated stack traces | Dev log | Small | |
-| 6 | Version of `svelteDoctor` that fixes | Gradle plugin | Medium | #203 |
+| 6 | `svelteDoctor --fix` | Gradle plugin | Medium | #203 |
 | 7 | i18n message check | Gradle plugin | Medium | |
 | 8 | Retry with backoff | Generated client | Small | |
 | 9 | `Page<T>` on the Kotlin side | Server | Small | |
