@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 36 | Unused endpoints report |  |
+| 45 | Rate limit aware client |  |
 
 ### In review
 
@@ -39,6 +39,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 18 | Jump from TypeScript to Kotlin | #223 |
 | 19 | Field docs and deprecations | #224 |
 | 35 | Typed path parameters | #225 |
+| 36 | Unused endpoints report | #226 |
 
 ### Next up
 
@@ -74,7 +75,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 45 | Rate limit aware client | Small | 2 |
 | 53 | Build info on both sides | Small | 2 |
 | 55 | One format command | Small | 2 |
 | 56 | Git pre-commit hook | Small | 2 |
