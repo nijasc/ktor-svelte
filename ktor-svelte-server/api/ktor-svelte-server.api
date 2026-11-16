@@ -46,6 +46,10 @@ public final synthetic class io/github/nijasc/ktor/svelte/Lowercase$Impl : io/gi
 	public fun <init> ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/NavigationKt {
+	public static final fun navigateTo (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;)V
+}
+
 public final class io/github/nijasc/ktor/svelte/Page {
 	public static final field Companion Lio/github/nijasc/ktor/svelte/Page$Companion;
 	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
