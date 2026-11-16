@@ -65,4 +65,20 @@ class GeneratedClientBehaviourTest {
         assertEquals(listOf(100, 200, 250, 250), results.getValue("waits").jsonArray.map { it.jsonPrimitive.content.toInt() })
         assertEquals("AbortError after 1 call(s)", result("stopsWhenAborted"))
     }
+
+    @Test
+    fun `a rate limit carries its wait, and is waited for once when retries are on`() {
+        val results = runHarness()
+
+        fun result(name: String) = results.getValue(name).jsonPrimitive.content
+        assertEquals("wait 2000", result("limitError"))
+        assertEquals("false", result("otherErrorIsNotALimit"))
+        assertEquals("ApiError 429 after 1 call(s)", result("limitIsNotWaitedForByDefault"))
+        assertEquals("ok {\"status\":201} after 2 call(s)", result("limitWaitsAndResendsWrites"))
+        assertEquals("ApiError 429 after 2 call(s)", result("limitResendsOnlyOnce"))
+        assertEquals("ApiError 429 after 1 call(s)", result("longLimitIsNotWaitedFor"))
+        assertEquals("ok {\"status\":200} after 4 call(s)", result("limitDoesNotUseUpGetAttempts"))
+        assertEquals("true", result("limitFromDate"))
+        assertEquals("true", result("unreadableLimit"))
+    }
 }

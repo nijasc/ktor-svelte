@@ -841,6 +841,8 @@ class TypeScriptGeneratorTest {
         assertContains(client, "    retry?: boolean | RetryConfig;")
         assertContains(client, "if (method !== 'GET' || !chosen) return undefined;")
         assertContains(client, "const RETRIED_STATUSES = [502, 503, 504];")
+        assertContains(client, "export function isRateLimitError(error: unknown): error is ApiError {")
+        assertContains(client, "        readonly retryAfter?: number")
     }
 
     @Test

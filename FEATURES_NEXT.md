@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 45 | Rate limit aware client |  |
+| 53 | Build info on both sides |  |
 
 ### In review
 
@@ -40,6 +40,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 19 | Field docs and deprecations | #224 |
 | 35 | Typed path parameters | #225 |
 | 36 | Unused endpoints report | #226 |
+| 45 | Rate limit aware client | #227 |
 
 ### Next up
 
@@ -75,7 +76,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 53 | Build info on both sides | Small | 2 |
 | 55 | One format command | Small | 2 |
 | 56 | Git pre-commit hook | Small | 2 |
 | 57 | Reload data after restart | Small | 2 |
