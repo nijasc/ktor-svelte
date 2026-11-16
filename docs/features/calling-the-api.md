@@ -295,6 +295,21 @@ try {
 
 With retries on, the client waits and sends the call again by itself, once, when the wait is no longer than `maxDelay`, which is five seconds unless you change it. That also applies to writes: a call the rate limit refused never reached your route, so sending it again cannot do the work twice. A longer wait is not sat out, and the error reaches you at once.
 
+## The visitor's time zone
+
+The server usually runs in UTC, and the visitor does not. The generated client sends the browser's time zone with every call to your app, and a route reads it as `call.timeZone`:
+
+```kotlin
+get("/api/report") {
+    val today = java.time.LocalDate.now(call.timeZone)
+    call.respondText("Report for $today")
+}
+```
+
+It is a `java.time.ZoneId`, such as `Europe/Zurich`, taken from the `X-Time-Zone` header. A request without the header, or with a name the JDK does not know, gets `defaultTimeZone` from `install(Svelte)`, which is `UTC` unless you change it. That covers requests the client does not make, such as a plain link to a download.
+
+The header only goes to your own origin, never to a `baseUrl` on another host. To stop sending it, set `apiConfig.sendTimeZone = false`.
+
 ## Search as you type
 
 When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:

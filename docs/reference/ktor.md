@@ -26,6 +26,7 @@ install(Svelte) {
     requestIds = true
     accessLog = false
     publicBuildInfo = false
+    defaultTimeZone = "UTC"
     allowedOrigins()
     maxApiBodySize = 1048576
     maxJsonDepth = 64
@@ -94,6 +95,7 @@ install(Svelte) {
 | `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](../features/endpoints.md#default-favicon) |
 | `accessLog` | Logs one line per request in production to the `ktor-svelte.access` logger: `method=GET path=/api/notes status=200 ms=12 id=...`. The query string is left out, because it can hold secrets, and requests for build assets under `/_app/` are skipped. Development mode never logs these, since the dev log and the API panel already show requests. Off by default |
 | `publicBuildInfo` | Serves the app's [build info](../guide/deployment.md#build-info) at `/_ktor-svelte/build.json`, for `loadBuildInfo()` in the browser. Off by default, because it tells every visitor the version and the commit |
+| `defaultTimeZone` | What [`call.timeZone`](../features/calling-the-api.md#the-visitors-time-zone) returns when a request does not say which zone the visitor is in. `UTC` by default |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](../security.md#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](../features/transport.md#api-compression) |
