@@ -570,6 +570,30 @@ class LibrariesTest {
     }
 
     @Test
+    fun `svelteVerifyLoads names API calls in load functions that do not pass fetch`() {
+        val project = project("lucide()")
+        val load = project.frontend.resolve("src/routes/notes/+page.ts")
+        load.parentFile.mkdirs()
+        load.writeText(
+            "import { api } from '#api';\n\nexport const load = async ({ fetch }) => {\n" +
+                "    const notes = await api.notes.list();\n    const tags = await api.tags.list({ fetch });\n    return { notes, tags };\n};\n",
+        )
+
+        val output = project.runAndFail("svelteVerifyLoads").output
+
+        assertContains(
+            output,
+            "src/routes/notes/+page.ts:4  api.notes.list()  ->  use apiWith(event), or pass { fetch } as the last argument",
+        )
+        assertContains(output, "1 API call(s) in load functions use neither apiWith(event) nor { fetch }")
+        assertContains(output, "features/calling-the-api#in-load-functions")
+
+        load.writeText(load.readText().replace("api.notes.list()", "api.notes.list({ fetch })"))
+
+        assertContains(project.run("svelteVerifyLoads").output, "every API call in a load function goes through SvelteKit's fetch")
+    }
+
+    @Test
     fun `svelteVerifyRoutes has nothing to do without typed routes`() {
         val project = project("lucide()")
         project.frontend.resolve("src/routes").mkdirs()

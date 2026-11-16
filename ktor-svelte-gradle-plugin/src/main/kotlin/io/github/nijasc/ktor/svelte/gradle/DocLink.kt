@@ -7,6 +7,7 @@ internal enum class DocLink(
     val anchor: String?,
 ) {
     ADD_TO_AN_EXISTING_PROJECT("guide/existing-project", null),
+    CALLING_THE_API("features/calling-the-api", "in-load-functions"),
     CREATE_A_PROJECT("guide/getting-started", null),
     DAISYUI("features/frontend-libraries", "daisyui"),
     FRONTEND_LIBRARIES("features/frontend-libraries", null),

@@ -26,16 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 4 | Flag `window.fetch` in `load` |  |
+| 5 | Fold repeated stack traces |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 2 | `svelteVerifyRoutes --fix` | #211 |
-| 3 | Dead link check | #212 |
-| 91 | Rename a page safely | #213 |
-| 103 | Editor-time lint rules | #214 |
+| 4 | Flag `window.fetch` in `load` | #215 |
 
 ### Next up
 
@@ -59,12 +56,15 @@ Features of this plan that are merged:
 | # | Feature | Pull request |
 |---|---|---|
 | 1 | Kotlin redirects in the route check | #208 |
+| 2 | `svelteVerifyRoutes --fix` | #211 |
+| 3 | Dead link check | #212 |
+| 91 | Rename a page safely | #213 |
+| 103 | Editor-time lint rules | #214 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 5 | Fold repeated stack traces | Small | 2 |
 | 6 | `svelteDoctor --fix` | Medium | 2 |
 | 7 | i18n message check | Medium | 2 |
 | 8 | Retry with backoff | Small | 2 |

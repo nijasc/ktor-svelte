@@ -23,6 +23,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLoadsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
@@ -267,6 +268,12 @@ public class KtorSveltePlugin : Plugin<Project> {
                         .orEmpty()
                 },
             )
+        }
+        project.tasks.register("svelteVerifyLoads", SvelteVerifyLoadsTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Fails if an API call inside a load function uses neither apiWith(event) nor { fetch }."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
         }
         project.tasks.register("svelteRename", SvelteRenameTask::class.java) { task ->
             task.group = TASK_GROUP
