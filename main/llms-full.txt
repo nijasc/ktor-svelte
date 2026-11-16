@@ -675,6 +675,16 @@ The **Routes** section of the panel is a map of the whole app: every page with t
 
 **Save fixtures** in the panel's header downloads the calls this page made, with their answers, as a JSON file that [frontend tests can replay](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#fixtures-for-frontend-tests) without a backend.
 
+The **Accessibility** section checks the page you are looking at with [axe](https://github.com/dequelabs/axe-core), the engine behind most accessibility tests, so you find a missing label or a low contrast while you build the page and not when CI or a user does. Open the section and it lists what axe found, worst first as axe ranks it, with how many elements each problem affects and a link to the rule's explanation. Click a problem and the elements get a red outline and scroll into view. **Check again** runs it once more after you changed something.
+
+It needs `axe-core` in your frontend, and tells you so when it is missing:
+
+```bash
+cd frontend && bun add -d axe-core
+```
+
+axe only sees what is on the screen at that moment, so open the dialog or the menu you want checked first. A page without findings is not proof that it is accessible. It is the automatic part of the check.
+
 The panel also has a **Public config** section. It lists the values of your [`publicConfig`](https://nijasc.github.io/ktor-svelte/main/features/runtime-config) and lets you change them for this browser only: flip a feature flag, lower a limit, see the page with another name, without editing a config file and without a restart. Values are written as JSON, so text goes in double quotes. **Apply and reload** saves them in the browser's local storage and reloads the page, and from then on `loadPublicConfig()` and `readPublicConfig()` return the changed values in this browser. A yellow "config changed" mark on the API button reminds you, and **Reset all** goes back to what the server sends.
 
 Only the browser is told something different. The server keeps its own values, so a limit the server enforces is still enforced, and nobody else sees the change. It exists in development only, like the rest of the panel.
