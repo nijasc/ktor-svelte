@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-Forty-two features is far more than one release usually holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+Fifty-four features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## Scope
 
@@ -52,6 +52,18 @@ Forty-two features is far more than one release usually holds. The [order](#orde
 | 40 | Record requests as fixtures | Dev panel | Medium | 12 |
 | 41 | Synced user preferences | Server and generated client | Large | 21 |
 | 42 | CRUD scaffold from a DTO | Gradle plugin | Large | 15 |
+| 43 | `Patch<T>` partial updates | Server and generated client | Medium | |
+| 44 | Typed multipart uploads | Generated client | Medium | |
+| 45 | Rate limit aware client | Generated client | Small | 8 |
+| 46 | Secret leak check | Gradle plugin | Medium | 37 |
+| 47 | Accessibility check task | Gradle plugin | Large | 30 |
+| 48 | API change report | Gradle plugin | Medium | |
+| 49 | Plurals in messages | Gradle plugin and generated files | Medium | |
+| 50 | Shared formatting | Server and generated files | Medium | |
+| 51 | Missing translation highlight | Dev panel | Small | #201 |
+| 52 | Installable app (PWA) | Gradle plugin and server | Large | |
+| 53 | Build info on both sides | Server and generated client | Small | |
+| 54 | Web vitals in metrics | Server and generated files | Medium | 29 |
 
 ## What each one does
 
@@ -139,19 +151,45 @@ Forty-two features is far more than one release usually holds. The [order](#orde
 41. **Synced user preferences.** Theme, locale and app-defined preferences are declared once in Kotlin, stored per user on the server, and available as a typed, reactive store on the frontend.
 42. **CRUD scaffold from a DTO.** `svelteAdd --crud=Note` generates list, detail and form pages wired to the generated client, with typed routes, validation bounds and i18n keys, as normal files the app then owns.
 
+### More for the generated client
+
+43. **`Patch<T>` partial updates.** A Kotlin `Patch<Note>` type for PATCH routes that tells "field not sent" from "field set to null", with a matching TypeScript type and an apply helper, so partial updates stop needing a second DTO.
+44. **Typed multipart uploads.** Upload routes take a typed object such as `{ file: File, title: string }` instead of a raw `FormData`. Today the generated signature is `body: FormData`, so field names are unchecked.
+45. **Rate limit aware client.** A 429 becomes a typed error that carries the wait time from `Retry-After`, and the client can wait and resend once by itself.
+
+### Build and security checks
+
+46. **Secret leak check.** After the frontend build, the bundle is scanned for the values of the app's secrets and server-only environment variables, and the build fails if one was baked into the JavaScript.
+47. **Accessibility check task.** A task that opens the built pages in a headless browser and runs axe on them in a light and a dark theme, as the showcase's browser tests do today, available to every app.
+48. **API change report.** Compares `openapi.json` with the one on `main` and lists what changed for callers: removed routes, removed or newly required fields, and changed types.
+
+### Languages and installable app
+
+49. **Plurals in messages.** A message can say `{count, plural, one {# note} other {# notes}}`, and both the Kotlin `Messages` and the TypeScript functions pick the right form for the locale. Today messages only have placeholders.
+50. **Shared formatting.** `formatDate`, `formatNumber` and `formatMoney` that give the same text in Kotlin and in TypeScript for the visitor's locale, so an email and the page never disagree.
+51. **Missing translation highlight.** In development, text that fell back to the default locale is outlined on the page and listed in the dev panel.
+52. **Installable app (PWA).** Name, colors and icon are declared once in Gradle, and the app gets a web manifest, icons in every size and a small service worker with an offline page, served with the right caching headers.
+
+### Operations
+
+53. **Build info on both sides.** Version, git commit and build time are available as `BuildInfo` in Kotlin and `buildInfo` in TypeScript, for an about box, bug reports and logs, without any setup.
+54. **Web vitals in metrics.** The frontend reports loading and interaction timings per page to the app, which adds them to the existing metrics, so slow pages show up next to slow API calls.
+
 ## Order
 
 1. The route check group (1, 2, 3), because all three build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19, 35, 36). Each is a self-contained pull request.
-3. The client helper and the dev panel group (11 to 14, then 38, 39, 40).
+2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53). Each is a self-contained pull request.
+3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51).
 4. The server talks to the UI (25, 26, 27) and shared constants (20). They share one mechanism: the server adds something to a response, and the generated client acts on it.
-5. Richer shared types (31, 32, 33) and declared environment variables (37).
-6. One login (21, then 24, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
-7. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16) and generated page loads (28). All of them change how a route or a page is described, so they are designed together.
-8. Frontend errors in the server log (29) and the Kotlin browser test kit (30).
-9. `svelteUpgrade` (17) last.
+5. Richer shared types (31, 32, 33, 43, 44) and declared environment variables (37), then the secret leak check (46), which reads that declaration.
+6. Languages (49, 50) and the API change report (48).
+7. One login (21, then 24, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
+8. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16) and generated page loads (28). All of them change how a route or a page is described, so they are designed together.
+9. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30) and the accessibility check (47), which runs on the test kit's browser.
+10. The installable app (52).
+11. `svelteUpgrade` (17) last.
 
-Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 8 hold every large feature, and any of them can move to 1.3.0.
+Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list. Groups 5 to 10 are enough for 1.3.0 and 1.4.0, and any of them can move there without rework.
 
 ## Open decisions
 
@@ -178,6 +216,15 @@ Groups 1 to 4 are the safe core of 1.2.0. Groups 5 to 8 hold every large feature
 | SQL queries per request | Does the runtime depend on Exposed? | No. It is compiled against Exposed as `compileOnly` and turns itself on only when Exposed is on the classpath and the app is in development mode. |
 | Synced user preferences | Who stores them? | The app. It gives ktor-svelte a load and a save function, and ktor-svelte generates the endpoint, the types and the store. |
 | CRUD scaffold | Who owns the generated pages? | The app. They are written once without the generated header and never touched again, and the task refuses to overwrite an existing file. |
+| Typed multipart uploads | What happens to code that passes `FormData`? | It keeps compiling. The generated function accepts the typed object or a `FormData`, and only the typed form is checked. |
+| Rate limit aware client | Does it resend by itself? | Only when retry is on, only once, and only when the wait is short. Otherwise it throws the typed error with the wait time. |
+| Secret leak check | Which values count as secrets? | Declared environment variables marked as secret, plus the values in `.env`, ignoring anything shorter than eight characters to avoid false alarms. |
+| Accessibility check task | Does every app pay for a browser? | No. The browser is downloaded the first time the task runs, as the browser tests do. |
+| API change report | Fail or report? | Report only, against a git ref that defaults to `origin/main`. A breaking change inside one JAR is often intended. |
+| Plurals in messages | Where do the plural rules come from? | Open. The browser has `Intl.PluralRules`, but the JDK has no public equivalent, and adding ICU4J for it is too heavy. The likely answer is a small generated table for the configured locales. |
+| Shared formatting | Can the two sides really print the same text? | Open. The JDK and the browser carry different locale data, so "the same text" only holds for patterns ktor-svelte defines itself. This needs a design note that says which formats are supported. |
+| Installable app | What does the service worker cache? | The offline page and hashed assets only. It never caches API responses or HTML pages, so a deploy is never hidden by a stale worker. |
+| Web vitals in metrics | On or off by default? | Off by default and sampled, with the same limits as frontend error reporting, because it is an endpoint anyone can post to. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -193,6 +240,8 @@ These were offered and not chosen for 1.2.0:
 - The server talks to the UI: live data pushed from the server, background job progress.
 - Dev panel: a login switcher for test users.
 - Whole app: maintenance mode.
+- Generated client: request batching.
+- Gradle: a dependency audit task, a container image task, a task that finds the frontend usages of a Kotlin route.
 
 ## Release
 
