@@ -1,5 +1,5 @@
-import { ApiError, request, type RequestOptions } from './client.js';
-import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, Greeting, Login, PasswordChange, Problem, ProfileInput, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef, PublicConfig } from './types.js';
+import { ApiError, request, codeMessages, errorCode, type RequestOptions } from './client.js';
+import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, Greeting, Login, PasswordChange, Problem, ProfileInput, PublicConfig, Registration, RoleChange, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
 
 /** @see showcase/Auth.kt */
 export const adminGetUsers = (options?: RequestOptions) => request<User[]>('GET', '/api/admin/users', { ...options, operation: 'admin.getUsers' });
@@ -182,8 +182,8 @@ export interface ApiErrors {
 
 const errorStatuses: Record<string, number[]> = {
     'admin.getUsers': [401, 403],
-    'admin.putUsersActive': [401, 403, 404, 409],
-    'admin.putUsersRole': [401, 403, 404, 409],
+    'admin.putUsersActive': [401, 403, 404],
+    'admin.putUsersRole': [401, 403, 404],
     'attachments.get': [401, 403, 404],
     'attachments.delete': [401, 403, 404],
     'greeting.list': [401, 403],
@@ -205,11 +205,19 @@ const errorStatuses: Record<string, number[]> = {
     'tasks.getComments': [401, 403, 404],
     'tasks.comments': [401, 403, 404],
     'tasks.status': [401, 403, 404],
-    'users.create': [401, 403, 409],
+    'users.create': [401, 403],
 };
 
 export function isApiError<K extends keyof ApiErrors>(error: unknown, operation: K): error is ApiError<ApiErrors[K]> {
     return error instanceof ApiError && error.operation === operation && (errorStatuses[operation] ?? []).includes(error.status);
+}
+
+export function hasErrorCode<C extends ErrorCode>(error: unknown, code: C): error is ApiError<{ message: string; code: C }> {
+    return errorCode(error) === code;
+}
+
+export function setCodeMessages(messages: Partial<Record<ErrorCode, string | (() => string)>>): void {
+    Object.assign(codeMessages, messages);
 }
 
 export const uploadRules = {
