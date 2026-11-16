@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 19 | Field docs and deprecations |  |
+| 35 | Typed path parameters |  |
 
 ### In review
 
@@ -37,6 +37,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 9 | `respondPage` helper | #221 |
 | 10 | Production access log | #222 |
 | 18 | Jump from TypeScript to Kotlin | #223 |
+| 19 | Field docs and deprecations | #224 |
 
 ### Next up
 
@@ -72,7 +73,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 35 | Typed path parameters | Small | 2 |
 | 36 | Unused endpoints report | Small | 2 |
 | 45 | Rate limit aware client | Small | 2 |
 | 53 | Build info on both sides | Small | 2 |
