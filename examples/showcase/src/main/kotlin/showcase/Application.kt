@@ -60,6 +60,7 @@ fun Application.module() {
         healthEndpoint = true
         healthCheck { database.isReachable() }
         constants(BoardLimits)
+        cookies(OnlyMineCookie)
         errorCodes<AccountError> { call, code ->
             when (code) {
                 AccountError.EmailTaken -> call.messages.problemEmailTaken()

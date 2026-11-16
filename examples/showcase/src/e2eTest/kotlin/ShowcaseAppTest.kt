@@ -240,6 +240,15 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `the cookie declared in Kotlin is in the generated client with its type and options`() {
+        assertContains(
+            File("frontend/src/lib/api/cookies.ts").readText(),
+            "boardMine: typedCookie<boolean, boolean>('board-mine', " +
+                "{ kind: 'boolean', default: false, maxAge: 7776000, path: '/', sameSite: 'lax', secure: false })",
+        )
+    }
+
+    @Test
     fun `the limits the server uses are in the generated client as typed constants`() {
         val constants = File("frontend/src/lib/api/constants.ts").readText()
         assertEquals(
