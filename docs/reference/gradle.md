@@ -94,6 +94,16 @@ One command formats Kotlin and the frontend, and one checks them:
 
 If your build already has a task called `format` or `formatCheck`, ktor-svelte does not register its own. The frontend half is always there as `svelteFormat` and `svelteFormatCheck`.
 
+### Check before every commit
+
+`svelteGitHooks` installs a git pre-commit hook in your clone that runs `formatCheck` and `svelteVerifySync`, so an unformatted file or a stale generated file never reaches a commit:
+
+```bash
+./gradlew svelteGitHooks
+```
+
+A commit that fails the check is stopped with the command that fixes it. `git commit --no-verify` skips the hook once, and `./gradlew svelteGitHooks --remove` takes it out again. The hook lives in `.git`, which git does not share, so everyone on the team runs the task once. A pre-commit hook that something else installed is never replaced: the task stops and tells you to call the two tasks from your own hook.
+
 ## Gradle tasks
 
 | Task | What it does |
@@ -120,6 +130,7 @@ If your build already has a task called `format` or `formatCheck`, ktor-svelte d
 | `svelteCheck` | Runs your `check` script |
 | `format`, `formatCheck` | [Format, or check the formatting of, Kotlin and the frontend](#format-both-sides) in one go |
 | `svelteFormat`, `svelteFormatCheck` | The frontend half of those: run the `format` and the `lint` script |
+| `svelteGitHooks` | Installs a [pre-commit hook](#check-before-every-commit) that runs `formatCheck` and `svelteVerifySync`. With `--remove` it takes the hook out |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |
 | `svelteOutdated` | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
