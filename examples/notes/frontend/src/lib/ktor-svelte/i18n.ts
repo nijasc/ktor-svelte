@@ -12,6 +12,7 @@ export const defaultLocale: Locale = 'en';
 
 declare global {
     var __ktorSvelteLocale: Locale | undefined;
+    var __ktorSvelteUntranslated: Map<string, { key: string; locale: string }> | undefined;
 }
 
 function matchLocale(tag: string | undefined): Locale | undefined {
@@ -36,8 +37,13 @@ export function localizeHref(path: string): string {
 }
 
 function translate(key: keyof (typeof messages)[Locale], values?: Record<string, string | number>): string {
-    const text: string = messages[getLocale()][key];
-    return values ? text.replace(/\{(\w+)}/g, (match, name) => String(values[name] ?? match)) : text;
+    const locale = getLocale();
+    const text: string = messages[locale][key];
+    const result = values ? text.replace(/\{(\w+)}/g, (match, name) => String(values[name] ?? match)) : text;
+    if (import.meta.env.DEV && locale !== defaultLocale && typeof document !== 'undefined' && text === messages[defaultLocale][key]) {
+        (globalThis.__ktorSvelteUntranslated ??= new Map()).set(result, { key, locale });
+    }
+    return result;
 }
 
 export const m = {
