@@ -169,7 +169,7 @@ fun Route.taskRoutes(
             if (file.attachment.uploader.id != viewer.id && viewer.role != Role.ADMIN) {
                 return@delete call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemNotYours()))
             }
-            tasks.detach(file.attachment.id)
+            tasks.detach(file.attachment.id.value)
             call.respond(HttpStatusCode.NoContent)
         }
     }

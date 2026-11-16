@@ -197,9 +197,15 @@ data class CommentInput(
     }
 }
 
+@JvmInline
+@Serializable
+value class AttachmentId(
+    val value: Int,
+)
+
 @Serializable
 data class Attachment(
-    val id: Int,
+    val id: AttachmentId,
     val taskId: Int,
     val name: String,
     val contentType: String,

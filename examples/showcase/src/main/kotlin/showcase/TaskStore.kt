@@ -194,7 +194,7 @@ class TaskStore(
                 } get Attachments.id
             }
         Files.write(filePath(id), content)
-        return Attachment(id, taskId, name, contentType, content.size.toLong(), UserRef(uploader.id, uploader.name), instant(now))
+        return Attachment(AttachmentId(id), taskId, name, contentType, content.size.toLong(), UserRef(uploader.id, uploader.name), instant(now))
     }
 
     suspend fun file(id: Int): StoredFile? {
@@ -260,7 +260,7 @@ class TaskStore(
         val uploaders = users.refs(rows.map { it[Attachments.uploaderId] })
         return rows.map {
             Attachment(
-                id = it[Attachments.id],
+                id = AttachmentId(it[Attachments.id]),
                 taskId = it[Attachments.taskId],
                 name = it[Attachments.name],
                 contentType = it[Attachments.contentType],

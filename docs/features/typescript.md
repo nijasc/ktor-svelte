@@ -212,6 +212,48 @@ A value of another type stops generation with a message that names the property.
 
 Like the rest of the client, `constants.ts` is checked by `svelteVerifyTs`, so a changed constant with a stale client fails `check`.
 
+## IDs that cannot be mixed up
+
+A note ID and a user ID are both numbers, so nothing stops code from passing one where the other belongs. In Kotlin a value class prevents that:
+
+```kotlin no-check
+@JvmInline
+@Serializable
+value class NoteId(val value: Long)
+
+@Serializable
+data class Note(val id: NoteId, val authorId: UserId, val title: String)
+```
+
+The generated client keeps the distinction. In JSON the ID is still a plain number, but in TypeScript it is its own type:
+
+```ts no-check
+export type NoteId = number & { readonly [brand]: 'NoteId' };
+
+export interface Note {
+    id: NoteId;
+    authorId: UserId;
+    title: string;
+}
+```
+
+```ts no-check
+import { api, NoteId } from '#api';
+
+const note = await api.notes.get(5);
+await api.notes.delete(note.id);
+await api.users.get(note.id); // fine today: path parameters take any number or text
+const copy: Note = { ...note, authorId: note.id }; // does not compile: NoteId is not UserId
+
+const fromUrl = NoteId(Number(page.params.id));
+```
+
+- Values that come from the server already have the type. To make one from a plain value, such as a route parameter, call the function of the same name: `NoteId(5)`.
+- A branded ID is still a number or text to everything that only reads it: it can be printed, compared and passed to a path parameter.
+- This applies to a value class over `Int`, `Long`, `Double` or `String`, wherever it appears in a DTO: alone, optional, in a list or as the values of a map. Value classes over anything else, or with validation annotations on the property, are generated as their underlying type, as before.
+
+When you turn an existing `Long` field into a value class, or update to this version with value classes already in your DTOs, the frontend stops compiling where it builds such a value from a plain number. Wrap those places in the function, as above.
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.

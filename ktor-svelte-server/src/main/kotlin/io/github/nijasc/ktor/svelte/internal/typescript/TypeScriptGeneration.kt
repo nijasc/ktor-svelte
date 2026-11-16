@@ -147,7 +147,7 @@ private fun generate(
     return try {
         val openApiJson =
             OpenApiDocSource
-                .Routing()
+                .Routing(schemaInference = BrandedSchemaInference)
                 .read(application, OpenApiDoc(info = OpenApiInfo(title = "API", version = "1.0")))
                 .content
         val routing = application.pluginOrNull(RoutingRoot)

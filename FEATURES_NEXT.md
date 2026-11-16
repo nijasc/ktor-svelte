@@ -26,45 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 31 | Branded ID types |  |
+| 32 | Decimal and duration types |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 104 | Generated files never conflict | #246 |
-| 109 | Protect internal endpoints | #247 |
-| 11 | Draft and form state helper | #248 |
-| 12 | Replay and copy as curl | #251 |
-| 13 | Open route in IDE | #252 |
-| 14 | Server error overlay | #253 |
-| 89 | Confirm helper | #254 |
-| 93 | Dialog helper | #255 |
-| 38 | SQL queries per request | #256 |
-| 39 | Override `publicConfig` in dev | #258 |
-| 40 | Record requests as fixtures | #259 |
-| 51 | Missing translation highlight | #260 |
-| 58 | Route map in dev panel | #261 |
-| 74 | Duplicate request detection | #262 |
-| 75 | Live accessibility hints | #263 |
-| 78 | Theme editor | #264 |
-| 80 | Status view | #265 |
-| 99 | Sensitive fields | #267 |
-| 25 | Server-sent toasts | #268 |
-| 26 | Server-directed navigation | #269 |
-| 27 | Upload rules shared | #270 |
-| 20 | Shared constants | #271 |
-| 73 | Typed error codes | #272 |
-| 62 | Typed cookies | #273 |
-| 79 | Cookie and session inspector | #274 |
-| 85 | Cookie consent helper | #275 |
-| 63 | Field component | #276 |
-| 64 | Inputs for dates and enums | #277 |
-| 65 | Data table for paged routes | #278 |
-| 69 | Typed error pages | #279 |
-| 94 | Theme and language switches | #280 |
-| 106 | Navigation progress bar | #281 |
-| 71 | Server checks while typing | #282 |
+| 31 | Branded ID types | #283 |
 
 ### Next up
 
@@ -120,12 +88,44 @@ Features of this plan that are merged:
 | 100 | Restart summary line | #243 |
 | 101 | Highlight your own frames | #244 |
 | 102 | Short task names | #245 |
+| 104 | Generated files never conflict | #246 |
+| 109 | Protect internal endpoints | #247 |
+| 11 | Draft and form state helper | #248 |
+| 12 | Replay and copy as curl | #251 |
+| 13 | Open route in IDE | #252 |
+| 14 | Server error overlay | #253 |
+| 89 | Confirm helper | #254 |
+| 93 | Dialog helper | #255 |
+| 38 | SQL queries per request | #256 |
+| 39 | Override `publicConfig` in dev | #258 |
+| 40 | Record requests as fixtures | #259 |
+| 51 | Missing translation highlight | #260 |
+| 58 | Route map in dev panel | #261 |
+| 74 | Duplicate request detection | #262 |
+| 75 | Live accessibility hints | #263 |
+| 78 | Theme editor | #264 |
+| 80 | Status view | #265 |
+| 99 | Sensitive fields | #267 |
+| 25 | Server-sent toasts | #268 |
+| 26 | Server-directed navigation | #269 |
+| 27 | Upload rules shared | #270 |
+| 20 | Shared constants | #271 |
+| 73 | Typed error codes | #272 |
+| 62 | Typed cookies | #273 |
+| 79 | Cookie and session inspector | #274 |
+| 85 | Cookie consent helper | #275 |
+| 63 | Field component | #276 |
+| 64 | Inputs for dates and enums | #277 |
+| 65 | Data table for paged routes | #278 |
+| 69 | Typed error pages | #279 |
+| 94 | Theme and language switches | #280 |
+| 106 | Navigation progress bar | #281 |
+| 71 | Server checks while typing | #282 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 32 | Decimal and duration types | Medium | 6 |
 | 33 | Version conflicts | Medium | 6 |
 | 43 | `Patch<T>` partial updates | Medium | 6 |
 | 44 | Typed multipart uploads | Medium | 6 |

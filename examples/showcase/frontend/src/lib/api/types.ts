@@ -2,6 +2,8 @@ import type { LucideIconName as LucideIcon } from '../ktor-svelte/icons.js';
 
 export type { LucideIcon };
 
+declare const brand: unique symbol;
+
 declare const iso: unique symbol;
 
 const pad = (value: number, width = 2) => String(value).padStart(width, '0');
@@ -53,7 +55,7 @@ export const Activity = {
 };
 
 export interface Attachment {
-    id: number;
+    id: AttachmentId;
     taskId: number;
     name: string;
     contentType: string;
@@ -64,7 +66,7 @@ export interface Attachment {
 
 export const Attachment = {
     empty: (): Attachment => ({
-        id: 0,
+        id: AttachmentId(0),
         taskId: 0,
         name: '',
         contentType: '',
@@ -73,11 +75,14 @@ export const Attachment = {
         createdAt: '' as IsoDateTime,
     }),
     bounds: {
-        id: { required: true },
         taskId: { required: true },
         size: { required: true },
     },
 };
+
+export type AttachmentId = number & { readonly [brand]: 'AttachmentId' };
+
+export const AttachmentId = (value: number): AttachmentId => value as AttachmentId;
 
 export interface BoardStats {
     todo: number;
