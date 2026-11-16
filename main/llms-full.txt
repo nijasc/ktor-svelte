@@ -671,6 +671,10 @@ When Kotlin stops compiling, the app keeps running its last good version, and th
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
 
+When an API call from the page fails with an exception on the server, the browser shows it the way Vite shows a frontend error: an overlay with the exception, its message and the stack trace without the framework frames, and a link to the first line of your own code in it. Click it or press Escape to close it. You do not have to switch to the terminal to see why a call answered 500.
+
+The overlay only appears for calls the open page made itself, and only for exceptions that reach Ktor. An exception your own `StatusPages` handler turns into an answer is yours, and shows up as its status in the list. Turn the overlay off with `dev { errorOverlay = false }`. It needs the panel, so `panel = false` turns it off too.
+
 Click the path of a call and the Kotlin route that answered it opens in your editor, at its line. The app hands this to Vite's "open in editor", the same one Vite's error overlay uses: it finds the editor that is running, or takes the one named in the `LAUNCH_EDITOR` environment variable, such as `idea` or `code`. Hovering a call shows the file and line. Only this machine can ask for it, and only for files of routes that are in the list.
 
 Each call has two buttons. **Replay** sends it again, with the same method, path, headers and body, so you can repeat a call after changing the Kotlin code without clicking through the page again. **curl** copies it as a `curl` command, with its body and its `X-Request-Id`, to paste into a terminal or a bug report. The command carries no cookies, so add your session yourself for a call that needs one. And it carries the body as it was sent, passwords included, so look at it before you share it.
@@ -2958,6 +2962,7 @@ install(Svelte) {
         panel = true
         browserLogs = true
         refreshAfterRestart = true
+        errorOverlay = true
         startupTiming = true
     }
 
@@ -3015,6 +3020,7 @@ install(Svelte) {
 | `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
 | `dev.slowApiCall` | Logs API calls that take longer than this in development. `null` turns it off |
 | `dev.startupTiming` | Logs what the startup time was spent on in development, with the parts you wrapped in [`startupStep`](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow). On by default |
+| `dev.errorOverlay` | Shows the Kotlin exception of a failed API call in the browser, in development. On by default, needs `dev.panel` |
 | `dev.refreshAfterRestart` | After the app restarts in development, open pages rerun their `load` functions, so a Kotlin change shows up without a manual reload. On by default |
 | `dev.browserLogs` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log. On by default |
 | `dev.panel` | Shows a panel of recent API calls, with status, timing and validation errors, on pages proxied from Vite. On by default. See [Dev workflow](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) |
