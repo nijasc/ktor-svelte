@@ -103,6 +103,7 @@
   "task-delete-question": "Delete this task?",
   "task-delete-warning": "Its comments and files are deleted too. This cannot be undone.",
   "action-cancel": "Cancel",
+  "action-close": "Close",
   "action-delete": "Delete",
   "attachments-title": "Files",
   "attachments-empty": "No files yet.",

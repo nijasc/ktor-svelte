@@ -235,6 +235,38 @@ old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'
 
 A message counts as used when its generated function is called anywhere in the frontend or in Kotlin, or when its key appears as a string, because it may then be looked up by name. The task only lists what it finds. Add `--strict` to fail the build instead.
 
+## Modals
+
+A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:
+
+```svelte
+<script lang="ts">
+    import { modal } from '#lib/ktor-svelte/modal.ts';
+
+    const rename = modal<string>();
+    let name = $state('');
+
+    async function askForName() {
+        const chosen = await rename.open();
+        if (chosen) console.log('renamed to', chosen);
+    }
+</script>
+
+<button onclick={askForName}>Rename</button>
+
+<dialog class="modal" use:rename.attach>
+    <div class="modal-box">
+        <input bind:value={name} aria-label="New name" />
+        <button onclick={() => rename.close(name)}>Save</button>
+        <button onclick={() => rename.close()}>Cancel</button>
+    </div>
+</dialog>
+```
+
+`open()` shows the dialog and returns a promise. It resolves with what `close(result)` was given, or with `undefined` when the dialog was closed any other way: `close()` without a value, Escape, or a click beside the box. Pass `modal({ closeOnBackdrop: false })` to keep such clicks from closing it. `isOpen` tells whether it is showing.
+
+The markup is yours, so it works with DaisyUI's `modal` classes, as above, and with a plain `<dialog>`. To only ask a yes or no question before a call, use [`confirmed`](./calling-the-api.md#ask-before-a-call), which brings its own dialog.
+
 ## Guide for coding assistants
 
 `svelteSync` also writes `src/lib/ktor-svelte/AGENTS.md`, a short guide for coding assistants such as Claude Code, Cursor or Copilot. It tells them what they otherwise get wrong in a project like this:

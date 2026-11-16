@@ -273,6 +273,29 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a modal opens from a button and closes by its button, by Escape and by a click beside it`() {
+        page.openWhenInteractive("/about")
+        val dialog = page.getByRole(AriaRole.DIALOG)
+        assertThat(dialog).hasCount(0)
+
+        page.button("Demo users").click()
+        assertThat(dialog).containsText("ada@example.com")
+        page.expectAccessible()
+        dialog.getByText("Close").click()
+        assertThat(dialog).hasCount(0)
+
+        page.button("Demo users").click()
+        assertThat(dialog).isVisible()
+        page.keyboard().press("Escape")
+        assertThat(dialog).hasCount(0)
+
+        page.button("Demo users").click()
+        assertThat(dialog).isVisible()
+        page.mouse().click(5.0, 5.0)
+        assertThat(dialog).hasCount(0)
+    }
+
+    @Test
     fun `a task that does not exist shows the error page`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/tasks/999999")

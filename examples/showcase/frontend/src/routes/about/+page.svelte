@@ -1,5 +1,8 @@
 <script lang="ts">
     import { m } from '#i18n';
+    import { modal } from '#lib/ktor-svelte/modal.ts';
+
+    const demoUsers = modal();
 
     const rows = $derived([
         { feature: m.aboutRowClient(), where: 'src/lib/api, generateTs = true' },
@@ -31,6 +34,15 @@
             {/each}
         </tbody>
     </table>
-    <h2>{m.aboutDemoTitle()}</h2>
-    <p>{m.aboutDemoText()}</p>
 </article>
+<button class="btn mt-4" type="button" onclick={() => demoUsers.open()}>{m.aboutDemoTitle()}</button>
+
+<dialog class="modal" aria-labelledby="demo-users-title" use:demoUsers.attach>
+    <div class="modal-box">
+        <h2 id="demo-users-title" class="text-lg font-semibold">{m.aboutDemoTitle()}</h2>
+        <p class="py-2">{m.aboutDemoText()}</p>
+        <div class="modal-action">
+            <button class="btn" type="button" onclick={() => demoUsers.close()}>{m.actionClose()}</button>
+        </div>
+    </div>
+</dialog>
