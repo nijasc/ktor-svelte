@@ -1,6 +1,9 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
+import io.github.nijasc.ktor.svelte.internal.DeclaredEnvironment
 import io.github.nijasc.ktor.svelte.internal.DocLink
+import io.github.nijasc.ktor.svelte.internal.ENV_EXAMPLE_FILE
+import io.github.nijasc.ktor.svelte.internal.environmentExample
 import io.github.nijasc.ktor.svelte.internal.onOwn
 import io.ktor.openapi.OpenApiDoc
 import io.ktor.openapi.OpenApiInfo
@@ -50,6 +53,9 @@ internal fun routeSourcesJson(
             }
         },
     ) + "\n"
+
+internal fun isGenerateOnlyRun(): Boolean =
+    System.getProperty(VERIFY_REPORT_PROPERTY) != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
 
 internal fun writeIfChanged(
     directory: Path,
@@ -153,12 +159,20 @@ private fun generate(
         val routing = application.pluginOrNull(RoutingRoot)
         val routeFiles = routing?.let { root -> routeSources(root).mapValues { it.value.file } }.orEmpty()
         val files = generator.generate(openApiJson, routeFiles)
+        val projectDirectory = Path("").absolute()
+        val environmentFile = environmentExample(DeclaredEnvironment.variables())?.let { mapOf(ENV_EXAMPLE_FILE to it) }.orEmpty()
         if (verifyReport != null) {
-            val stale = staleFiles(output, files).map { it.absolute().normalize().toString() }
+            val stale =
+                (
+                    staleFiles(
+                        output,
+                        files,
+                    ) + staleFiles(projectDirectory, environmentFile)
+                ).map { it.absolute().normalize().toString() }
             verifyReport.parent?.createDirectories()
             verifyReport.writeText(stale.joinToString("") { "$it\n" })
         } else {
-            val changed = writeIfChanged(output, files)
+            val changed = writeIfChanged(output, files) + writeIfChanged(projectDirectory, environmentFile)
             if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
             routing?.let { root ->
                 writeIfChanged(

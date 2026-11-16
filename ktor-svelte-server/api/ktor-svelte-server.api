@@ -67,6 +67,30 @@ public final synthetic class io/github/nijasc/ktor/svelte/EmptyAsNull$Impl : io/
 	public fun <init> ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/EnvironmentException : java/lang/IllegalStateException {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun getVariables ()Ljava/util/List;
+}
+
+public final class io/github/nijasc/ktor/svelte/EnvironmentKt {
+	public static final fun environment (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static synthetic fun environment$default (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class io/github/nijasc/ktor/svelte/EnvironmentScope {
+	public final fun boolean (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;)Z
+	public static synthetic fun boolean$default (Lio/github/nijasc/ktor/svelte/EnvironmentScope;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;ILjava/lang/Object;)Z
+	public final fun choice (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)Ljava/lang/String;
+	public final fun int (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;)I
+	public static synthetic fun int$default (Lio/github/nijasc/ktor/svelte/EnvironmentScope;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;ILjava/lang/Object;)I
+	public final fun optional (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static synthetic fun optional$default (Lio/github/nijasc/ktor/svelte/EnvironmentScope;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+	public final fun optionalSecret (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public final fun secret (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public final fun string (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static synthetic fun string$default (Lio/github/nijasc/ktor/svelte/EnvironmentScope;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+}
+
 public final class io/github/nijasc/ktor/svelte/ErrorCodesKt {
 	public static final fun respondError (Lio/ktor/server/application/ApplicationCall;Ljava/lang/Enum;Lio/ktor/http/HttpStatusCode;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun respondError$default (Lio/ktor/server/application/ApplicationCall;Ljava/lang/Enum;Lio/ktor/http/HttpStatusCode;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;

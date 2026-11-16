@@ -310,6 +310,27 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `wrong environment variables stop the app at once, with one table that names them all`() {
+        val runtime = File(System.getProperty("java.home"), "bin/java").path
+        val process =
+            ProcessBuilder(runtime, "-jar", System.getProperty("example.jar"))
+                .apply {
+                    environment()["PORT"] = "eighty"
+                    environment()["SHOWCASE_REGISTRATION"] = "maybe"
+                    environment()["SHOWCASE_DATA"] = directory.resolve("never-started").toString()
+                }.redirectErrorStream(true)
+                .start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertTrue(process.waitFor(60, java.util.concurrent.TimeUnit.SECONDS), output)
+        assertFalse(process.exitValue() == 0, output)
+        assertContains(output, "The app cannot start: 2 environment variables are missing or wrong.")
+        assertTrue(Regex("""PORT\s+"eighty" is not a whole number\s+Port the server listens on""").containsMatchIn(output), output)
+        assertTrue(Regex("""SHOWCASE_REGISTRATION\s+"maybe" is not one of Open, Closed""").containsMatchIn(output), output)
+        assertFalse(directory.resolve("never-started").toFile().exists())
+        assertContains(File(".env.example").readText(), "# SHOWCASE_REGISTRATION=Open")
+    }
+
+    @Test
     fun `an id that is a value class in Kotlin is its own type in the generated client`() {
         val types = File("frontend/src/lib/api/types.ts").readText().replace("\r\n", "\n")
         assertContains(types, "export type AttachmentId = number & { readonly [brand]: 'AttachmentId' };")
