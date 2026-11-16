@@ -6,6 +6,7 @@ import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import com.microsoft.playwright.options.AriaRole
+import com.microsoft.playwright.options.Cookie
 import java.io.File
 import java.net.ServerSocket
 import java.net.URI
@@ -84,7 +85,10 @@ class BrowserSession(
             else -> playwright.chromium()
         }.launch()
 
-    fun newContext(): BrowserContext = browser.newContext(Browser.NewContextOptions().setBaseURL(server.url).setLocale("en-US"))
+    fun newContext(): BrowserContext =
+        browser.newContext(Browser.NewContextOptions().setBaseURL(server.url).setLocale("en-US")).also { context ->
+            context.addCookies(listOf(Cookie("cookie-consent", "preferences").setUrl(server.url)))
+        }
 
     override fun close() {
         browser.close()

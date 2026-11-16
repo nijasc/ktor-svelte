@@ -50,6 +50,7 @@ fun main(arguments: Array<String>) {
                     context.addCookies(
                         listOf(
                             Cookie("ktor_svelte_theme", shot.theme).setUrl(server.url),
+                            Cookie("cookie-consent", "preferences").setUrl(server.url),
                             Cookie("ktor_svelte_locale", shot.locale).setUrl(server.url),
                         ),
                     )

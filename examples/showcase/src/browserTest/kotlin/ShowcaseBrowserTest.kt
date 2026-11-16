@@ -172,6 +172,37 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a visitor chooses whether the optional cookie is kept, and the choice is followed`() {
+        fun cookies() = page.context().cookies().associate { it.name to it.value }
+        val banner = page.getByRole(AriaRole.REGION, Page.GetByRoleOptions().setName("Cookies"))
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        assertThat(banner).hasCount(0)
+
+        context.clearCookies(com.microsoft.playwright.BrowserContext.ClearCookiesOptions().setName("cookie-consent"))
+        page.navigate("/board")
+        assertThat(banner).containsText("This site can remember your board filter in a cookie.")
+        banner.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Only what is needed")).click()
+        assertThat(banner).hasCount(0)
+        assertEquals("none", cookies()["cookie-consent"])
+        page.locator("#mine").check()
+        assertThat(page.locator("#tasks > li, #no-tasks").first()).isVisible()
+        assertEquals(null, cookies()["board-mine"])
+        page.reload()
+        assertThat(page.locator("#mine")).not().isChecked()
+        assertThat(banner).hasCount(0)
+
+        context.clearCookies(com.microsoft.playwright.BrowserContext.ClearCookiesOptions().setName("cookie-consent"))
+        page.reload()
+        banner.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Remember it")).click()
+        assertEquals("preferences", cookies()["cookie-consent"])
+        page.locator("#mine").check()
+        page.waitForCondition { cookies()["board-mine"] == "true" }
+        page.reload()
+        assertThat(page.locator("#mine")).isChecked()
+        page.locator("#mine").uncheck()
+    }
+
+    @Test
     fun `the board remembers the mine filter in its typed cookie`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/board")
