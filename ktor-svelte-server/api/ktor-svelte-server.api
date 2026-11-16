@@ -42,6 +42,25 @@ public final class io/github/nijasc/ktor/svelte/Page$Companion {
 	public final fun serializer (Lkotlinx/serialization/KSerializer;)Lkotlinx/serialization/KSerializer;
 }
 
+public final class io/github/nijasc/ktor/svelte/PageKt {
+	public static final field DEFAULT_PAGE_LIMIT I
+	public static final field LARGEST_PAGE_LIMIT I
+	public static final fun pageRequest (Lio/ktor/server/application/ApplicationCall;II)Lio/github/nijasc/ktor/svelte/PageRequest;
+}
+
+public final class io/github/nijasc/ktor/svelte/PageRequest {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Lio/github/nijasc/ktor/svelte/PageRequest;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/PageRequest;Ljava/lang/String;IILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/PageRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCursor ()Ljava/lang/String;
+	public final fun getLimit ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/Enum {
 	public static final field FixedWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 	public static final field SlidingWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
