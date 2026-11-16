@@ -263,6 +263,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
 
         if (devRequests != null) {
             devRequests.install(application)
+            devRequests.countSql(application)
             onCall { call -> devRequests.started(call) }
             on(ResponseSent) { call -> devRequests.finished(call) }
         }

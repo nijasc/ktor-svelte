@@ -259,6 +259,12 @@ class DevModeBrowserTest {
         assertThat(page.locator("#tasks > li").first()).isVisible()
         page.reload()
         assertThat(page.locator("#signed-in-as")).hasText("Ada Lovelace")
+        val tasks =
+            page
+                .locator("[data-ktor-svelte-panel] .row")
+                .filter(Locator.FilterOptions().setHasText("/api/tasks"))
+                .first()
+        assertThat(tasks.locator(".sql")).containsText(Pattern.compile("^\\d+ SQL, [\\d.]+ ms"))
     }
 
     @Test

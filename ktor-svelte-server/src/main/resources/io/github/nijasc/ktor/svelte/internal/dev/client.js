@@ -154,6 +154,8 @@ button.path:hover { text-decoration: underline; }
 .ok { color: #7bd88f; } .warn { color: #f3c969; } .bad { color: #ff7b72; }
 .ms { text-align: right; color: #aaa; }
 .fields { grid-column: 2 / -1; color: #f3c969; white-space: pre-wrap; }
+.sql { grid-column: 2 / -1; color: #aaa; }
+.sql .repeated { color: #f3c969; }
 .empty { padding: 10px; color: #aaa; font-family: system-ui, sans-serif; }
 `;
 
@@ -307,6 +309,19 @@ function startPanel() {
                 row.append(cell);
             }
             row.append(rowTools(entry));
+            if (entry.sql) {
+                const sql = document.createElement('span');
+                sql.className = 'sql';
+                sql.textContent = `${entry.sql.count} SQL, ${entry.sql.ms.toFixed(entry.sql.ms < 10 ? 1 : 0)} ms`;
+                if (entry.sql.repeated) {
+                    const repeated = document.createElement('span');
+                    repeated.className = 'repeated';
+                    repeated.textContent = `, the same statement ${entry.sql.repeated} times`;
+                    repeated.title = entry.sql.statement;
+                    sql.append(repeated);
+                }
+                row.append(sql);
+            }
             if (entry.fields) {
                 const fields = document.createElement('span');
                 fields.className = 'fields';

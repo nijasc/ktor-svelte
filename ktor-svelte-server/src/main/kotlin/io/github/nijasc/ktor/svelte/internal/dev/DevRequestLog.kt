@@ -9,6 +9,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.ApplicationCallPipeline
+import io.ktor.server.application.call
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.uri
@@ -22,6 +24,7 @@ import io.ktor.util.AttributeKey
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -62,6 +65,15 @@ internal class DevRequestLog(
 
     fun started(call: ApplicationCall) {
         call.attributes.put(RequestStartedAt, clock())
+    }
+
+    fun countSql(application: Application) {
+        application.intercept(ApplicationCallPipeline.Setup) {
+            if (!resolver.isApiPath(decodedPathOrRaw(call))) return@intercept
+            val sql = RequestSql()
+            call.attributes.put(RequestSqlKey, sql)
+            withContext(RequestSqlElement(sql)) { proceed() }
+        }
     }
 
     fun validationFailed(
@@ -108,6 +120,10 @@ internal class DevRequestLog(
                     )
                 }
                 call.attributes.getOrNull(RequestError)?.let { put("error", it) }
+                call.attributes
+                    .getOrNull(RequestSqlKey)
+                    ?.summary()
+                    ?.let { put("sql", it) }
                 call.attributes.getOrNull(RequestFields)?.let { fields ->
                     put(
                         "fields",

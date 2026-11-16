@@ -58,6 +58,10 @@ The overlay only appears for calls the open page made itself, and only for excep
 
 Click the path of a call and the Kotlin route that answered it opens in your editor, at its line. The app hands this to Vite's "open in editor", the same one Vite's error overlay uses: it finds the editor that is running, or takes the one named in the `LAUNCH_EDITOR` environment variable, such as `idea` or `code`. Hovering a call shows the file and line. Only this machine can ask for it, and only for files of routes that are in the list.
 
+When your app uses [Exposed](https://www.jetbrains.com/exposed/), each call also shows what it cost in the database, such as `7 SQL, 12 ms`: the number of statements it ran and the time they took together. When one statement ran five times or more in a single call, the line says so in yellow, with the statement on hover. That is the usual sign of a query inside a loop, the kind that is fast with ten rows and slow with ten thousand.
+
+This needs no setup and no code: ktor-svelte registers itself with Exposed when both are in the app. Statements count for the call that started them, also when they run on another thread or in a child coroutine. It works with Exposed 1.0 and newer, and only measures while the dev panel is on.
+
 Each call has two buttons. **Replay** sends it again, with the same method, path, headers and body, so you can repeat a call after changing the Kotlin code without clicking through the page again. **curl** copies it as a `curl` command, with its body and its `X-Request-Id`, to paste into a terminal or a bug report. The command carries no cookies, so add your session yourself for a call that needs one. And it carries the body as it was sent, passwords included, so look at it before you share it.
 
 The buttons work for calls this page made, since that is where the body is known, and for every `GET`. For other calls, such as an upload or one from another tab, they are disabled.

@@ -26,6 +26,7 @@ dependencies {
     api(libs.serialization.json)
     compileOnly(libs.ktor.serialization.xml)
     compileOnly(libs.ktor.server.compression.zstd)
+    compileOnly(libs.exposed.core)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.server.netty)
@@ -37,6 +38,8 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.logback)
+    testImplementation(libs.exposed.jdbc)
+    testImplementation(libs.h2)
 }
 
 mavenPublishing {

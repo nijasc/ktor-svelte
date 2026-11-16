@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 38 | SQL queries per request |  |
+| 39 | Override `publicConfig` in dev |  |
 
 ### In review
 
@@ -40,6 +40,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 14 | Server error overlay | #253 |
 | 89 | Confirm helper | #254 |
 | 93 | Dialog helper | #255 |
+| 38 | SQL queries per request | #256 |
 
 ### Next up
 
@@ -100,7 +101,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 39 | Override `publicConfig` in dev | Small | 3 |
 | 40 | Record requests as fixtures | Medium | 3 |
 | 51 | Missing translation highlight | Small | 3 |
 | 58 | Route map in dev panel | Medium | 3 |
