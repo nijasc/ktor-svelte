@@ -450,6 +450,13 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDepe
 	public final fun update ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyApiRoutesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
+	public final fun verify ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyLinksTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;

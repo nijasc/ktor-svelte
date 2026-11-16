@@ -159,10 +159,10 @@ The path is the file's package folder and name, so it is the same on every machi
 
 ## Routes nothing calls
 
-A call to a route that no longer exists does not compile. The other direction needs a task: `svelteVerifyEndpoints` lists the API routes that nothing in the frontend calls, so you can see what is safe to remove:
+A call to a route that no longer exists does not compile. The other direction needs a task: `svelteVerifyApiRoutes` lists the API routes that nothing in the frontend calls, so you can see what is safe to remove:
 
 ```bash
-./gradlew svelteVerifyEndpoints
+./gradlew svelteVerifyApiRoutes
 ```
 
 ```text

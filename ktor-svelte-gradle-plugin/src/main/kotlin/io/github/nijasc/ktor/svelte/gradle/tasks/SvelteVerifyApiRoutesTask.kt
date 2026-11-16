@@ -29,7 +29,7 @@ internal fun unusedEndpointReport(frontend: File): List<String>? {
 }
 
 @UntrackedTask(because = "Reads the generated client and the frontend sources and reports API routes nothing calls")
-public abstract class SvelteVerifyEndpointsTask : DefaultTask() {
+public abstract class SvelteVerifyApiRoutesTask : DefaultTask() {
     @get:Internal
     public abstract val frontendDir: DirectoryProperty
 
