@@ -4,7 +4,7 @@ The features chosen for 1.2.0, in the order to build them. Each one is its own p
 
 The goal behind the list: the frontend and the backend should feel like one app. What Kotlin knows, TypeScript knows, and neither side repeats what the other already said.
 
-Seventy-six features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
+Eighty-five features is far more than one release holds. The [order](#order) puts the ones that stand alone first, so the release can be cut after any group, and the rest moves to 1.3.0 without rework.
 
 ## Scope
 
@@ -86,6 +86,15 @@ Seventy-six features is far more than one release holds. The [order](#order) put
 | 74 | Duplicate request detection | Dev panel | Small | #201 |
 | 75 | Live accessibility hints | Dev panel | Medium | #201 |
 | 76 | Starter page with next steps | Gradle plugin | Small | |
+| 77 | Page metadata for sharing | Gradle plugin and generated files | Medium | 16 |
+| 78 | Theme editor | Dev panel | Medium | #201 |
+| 79 | Cookie and session inspector | Dev panel | Small | 62 |
+| 80 | Status view | Dev panel | Small | #201 |
+| 81 | Production smoke test | Gradle plugin | Medium | |
+| 82 | Deploy presets | Gradle plugin | Medium | 37 |
+| 83 | Reload prompt after deploy | Generated files | Small | |
+| 84 | Project guide for coding assistants | Gradle plugin | Small | |
+| 85 | Cookie consent helper | Server and generated files | Medium | 62 |
 
 ## What each one does
 
@@ -246,23 +255,44 @@ Seventy-six features is far more than one release holds. The [order](#order) put
 
 76. **Starter page with next steps.** A new project's first page shows what is set up, links to the dev panel, the API docs and the docs for each chosen feature, and suggests what to build first.
 
+### Search engines and sharing
+
+77. **Page metadata for sharing.** A page declares title, description and preview image next to its nav metadata, and the prerendered HTML gets the matching head tags, including Open Graph, with translated text per locale.
+
+### More tools in the dev panel
+
+78. **Theme editor.** Adjust the colors of a DaisyUI theme live on the page, then copy the result as the custom theme block for `build.gradle.kts`.
+79. **Cookie and session inspector.** See the cookies and the current session of this browser as the server reads them, with what each declared cookie means, and clear them with one click.
+80. **Status view.** The settings, versions, health check result and build fingerprint the status endpoint returns, shown readable in the dev panel instead of as raw JSON.
+
+### Running in production
+
+81. **Production smoke test.** A task builds the JAR, starts it the way production does, requests every prerendered page and a few API routes, and fails if anything is not answered correctly.
+82. **Deploy presets.** Generates the config for a host such as Railway, Fly.io or Render from the project's settings: start command, health check path, port and required environment variables.
+83. **Reload prompt after deploy.** A ready-made "new version available, reload" toast wired to the existing new-build detection, so apps do not each write the `onNewBuild` handler shown in the docs.
+
+### Coding assistants and privacy
+
+84. **Project guide for coding assistants.** A generated file tells coding assistants how this project works: its API routes, the generated client, typed routes, commands and the files they must not edit by hand. `svelteSync` keeps it current.
+85. **Cookie consent helper.** Declared cookies get a category, and a generated consent store and banner let visitors accept or refuse the optional ones, on both sides from the same list.
+
 ## Order
 
 1. The route check group (1, 2, 3), because all three build on the matcher from #202.
-2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68, 70, 76). Each is a self-contained pull request.
-3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51, 58, 74, 75).
-4. The server talks to the UI (25, 26, 27), shared constants (20), typed cookies (62) and typed error codes (73). They share one mechanism: the server says something once, and the generated client acts on it.
+2. The small independent ones (4 to 10, 18, 19, 35, 36, 45, 53, 55, 56, 57, 68, 70, 76, 83, 84). Each is a self-contained pull request.
+3. The client helper and the dev panel group (11 to 14, then 38, 39, 40, 51, 58, 74, 75, 78, 80).
+4. The server talks to the UI (25, 26, 27), shared constants (20), typed error codes (73) and typed cookies (62), then the cookie inspector (79) and the consent helper (85), which read the declared cookies. They share one mechanism: the server says something once, and the generated client acts on it.
 5. Generated UI building blocks (63, 64, 65, 69) and server checks while typing (71). They come after the form state helper (11) and the `respondPage` helper (9), which they use.
-6. Richer shared types (31, 32, 33, 43, 44), idempotency keys (72) and declared environment variables (37), then the secret leak check (46), which reads that declaration.
-7. Languages (49, 50), self-hosted fonts (59) and the API change report (48).
+6. Richer shared types (31, 32, 33, 43, 44), idempotency keys (72) and declared environment variables (37), then the secret leak check (46) and the deploy presets (82), which read that declaration.
+7. Languages (49, 50), self-hosted fonts (59), the API change report (48) and the production smoke test (81).
 8. One login (21, then 24, 67, 22, 23), then synced user preferences (41). Typed current user comes first, because the others read it.
-9. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16), generated page loads (28) and inline page data (66). All of them change how a route or a page is described, so they are designed together.
+9. The resource routes DSL (34), page scaffolding (15), the CRUD scaffold (42), nav metadata (16), page metadata for sharing (77), generated page loads (28) and inline page data (66). All of them change how a route or a page is described, so they are designed together.
 10. Frontend errors in the server log (29), web vitals (54), the Kotlin browser test kit (30) and the accessibility check (47), which runs on the test kit's browser.
 11. The installable app (52) and emails from Svelte components (61). Both add a second kind of build output next to the pages.
 12. Multiple frontends (60). It changes the one-frontend, one-manifest assumption the whole project rests on, so it is a candidate for 2.0 and not for a minor release.
 13. `svelteUpgrade` (17) last.
 
-Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list. Groups 5 to 11 are enough for 1.3.0 through 1.5.0, and any of them can move there without rework.
+Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list. Groups 5 to 11 are enough for 1.3.0 through 1.6.0, and any of them can move there without rework.
 
 ## Open decisions
 
@@ -317,6 +347,13 @@ Groups 1 to 4 are the safe core of 1.2.0, and they are about a third of the list
 | Typed error codes | Where does the enum live? | In the app, registered once in `install(Svelte)`. `errorMessage()` uses the code's message when there is one, before it falls back to the body's `message`. |
 | Live accessibility hints | Does it add a dependency to every app? | No. It is turned on in `dev { }`, and `svelteSync` adds axe as a development dependency only then. It never reaches the production build. |
 | Starter page | Can it overwrite a real page? | No. It is only written by `svelteInit` and the setup script, into an empty project. |
+| Page metadata for sharing | Does it work for pages with parameters? | Only for the static part. A prerendered page gets its tags at build time, and a page such as `/notes/[id]` sets its own title at runtime, because the server never renders pages. |
+| Theme editor | Does it write to the build file? | No. It only shows the block to copy, because the plugin never edits `build.gradle.kts`. |
+| Production smoke test | Is it part of `check`? | No. It needs the environment the app needs, such as a database, so it is a task to run in CI where that exists. |
+| Deploy presets | Which hosts? | Railway first, because that is what the author deploys to, and others when someone asks. Each preset is written once and then belongs to the app. |
+| Reload prompt after deploy | On for everyone who uses toasts? | No, because it would change what existing apps show. It is one option of the toasts library, and it never replaces an `onNewBuild` handler the app already set. |
+| Project guide for coding assistants | Which file, and what about one the project already has? | A generated file of its own with the generated header, which the project's `AGENTS.md` or `CLAUDE.md` links to in one line. The plugin never edits those. |
+| Cookie consent helper | Does it make an app compliant? | No, and the docs must say so. It provides the mechanics: categories, the stored choice and a guard on both sides so an optional cookie is not set before consent. |
 | Kotlin browser test kit | A new published module? | Yes, `ktor-svelte-test`, with Playwright as its only large dependency, so apps that do not use it pay nothing. |
 
 ## Considered and left out
@@ -345,6 +382,10 @@ These were offered and not chosen for 1.2.0:
 - Forms and data: draft autosave, sample data builders, development seed data with a reset button, a client split into one file per resource.
 - Dev panel: sequential load detection, mocking a response for one route.
 - Testing and CI: screenshot comparisons in the test kit, a reusable CI action, a component preview page.
+- Search engines and languages: hreflang and canonical links, a task that fills missing translations, a check for untranslated text.
+- Dev panel: an icon search.
+- Production: an announcement banner.
+- Coding assistants and editor: a development MCP server, an IntelliJ plugin.
 
 ## Release
 
