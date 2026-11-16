@@ -179,4 +179,32 @@ results.missingFixture = await request('GET', '/api/other').catch((error: Error)
 apiConfig.fetch = fixtureFetch(recordedCalls);
 results.eachFetchStartsOver = await outcomeOf(() => request('GET', '/api/notes', { query: { page: 1 } }));
 
+async function toastsShownFor(headers: Record<string, string>, path: string, status = 200, setup: () => void = () => {}): Promise<string[]> {
+    const shown: string[] = [];
+    apiConfig.retry = undefined;
+    apiConfig.onError = undefined;
+    apiConfig.baseUrl = '';
+    apiConfig.onToast = (message, kind) => shown.push(`${kind}: ${message}`);
+    setup();
+    apiConfig.fetch = (async () => new Response(status === 204 ? null : '{}', { status, headers })) as typeof fetch;
+    await request('POST', path, { body: {} }).catch(() => undefined);
+    apiConfig.onToast = undefined;
+    apiConfig.baseUrl = '';
+    return shown;
+}
+
+Object.assign(globalThis, { document: {}, location: { href: 'http://app.test/', origin: 'http://app.test' } });
+results.serverToast = await toastsShownFor({ 'x-ktor-svelte-toast': 'success:Note%20saved' }, '/api/notes');
+results.severalToasts = await toastsShownFor(
+    { 'x-ktor-svelte-toast': 'info:Gr%C3%BC%C3%9Fe%2C%20Ada, warning:Almost%20full, shout:ignored, broken, error:%E0%A4%A' },
+    '/api/notes'
+);
+results.toastOnAFailedCall = await toastsShownFor({ 'x-ktor-svelte-toast': 'error:Quota%20reached' }, '/api/notes', 409);
+results.toastFromAnotherOrigin = await toastsShownFor({ 'x-ktor-svelte-toast': 'info:Hello' }, '/api/notes', 200, () => {
+    apiConfig.baseUrl = 'https://other.example';
+});
+results.noToastHeader = await toastsShownFor({}, '/api/notes');
+Reflect.deleteProperty(globalThis, 'document');
+Reflect.deleteProperty(globalThis, 'location');
+
 console.log(JSON.stringify(results));

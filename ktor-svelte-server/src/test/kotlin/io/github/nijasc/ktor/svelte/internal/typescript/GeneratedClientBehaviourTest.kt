@@ -127,4 +127,16 @@ class GeneratedClientBehaviourTest {
         )
         assertEquals("ok {\"items\":[\"first\"]}", results.getValue("eachFetchStartsOver").jsonPrimitive.content)
     }
+
+    @Test
+    fun `toasts the server asked for are handed to the app, from its own origin only`() {
+        val results = runHarness()
+
+        fun list(name: String) = results.getValue(name).jsonArray.map { it.jsonPrimitive.content }
+        assertEquals(listOf("success: Note saved"), list("serverToast"))
+        assertEquals(listOf("info: Gr\u00fc\u00dfe, Ada", "warning: Almost full"), list("severalToasts"))
+        assertEquals(listOf("error: Quota reached"), list("toastOnAFailedCall"))
+        assertEquals(emptyList(), list("toastFromAnotherOrigin"))
+        assertEquals(emptyList(), list("noToastHeader"))
+    }
 }
