@@ -297,6 +297,30 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `a call in the dev panel opens the Kotlin route that answered it`() {
+        val opened = java.util.concurrent.CopyOnWriteArrayList<String>()
+        page.route("**/__open-in-editor**") { route ->
+            opened += java.net.URLDecoder.decode(route.request().url().substringAfter("file="), Charsets.UTF_8)
+            route.fulfill(com.microsoft.playwright.Route.FulfillOptions().setStatus(200).setBody(""))
+        }
+        page.navigate("/")
+        assertThat(page.locator("#greeting")).containsText("greetings from Ktor!")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        val greeting = panel.locator(".row").filter(Locator.FilterOptions().setHasText("/api/greeting")).first()
+        assertThat(greeting).hasAttribute("title", Pattern.compile("(?s).*showcase/TaskRoutes\\.kt:\\d+"))
+
+        greeting.locator("button.path").click()
+
+        waitFor("the request to open the editor", 10) { opened.isNotEmpty() }
+        val routes = File(project, "src/main/kotlin/showcase/TaskRoutes.kt").canonicalFile.invariantSeparatorsPath
+        assertTrue(Regex(Regex.escape(routes) + ":\\d+:1").matches(opened.single()), opened.toString())
+        val line = opened.single().removeSuffix(":1").substringAfterLast(':').toInt()
+        assertContains(File(routes).readLines()[line - 1] + File(routes).readLines()[line], "greeting")
+        assertContains(get("/__open-in-editor")?.body().orEmpty(), "file")
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
