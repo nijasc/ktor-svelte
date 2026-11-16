@@ -330,3 +330,15 @@ public final class io/github/nijasc/ktor/svelte/Validator {
 	public final fun check (Lkotlin/reflect/KProperty0;ZLkotlin/jvm/functions/Function0;)V
 }
 
+public final class io/github/nijasc/ktor/svelte/internal/dev/ExposedSqlCounter : org/jetbrains/exposed/v1/core/statements/GlobalStatementInterceptor {
+	public fun <init> ()V
+	public fun afterCommit (Lorg/jetbrains/exposed/v1/core/Transaction;)V
+	public fun afterExecution (Lorg/jetbrains/exposed/v1/core/Transaction;Ljava/util/List;Lorg/jetbrains/exposed/v1/core/statements/api/PreparedStatementApi;)V
+	public fun afterRollback (Lorg/jetbrains/exposed/v1/core/Transaction;)V
+	public fun afterStatementPrepared (Lorg/jetbrains/exposed/v1/core/Transaction;Lorg/jetbrains/exposed/v1/core/statements/api/PreparedStatementApi;)V
+	public fun beforeCommit (Lorg/jetbrains/exposed/v1/core/Transaction;)V
+	public fun beforeExecution (Lorg/jetbrains/exposed/v1/core/Transaction;Lorg/jetbrains/exposed/v1/core/statements/StatementContext;)V
+	public fun beforeRollback (Lorg/jetbrains/exposed/v1/core/Transaction;)V
+	public fun keepUserDataInTransactionStoreOnCommit (Ljava/util/Map;)Ljava/util/Map;
+}
+
