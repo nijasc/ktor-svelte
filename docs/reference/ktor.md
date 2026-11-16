@@ -17,6 +17,7 @@ install(Svelte) {
     apiDocsPath = "/api/docs"
     routing = SvelteRouting.Automatic
     statusEndpoint = false
+    internalAccess { }
     healthEndpoint = false
     originCheck = true
     hideErrorDetails = true
@@ -82,9 +83,10 @@ install(Svelte) {
 | `source` | `SvelteSource.Classpath`, or `SvelteSource.Directory(path)` to serve a build from disk |
 | `generateTs` | Generates TypeScript from your routes in development mode |
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
-| `apiDocs` | Serves Swagger UI in development mode. See [API docs](../features/endpoints.md#api-docs) |
+| `apiDocs` | Serves Swagger UI in development mode, and elsewhere when `internalAccess` is set. See [API docs](../features/endpoints.md#api-docs) |
 | `apiDocsPath` | Path of the Swagger UI page |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](../features/auth.md) |
+| `internalAccess { }` | Who may see the status endpoint and the API docs besides this machine: a `token`, `networks(...)` or your own `allow { }` check. See [Who may see internal endpoints](../features/endpoints.md#who-may-see-internal-endpoints) |
 | `statusEndpoint` | Serves build and proxy details at `/_ktor-svelte/status`, to this machine only. Off by default. See [Status endpoint](../features/endpoints.md#status-endpoint) |
 | `healthEndpoint` | Serves `/_ktor-svelte/health` for load balancers and orchestrators. Off by default. `healthCheck { ... }` adds your own checks. See [Health endpoint](../features/endpoints.md#health-endpoint) |
 | `originCheck` | Refuses cross-site requests to API paths for every method except GET, HEAD, OPTIONS and TRACE. See [API request guards](../security.md#api-request-guards) |
