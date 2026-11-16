@@ -264,20 +264,24 @@ class DevModeBrowserTest {
     @Test
     fun `the dev panel replays an API call and copies it as a curl command`() {
         context.grantPermissions(listOf("clipboard-read", "clipboard-write"))
-        waitFor("the sign in page", 60) {
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        val refused =
+            panel
+                .locator(".row")
+                .filter(Locator.FilterOptions().setHasText("/api/session"))
+                .filter(Locator.FilterOptions().setHasText("POST"))
+                .filter(Locator.FilterOptions().setHasText("401"))
+        waitFor("a refused sign in", 60) {
             page.navigate("/login")
             page.getByLabel("Email").fill(ADMIN_EMAIL)
             page.getByLabel("Password").fill("not-the-password")
             page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
-            page.getByRole(AriaRole.ALERT).first().waitFor(Locator.WaitForOptions().setTimeout(5_000.0))
-            true
+            page.waitForTimeout(1_500.0)
+            refused.count() > 0
         }
-        val panel = page.locator("[data-ktor-svelte-panel]")
         panel.locator(".toggle").click()
-        val signIns = panel.locator(".row").filter(Locator.FilterOptions().setHasText("/api/session"))
-        val failed = signIns.filter(Locator.FilterOptions().setHasText("POST")).first()
-        assertThat(failed).containsText("401")
-        val before = signIns.count()
+        val failed = refused.first()
+        val before = refused.count()
 
         failed.getByText("curl").click()
         assertThat(failed.getByText("Copied")).isVisible()
@@ -288,9 +292,8 @@ class DevModeBrowserTest {
         assertContains(command, "--data-raw '{\"email\":\"$ADMIN_EMAIL\",\"password\":\"not-the-password\"}'")
 
         failed.getByText("Replay").click()
-        waitFor("the replayed call in the list", 20) { signIns.count() == before + 1 }
-        assertThat(signIns.first()).containsText("401")
-        assertThat(signIns.first().getByText("Replay")).isEnabled()
+        waitFor("the replayed call in the list", 20) { refused.count() == before + 1 }
+        assertThat(refused.first().getByText("Replay")).isEnabled()
     }
 
     @Test
