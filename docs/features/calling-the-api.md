@@ -204,6 +204,29 @@ await api.notes.update(id, draft, { refresh: false });
 
 The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
 
+## Ask before a call
+
+A call that deletes something should ask first. `confirmed` asks, and only calls when the answer is yes:
+
+```ts no-check
+import { api } from '#api';
+import { confirmed } from '#lib/ktor-svelte/confirm.ts';
+
+const deleted = await confirmed('Delete this note?', () => api.notes.delete(id), {
+    details: 'It cannot be restored.',
+    confirm: 'Delete',
+    danger: true
+});
+```
+
+It resolves to what the call returned, or to `undefined` when the answer was no.
+
+With DaisyUI on, the question is a modal in your theme. While the call runs, both buttons are disabled, so it cannot be sent twice. When it fails, the modal stays open and shows the error's `message`, and the user can try again or cancel. `danger: true` makes the confirm button red and puts the focus on Cancel. Escape cancels.
+
+Without DaisyUI it is the browser's own `confirm`, and a failed call rejects as usual.
+
+`svelteSync` writes the helper to `src/lib/ktor-svelte/confirm.ts` for every project that has generated files. The button labels default to `confirmMessages.confirm` and `confirmMessages.cancel`, which you can set once, such as to your translations.
+
 ## Show errors automatically
 
 Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:
