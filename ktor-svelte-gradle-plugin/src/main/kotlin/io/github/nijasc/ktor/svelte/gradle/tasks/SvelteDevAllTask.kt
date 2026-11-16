@@ -126,6 +126,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 projectDirectory.get().asFile,
                 frontendDirectory = frontendDir.get().asFile,
                 foldStackTraces = !fullStackTraces.getOrElse(false),
+                sourceDirectories = sourceDirectories.files.toList(),
             )
         val record = DevProcessRecord(compileErrorsFile.get().asFile.resolveSibling("dev-processes"))
         freePorts(record)
@@ -268,11 +269,14 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         builder.environment().putAll(System.getenv())
         val process = builder.start()
         thread(isDaemon = true, name = "ktor-svelte-${source.label}") {
-            process.inputStream.bufferedReader().useLines { lines ->
-                lines.forEach { line ->
+            process.inputStream.bufferedReader().use { reader ->
+                while (true) {
+                    val line = reader.readLine() ?: break
                     devLog.format(source, line)?.let(logger::lifecycle)
                     onLine(line)
+                    if (source == LogSource.APP && !reader.ready()) devLog.flushStackTrace()?.let(logger::lifecycle)
                 }
+                if (source == LogSource.APP) devLog.flushStackTrace()?.let(logger::lifecycle)
             }
         }
         return process
