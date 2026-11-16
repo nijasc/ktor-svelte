@@ -222,4 +222,9 @@ class GeneratedClientBehaviourTest {
         )
         assertEquals("[0,9,0]", consent.getValue("fromHeader").toString())
     }
+
+    @Test
+    fun `only a 409 with the conflict code and the current record is a version conflict`() {
+        assertEquals("[true,false,false,false,false]", runHarness().getValue("conflicts").toString())
+    }
 }

@@ -9,6 +9,7 @@ import {
     typedCookie,
     isRateLimitError,
     isUploadError,
+    isVersionConflict,
     request,
     type ApiFixtures,
     type RequestOptions,
@@ -283,6 +284,13 @@ results.uploads = [
     await uploadOutcome([file('a.txt', 'text/plain'), file('b.txt', 'text/plain')], { maxFiles: 1 })
 ];
 
+results.conflicts = [
+    isVersionConflict(new ApiError(409, { message: 'x', code: 'version.conflict', current: { version: 2 } }, '/api/n')),
+    isVersionConflict(new ApiError(409, { message: 'x', code: 'EmailTaken' }, '/api/n')),
+    isVersionConflict(new ApiError(412, { message: 'x', code: 'version.conflict', current: {} }, '/api/n')),
+    isVersionConflict(new ApiError(409, 'plain text', '/api/n')),
+    isVersionConflict(new TypeError('offline'))
+];
 const coded = (code: unknown, message?: string) => new ApiError(409, { message, code }, '/api/notes/1');
 codeMessages.NoteLocked = 'This note is locked.';
 codeMessages.QuotaReached = () => `Limit reached at ${new Date(0).getUTCFullYear()}.`;
