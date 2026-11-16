@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 86 | Query parameters as a data class |  |
+| 92 | Exposed helpers |  |
 
 ### In review
 
@@ -37,6 +37,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 43 | `Patch<T>` partial updates | #286 |
 | 44 | Typed multipart uploads | #287 |
 | 95 | File drop zone | #288 |
+| 86 | Query parameters as a data class | #289 |
 
 ### Next up
 
@@ -131,7 +132,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 92 | Exposed helpers | Medium | 6 |
 | 72 | Idempotency keys | Medium | 6 |
 | 37 | Declared environment variables | Medium | 6 |
 | 46 | Secret leak check | Medium | 6 |
