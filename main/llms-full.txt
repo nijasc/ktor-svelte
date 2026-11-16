@@ -689,6 +689,8 @@ When your app uses [Exposed](https://www.jetbrains.com/exposed/), each call also
 
 This needs no setup and no code: ktor-svelte registers itself with Exposed when both are in the app. Statements count for the call that started them, also when they run on another thread or in a child coroutine. It works with Exposed 1.0 and newer, and only measures while the dev panel is on.
 
+When a page asks for the same thing twice, the second call is marked: `asked for twice within 12 ms, from src/routes/+layout.svelte:33 and from src/routes/board/+page.svelte:18`. That happens easily when a layout and a page both load the same data, and it costs a second trip to the server and the database for nothing. The two files tell you where to remove one, or to share the result. Only `GET` calls made within two seconds of each other count, a replay from the panel does not, and the line numbers are those of the code the browser runs, which can be a few lines off your source.
+
 Each call has two buttons. **Replay** sends it again, with the same method, path, headers and body, so you can repeat a call after changing the Kotlin code without clicking through the page again. **curl** copies it as a `curl` command, with its body and its `X-Request-Id`, to paste into a terminal or a bug report. The command carries no cookies, so add your session yourself for a call that needs one. And it carries the body as it was sent, passwords included, so look at it before you share it.
 
 The buttons work for calls this page made, since that is where the body is known, and for every `GET`. For other calls, such as an upload or one from another tab, they are disabled.
