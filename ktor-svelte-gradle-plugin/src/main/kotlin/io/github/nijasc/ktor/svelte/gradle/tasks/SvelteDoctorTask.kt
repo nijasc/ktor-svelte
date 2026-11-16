@@ -38,6 +38,7 @@ internal class SetupDoctor(
     private val isPortFree: (Int) -> Boolean = ::portIsFree,
     private val nodeVersion: () -> String? = ::installedNodeVersion,
     private val bunVersion: String? = null,
+    private val environment: (String) -> String? = System::getenv,
 ) {
     private val pinnedBun = bunVersion != null && (packageManager == PackageManager.Auto || packageManager == PackageManager.Bun)
 
@@ -46,7 +47,7 @@ internal class SetupDoctor(
         val packageJson = frontend.resolve("package.json")
         if (!packageJson.isFile) return listOf(Finding(Severity.ERROR, "No package.json in $frontend. Run svelteInit in an empty folder."))
         val manifest = packageJson.readText()
-        return listOf(
+        return listOfNotNull(
             tool(),
             node(),
             kitVersion(manifest),
@@ -57,7 +58,8 @@ internal class SetupDoctor(
             subpathImports(manifest),
             tsconfig(),
             legacyLibImports(),
-            dependenciesInstalled(),
+            dependenciesInstalled(manifest),
+            extraCertificates(),
             port(),
         )
     }
@@ -209,12 +211,48 @@ internal class SetupDoctor(
         }
     }
 
-    private fun dependenciesInstalled(): Finding =
-        if (frontend.resolve("node_modules").isDirectory) {
-            Finding(Severity.OK, "Dependencies are installed")
-        } else {
-            Finding(Severity.WARN, "Dependencies are not installed yet. svelteInstall runs automatically when needed.")
+    private fun dependenciesInstalled(manifest: String): Finding {
+        val modules = frontend.resolve("node_modules")
+        if (!modules.isDirectory) {
+            return Finding(Severity.WARN, "Dependencies are not installed yet. svelteInstall runs automatically when needed.")
         }
+        val incomplete = installedPackages(modules).filter { it.isMissingItsFiles() }.map { it.relativeTo(modules).invariantSeparatorsPath }
+        if (incomplete.isNotEmpty()) {
+            val cache = cacheClearCommand()?.let { " If it happens again, clear the package manager cache with `$it`." }.orEmpty()
+            return Finding(
+                Severity.ERROR,
+                "${incomplete.size} installed package(s) are missing their files (${incomplete.summary()}), " +
+                    "so the install was cut short. Run svelteClean and install again.$cache",
+            )
+        }
+        val missing = declaredDependencies(manifest).filterNot { modules.resolve("$it/package.json").isFile }
+        if (missing.isNotEmpty()) {
+            return Finding(Severity.WARN, "${missing.summary()} in package.json is not installed. Run svelteInstall.")
+        }
+        return Finding(Severity.OK, "Dependencies are installed")
+    }
+
+    private fun cacheClearCommand(): String? =
+        when (if (pinnedBun) "bun" else runCatching { resolveFrontendTool(frontend, packageManager).executableName }.getOrNull()) {
+            "bun" -> "bun pm cache rm"
+            "pnpm" -> "pnpm store prune"
+            "npm" -> "npm cache clean --force"
+            "yarn" -> "yarn cache clean"
+            else -> null
+        }
+
+    private fun extraCertificates(): Finding? {
+        val path = environment("NODE_EXTRA_CA_CERTS")?.takeIf { it.isNotBlank() } ?: return null
+        return if (File(path).isFile) {
+            Finding(Severity.OK, "NODE_EXTRA_CA_CERTS file exists")
+        } else {
+            Finding(
+                Severity.WARN,
+                "NODE_EXTRA_CA_CERTS points to $path, which does not exist, so package downloads can fail behind a proxy. " +
+                    "Fix the path or unset the variable.",
+            )
+        }
+    }
 
     private fun port(): Finding =
         if (isPortFree(devPort)) {
@@ -223,6 +261,46 @@ internal class SetupDoctor(
             Finding(Severity.WARN, "Port $devPort is in use. If Vite is not running, a process was left behind.")
         }
 }
+
+private fun List<String>.summary(): String = take(3).joinToString() + if (size > 3) " and ${size - 3} more" else ""
+
+private fun installedPackages(modules: File): List<File> =
+    modules
+        .listFiles()
+        .orEmpty()
+        .filter { it.isDirectory && !it.name.startsWith(".") }
+        .flatMap { if (it.name.startsWith("@")) it.listFiles().orEmpty().filter(File::isDirectory) else listOf(it) }
+        .filter { it.resolve("package.json").isFile }
+        .sortedBy { it.relativeTo(modules).invariantSeparatorsPath }
+
+private fun parsedManifest(text: String): Map<*, *>? = runCatching { JsonSlurper().parseText(text) as? Map<*, *> }.getOrNull()
+
+private fun declaredDependencies(manifest: String): List<String> {
+    val parsed = parsedManifest(manifest) ?: return emptyList()
+    return listOf("dependencies", "devDependencies")
+        .flatMap { section -> (parsed[section] as? Map<*, *>)?.keys.orEmpty().map { it.toString() } }
+        .sorted()
+}
+
+private fun File.isMissingItsFiles(): Boolean {
+    val manifest = parsedManifest(resolve("package.json").readText()) ?: return false
+    val exports = manifest["exports"]
+    val root = if (exports is Map<*, *> && exports.keys.any { it.toString().startsWith(".") }) exports["."] else exports
+    val declared =
+        (listOf("main", "module", "svelte", "types", "typings").map { manifest[it] } + entryFiles(root))
+            .filterIsInstance<String>()
+            .filter { it.isNotBlank() && '*' !in it }
+    if (declared.isEmpty()) return false
+    return declared.none { entry -> listOf(entry, "$entry.js", "$entry/index.js").any { resolve(it).isFile } }
+}
+
+private fun entryFiles(node: Any?): List<String> =
+    when (node) {
+        is String -> listOf(node)
+        is Map<*, *> -> node.values.flatMap(::entryFiles)
+        is List<*> -> node.flatMap(::entryFiles)
+        else -> emptyList()
+    }
 
 private fun String.normalizedOutputPath(): String = trim().removePrefix("./").trimEnd('/', '\\').replace('\\', '/')
 
