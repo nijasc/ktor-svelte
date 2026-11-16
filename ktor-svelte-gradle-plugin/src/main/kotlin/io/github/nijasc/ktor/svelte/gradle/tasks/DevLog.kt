@@ -33,6 +33,27 @@ private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
 private const val BROWSER_LOGGER = "ktor-svelte.browser"
 private val DEV_SOURCE_URL = Regex("""https?://(?:localhost|127\.0\.0\.1|\[::1]):\d+/(src/[^\s?:)'"]+)(?:\?[^\s:)'"]*)?:(\d+):(\d+)""")
 
+private const val REMEMBERED_ERRORS = 200
+private const val HIDDEN_FRAMES = "... framework frames hidden"
+private val EXCEPTION_LINE = Regex("""^\s*(?:Caused by: )?[\w.$]+(?:Exception|Error|Throwable)\b.*""")
+private val STACK_FRAME = Regex("""^(\s*)at (\S+)""")
+private val FRAMEWORK_FRAMES =
+    listOf(
+        "io.netty.",
+        "kotlinx.coroutines.",
+        "kotlin.coroutines.",
+        "io.ktor.util.pipeline.",
+        "io.ktor.server.netty.",
+        "io.ktor.server.engine.",
+        "java.base/java.util.concurrent.",
+        "java.base/java.lang.Thread.",
+    )
+
+private class SeenError(
+    val firstTime: String,
+    var count: Int,
+)
+
 internal fun fileUrl(file: File): String {
     val path = file.absoluteFile.invariantSeparatorsPath
     return "file://" + if (path.startsWith("/")) path else "/$path"
@@ -77,7 +98,14 @@ internal class DevLogFormatter(
     private val projectDirectory: File? = null,
     private val now: () -> LocalTime = LocalTime::now,
     private val frontendDirectory: File? = null,
+    private val foldStackTraces: Boolean = true,
 ) {
+    private val seenErrors = LinkedHashMap<String, SeenError>()
+    private var lastAppMessage = ""
+    private var lastAppTime = ""
+    private var awaitingException = false
+    private var hidingTrace = false
+    private var hidingFrames = false
     private var errorsThisBuild = 0
     private var compiling = false
     private var lastAppSource = LogSource.APP
@@ -99,14 +127,46 @@ internal class DevLogFormatter(
 
     private fun app(line: String): String? {
         if (line.startsWith("Listening for transport dt_socket")) return null
-        val match =
-            APP_LINE.matchEntire(line)
-                ?: return render(lastAppSource, null, if (lastAppSource == LogSource.BROWSER) linkSources(line) else line, null)
+        val match = APP_LINE.matchEntire(line) ?: return continuation(line)
         val (time, level, logger, message) = match.destructured
         val source = if (logger == BROWSER_LOGGER || logger.endsWith(".browser")) LogSource.BROWSER else LogSource.APP
         lastAppSource = source
+        lastAppMessage = message
+        lastAppTime = time
+        awaitingException = source == LogSource.APP && (level == "ERROR" || level == "WARN")
+        hidingTrace = false
+        hidingFrames = false
+        if (message.startsWith("Application started")) seenErrors.clear()
         val shown = logger.substringAfterLast('.').takeUnless { source == LogSource.BROWSER || it == "Application" }
         return render(source, levelOf(level), if (source == LogSource.BROWSER) linkSources(message) else message, shown, time)
+    }
+
+    private fun continuation(line: String): String? {
+        if (lastAppSource == LogSource.BROWSER) return render(LogSource.BROWSER, null, linkSources(line), null)
+        if (!foldStackTraces) return render(LogSource.APP, null, line, null)
+        if (hidingTrace) return null
+        if (awaitingException) {
+            awaitingException = false
+            if (EXCEPTION_LINE.matches(line)) {
+                val seen = seenErrors["$lastAppMessage\n${line.trim()}"]
+                if (seen != null) {
+                    seen.count++
+                    hidingTrace = true
+                    val note = "(seen ${seen.count} times since ${seen.firstTime}, stack trace hidden)"
+                    return render(LogSource.APP, null, "$line  $note", null)
+                }
+                if (seenErrors.size >= REMEMBERED_ERRORS) seenErrors.remove(seenErrors.keys.first())
+                seenErrors["$lastAppMessage\n${line.trim()}"] = SeenError(lastAppTime, 1)
+            }
+        }
+        val frame = STACK_FRAME.find(line)
+        if (frame != null && FRAMEWORK_FRAMES.any { frame.groupValues[2].startsWith(it) }) {
+            if (hidingFrames) return null
+            hidingFrames = true
+            return render(LogSource.APP, null, frame.groupValues[1] + HIDDEN_FRAMES, null)
+        }
+        hidingFrames = false
+        return render(LogSource.APP, null, line, null)
     }
 
     private fun vite(line: String): String? {
