@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte
 
 import io.github.nijasc.ktor.svelte.internal.DeclaredEnvironment
 import io.github.nijasc.ktor.svelte.internal.environmentExample
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -29,6 +30,11 @@ class EnvironmentTest {
     fun forget() {
         DeclaredEnvironment.clear()
         System.clearProperty("ktor.svelte.generateTsOnly")
+    }
+
+    @AfterTest
+    fun leaveNothingBehind() {
+        DeclaredEnvironment.clear()
     }
 
     private fun from(vararg values: Pair<String, String>): (String) -> String? = values.toMap()::get
