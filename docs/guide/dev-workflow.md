@@ -89,6 +89,14 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
 
+After every restart, `svelteDevAll` sums it up in one line: which file caused it, how long compiling and starting took, and whether the generated API client is different now:
+
+```
+ktor-svelte: restarted in 4.7 s after TaskRoutes.kt changed: 2.2 s to compile, 2.5 s to start. The API client changed: openapi.json, services.ts.
+```
+
+"To compile" runs from the moment the file was saved until the classes were written, so it includes the time Gradle takes to notice the change. When several files changed, the one saved last is named with the number of others. "The API client did not change" tells you the frontend has nothing new to pick up, and the list of files tells you where to look when it has.
+
 Every restart costs you the app's startup time, so in development the app also logs what that time was spent on:
 
 ```

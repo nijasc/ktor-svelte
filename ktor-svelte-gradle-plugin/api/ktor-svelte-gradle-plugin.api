@@ -346,6 +346,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
+	public abstract fun getSourceDirectories ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public final fun runAll ()V
 }
 

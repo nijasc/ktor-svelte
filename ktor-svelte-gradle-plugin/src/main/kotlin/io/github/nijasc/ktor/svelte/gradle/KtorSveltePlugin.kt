@@ -600,6 +600,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.mainClass.set(application.mainClass)
             task.appClasspath.from(developmentClasspath(project))
             task.classesDirectories.from(main.map { it.output.classesDirs })
+            task.sourceDirectories.from(main.map { it.allSource.sourceDirectories })
             task.projectDirectory.set(project.layout.projectDirectory)
             task.gradleExecutable.set(gradleExecutablePath(gradleHome))
             task.javaLauncher.set(toolchains.launcherFor(toolchain))
