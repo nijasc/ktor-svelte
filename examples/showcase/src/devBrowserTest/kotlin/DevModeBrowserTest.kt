@@ -518,6 +518,34 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `theme colors change live from the dev panel and come out as a Gradle block`() {
+        context.grantPermissions(listOf("clipboard-read", "clipboard-write"))
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        val primary = "getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()"
+        val original = page.evaluate(primary) as String
+        panel.locator(".toggle").click()
+        panel.locator(".theme summary").click()
+        assertThat(panel.getByLabel("primary", Locator.GetByLabelOptions().setExact(true))).hasValue(Pattern.compile("^#[0-9a-f]{6}$"))
+
+        panel.getByLabel("primary", Locator.GetByLabelOptions().setExact(true)).fill("#ff0044")
+        panel.getByLabel("base100").fill("#fff8e7")
+        assertEquals("#ff0044", page.evaluate(primary))
+        panel.getByLabel("Theme name").fill("sunset")
+        panel.locator(".theme-copy").click()
+        assertThat(panel.locator(".theme-note")).containsText("Copied.")
+        val block = page.evaluate("navigator.clipboard.readText()") as String
+        assertTrue(block.startsWith("customTheme(\"sunset\") {\n    primary = \"#ff0044\"\n"), block)
+        assertContains(block, "    base100 = \"#fff8e7\"\n")
+        assertEquals(14, block.lines().size, block)
+        assertTrue(block.endsWith("\n}"), block)
+
+        panel.locator(".theme-reset").click()
+        assertEquals(original, page.evaluate(primary))
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
