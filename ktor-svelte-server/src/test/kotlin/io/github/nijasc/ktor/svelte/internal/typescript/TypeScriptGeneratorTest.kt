@@ -780,4 +780,13 @@ class TypeScriptGeneratorTest {
             )
         assertContains(source, "addNested(errors, `children[\${index}].`, Tree.validate(item));")
     }
+
+    @Test
+    fun `the client turns any failure into one message to show`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "export function errorMessage(error: unknown): string {")
+        assertContains(client, "if (isTimeoutError(error)) return errorMessages.timeout;")
+        assertContains(client, "if (error instanceof TypeError) return errorMessages.network;")
+        assertContains(client, "return typeof message === 'string' && message !== '' ? message : errorMessages.failed;")
+    }
 }
