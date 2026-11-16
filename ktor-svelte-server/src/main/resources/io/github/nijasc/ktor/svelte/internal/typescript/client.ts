@@ -94,6 +94,69 @@ interface InternalOptions extends RequestOptions {
     query?: Record<string, unknown>;
     body?: unknown;
     operation?: string;
+    upload?: UploadRules;
+}
+
+export interface UploadRules {
+    readonly maxBytes?: number;
+    readonly types?: readonly string[];
+    readonly maxFiles?: number;
+}
+
+export interface UploadProblem {
+    message: string;
+    code: 'upload.tooLarge' | 'upload.type' | 'upload.tooMany';
+    file?: string;
+}
+
+export function isUploadError(error: unknown): error is ApiError<UploadProblem> {
+    if (!(error instanceof ApiError) || typeof error.body !== 'object' || error.body === null) return false;
+    const code = (error.body as { code?: unknown }).code;
+    return typeof code === 'string' && code.startsWith('upload.');
+}
+
+function readableSize(bytes: number): string {
+    const [value, unit] = bytes >= 1024 * 1024 ? [bytes / (1024 * 1024), 'MiB'] : bytes >= 1024 ? [bytes / 1024, 'KiB'] : [bytes, 'bytes'];
+    return unit === 'bytes' ? `${value} bytes` : `${value.toFixed(1).replace(/\.0$/, '')} ${unit}`;
+}
+
+function acceptsFile(types: readonly string[], file: File): boolean {
+    if (types.length === 0) return true;
+    const type = file.type.split(';')[0].trim().toLowerCase();
+    const name = file.name.toLowerCase();
+    return types.some((accepted) => {
+        const wanted = accepted.trim().toLowerCase();
+        if (wanted.startsWith('.')) return name.endsWith(wanted);
+        return wanted.endsWith('/*') ? type.startsWith(wanted.slice(0, -1)) : type === wanted;
+    });
+}
+
+export function uploadProblem(rules: UploadRules, files: Iterable<File>): (UploadProblem & { status: number }) | undefined {
+    let count = 0;
+    for (const file of files) {
+        count++;
+        if (rules.maxFiles !== undefined && count > rules.maxFiles) {
+            const message = rules.maxFiles === 1 ? 'Only one file can be sent at once.' : `At most ${rules.maxFiles} files can be sent at once.`;
+            return { status: 400, code: 'upload.tooMany', message };
+        }
+        if (!acceptsFile(rules.types ?? [], file)) {
+            return { status: 415, code: 'upload.type', message: `${file.name} is not an accepted file type.`, file: file.name };
+        }
+        if (rules.maxBytes !== undefined && file.size > rules.maxBytes) {
+            const message = `${file.name} is larger than ${readableSize(rules.maxBytes)}.`;
+            return { status: 413, code: 'upload.tooLarge', message, file: file.name };
+        }
+    }
+    return undefined;
+}
+
+function checkUpload(rules: UploadRules | undefined, body: unknown, url: string, operation: string | undefined) {
+    if (!rules || typeof FormData === 'undefined' || !(body instanceof FormData)) return;
+    const files = [...body.values()].filter((value): value is File => typeof value !== 'string');
+    const problem = uploadProblem(rules, files);
+    if (!problem) return;
+    const { status, ...refusal } = problem;
+    throw new ApiError(status, refusal, url, operation);
 }
 
 function queryString(query: Record<string, unknown> | undefined): string {
@@ -241,7 +304,7 @@ function timeZone(): string | undefined {
 }
 
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
-    const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, refresh, ...init } =
+    const { query, body, operation, upload, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, refresh, ...init } =
         options;
     const plan = streaming ? undefined : retryPlan(method, retry);
     const chosenRetry = retry ?? apiConfig.retry;
@@ -263,7 +326,10 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
     return {
         url,
         operation,
-        send: () => send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) }),
+        send: async () => {
+            checkUpload(upload, body, url, operation);
+            return send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) });
+        },
         attempt: <T>(call: () => Promise<T>) => withRetry(call, plan, longestLimitWait, signal)
     };
 }

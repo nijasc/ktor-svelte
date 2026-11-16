@@ -1,4 +1,14 @@
-import { ApiError, apiConfig, fixtureFetch, isRateLimitError, request, type ApiFixtures } from './client.ts';
+import {
+    ApiError,
+    apiConfig,
+    fixtureFetch,
+    isRateLimitError,
+    isUploadError,
+    request,
+    type ApiFixtures,
+    type RequestOptions,
+    type UploadRules
+} from './client.ts';
 
 type Outcome = number | Error | { status: number; retryAfter: string };
 
@@ -235,5 +245,38 @@ results.noNavigationFromAnotherOrigin = await navigatedAfter('/notes/7', 200, ()
 });
 Reflect.deleteProperty(globalThis, 'document');
 Reflect.deleteProperty(globalThis, 'location');
+
+async function uploadOutcome(files: File[], rules: UploadRules | undefined): Promise<string> {
+    let sent = 0;
+    apiConfig.retry = undefined;
+    apiConfig.onError = undefined;
+    apiConfig.baseUrl = '';
+    apiConfig.fetch = (async () => {
+        sent++;
+        return new Response('{"stored":true}', { status: 201, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const form = new FormData();
+    form.append('note', 'just text');
+    files.forEach((file) => form.append('file', file));
+    try {
+        await request('POST', '/api/files', { body: form, upload: rules } as RequestOptions);
+        return `sent ${sent}`;
+    } catch (error) {
+        if (!isUploadError(error)) return `other ${String(error)}`;
+        return `${error.status} ${error.body.code} ${error.body.message} file=${error.body.file ?? '-'} sent ${sent}`;
+    }
+}
+
+const file = (name: string, type: string, size = 4) => new File([new Uint8Array(size)], name, { type });
+const filesRules: UploadRules = { maxBytes: 10, types: ['text/*', '.csv'], maxFiles: 2 };
+results.uploads = [
+    await uploadOutcome([file('a.txt', 'text/plain;charset=utf-8'), file('b.csv', 'application/octet-stream', 10)], filesRules),
+    await uploadOutcome([file('big.txt', 'text/plain', 11)], filesRules),
+    await uploadOutcome([file('photo.png', 'image/png')], filesRules),
+    await uploadOutcome([file('a.txt', 'text/plain'), file('b.txt', 'text/plain'), file('c.txt', 'text/plain')], filesRules),
+    await uploadOutcome([file('photo.png', 'image/png', 2000)], undefined),
+    await uploadOutcome([file('photo.png', 'image/png', 6 * 1024 * 1024)], { maxBytes: 5 * 1024 * 1024 }),
+    await uploadOutcome([file('a.txt', 'text/plain'), file('b.txt', 'text/plain')], { maxFiles: 1 })
+];
 
 console.log(JSON.stringify(results));

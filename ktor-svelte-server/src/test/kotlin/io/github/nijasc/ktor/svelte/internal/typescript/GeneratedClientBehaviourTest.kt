@@ -151,4 +151,21 @@ class GeneratedClientBehaviourTest {
         assertEquals(List(4) { "the call returned" }, list("otherSitesAreNotFollowed"))
         assertEquals(listOf("the call returned"), list("noNavigationFromAnotherOrigin"))
     }
+
+    @Test
+    fun `upload rules are checked before anything is sent, with the server's own errors`() {
+        val results = runHarness()
+        assertEquals(
+            listOf(
+                "sent 1",
+                "413 upload.tooLarge big.txt is larger than 10 bytes. file=big.txt sent 0",
+                "415 upload.type photo.png is not an accepted file type. file=photo.png sent 0",
+                "400 upload.tooMany At most 2 files can be sent at once. file=- sent 0",
+                "sent 1",
+                "413 upload.tooLarge photo.png is larger than 5 MiB. file=photo.png sent 0",
+                "400 upload.tooMany Only one file can be sent at once. file=- sent 0",
+            ),
+            results.getValue("uploads").jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
 }
