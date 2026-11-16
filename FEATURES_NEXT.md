@@ -26,13 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 32 | Decimal and duration types |  |
+| 33 | Version conflicts |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 31 | Branded ID types | #283 |
+| 32 | Decimal and duration types | #284 |
 
 ### Next up
 
@@ -121,12 +121,12 @@ Features of this plan that are merged:
 | 94 | Theme and language switches | #280 |
 | 106 | Navigation progress bar | #281 |
 | 71 | Server checks while typing | #282 |
+| 31 | Branded ID types | #283 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 33 | Version conflicts | Medium | 6 |
 | 43 | `Patch<T>` partial updates | Medium | 6 |
 | 44 | Typed multipart uploads | Medium | 6 |
 | 95 | File drop zone | Medium | 6 |
