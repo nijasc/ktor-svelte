@@ -212,8 +212,7 @@ function rowTools(entry) {
 }
 
 function openInEditor(source) {
-    const file = encodeURIComponent(`${source.path}:${source.line}:1`);
-    return fetch(`/__open-in-editor?file=${file}`).catch(() => undefined);
+    return fetch(`/_ktor-svelte/dev/open?file=${encodeURIComponent(source.path)}&line=${source.line}`).catch(() => undefined);
 }
 
 function statusClass(status) {

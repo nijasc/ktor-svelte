@@ -29,6 +29,7 @@ import kotlinx.serialization.json.put
 import java.util.concurrent.ConcurrentHashMap
 
 internal const val DEV_REQUESTS_PATH = "/_ktor-svelte/dev/requests"
+internal const val DEV_OPEN_PATH = "/_ktor-svelte/dev/open"
 private const val KEPT_REQUESTS = 100
 
 private val RequestStartedAt = AttributeKey<Long>("KtorSvelteDevRequestStartedAt")
@@ -107,12 +108,28 @@ internal class DevRequestLog(
     }
 
     fun snapshot(): List<String> = synchronized(recent) { recent.toList() }
+
+    fun isRouteSource(path: String): Boolean = sourceFiles.isKnown(path)
 }
 
 internal fun Route.devRequestRoutes(
     log: DevRequestLog,
     allowRemote: Boolean,
+    proxy: DevProxy,
 ) {
+    get(DEV_OPEN_PATH) {
+        val file = call.request.queryParameters["file"].orEmpty()
+        val line = call.request.queryParameters["line"]?.toIntOrNull()
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        when {
+            !isLocalCall(call) ->
+                call.respondText("The ktor-svelte dev client only opens files for this machine.", status = HttpStatusCode.Forbidden)
+            line == null || line < 1 || !log.isRouteSource(file) ->
+                call.respondText("Only the file of a route in the request list can be opened.", status = HttpStatusCode.BadRequest)
+            proxy.openInEditor(file, line) -> call.respondText("", status = HttpStatusCode.NoContent)
+            else -> call.respondText("Vite did not take the request to open the editor.", status = HttpStatusCode.BadGateway)
+        }
+    }
     get(DEV_REQUESTS_PATH) {
         if (!allowRemote && !isLocalCall(call)) {
             call.respondText("The ktor-svelte dev client only answers this machine.", status = HttpStatusCode.Forbidden)

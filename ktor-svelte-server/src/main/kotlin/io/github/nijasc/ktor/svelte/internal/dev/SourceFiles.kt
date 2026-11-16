@@ -21,6 +21,9 @@ internal class SourceFiles(
         return match
     }
 
+    @Synchronized
+    fun isKnown(path: String): Boolean = path in found.values
+
     private fun lookUp(
         location: String,
         rebuild: Boolean = false,
