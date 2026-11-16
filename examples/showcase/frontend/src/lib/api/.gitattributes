@@ -6,4 +6,5 @@ types.ts text eol=lf linguist-generated merge=ktor-svelte
 services.ts text eol=lf linguist-generated merge=ktor-svelte
 index.ts text eol=lf linguist-generated merge=ktor-svelte
 constants.ts text eol=lf linguist-generated merge=ktor-svelte
+cookies.ts text eol=lf linguist-generated merge=ktor-svelte
 openapi.json text eol=lf linguist-generated merge=ktor-svelte
