@@ -120,6 +120,36 @@ method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8
 
 Each line has the method, the path without its query string, the status, how long the app took in milliseconds, and the request ID that the browser also shows for a failed call. The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again. Requests for build assets under `/_app/` are not logged.
 
+## Build info
+
+Every build knows what it is. The Gradle plugin writes the project's `version`, the git commit and the time of that commit into the JAR, and the app reads them without any setup:
+
+```kotlin
+get("/api/about") {
+    val build = call.application.buildInfo
+    call.respondText("Version ${build.version} (${build.shortCommit})")
+}
+```
+
+`buildInfo.version`, `commit` and `time` are `null` when the build could not know them: no `version` in `build.gradle.kts`, or no git repository. The time is the commit's, not the clock's, so building the same commit twice gives the same JAR.
+
+The browser can read the same values once you allow it:
+
+```kotlin
+install(Svelte) {
+    publicBuildInfo = true
+}
+```
+
+```ts
+import { loadBuildInfo } from '#api';
+
+const build = await loadBuildInfo();
+const label = `${build.version ?? 'dev'} (${build.commit?.slice(0, 7) ?? 'no commit'})`;
+```
+
+It is off by default, because it tells every visitor which version and commit is running. For values only signed-in users or admins should see, leave it off and return `buildInfo` from a route of your own.
+
 ## Checklist
 
 - The JAR was built without `-Psvelte.skip=true` or `-Psvelte.dev=true`.

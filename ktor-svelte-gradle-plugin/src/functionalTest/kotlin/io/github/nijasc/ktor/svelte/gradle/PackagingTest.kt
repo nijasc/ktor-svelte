@@ -1,12 +1,14 @@
 package io.github.nijasc.ktor.svelte.gradle
 
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.zip.ZipFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class PackagingTest {
     @TempDir
@@ -89,6 +91,42 @@ class PackagingTest {
         project.run("buildFatJar")
 
         assertContainsFrontend(dir.resolve("build/libs/sample-all.jar"))
+    }
+
+    private fun git(vararg arguments: String): Boolean =
+        runCatching {
+            ProcessBuilder(listOf("git", "-c", "user.name=test", "-c", "user.email=test@example.com", *arguments))
+                .directory(dir)
+                .redirectErrorStream(true)
+                .start()
+                .apply { inputStream.readBytes() }
+                .waitFor() == 0
+        }.getOrDefault(false)
+
+    private fun buildInfoIn(jarFile: File): String =
+        ZipFile(jarFile).use { jar ->
+            val entry = assertNotNull(jar.getEntry("ktor-svelte/build-info.properties"), "build info missing from ${jarFile.name}")
+            jar.getInputStream(entry).reader().readText()
+        }
+
+    @Test
+    fun `the jar says which version it is, without a repository too`() {
+        val project = projectWith("", extra = "version = \"1.4.0\"")
+        project.run("jar", "--configuration-cache")
+        assertEquals("version=1.4.0\n", buildInfoIn(dir.resolve("build/libs/sample-1.4.0.jar")))
+    }
+
+    @Test
+    fun `the jar names the commit it was built from`() {
+        val project = projectWith("", extra = "version = \"1.4.0\"")
+        dir.resolve(".gitignore").writeText("build/\n.gradle/\nfake-bin/\n")
+        assumeTrue(git("init", "-q") && git("add", "-A") && git("commit", "-q", "-m", "first"))
+        project.run("jar")
+        val info = buildInfoIn(dir.resolve("build/libs/sample-1.4.0.jar")).lines()
+        assertEquals("version=1.4.0", info[0])
+        assertTrue(Regex("commit=[0-9a-f]{40}").matches(info[1]), info[1])
+        assertTrue(Regex("""time=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}""").matches(info[2]), info[2])
+        assertEquals(TaskOutcome.UP_TO_DATE, project.run("jar").task(":svelteBuildInfo")?.outcome)
     }
 
     @Test

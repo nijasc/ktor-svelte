@@ -381,6 +381,22 @@ export async function* pages<Q extends { cursor?: string }, T>(
     } while (cursor !== undefined);
 }
 
+export interface BuildInfo {
+    version?: string;
+    commit?: string;
+    time?: string;
+}
+
+let buildInfo: Promise<BuildInfo> | undefined;
+
+export function loadBuildInfo(options?: RequestOptions): Promise<BuildInfo> {
+    buildInfo ??= request<BuildInfo>('GET', '/_ktor-svelte/build.json', { ...options }).catch((error: unknown) => {
+        buildInfo = undefined;
+        throw error;
+    });
+    return buildInfo;
+}
+
 export function isAbortError(error: unknown): boolean {
     return error instanceof DOMException && error.name === 'AbortError';
 }

@@ -836,6 +836,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the client can load the build info of the app`() {
+        val client = generate().getValue("client.ts")
+        assertContains(client, "export function loadBuildInfo(options?: RequestOptions): Promise<BuildInfo> {")
+        assertContains(client, "request<BuildInfo>('GET', '/_ktor-svelte/build.json', { ...options })")
+    }
+
+    @Test
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")
