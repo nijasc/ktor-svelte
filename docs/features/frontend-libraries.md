@@ -235,6 +235,26 @@ old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'
 
 A message counts as used when its generated function is called anywhere in the frontend or in Kotlin, or when its key appears as a string, because it may then be looked up by name. The task only lists what it finds. Add `--strict` to fail the build instead.
 
+## Guide for coding assistants
+
+`svelteSync` also writes `src/lib/ktor-svelte/AGENTS.md`, a short guide for coding assistants such as Claude Code, Cursor or Copilot. It tells them what they otherwise get wrong in a project like this:
+
+- which files are generated and must not be edited, and which Gradle setting or Kotlin route to change instead
+- that the backend is called through the typed client from `#api`, with `apiWith(event)` in `load` functions, never through a hand-written `fetch`
+- the libraries you turned on and how to use them: icons, messages, themes, toasts
+- your pages by their typed route name, when `routes()` is on
+- the Gradle commands to run
+
+It describes your project, not ktor-svelte in general: a project without i18n gets no word about messages. Like every generated file it is kept current by `svelteSync` and checked by `svelteVerifySync`.
+
+Assistants that read nested `AGENTS.md` files find it when they work in the frontend. To make sure, link it from the file your assistant reads at the project root, such as `AGENTS.md` or `CLAUDE.md`:
+
+```md
+Read `frontend/src/lib/ktor-svelte/AGENTS.md` before changing anything.
+```
+
+Projects created by the setup script have that `AGENTS.md` already. ktor-svelte never edits a root `AGENTS.md` or `CLAUDE.md` of yours.
+
 ## Lint rules
 
 Next to the generated files, `svelteSync` writes `src/lib/ktor-svelte/eslint.js`, a small ESLint plugin with rules for mistakes that are easy to make in a ktor-svelte app. They show up in the editor while you type:
