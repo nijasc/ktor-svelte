@@ -1082,7 +1082,7 @@ private fun hasDateFormat(element: JsonElement): Boolean =
 
 private const val LUCIDE_TYPE = "LucideIcon"
 internal const val GIT_ATTRIBUTES_FILE = ".gitattributes"
-private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated"
+private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated merge=ktor-svelte"
 private val SERVICES_MODULE_NAMES =
     setOf("api", "request", "stream", "ApiError", "errorStatuses", "isApiError", "publicConfig", "loadPublicConfig")
 private val ENDPOINT_ARGUMENTS = setOf("body", "query", "options", "encodeURIComponent")

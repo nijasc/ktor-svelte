@@ -396,6 +396,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteGitHooksTa
 	public fun <init> ()V
 	public abstract fun getHookTasks ()Lorg/gradle/api/provider/ListProperty;
 	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getRegenerateTasks ()Lorg/gradle/api/provider/ListProperty;
 	public abstract fun getRemove ()Lorg/gradle/api/provider/Property;
 	public final fun install ()V
 }

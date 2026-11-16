@@ -3,12 +3,13 @@ package io.github.nijasc.ktor.svelte.gradle.libraries
 import groovy.json.JsonOutput
 import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
 import io.github.nijasc.ktor.svelte.gradle.renderTemplate
+import io.github.nijasc.ktor.svelte.gradle.tasks.MERGE_DRIVER
 
 private const val HEADER = "// $GENERATED_MARKER\n"
 
 internal const val GENERATED_GIT_ATTRIBUTES = "$GENERATED_DIR/.gitattributes"
 internal const val GENERATED_LINT_RULES = "$GENERATED_DIR/eslint.js"
-private const val GIT_ATTRIBUTES = "# $GENERATED_MARKER\n* text eol=lf linguist-generated\n"
+private const val GIT_ATTRIBUTES = "# $GENERATED_MARKER\n* text eol=lf linguist-generated merge=$MERGE_DRIVER\n"
 
 private fun json(value: Any?): String = JsonOutput.toJson(value)
 
