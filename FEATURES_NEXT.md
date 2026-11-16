@@ -24,19 +24,21 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 ### In progress
 
-Nothing yet.
+| # | Feature | Pull request |
+|---|---|---|
+| 91 | Rename a page safely |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
 | 2 | `svelteVerifyRoutes --fix` | #211 |
+| 3 | Dead link check | #212 |
 
 ### Next up
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 3 | Dead link check | Medium | 1 |
 
 ### Done
 
@@ -60,7 +62,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 91 | Rename a page safely | Medium | 1 |
 | 103 | Editor-time lint rules | Medium | 1 |
 | 4 | Flag `window.fetch` in `load` | Small | 2 |
 | 5 | Fold repeated stack traces | Small | 2 |
