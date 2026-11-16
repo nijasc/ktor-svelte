@@ -33,7 +33,7 @@ install(Svelte) {
 }
 ```
 
-`GET /_ktor-svelte/status` returns JSON with the bundled build (`present`, `formatVersion`, `files`, `fingerprint`) and the dev proxy (`proxy`, and when active `url` and `reachable`), and how many requests the security guards refused (`refusals`: `crossOrigin`, `bodyTooLarge`, `rateLimit`). It is off by default, never cached, hidden from the OpenAPI document, and answers only requests from this machine with a local `Host`. Everything else gets 403.
+`GET /_ktor-svelte/status` returns JSON with the bundled build (`present`, `formatVersion`, `files`, `fingerprint`) and the dev proxy (`proxy`, and when active `url` and `reachable`), and how many requests the security guards refused (`refusals`: `crossOrigin`, `bodyTooLarge`, `rateLimit`). It is off by default, never cached, hidden from the OpenAPI document, and answers only requests from this machine with a local `Host`. Everything else gets 403, unless you [open it to more callers](#who-may-see-internal-endpoints).
 
 ## Health endpoint
 
@@ -51,3 +51,38 @@ install(Svelte) {
 ## API docs
 
 `apiDocs = true` serves Swagger UI at `/api/docs` in development mode only, using the same OpenAPI document as `generateTs`. Change the path with `apiDocsPath`. The page loads its scripts from a public CDN, so it needs internet access.
+
+To have the docs on a deployed app as well, say [who may see them](#who-may-see-internal-endpoints). Without that they stay a development tool.
+
+## Who may see internal endpoints
+
+The status endpoint and the API docs are for you and your tools, not for visitors. By default the status endpoint answers this machine only, and the docs exist in development only. One block opens both to the callers you name, and to nobody else:
+
+```kotlin
+import io.ktor.server.sessions.get
+import io.ktor.server.sessions.sessions
+
+install(Svelte) {
+    statusEndpoint = true
+    apiDocs = true
+    internalAccess {
+        token = env("INTERNAL_TOKEN")
+        networks("10.0.0.0/8", "fd00::/8")
+        allow { call -> call.sessions.get<UserSession>()?.userId == "admin" }
+    }
+}
+```
+
+A request gets in when any one of them lets it in. Requests from this machine always do.
+
+| Setting | Lets in | Good for |
+|---|---|---|
+| `token` | Requests with `Authorization: Bearer <token>`. At least 16 characters, compared in constant time | A monitoring job that reads the status endpoint |
+| `networks(...)` | Clients whose address is in one of the ranges, IPv4 or IPv6 | An office network or a VPN |
+| `allow { call -> ... }` | Whatever your own check accepts, such as a signed-in user with a role | Opening the API docs in a browser, which cannot send a token |
+
+With `internalAccess` set, `apiDocs = true` serves the docs outside development too, behind the same rules. Everyone else gets 403, or 401 when a token is configured and none was sent. The app does not start with a token that is too short or a range it cannot read.
+
+Behind a reverse proxy, every request reaches the app from the proxy's address, which is usually a private one. A network range would then let the whole internet in, so ktor-svelte refuses it: when a request carries `X-Forwarded-For` or `Forwarded` and the app has not told Ktor to trust the proxy, `networks` lets nobody in. Install Ktor's `XForwardedHeaders` or `ForwardedHeaders` plugin, and the range is checked against the client's real address.
+
+The health endpoint and the public build info stay open, since they are made for callers you do not know.

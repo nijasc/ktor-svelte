@@ -26,13 +26,14 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 109 | Protect internal endpoints |  |
+| 11 | Draft and form state helper |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
 | 104 | Generated files never conflict | #246 |
+| 109 | Protect internal endpoints | #247 |
 
 ### Next up
 
@@ -93,7 +94,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 11 | Draft and form state helper | Medium | 3 |
 | 12 | Replay and copy as curl | Medium | 3 |
 | 13 | Open route in IDE | Small | 3 |
 | 14 | Server error overlay | Medium | 3 |
