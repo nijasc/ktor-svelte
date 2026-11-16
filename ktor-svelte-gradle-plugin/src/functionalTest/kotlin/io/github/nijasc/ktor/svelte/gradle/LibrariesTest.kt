@@ -527,6 +527,49 @@ class LibrariesTest {
     }
 
     @Test
+    fun `svelteRename moves a page, rewrites its typed calls and regenerates the routes`() {
+        val project = project("routes()")
+        listOf("", "notes", "notes/[id]").forEach { route ->
+            project.frontend
+                .resolve("src/routes/$route/+page.svelte")
+                .apply { parentFile.mkdirs() }
+                .writeText("<a href={routes.notesId({ id: 1 })}>Open</a> <a href={routes.notes()}>All</a>\n")
+        }
+        val kotlin = dir.resolve("src/main/kotlin/Routes.kt")
+        kotlin.parentFile.mkdirs()
+        kotlin.writeText("val target = FrontendRoutes.notesId(\"1\")\n")
+        project.run("svelteSync")
+
+        val output = project.run("svelteRename", "--page=notes", "--to=/memos").output
+
+        assertContains(output, "moved /notes to /memos and updated 7 typed route call(s) in 4 file(s)")
+        assertContains(output, "nothing answers at /notes any more")
+        assertFalse(project.frontend.resolve("src/routes/notes").exists())
+        assertEquals(
+            "<a href={routes.memosId({ id: 1 })}>Open</a> <a href={routes.memos()}>All</a>\n",
+            project.frontend.resolve("src/routes/memos/[id]/+page.svelte").readText(),
+        )
+        assertEquals("val target = FrontendRoutes.memosId(\"1\")\n", kotlin.readText())
+        val generated = project.frontend.resolve("src/lib/ktor-svelte/routes.ts").readText()
+        assertContains(generated, "memosId: '/memos/[id]'")
+        assertFalse(generated.contains("notesId"))
+    }
+
+    @Test
+    fun `svelteRename explains what it needs and refuses a target that exists`() {
+        val project = project("routes()")
+        listOf("", "notes", "memos").forEach { route ->
+            project.frontend
+                .resolve("src/routes/$route/+page.svelte")
+                .apply { parentFile.mkdirs() }
+                .writeText("")
+        }
+        assertContains(project.runAndFail("svelteRename").output, "svelteRename --page=notes/[id] --to=memos/[id]")
+        assertContains(project.runAndFail("svelteRename", "--page=notes", "--to=memos").output, "already exists")
+        assertTrue(project.frontend.resolve("src/routes/notes/+page.svelte").isFile)
+    }
+
+    @Test
     fun `svelteVerifyRoutes has nothing to do without typed routes`() {
         val project = project("lucide()")
         project.frontend.resolve("src/routes").mkdirs()
