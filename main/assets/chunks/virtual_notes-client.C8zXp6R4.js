@@ -507,52 +507,78 @@ export * from './types.js';
 `,"services.ts":`import { ApiError, request, type RequestOptions } from './client.js';
 import type { Activity, Greeting, Note, NoteInput, NoteStats, NotesExport, Problem, UploadReceipt, PublicConfig } from './types.js';
 
+/** @see notes/Routes.kt */
 export const greetingList = (query?: { name?: string }, options?: RequestOptions) => request<Greeting>('GET', '/api/greeting', { ...options, query, operation: 'greeting.list' });
 
 export const greeting = {
+    /** @see notes/Routes.kt */
     list: greetingList,
 };
 
+/** @see notes/Routes.kt */
 export const notesList = (query?: { search?: string; tag?: string }, options?: RequestOptions) => request<Note[]>('GET', '/api/notes', { ...options, query, operation: 'notes.list' });
+/** @see notes/Routes.kt */
 export const notesCreate = (body: NoteInput, options?: RequestOptions) => request<Note>('POST', '/api/notes', { ...options, body, operation: 'notes.create' });
+/** @see notes/Routes.kt */
 export const notesGetExport = (options?: RequestOptions) => request<NotesExport>('GET', '/api/notes/export', { ...options, operation: 'notes.getExport' });
+/** @see notes/Routes.kt */
 export const notesGetFeed = (query?: { cursor?: string; limit?: string }, options?: RequestOptions) => request<{
     items: Note[];
     next?: string | null;
 }>('GET', '/api/notes/feed', { ...options, query, operation: 'notes.getFeed' });
+/** @see notes/Routes.kt */
 export const notesGet = (id: string | number, options?: RequestOptions) => request<Note>('GET', \`/api/notes/\${encodeURIComponent(id)}\`, { ...options, operation: 'notes.get' });
+/** @see notes/Routes.kt */
 export const notesUpdate = (id: string | number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', \`/api/notes/\${encodeURIComponent(id)}\`, { ...options, body, operation: 'notes.update' });
+/** @see notes/Routes.kt */
 export const notesDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', \`/api/notes/\${encodeURIComponent(id)}\`, { ...options, operation: 'notes.delete' });
+/** @see notes/Routes.kt */
 export const notesGetActivity = (id: string | number, options?: RequestOptions) => request<Activity[]>('GET', \`/api/notes/\${encodeURIComponent(id)}/activity\`, { ...options, operation: 'notes.getActivity' });
+/** @see notes/Routes.kt */
 export const notesArchive = (id: string | number, options?: RequestOptions) => request<Note>('POST', \`/api/notes/\${encodeURIComponent(id)}/archive\`, { ...options, operation: 'notes.archive' });
 /**
  * Uploads files to a note.
  *
  * Send the files as multipart form data. The response lists the received file names and the total size.
+ *
+ * @see notes/Routes.kt
  */
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => request<UploadReceipt>('POST', \`/api/notes/\${encodeURIComponent(id)}/attachments\`, { ...options, body, operation: 'notes.attachments' });
 
 export const notes = {
+    /** @see notes/Routes.kt */
     list: notesList,
+    /** @see notes/Routes.kt */
     create: notesCreate,
+    /** @see notes/Routes.kt */
     getExport: notesGetExport,
+    /** @see notes/Routes.kt */
     getFeed: notesGetFeed,
+    /** @see notes/Routes.kt */
     get: notesGet,
+    /** @see notes/Routes.kt */
     update: notesUpdate,
+    /** @see notes/Routes.kt */
     delete: notesDelete,
+    /** @see notes/Routes.kt */
     getActivity: notesGetActivity,
+    /** @see notes/Routes.kt */
     archive: notesArchive,
     /**
      * Uploads files to a note.
      *
      * Send the files as multipart form data. The response lists the received file names and the total size.
+     *
+     * @see notes/Routes.kt
      */
     attachments: notesAttachments,
 };
 
+/** @see notes/Routes.kt */
 export const statsList = (options?: RequestOptions) => request<NoteStats>('GET', '/api/stats', { ...options, operation: 'stats.list' });
 
 export const stats = {
+    /** @see notes/Routes.kt */
     list: statsList,
 };
 
@@ -701,10 +727,12 @@ export const Greeting = {
     }),
 };
 
+/** A note with its tags and its icon. */
 export interface Note {
     id: number;
     title: string;
     body: string;
+    /** Lowercase words the list can be filtered by. */
     tags: string[];
     status: Status;
     icon: LucideIcon;
