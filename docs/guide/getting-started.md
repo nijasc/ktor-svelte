@@ -22,7 +22,7 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 ./gradlew svelteDevAll
 ```
 
-The first page of the new app lists what was set up for the answers you gave, each with a link to its docs, and what to do next.
+`./gradlew dev` is short for the same task. The first page of the new app lists what was set up for the answers you gave, each with a link to its docs, and what to do next.
 
 | Question | Flag | Default | What you get |
 |---|---|---|---|
