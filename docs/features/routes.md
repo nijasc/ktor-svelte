@@ -62,3 +62,24 @@ A route's name is its path in camel case, without groups: `/` is `home`, `/about
 ## Keeping it current
 
 `routes.ts` is a generated file like the others: commit it, and a production build fails if it is out of date. While `svelteDev` or `svelteDevAll` runs, adding, moving or deleting a page updates `routes.ts` at once. Under `svelteDevAll` `FrontendRoutes` follows and the app restarts. Otherwise it updates the next time Kotlin compiles.
+
+## Finding links that are still strings
+
+An app that turns typed routes on later still has links such as `href="/notes/{note.id}"`. `svelteVerifyRoutes` reads every `.svelte`, `.ts` and `.js` file under `src` and lists each `href`, `goto` and `redirect` whose path is one of your pages, with the call to write instead:
+
+```bash
+./gradlew svelteVerifyRoutes
+```
+
+```text
+src/routes/+page.svelte:12  href="/notes/{note.id}"  ->  routes.notesId({ id: note.id })
+src/lib/NoteForm.svelte:31  goto("/notes/" + created.id)  ->  routes.notesId({ id: created.id })
+```
+
+It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. It is not part of `check`. To keep new string links out, add it yourself:
+
+```kotlin no-check
+tasks.check {
+    dependsOn("svelteVerifyRoutes")
+}
+```
