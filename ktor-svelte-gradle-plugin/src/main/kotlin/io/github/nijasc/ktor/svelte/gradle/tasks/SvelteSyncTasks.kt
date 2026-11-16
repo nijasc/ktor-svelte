@@ -253,6 +253,22 @@ public abstract class SvelteVerifySyncTask : SvelteLibraryTask() {
     }
 }
 
+internal fun writeOnlyWhatChanged(
+    root: File,
+    files: Map<String, String>,
+) {
+    val wanted = files.mapKeys { (path, _) -> root.resolve(path).normalize() }
+    if (root.isDirectory) {
+        root.walkBottomUp().filter { it.isFile && it !in wanted }.forEach { it.delete() }
+        root.walkBottomUp().filter { it.isDirectory && it != root && it.list().isNullOrEmpty() }.forEach { it.delete() }
+    }
+    wanted.forEach { (file, content) ->
+        if (file.isFile && file.readText() == content) return@forEach
+        file.parentFile.mkdirs()
+        file.writeText(content)
+    }
+}
+
 @CacheableTask
 public abstract class SvelteGenerateSourcesTask : DefaultTask() {
     @get:Input
@@ -305,19 +321,11 @@ public abstract class SvelteGenerateSourcesTask : DefaultTask() {
         val catalog = current.i18n?.let { readMessages(messagesDirectory.get().asFile, it.locales) }
 
         val packagePath = current.generatedPackage.replace('.', '/')
-        val kotlinRoot = kotlinDirectory.get().asFile
-        kotlinRoot.deleteRecursively()
         val routes = if (current.routes) scanRoutes(routesDirectory.get().asFile) else null
-        kotlinFiles(current, icons, catalog, hasRuntimeDependency.get(), routes).forEach { (name, content) ->
-            val file = kotlinRoot.resolve("$packagePath/$name")
-            file.parentFile.mkdirs()
-            file.writeText(content)
-        }
-
-        val resourcesRoot = resourcesDirectory.get().asFile
-        resourcesRoot.deleteRecursively()
-        val properties = resourcesRoot.resolve("ktor-svelte/libraries.properties")
-        properties.parentFile.mkdirs()
-        properties.writeText(runtimeProperties(current))
+        writeOnlyWhatChanged(
+            kotlinDirectory.get().asFile,
+            kotlinFiles(current, icons, catalog, hasRuntimeDependency.get(), routes).mapKeys { (name, _) -> "$packagePath/$name" },
+        )
+        writeOnlyWhatChanged(resourcesDirectory.get().asFile, mapOf("ktor-svelte/libraries.properties" to runtimeProperties(current)))
     }
 }
