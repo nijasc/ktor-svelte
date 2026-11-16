@@ -261,6 +261,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         }
 
         if (devRequests != null) {
+            devRequests.install(application)
             onCall { call -> devRequests.started(call) }
             on(ResponseSent) { call -> devRequests.finished(call) }
         }
@@ -312,7 +313,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
-            if (devRequests != null) devRequestRoutes(devRequests, allowRemote)
+            if (devRequests != null && devProxy != null) devRequestRoutes(devRequests, allowRemote, devProxy)
             if (pluginConfig.publicBuildInfo) {
                 get(BUILD_INFO_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-cache")

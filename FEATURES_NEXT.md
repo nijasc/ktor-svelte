@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 13 | Open route in IDE |  |
+| 14 | Server error overlay |  |
 
 ### In review
 
@@ -36,6 +36,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 109 | Protect internal endpoints | #247 |
 | 11 | Draft and form state helper | #248 |
 | 12 | Replay and copy as curl | #251 |
+| 13 | Open route in IDE | #252 |
 
 ### Next up
 
@@ -96,7 +97,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 14 | Server error overlay | Medium | 3 |
 | 89 | Confirm helper | Small | 3 |
 | 93 | Dialog helper | Small | 3 |
 | 38 | SQL queries per request | Medium | 3 |

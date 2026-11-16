@@ -23,6 +23,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.InetAddress
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -197,6 +198,25 @@ internal class DevProxy(
             try {
                 client.sendAsync(request, HttpResponse.BodyHandlers.discarding()).await()
                 true
+            } catch (_: IOException) {
+                false
+            }
+        }
+
+    suspend fun openInEditor(
+        file: String,
+        line: Int,
+    ): Boolean =
+        targets.any { target ->
+            val location = URLEncoder.encode("$file:$line:1", Charsets.UTF_8)
+            val request =
+                HttpRequest
+                    .newBuilder(URI.create("$target/__open-in-editor?file=$location"))
+                    .timeout(Duration.ofSeconds(2))
+                    .GET()
+                    .build()
+            try {
+                client.sendAsync(request, HttpResponse.BodyHandlers.discarding()).await().statusCode() == HttpStatusCode.OK.value
             } catch (_: IOException) {
                 false
             }
