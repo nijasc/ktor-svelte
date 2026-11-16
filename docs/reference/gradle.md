@@ -85,6 +85,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteSync` | Installs configured libraries and writes their generated files |
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
+| `svelteBuildInfo` | Writes the version, the git commit and its time into the build, for [`buildInfo`](../guide/deployment.md#build-info). Runs before resources are processed |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
 | `svelteInstall`, `svelteBuild`, `svelteBundle` | Install the frontend dependencies from the lockfile, build the frontend, and copy the build into the JAR's resources with its manifest. They run as part of `jar` and `processResources`, so you rarely call them yourself |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, with the [typed route](../features/routes.md#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
@@ -98,6 +99,7 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
+| `svelteVerifyApiRoutes` | Lists [API routes that nothing in the frontend calls](../features/typescript.md#routes-nothing-calls). With `--strict` it fails when it finds one |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](../features/routes.md#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
 | `svelteCheck` | Runs your `check` script |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |

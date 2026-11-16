@@ -276,6 +276,15 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec : 
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteBuildInfoTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getCommit ()Lorg/gradle/api/provider/Property;
+	public abstract fun getCommitTime ()Lorg/gradle/api/provider/Property;
+	public abstract fun getOutputDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getVersion ()Lorg/gradle/api/provider/Property;
+	public final fun write ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteBuildTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public final fun build ()V
@@ -448,6 +457,13 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask :
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDependenciesTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public final fun update ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyApiRoutesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
+	public final fun verify ()V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyLinksTask : org/gradle/api/DefaultTask {

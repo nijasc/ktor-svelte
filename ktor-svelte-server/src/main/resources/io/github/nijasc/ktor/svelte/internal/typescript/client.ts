@@ -41,11 +41,16 @@ export class ApiError<E = unknown> extends Error {
         readonly body: E,
         readonly url: string,
         readonly operation?: string,
-        readonly requestId?: string
+        readonly requestId?: string,
+        readonly retryAfter?: number
     ) {
         super(`Request to ${url} failed with status ${status}`);
         this.name = 'ApiError';
     }
+}
+
+export function isRateLimitError(error: unknown): error is ApiError {
+    return error instanceof ApiError && error.status === 429;
 }
 
 export interface ValidationProblem {
@@ -183,11 +188,32 @@ function pause(milliseconds: number, signal: AbortSignal | null | undefined): Pr
     });
 }
 
-async function withRetry<T>(call: () => Promise<T>, plan: Required<RetryConfig> | undefined, signal: AbortSignal | null | undefined): Promise<T> {
+function retryAfter(response: Response): number | undefined {
+    const value = response.headers.get('retry-after')?.trim();
+    if (!value) return undefined;
+    if (/^\d+$/.test(value)) return Number(value) * 1000;
+    const date = Date.parse(value);
+    return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
+}
+
+async function withRetry<T>(
+    call: () => Promise<T>,
+    plan: Required<RetryConfig> | undefined,
+    longestLimitWait: number | undefined,
+    signal: AbortSignal | null | undefined
+): Promise<T> {
+    let waitedForLimit = false;
     for (let tried = 1; ; tried++) {
         try {
             return await call();
         } catch (error) {
+            const wait = isRateLimitError(error) ? error.retryAfter : undefined;
+            if (!waitedForLimit && wait !== undefined && longestLimitWait !== undefined && wait <= longestLimitWait) {
+                waitedForLimit = true;
+                tried--;
+                await pause(wait, signal);
+                continue;
+            }
             if (!plan || tried >= plan.attempts || !isRetryable(error)) throw error;
             await pause(Math.min(plan.delay * 2 ** (tried - 1), plan.maxDelay), signal);
         }
@@ -197,6 +223,8 @@ async function withRetry<T>(call: () => Promise<T>, plan: Required<RetryConfig> 
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
     const { query, body, operation, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, ...init } = options;
     const plan = streaming ? undefined : retryPlan(method, retry);
+    const chosenRetry = retry ?? apiConfig.retry;
+    const longestLimitWait = streaming || !chosenRetry ? undefined : ((chosenRetry === true ? undefined : chosenRetry.maxDelay) ?? 5000);
     const limit = timeout ?? (streaming ? undefined : apiConfig.timeout);
     const send = onUploadProgress ? sendWithProgress(onUploadProgress) : (customFetch ?? apiConfig.fetch ?? fetch);
     const url = apiConfig.baseUrl + path + queryString(query);
@@ -213,7 +241,7 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
         url,
         operation,
         send: () => send(url, { ...init, method, headers: merged, body: payload, signal: withTimeout(signal, limit) }),
-        attempt: <T>(call: () => Promise<T>) => withRetry(call, plan, signal)
+        attempt: <T>(call: () => Promise<T>) => withRetry(call, plan, longestLimitWait, signal)
     };
 }
 
@@ -231,7 +259,7 @@ async function checked(response: Response, url: string, operation: string | unde
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
     if (!response.ok) {
         const requestId = response.headers.get('x-request-id') ?? undefined;
-        throw new ApiError(response.status, await parseResponse(response), url, operation, requestId);
+        throw new ApiError(response.status, await parseResponse(response), url, operation, requestId, retryAfter(response));
     }
     return response;
 }
@@ -351,6 +379,22 @@ export async function* pages<Q extends { cursor?: string }, T>(
         yield page.items;
         cursor = page.next ?? undefined;
     } while (cursor !== undefined);
+}
+
+export interface BuildInfo {
+    version?: string;
+    commit?: string;
+    time?: string;
+}
+
+let buildInfo: Promise<BuildInfo> | undefined;
+
+export function loadBuildInfo(options?: RequestOptions): Promise<BuildInfo> {
+    buildInfo ??= request<BuildInfo>('GET', '/_ktor-svelte/build.json', { ...options }).catch((error: unknown) => {
+        buildInfo = undefined;
+        throw error;
+    });
+    return buildInfo;
 }
 
 export function isAbortError(error: unknown): boolean {

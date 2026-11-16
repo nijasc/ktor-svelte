@@ -25,6 +25,7 @@ install(Svelte) {
     buildHeader = true
     requestIds = true
     accessLog = false
+    publicBuildInfo = false
     allowedOrigins()
     maxApiBodySize = 1048576
     maxJsonDepth = 64
@@ -91,6 +92,7 @@ install(Svelte) {
 | `siteUrl` | Public address used in the sitemap, such as `https://example.com`. `null` takes it from the request |
 | `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](../features/endpoints.md#default-favicon) |
 | `accessLog` | Logs one line per request in production to the `ktor-svelte.access` logger: `method=GET path=/api/notes status=200 ms=12 id=...`. The query string is left out, because it can hold secrets, and requests for build assets under `/_app/` are skipped. Development mode never logs these, since the dev log and the API panel already show requests. Off by default |
+| `publicBuildInfo` | Serves the app's [build info](../guide/deployment.md#build-info) at `/_ktor-svelte/build.json`, for `loadBuildInfo()` in the browser. Off by default, because it tells every visitor the version and the commit |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](../security.md#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](../features/transport.md#api-compression) |
@@ -118,3 +120,16 @@ A route of yours such as `get("/{slug}")` beats the frontend. That is intended, 
 ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`. `.zst` files next to them, for example from a Vite compression plugin, are bundled too and preferred for browsers that accept `zstd`, since they decompress faster.
 
 If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
+
+## Path parameters
+
+`call.pathParameter<T>(name)` reads a path parameter in the type you need, so a route does not parse it by hand:
+
+```kotlin
+get("/api/notes/{id}") {
+    val id = call.pathParameter<Int>("id")
+    call.respond(store.create(Note(id, "x")))
+}
+```
+
+It reads `String`, `Int`, `Long`, `UUID` and enums, which match by name in any case. A value that does not fit, such as `/api/notes/abc`, ends the request with Ktor's `NotFoundException`: the address names nothing, so the answer is 404, through your `StatusPages` if you have one. Asking for a parameter the route's path does not have, or for a type it cannot read, is a mistake in the route and fails with a 500 that says so.
