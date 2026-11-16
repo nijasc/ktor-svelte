@@ -27,6 +27,7 @@ svelte {
         images()
         toasts()
         routes()
+        components()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -254,6 +255,43 @@ old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'
 ```
 
 A message counts as used when its generated function is called anywhere in the frontend or in Kotlin, or when its key appears as a string, because it may then be looked up by name. The task only lists what it finds. Add `--strict` to fail the build instead.
+
+## Components
+
+`components()` generates Svelte components into `src/lib/ktor-svelte/components`, imported as `#components/...`. They are the pieces that exist because of something the plugin already generates: a component here is a few lines of markup over a generated helper, written once. They use DaisyUI's classes when `daisyUi` is on, and plain class names with a minimal style otherwise.
+
+The files belong to the plugin and are rewritten by `svelteSync`. For a different look, write your own component on the same helper. The generated ones are short enough to copy as a start.
+
+The components import from `#api`, so they need `generateTs = true` on the server.
+
+### Field
+
+One form field: its label, the input, an optional hint, and the validation errors.
+
+```svelte no-check
+<script lang="ts">
+    import { NoteInput } from '#api';
+    import Field from '#components/Field.svelte';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate });
+</script>
+
+<Field label="Title" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} hint="Shown in the list." />
+<Field label="Text" multiline rows={4} bind:value={form.value.text} errors={form.errors.text} />
+```
+
+| Prop | Meaning |
+|---|---|
+| `label` | The text of the `<label>`, tied to the input. |
+| `bind:value` | The value, as with an `<input>`. |
+| `bounds` | The limits from the DTO, such as `NoteInput.bounds.title`. They become `required`, `maxlength` and the like. |
+| `errors` | The messages for this field, from `validate()` or from a 422. |
+| `hint` | A line under the input, announced with it by screen readers. |
+| `multiline` | Renders a `<textarea>`. |
+| `class` | Added to the wrapper. |
+
+Everything else, such as `type`, `autocomplete`, `placeholder` or `id`, goes to the input unchanged. Underneath it is the [`field` action](validation.md), so errors appear and disappear the same way as with `use:field`.
 
 ## Modals
 

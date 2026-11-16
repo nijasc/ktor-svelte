@@ -101,7 +101,9 @@ For a rule that depends on the route, such as comparing against a database, call
 <input bind:value={draft.title} use:field={{ bounds: NoteInput.bounds.title, errors: errors.title, errorClass: 'text-error' }} />
 ```
 
-The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty.
+The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty. If the input has a hint of its own, pass the hint's id as `describedBy`, and it stays in `aria-describedby` next to the error.
+
+With `libraries { components() }`, the generated [`<Field>`](frontend-libraries.md#field) wraps this action together with the label and a hint.
 
 ## Form state
 
