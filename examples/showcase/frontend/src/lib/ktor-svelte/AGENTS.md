@@ -26,7 +26,7 @@ They are generated. An edit is overwritten, and `./gradlew check` fails when the
 ## Components
 
 Ready-made components are in `#components/`. Use them before writing the same markup by hand.
-- `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as `<Field label="Title" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.
+- `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as `<Field label="Title" bind:value={form.draft.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.
 - `DateInput.svelte` and `DateTimeInput.svelte`: the same for `IsoDate` and `IsoDateTime` values, without converting text by hand.
 - `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.
 - `ThemeToggle.svelte`: lets the visitor pick one of the configured themes and remembers it.

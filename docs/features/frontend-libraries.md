@@ -277,8 +277,8 @@ One form field: its label, the input, an optional hint, and the validation error
     const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate });
 </script>
 
-<Field label="Title" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} hint="Shown in the list." />
-<Field label="Text" multiline rows={4} bind:value={form.value.text} errors={form.errors.text} />
+<Field label="Title" bind:value={form.draft.title} bounds={NoteInput.bounds.title} errors={form.errors.title} hint="Shown in the list." />
+<Field label="Text" multiline rows={4} bind:value={form.draft.text} errors={form.errors.text} />
 ```
 
 | Prop | Meaning |
@@ -298,7 +298,7 @@ For a control that is not a plain input, pass it as the `control` snippet. It ge
 ```svelte no-check
 <Field label="Color" errors={form.errors.color}>
     {#snippet control({ id, options })}
-        <input {id} type="color" bind:value={form.value.color} use:field={options} />
+        <input {id} type="color" bind:value={form.draft.color} use:field={options} />
     {/snippet}
 </Field>
 ```
@@ -313,9 +313,9 @@ A date from the API is an `IsoDate`, text such as `2026-12-24`, and a field that
     import DateTimeInput from '#components/DateTimeInput.svelte';
 </script>
 
-<DateInput label="Due on" bind:value={form.value.dueOn} errors={form.errors.dueOn} />
-<DateTimeInput label="Starts at" bind:value={form.value.startsAt} />
-<DateTimeInput label="Opens at" local bind:value={form.value.opensAt} />
+<DateInput label="Due on" bind:value={form.draft.dueOn} errors={form.errors.dueOn} />
+<DateTimeInput label="Starts at" bind:value={form.draft.startsAt} />
+<DateTimeInput label="Opens at" local bind:value={form.draft.opensAt} />
 ```
 
 Both take the props of `Field`, and an empty input is `null`.
@@ -332,7 +332,7 @@ A `<select>` over a generated enum object:
     import EnumSelect from '#components/EnumSelect.svelte';
 </script>
 
-<EnumSelect label="Status" options={Status} bind:value={form.value.status} labels={{ TODO: 'To do', DONE: 'Done' }} placeholder="Any" />
+<EnumSelect label="Status" options={Status} bind:value={form.draft.status} labels={{ TODO: 'To do', DONE: 'Done' }} placeholder="Any" />
 ```
 
 It lists every value of the enum, so a value added in Kotlin appears after the next `svelteGenerateTs`. `labels` gives the text to show, as text or as a function for translations, and a value without one shows its name. With `placeholder` there is a first option that stands for `null`. The bound value has the enum's type, so no cast is needed.

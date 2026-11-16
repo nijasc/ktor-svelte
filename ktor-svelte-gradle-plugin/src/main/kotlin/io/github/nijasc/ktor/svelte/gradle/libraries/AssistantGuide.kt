@@ -54,7 +54,7 @@ internal fun assistantGuide(
             appendLine("Ready-made components are in `#components/`. Use them before writing the same markup by hand.")
             appendLine(
                 "- `import Field from '#components/Field.svelte'`: one form field with its label, hint and errors, such as " +
-                    "`<Field label=\"Title\" bind:value={form.value.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.",
+                    "`<Field label=\"Title\" bind:value={form.draft.title} bounds={NoteInput.bounds.title} errors={form.errors.title} />`.",
             )
             appendLine(
                 "- `DateInput.svelte` and `DateTimeInput.svelte`: the same for `IsoDate` and `IsoDateTime` values, without converting text by hand.",
