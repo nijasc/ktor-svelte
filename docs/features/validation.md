@@ -67,6 +67,30 @@ On a `List<String>` or a `Map<String, String>` they apply to every item or value
 
 Only JSON request bodies are cleaned up, not query parameters, and the browser does not apply them: `validate()` in the generated TypeScript checks the text as typed. That only matters for a value that is valid after trimming but not before, which the server then accepts.
 
+## Sensitive fields
+
+The development tools show a lot of what travels between browser and server, and some of it should not be shown: a password, a token, an API key. Mark such a field once:
+
+```kotlin
+@Serializable
+data class Login(
+    val email: String,
+    @Sensitive
+    val password: String,
+)
+```
+
+From then on the field's value is replaced by `***` wherever ktor-svelte itself displays or stores it:
+
+- in the `curl` command the [dev panel](../guide/dev-workflow.md) copies
+- in the [fixtures](./calling-the-api.md#fixtures-for-frontend-tests) it saves, for request and response bodies
+- in browser console output that is forwarded to the dev log
+- in the request list and the slow call log, for a query parameter of that name
+
+It works for requests and for responses, in nested classes too, and by the JSON name of the field, so `@SerialName("api_key")` masks `api_key`.
+
+Two things to know. Masking goes by name: once `password` is marked in one class, every field and query parameter called `password` is masked in those places, in any class. So give a sensitive field a telling name, not `value` or `next`. And it changes nothing about your API: the field is received and returned as before. Keeping a value out of a response is still done by not putting it into the response class.
+
 With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](typescript.md#generated-typescript).
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
