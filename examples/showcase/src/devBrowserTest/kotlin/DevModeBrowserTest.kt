@@ -324,6 +324,34 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `an API call that fails on the server shows the Kotlin exception in the browser`() {
+        val routes = File(project, "src/main/kotlin/showcase/TaskRoutes.kt")
+        try {
+            change(routes) {
+                it.replace(
+                    "        val greeting = Greeting(",
+                    "        if (name == \"boom\") error(\"probe failure\")\n        val greeting = Greeting(",
+                )
+            }
+            waitFor("the app to restart with the failing route", CHANGE_SECONDS) { get("/api/greeting?name=boom")?.statusCode() == 500 }
+            page.navigate("/")
+            assertThat(page.locator("#greeting")).containsText("greetings from Ktor!")
+            assertThat(page.locator("vite-error-overlay")).hasCount(0)
+
+            page.evaluate("fetch('/api/greeting?name=boom', { headers: { 'X-Request-Id': 'overlay-probe' } })")
+
+            val overlay = page.locator("vite-error-overlay")
+            assertThat(overlay).containsText("GET /api/greeting?name=boom failed on the server: java.lang.IllegalStateException: probe failure")
+            assertThat(overlay).containsText("TaskRoutes.kt")
+            page.keyboard().press("Escape")
+            assertThat(overlay).hasCount(0)
+        } finally {
+            restore(routes)
+        }
+        waitFor("the app to restart with the old route", CHANGE_SECONDS) { get("/api/greeting?name=boom")?.statusCode() == 200 }
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")
