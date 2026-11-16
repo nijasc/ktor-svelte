@@ -45,7 +45,7 @@ public final class io/github/nijasc/ktor/svelte/Page$Companion {
 public final class io/github/nijasc/ktor/svelte/PageKt {
 	public static final field DEFAULT_PAGE_LIMIT I
 	public static final field LARGEST_PAGE_LIMIT I
-	public static final fun pageRequest (Lio/ktor/server/application/ApplicationCall;II)Lio/github/nijasc/ktor/svelte/PageRequest;
+	public static final fun pagedRoute (Lio/ktor/server/routing/Route;Ljava/lang/String;IILio/ktor/util/reflect/TypeInfo;Lkotlin/jvm/functions/Function3;)Lio/ktor/server/routing/Route;
 }
 
 public final class io/github/nijasc/ktor/svelte/PageRequest {

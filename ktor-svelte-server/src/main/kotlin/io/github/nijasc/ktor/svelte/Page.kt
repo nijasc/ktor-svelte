@@ -8,6 +8,8 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.describe
+import io.ktor.util.reflect.TypeInfo
+import io.ktor.util.reflect.typeInfo
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.Serializable
 
@@ -25,13 +27,24 @@ public data class PageRequest(
     val limit: Int,
 )
 
-@PublishedApi
-internal fun ApplicationCall.pageRequest(
+private fun ApplicationCall.pageRequest(
     defaultLimit: Int,
     maxLimit: Int,
 ): PageRequest {
     val asked = request.queryParameters["limit"]?.toIntOrNull() ?: defaultLimit
     return PageRequest(request.queryParameters["cursor"]?.takeIf { it.isNotEmpty() }, asked.coerceIn(1, maxLimit))
+}
+
+@PublishedApi
+internal fun <T : Any> Route.pagedRoute(
+    path: String,
+    defaultLimit: Int,
+    maxLimit: Int,
+    pageType: TypeInfo,
+    body: suspend RoutingContext.(PageRequest) -> Page<T>,
+): Route {
+    require(maxLimit >= 1) { "maxLimit must be at least 1, but is $maxLimit." }
+    return get(path) { call.respond(body(call.pageRequest(defaultLimit, maxLimit)), pageType) }
 }
 
 @OptIn(ExperimentalKtorApi::class)
@@ -40,9 +53,8 @@ public inline fun <reified T : Any> Route.getPage(
     defaultLimit: Int = DEFAULT_PAGE_LIMIT,
     maxLimit: Int = LARGEST_PAGE_LIMIT,
     noinline body: suspend RoutingContext.(PageRequest) -> Page<T>,
-): Route {
-    require(maxLimit >= 1) { "maxLimit must be at least 1, but is $maxLimit." }
-    return get(path) { call.respond(body(call.pageRequest(defaultLimit, maxLimit))) }.describe {
+): Route =
+    pagedRoute(path, defaultLimit, maxLimit, typeInfo<Page<T>>(), body).describe {
         parameters {
             query("cursor") { required = false }
             query("limit") { required = false }
@@ -51,4 +63,3 @@ public inline fun <reified T : Any> Route.getPage(
             HttpStatusCode.OK { schema = jsonSchema<Page<T>>() }
         }
     }
-}
