@@ -358,6 +358,39 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `a public config value can be changed for this browser from the dev panel, and reset`() {
+        val name = page.getByRole(AriaRole.BANNER).getByRole(AriaRole.LINK).first()
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        page.navigate("/")
+        assertThat(name).containsText("ktor-svelte showcase")
+        assertThat(panel.locator(".overrides")).isHidden()
+
+        panel.locator(".toggle").click()
+        panel.locator(".config summary").click()
+        val appName = panel.getByLabel("appName")
+        assertThat(appName).hasValue("\"ktor-svelte showcase\"")
+        appName.fill("not json")
+        panel.locator(".config-apply").click()
+        assertThat(panel.locator(".config-note")).containsText("appName is not valid JSON")
+
+        appName.fill("\"Renamed in the panel\"")
+        panel.locator(".config-apply").click()
+        assertThat(name).containsText("Renamed in the panel")
+        assertThat(panel.locator(".overrides")).isVisible()
+        assertContains(get("/_ktor-svelte/config.json")?.body().orEmpty(), "ktor-svelte showcase")
+        page.navigate("/about")
+        assertThat(name).containsText("Renamed in the panel")
+
+        panel.locator(".toggle").click()
+        panel.locator(".config summary").click()
+        assertThat(panel.locator(".config-count")).hasText(" (1 changed)")
+        assertThat(panel.getByLabel("appName")).hasValue("\"Renamed in the panel\"")
+        panel.locator(".config-reset").click()
+        assertThat(name).containsText("ktor-svelte showcase")
+        assertThat(panel.locator(".overrides")).isHidden()
+    }
+
+    @Test
     fun `browser errors show up in the dev console`() {
         val marker = "dev-console-marker-${System.nanoTime()}"
         page.navigate("/")

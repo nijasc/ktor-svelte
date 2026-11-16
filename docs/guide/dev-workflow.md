@@ -52,6 +52,10 @@ When Kotlin stops compiling, the app keeps running its last good version, and th
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
 
+The panel also has a **Public config** section. It lists the values of your [`publicConfig`](../features/runtime-config.md) and lets you change them for this browser only: flip a feature flag, lower a limit, see the page with another name, without editing a config file and without a restart. Values are written as JSON, so text goes in double quotes. **Apply and reload** saves them in the browser's local storage and reloads the page, and from then on `loadPublicConfig()` and `readPublicConfig()` return the changed values in this browser. A yellow "config changed" mark on the API button reminds you, and **Reset all** goes back to what the server sends.
+
+Only the browser is told something different. The server keeps its own values, so a limit the server enforces is still enforced, and nobody else sees the change. It exists in development only, like the rest of the panel.
+
 When an API call from the page fails with an exception on the server, the browser shows it the way Vite shows a frontend error: an overlay with the exception, its message and the stack trace without the framework frames, and a link to the first line of your own code in it. Click it or press Escape to close it. You do not have to switch to the terminal to see why a call answered 500.
 
 The overlay only appears for calls the open page made itself, and only for exceptions that reach Ktor. An exception your own `StatusPages` handler turns into an answer is yours, and shows up as its status in the list. Turn the overlay off with `dev { errorOverlay = false }`. It needs the panel, so `panel = false` turns it off too.
