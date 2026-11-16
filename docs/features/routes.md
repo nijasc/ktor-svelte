@@ -77,7 +77,15 @@ src/lib/NoteForm.svelte:31  goto("/notes/" + created.id)  ->  routes.notesId({ i
 src/main/kotlin/notes/Routes.kt:48  respondRedirect("/notes/${note.id}")  ->  FrontendRoutes.notesId(note.id)
 ```
 
-It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. In Kotlin, string templates such as `$id` and `${note.id}` become the arguments, and a value that is not a `String` still needs its `toString()`. It is not part of `check`. To keep new string links out, add it yourself:
+It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. In Kotlin, string templates such as `$id` and `${note.id}` become the arguments, and a value that is not a `String` still needs its `toString()`. Add `--fix` and the task rewrites the links for you and adds the `#routes` import to each file it changes:
+
+```bash
+./gradlew svelteVerifyRoutes --fix
+```
+
+It only rewrites a link when nothing is lost. A link with a query string or a fragment, a path that is too dynamic to read, and a Kotlin redirect with parameters are still listed for you to change by hand, and a file that already has something else called `routes` is left alone. Look at the diff before you commit, and run your formatter afterwards.
+
+The check is not part of `check`. To keep new string links out, add it yourself:
 
 ```kotlin no-check
 tasks.check {

@@ -458,6 +458,45 @@ class LibrariesTest {
     }
 
     @Test
+    fun `svelteVerifyRoutes with fix rewrites what it can and lists the rest`() {
+        val project = project("routes()")
+        val home = project.frontend.resolve("src/routes/+page.svelte")
+        val note = project.frontend.resolve("src/routes/notes/[id]/+page.svelte")
+        val guard = project.frontend.resolve("src/routes/+layout.ts")
+        note.parentFile.mkdirs()
+        note.writeText("<a href=\"/\">Home</a>\n<a href=\"/notes/{id}?tab=files\">Files</a>\n")
+        home.writeText("<script lang=\"ts\">\n    let { note } = ${'$'}props();\n</script>\n\n<a href=\"/notes/{note.id}\">Open</a>\n")
+        guard.writeText("import { redirect } from '@sveltejs/kit';\n\nexport const load = () => redirect(307, '/');\n")
+        val routes = dir.resolve("src/main/kotlin/Routes.kt")
+        routes.parentFile.mkdirs()
+        routes.writeText("package app\n\nfun x() {\n    call.respondRedirect(\"/\")\n}\n")
+
+        val output = project.runAndFail("svelteVerifyRoutes", "--fix").output
+
+        assertContains(output, "rewrote 4 link(s) in 4 file(s)")
+        assertContains(output, "src/routes/notes/[id]/+page.svelte:6  href=\"/notes/{id}?tab=files\"  ->  routes.notesId({ id: id })")
+        assertContains(output, "1 link(s) to pages are written as strings and need a person to rewrite them.")
+        assertEquals(
+            "<script lang=\"ts\">\n    import { routes } from '#routes';\n    let { note } = ${'$'}props();\n</script>\n\n" +
+                "<a href={routes.notesId({ id: note.id })}>Open</a>\n",
+            home.readText(),
+        )
+        assertEquals(
+            "<script lang=\"ts\">\n    import { routes } from '#routes';\n</script>\n\n" +
+                "<a href={routes.home()}>Home</a>\n<a href=\"/notes/{id}?tab=files\">Files</a>\n",
+            note.readText(),
+        )
+        assertEquals(
+            "import { routes } from '#routes';\nimport { redirect } from '@sveltejs/kit';\n\nexport const load = () => redirect(307, routes.home());\n",
+            guard.readText(),
+        )
+        assertEquals(
+            "package app\n\nimport io.github.nijasc.ktorsvelte.FrontendRoutes\n\nfun x() {\n    call.respondRedirect(FrontendRoutes.home)\n}\n",
+            routes.readText(),
+        )
+    }
+
+    @Test
     fun `svelteVerifyRoutes has nothing to do without typed routes`() {
         val project = project("lucide()")
         project.frontend.resolve("src/routes").mkdirs()

@@ -24,15 +24,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 ### In progress
 
-| # | Feature | Pull request |
-|---|---|---|
-| 2 | `svelteVerifyRoutes --fix` |  |
+Nothing yet.
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 1 | Kotlin redirects in the route check | #208 |
+| 2 | `svelteVerifyRoutes --fix` | #211 |
 
 ### Next up
 
@@ -51,6 +49,12 @@ What these features build on has shipped in 1.1.0:
 | #203 | `svelteDoctor` catches installs that lost their files |
 | #204 | `errorMessage` in the generated client |
 | #205 | `.gitattributes` next to generated frontend files |
+
+Features of this plan that are merged:
+
+| # | Feature | Pull request |
+|---|---|---|
+| 1 | Kotlin redirects in the route check | #208 |
 
 ### Backlog
 

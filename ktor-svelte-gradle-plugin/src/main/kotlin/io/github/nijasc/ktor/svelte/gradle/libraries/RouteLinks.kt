@@ -6,6 +6,14 @@ internal data class StringLink(
     val line: Int,
     val written: String,
     val suggestion: String,
+    val range: IntRange = IntRange.EMPTY,
+    val replacement: String? = null,
+)
+
+internal data class FixedSource(
+    val source: String,
+    val fixed: Int,
+    val left: List<StringLink>,
 )
 
 private sealed interface LinkSegment {
@@ -31,6 +39,7 @@ private data class RouteMatch(
 private data class MatchedRoute(
     val route: FrontendRoute,
     val arguments: Map<String, Argument?>,
+    val exact: Boolean,
 )
 
 private const val EXPRESSION_MARK = '\u0000'
@@ -73,8 +82,34 @@ internal fun findStringLinks(
             val appended = match.groupValues.getOrNull(3).orEmpty()
             val expressions = if (quote == "`") TEMPLATE_EXPRESSION else MARKUP_EXPRESSION
             val matched = matchedRoute(path, expressions, appended, routes) ?: return@mapNotNull null
-            StringLink(lineOf(source, match), match.value, svelteSuggestion(matched))
+            val suggestion = svelteSuggestion(matched)
+            val replacement =
+                when {
+                    !matched.exact -> null
+                    !match.value.startsWith("href") -> callReplacement(match.value, quote, suggestion)
+                    "{" in match.value.substringBefore(quote) -> "href={$suggestion"
+                    else -> "href={$suggestion}"
+                }
+            StringLink(lineOf(source, match), match.value, suggestion, match.range, replacement)
         }.toList()
+
+private fun callReplacement(
+    written: String,
+    quote: String,
+    suggestion: String,
+): String = written.substringBefore(quote) + suggestion + if (written.endsWith(")")) ")" else ""
+
+internal fun fixStringLinks(
+    source: String,
+    links: List<StringLink>,
+): FixedSource {
+    val fixable = links.filter { it.replacement != null }
+    val fixed =
+        fixable.sortedByDescending { it.range.first }.fold(source) { text, link ->
+            text.replaceRange(link.range, link.replacement.orEmpty())
+        }
+    return FixedSource(fixed, fixable.size, links - fixable.toSet())
+}
 
 internal fun findKotlinStringLinks(
     source: String,
@@ -84,7 +119,16 @@ internal fun findKotlinStringLinks(
         .findAll(source)
         .mapNotNull { match ->
             val matched = matchedRoute(match.groupValues[1], KOTLIN_EXPRESSION, match.groupValues[2], routes) ?: return@mapNotNull null
-            StringLink(lineOf(source, match), match.value, kotlinSuggestion(matched))
+            val suggestion = kotlinSuggestion(matched)
+            val replacement =
+                suggestion.takeIf { matched.exact && matched.route.params.isEmpty() }?.let {
+                    callReplacement(
+                        match.value,
+                        "\"",
+                        it,
+                    )
+                }
+            StringLink(lineOf(source, match), match.value, suggestion, match.range, replacement)
         }.toList()
 
 private fun lineOf(
@@ -103,7 +147,10 @@ private fun matchedRoute(
     return routes
         .mapNotNull { route -> matchRoute(route.segments, link)?.let { route to it } }
         .maxByOrNull { (_, match) -> match.literalSegments }
-        ?.let { (route, match) -> MatchedRoute(route, match.arguments) }
+        ?.let { (route, match) ->
+            val keepsWholePath = expressions.replace(path, "").none { it == '?' || it == '#' }
+            MatchedRoute(route, match.arguments, exact = keepsWholePath && match.arguments.values.none { it == null })
+        }
 }
 
 private fun linkSegments(

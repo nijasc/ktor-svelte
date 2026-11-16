@@ -242,10 +242,11 @@ public class KtorSveltePlugin : Plugin<Project> {
             }
         project.tasks.register("svelteVerifyRoutes", SvelteVerifyRoutesTask::class.java) { task ->
             task.group = TASK_GROUP
-            task.description = "Fails if a link to a page is written as a string instead of a typed route."
+            task.description = "Fails if a link to a page is written as a string instead of a typed route. Add --fix to rewrite them."
             task.frontendDir.set(extension.frontendDir)
             task.routesDirectory.set(routes)
             task.routesEnabled.set(librarySpec.map { it.routes })
+            task.generatedPackage.set(librarySpec.map { it.generatedPackage })
             task.projectDirectory.set(project.layout.projectDirectory)
             task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
         }
