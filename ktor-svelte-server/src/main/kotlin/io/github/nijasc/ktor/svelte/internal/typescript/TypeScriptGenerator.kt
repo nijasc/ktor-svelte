@@ -56,6 +56,7 @@ internal class TypeScriptGenerator(
         return withGitAttributes(
             "client.ts" to typeScriptTemplate("client.ts"),
             "form.ts" to typeScriptTemplate("form.ts"),
+            FORM_STATE_FILE to typeScriptTemplate(FORM_STATE_FILE),
             "types.ts" to types + validationHelpers.sorted().joinToString("") { "\n" + it.source },
             "services.ts" to
                 servicesSource(
@@ -1082,6 +1083,7 @@ private fun hasDateFormat(element: JsonElement): Boolean =
 
 private const val LUCIDE_TYPE = "LucideIcon"
 internal const val GIT_ATTRIBUTES_FILE = ".gitattributes"
+internal const val FORM_STATE_FILE = "form-state.svelte.ts"
 private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated merge=ktor-svelte"
 private val SERVICES_MODULE_NAMES =
     setOf("api", "request", "stream", "ApiError", "errorStatuses", "isApiError", "publicConfig", "loadPublicConfig")

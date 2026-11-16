@@ -858,6 +858,17 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the form state helper is its own rune module and stays out of the index`() {
+        val files = generate()
+        val helper = files.getValue("form-state.svelte.ts")
+        assertContains(helper, "export function formState<T extends object>(initial: T, options: FormStateOptions<T> = {}): FormState<T> {")
+        assertContains(helper, "import { errorMessage, isValidationError } from './client.js';")
+        assertContains(helper, "let draft = \$state(")
+        assertFalse("svelte" in files.getValue("index.ts"), "importing #api must not need the Svelte compiler")
+        assertContains(files.getValue(".gitattributes"), "form-state.svelte.ts text eol=lf linguist-generated")
+    }
+
+    @Test
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")
