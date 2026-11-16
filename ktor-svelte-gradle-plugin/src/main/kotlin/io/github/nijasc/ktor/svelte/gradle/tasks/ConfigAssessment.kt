@@ -75,6 +75,12 @@ internal fun assess(
     )
     check(
         Area.DEVELOPER_EXPERIENCE,
+        gradle["libraries.routes"] == "true",
+        "Links and redirects point to pages that exist",
+        "Turn on svelte { libraries { routes() } } so links in Svelte and redirects in Ktor are checked by the compiler.",
+    )
+    check(
+        Area.DEVELOPER_EXPERIENCE,
         gradle["verifyTs"] != "false",
         "check verifies the generated TypeScript",
         "Remove svelte.verifyTs=false so check fails when a DTO or route drifts from the frontend.",

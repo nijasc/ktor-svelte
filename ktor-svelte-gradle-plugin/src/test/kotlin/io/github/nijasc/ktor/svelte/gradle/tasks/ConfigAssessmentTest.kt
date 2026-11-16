@@ -31,16 +31,19 @@ class ConfigAssessmentTest {
     @Test
     fun `without the app only build settings are scored`() {
         val checks = assess(gradle, null)
-        assertEquals(6, checks.size)
+        assertEquals(7, checks.size)
         assertEquals(
             listOf(
                 "Images are resized and served as AVIF and WebP",
                 "Every machine builds with the same Bun",
                 "Failed API calls are shown to users",
+                "Links and redirects point to pages that exist",
             ),
             checks.filterNot { it.passed }.map { it.label },
         )
-        val complete = gradle + mapOf("libraries.images" to "true", "libraries.toasts" to "true", "bunVersion" to "1.3.14")
+        val complete =
+            gradle +
+                mapOf("libraries.images" to "true", "libraries.toasts" to "true", "libraries.routes" to "true", "bunVersion" to "1.3.14")
         assertTrue(assess(complete, null).all { it.passed })
     }
 

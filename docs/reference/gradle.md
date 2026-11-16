@@ -57,14 +57,14 @@ Scores
   Security              [#########-]  90%  10 of 11
   Performance           [##########] 100%  4 of 4
   Operations            [#######---]  66%  2 of 3
-  Developer experience  [##########] 100%  4 of 4
+  Developer experience  [##########] 100%  5 of 5
 
 Suggestions
   - [Security] Set maxJsonStringLength = 100_000, or the longest text your API accepts.
   - [Operations] Set healthEndpoint = true and point your orchestrator at /_ktor-svelte/health.
 ```
 
-The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
+The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts, typed routes and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
 
 ## Pin Bun
 
