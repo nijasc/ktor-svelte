@@ -2,6 +2,7 @@
 
 package io.github.nijasc.ktor.svelte.internal.typescript
 
+import io.github.nijasc.ktor.svelte.DECIMAL_SERIAL_NAME
 import io.ktor.openapi.AdditionalProperties
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonSchemaInference
@@ -15,6 +16,7 @@ import kotlinx.serialization.serializerOrNull
 import kotlin.reflect.KType
 
 private const val DEEPEST_TYPE = 32
+private val DECIMAL_NAMES = setOf(DECIMAL_SERIAL_NAME, "java.math.BigDecimal", "BigDecimal")
 private val BRANDABLE = setOf(JsonType.STRING, JsonType.INTEGER, JsonType.NUMBER)
 
 internal object BrandedSchemaInference : JsonSchemaInference {
@@ -44,6 +46,9 @@ internal object BrandedSchemaInference : JsonSchemaInference {
         depth: Int,
     ): JsonSchema {
         if (depth > DEEPEST_TYPE) return schema
+        if (descriptor.serialName.trimEnd('?') in DECIMAL_NAMES && plainType(schema) == JsonType.STRING && schema.format == null) {
+            return schema.copy(format = DECIMAL_FORMAT)
+        }
         if (descriptor.isInline) {
             val plain = plainType(schema)
             if (plain !in BRANDABLE || schema.copy(type = null) != JsonSchema()) return schema

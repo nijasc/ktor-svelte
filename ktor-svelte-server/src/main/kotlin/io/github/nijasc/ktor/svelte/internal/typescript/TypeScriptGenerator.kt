@@ -44,6 +44,7 @@ internal class TypeScriptGenerator(
     private val prefixes = apiPrefixes.map { "/" + it.trim('/') }
     private var enumTypes: Map<Set<String>, EnumType> = emptyMap()
     private var usesDates = false
+    private var usesQuantities = false
     private val validationHelpers = mutableSetOf<ValidationHelper>()
     val operations = mutableListOf<GeneratedOperation>()
     private var routeFiles: Map<String, String> = emptyMap()
@@ -58,7 +59,11 @@ internal class TypeScriptGenerator(
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
         enumTypes = nameEnums(filtered, schemas)
         usesDates = hasDateFormat(filtered) || publicConfigSchema?.let { hasDateFormat(Json.parseToJsonElement(it)) } == true
-        val dateTypes = if (usesDates) DATE_FORMATS.values else emptyList()
+        usesQuantities =
+            hasFormat(filtered, QUANTITY_FORMATS) ||
+            publicConfigSchema?.let { hasFormat(Json.parseToJsonElement(it), QUANTITY_FORMATS) } == true
+        val dateTypes =
+            (if (usesDates) DATE_FORMATS.values else emptyList()) + (if (usesQuantities) QUANTITY_FORMATS.values else emptyList())
         validationHelpers.clear()
         operations.clear()
         val types = typesSource(schemas) + publicConfigDeclaration(schemas)
@@ -219,7 +224,7 @@ internal class TypeScriptGenerator(
             (prefixes.isEmpty() || prefixes.any { prefix -> prefix == "/" || path == prefix || path.startsWith("$prefix/") })
 
     private fun typesSource(schemas: Map<String, JsonElement>): String {
-        if (schemas.isEmpty() && iconNames.isEmpty() && enumTypes.isEmpty() && !usesDates) return "export {};\n"
+        if (schemas.isEmpty() && iconNames.isEmpty() && enumTypes.isEmpty() && !usesDates && !usesQuantities) return "export {};\n"
         val references = mutableSetOf<String>()
         val schemaDeclarations =
             schemas.map { (name, schema) -> name to declaration(typeName(name), schema.jsonObject, references, schemas) }
@@ -237,8 +242,9 @@ internal class TypeScriptGenerator(
         val brands = schemas.values.any { isBrand(it.jsonObject) }
         val body =
             listOfNotNull(
-                BRAND_SYMBOL.takeIf { brands },
+                BRAND_SYMBOL.takeIf { brands || usesQuantities },
                 typeScriptTemplate("dates.ts").takeIf { usesDates },
+                typeScriptTemplate("quantities.ts").takeIf { usesQuantities },
                 declarations.ifEmpty { null },
             ).joinToString("\n")
         return iconImport + body.ifEmpty { "export {};\n" }
@@ -654,7 +660,9 @@ internal class TypeScriptGenerator(
                 else -> null
             }
         return when (type) {
-            "string" -> dateType(schema)?.let { "'' as $it" } ?: "''"
+            "string" ->
+                dateType(schema)?.let { "'' as $it" } ?: quantityType(schema)?.let { "${QUANTITY_EMPTY.getValue(it)} as $it" }
+                    ?: "''"
             "integer", "number" -> "0"
             "boolean" -> "false"
             "array" ->
@@ -737,7 +745,7 @@ internal class TypeScriptGenerator(
         indent: String,
     ): String =
         when (type) {
-            "string" -> dateType(schema)?.also { references += it } ?: "string"
+            "string" -> (dateType(schema) ?: quantityType(schema))?.also { references += it } ?: "string"
             "integer", "number" -> "number"
             "boolean" -> "boolean"
             "null" -> "null"
@@ -1169,6 +1177,22 @@ private fun JsonObject.stringList(key: String): List<String> = arrayAt(key).orEm
 private val DATE_FORMATS = linkedMapOf("date" to "IsoDate", "time" to "IsoTime", "date-time" to "IsoDateTime")
 
 private fun dateType(schema: JsonObject): String? = schema.stringAt("format")?.let(DATE_FORMATS::get)
+
+internal const val DECIMAL_FORMAT = "decimal"
+private val QUANTITY_FORMATS = linkedMapOf("duration" to "IsoDuration", DECIMAL_FORMAT to "Decimal")
+private val QUANTITY_EMPTY = mapOf("IsoDuration" to "'PT0S'", "Decimal" to "'0'")
+
+private fun quantityType(schema: JsonObject): String? = schema.stringAt("format")?.let(QUANTITY_FORMATS::get)
+
+private fun hasFormat(
+    element: JsonElement,
+    formats: Map<String, String>,
+): Boolean =
+    when (element) {
+        is JsonObject -> element.stringAt("format") in formats || element.values.any { hasFormat(it, formats) }
+        is JsonArray -> element.any { hasFormat(it, formats) }
+        else -> false
+    }
 
 private fun hasDateFormat(element: JsonElement): Boolean =
     when (element) {
