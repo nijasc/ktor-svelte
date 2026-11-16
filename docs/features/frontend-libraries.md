@@ -226,7 +226,7 @@ Next to the generated files, `svelteSync` writes `src/lib/ktor-svelte/eslint.js`
 | Rule | What it flags |
 |---|---|
 | `ktor-svelte/no-string-page-links` | An `href`, `goto` or `redirect` that leads to one of your pages as a string, when [typed routes](./routes.md) are on |
-| `ktor-svelte/fetch-in-load` | An API call inside a `load` function that does not pass `{ fetch }`, which SvelteKit reports at runtime as `window_fetch_in_load` |
+| `ktor-svelte/fetch-in-load` | An API call inside a `load` function that goes through neither `apiWith(event)` nor `{ fetch }`, which SvelteKit reports at runtime as `window_fetch_in_load` |
 | `ktor-svelte/no-error-body-message` | Reading `error.body.message` from a caught error without narrowing it with `isApiError` first, where [`errorMessage`](./calling-the-api.md) is the safe choice |
 
 A project made by the setup script has them wired in. In an existing project, add two lines to `eslint.config.js`:

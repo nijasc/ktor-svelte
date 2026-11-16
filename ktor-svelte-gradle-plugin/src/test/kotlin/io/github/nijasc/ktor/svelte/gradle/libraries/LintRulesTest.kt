@@ -68,6 +68,7 @@ class LintRulesTest {
         )
         assertEquals(listOf("fetch", "fetch", "fetch"), results["loadFile"])
         assertEquals(emptyList<String>(), results["otherFile"])
+        assertEquals(emptyList<String>(), results["ownClient"])
         assertEquals(listOf("message:error", "message:error"), results["messages"])
         assertEquals(
             listOf("ktor-svelte/no-string-page-links", "ktor-svelte/fetch-in-load", "ktor-svelte/no-error-body-message"),

@@ -100,6 +100,17 @@ const results = {
         statement(api('notes', 'list'))
     ),
     otherFile: run('fetch-in-load', 'src/lib/notes.ts', loadFunction(statement(api('notes', 'list')))),
+    ownClient: run(
+        'fetch-in-load',
+        'src/routes/+layout.ts',
+        loadFunction(
+            {
+                type: 'VariableDeclaration',
+                declarations: [{ type: 'VariableDeclarator', id: id('api'), init: call('apiWith', id('event')) }]
+            },
+            statement(api('notes', 'list'))
+        )
+    ),
     messages: run(
         'no-error-body-message',
         'Form.svelte',

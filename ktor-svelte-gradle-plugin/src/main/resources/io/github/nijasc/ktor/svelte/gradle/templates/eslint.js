@@ -157,15 +157,19 @@ const fetchInLoad = {
         docs: { description: 'Pass the fetch of a load function to API calls made inside it.' },
         schema: [],
         messages: {
-            fetch: 'Pass { fetch } as the last argument. Inside load, SvelteKit can only reuse and track a request made with its own fetch.'
+            fetch: "Call this through apiWith(event) from '#api', or pass { fetch } as the last argument. Inside load, SvelteKit can only reuse and track a request made with its own fetch."
         }
     },
     create(context) {
         const filename = context.filename ?? context.getFilename();
         if (!/(^|[\\/])\+(page|layout)(\.server)?\.(ts|js)$/.test(filename)) return {};
+        let ownClient = false;
         return {
+            VariableDeclarator(node) {
+                if (node.id.type === 'Identifier' && node.id.name === 'api') ownClient = true;
+            },
             CallExpression(node) {
-                if (startsAtApi(node.callee) && insideLoad(node) && !passesFetch(node)) {
+                if (!ownClient && startsAtApi(node.callee) && insideLoad(node) && !passesFetch(node)) {
                     context.report({ node, messageId: 'fetch' });
                 }
             }
