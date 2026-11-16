@@ -1,9 +1,12 @@
-import { ApiError, apiConfig, request } from './client.ts';
+import { ApiError, apiConfig, isRateLimitError, request } from './client.ts';
 
-type Outcome = number | Error;
+type Outcome = number | Error | { status: number; retryAfter: string };
 
-function answer(status: number): Response {
-    return new Response(JSON.stringify({ status }), { status, headers: { 'content-type': 'application/json' } });
+function answer(outcome: number | { status: number; retryAfter: string }): Response {
+    const status = typeof outcome === 'number' ? outcome : outcome.status;
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (typeof outcome !== 'number') headers['retry-after'] = outcome.retryAfter;
+    return new Response(JSON.stringify({ status }), { status, headers });
 }
 
 function server(outcomes: Outcome[]) {
@@ -74,5 +77,29 @@ results.waits = waits;
 const controller = new AbortController();
 realTimeout(() => controller.abort(), 10);
 await scenario('stopsWhenAborted', [503], () => request('GET', '/api/notes', { retry: { delay: 5000 }, signal: controller.signal }));
+
+const limited = (retryAfter: string) => ({ status: 429, retryAfter });
+
+server([limited('2')]);
+apiConfig.retry = undefined;
+const refused = await request('POST', '/api/notes', { body: {} }).catch((error: unknown) => error);
+results.limitError = isRateLimitError(refused) ? `wait ${refused.retryAfter}` : 'not a rate limit error';
+results.otherErrorIsNotALimit = isRateLimitError(new ApiError(500, undefined, '/x'));
+
+await scenario('limitIsNotWaitedForByDefault', [limited('0'), 200], () => request('POST', '/api/notes', { body: {} }));
+await scenario('limitWaitsAndResendsWrites', [limited('0'), 201], () => request('POST', '/api/notes', { body: {} }), () => (apiConfig.retry = quick));
+await scenario('limitResendsOnlyOnce', [limited('0')], () => request('POST', '/api/notes', { body: {} }), () => (apiConfig.retry = quick));
+await scenario('longLimitIsNotWaitedFor', [limited('60'), 201], () => request('POST', '/api/notes', { body: {} }), () => (apiConfig.retry = true));
+await scenario('limitDoesNotUseUpGetAttempts', [limited('0'), 503, 503, 200], () => request('GET', '/api/notes'), () => (apiConfig.retry = quick));
+
+server([limited(new Date(Date.now() + 1500).toUTCString())]);
+apiConfig.retry = undefined;
+const dated = await request('GET', '/api/notes').catch((error: unknown) => error);
+const datedWait = isRateLimitError(dated) ? (dated.retryAfter ?? -1) : -1;
+results.limitFromDate = datedWait >= 0 && datedWait <= 1500;
+
+server([limited('soon')]);
+const unreadable = await request('GET', '/api/notes').catch((error: unknown) => error);
+results.unreadableLimit = isRateLimitError(unreadable) && unreadable.retryAfter === undefined;
 
 console.log(JSON.stringify(results));
