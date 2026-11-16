@@ -4,7 +4,7 @@
     import Icon from '#icon';
     import '#lib/ktor-svelte/app.css';
     import { getLocale, locales, m, setLocale, type Locale } from '#i18n';
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
     import { defaultTheme, getTheme, setTheme, themes, type ThemeName } from '#theme';
 
     let { children } = $props();
@@ -22,10 +22,10 @@
 </script>
 
 <header class="navbar bg-base-100 border-b border-base-300 gap-4 px-6">
-    <a class="btn btn-ghost text-lg" href={href(routes.home)}><Icon name="NotebookPen" size={20} /> {appName}</a>
+    <a class="btn btn-ghost text-lg" href={routes.home()}><Icon name="NotebookPen" size={20} /> {appName}</a>
     <nav class="flex flex-1 gap-1">
-        <a class="btn btn-ghost btn-sm" href={href(routes.notes)}><Icon name="StickyNote" size={16} /> {m.navNotes()}</a>
-        <a class="btn btn-ghost btn-sm" href={href(routes.about)}><Icon name="Info" size={16} /> {m.navAbout()}</a>
+        <a class="btn btn-ghost btn-sm" href={routes.notes()}><Icon name="StickyNote" size={16} /> {m.navNotes()}</a>
+        <a class="btn btn-ghost btn-sm" href={routes.about()}><Icon name="Info" size={16} /> {m.navAbout()}</a>
     </nav>
     <select id="theme" class="select select-sm w-32" aria-label="Theme" bind:value={theme} onchange={() => setTheme(theme)}>
         {#each themes as option}<option value={option}>{option}</option>{/each}

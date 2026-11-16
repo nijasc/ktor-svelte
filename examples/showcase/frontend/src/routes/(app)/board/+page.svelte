@@ -2,7 +2,7 @@
     import { api, isAbortError, latest, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
     import { formatDate } from '#lib/format.ts';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
@@ -76,7 +76,7 @@
 
 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
     <h1 class="text-3xl font-bold">{m.navBoard()}</h1>
-    <a class="btn btn-primary btn-sm" href={href(routes.tasksNew)}><Icon name="Plus" size={16} /> {m.navNewTask()}</a>
+    <a class="btn btn-primary btn-sm" href={routes.tasksNew()}><Icon name="Plus" size={16} /> {m.navNewTask()}</a>
 </div>
 
 <dl id="stats" class="stats bg-base-200 mb-6 w-full">
@@ -126,7 +126,7 @@
     {#each tasks as task (task.id)}
         <li class="card bg-base-200 p-4" class:opacity-70={task.status === Status.DONE}>
             <div class="flex flex-wrap items-center gap-2">
-                <a class="link flex items-center gap-2 font-semibold" href={href(routes.tasksId, { id: String(task.id) })} use:prefetchOnHover={() => api.tasks.get(task.id)}>
+                <a class="link flex items-center gap-2 font-semibold" href={routes.tasksId({ id: task.id })} use:prefetchOnHover={() => api.tasks.get(task.id)}>
                     <Icon name={task.icon} size={18} />
                     {task.title}
                 </a>

@@ -3,7 +3,7 @@
     import { api, isApiError, Login } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
     import { session } from '#lib/session.svelte.ts';
 
     let draft = $state(Login.empty());
@@ -17,7 +17,7 @@
         try {
             session.user = await api.session.create(draft);
             session.ready = true;
-            await goto(href(routes.board));
+            await goto(routes.board());
         } catch (error) {
             if (isApiError(error, 'session.create')) message = error.body.message;
             else message = m.loginFailed();
@@ -45,6 +45,6 @@
         <p id="login-error" class="text-error min-h-6" role="alert">{message}</p>
         <button class="btn btn-primary" type="submit" disabled={busy}><Icon name="LogIn" size={16} /> {m.navSignIn()}</button>
     </form>
-    <p class="mt-4 text-sm">{m.loginNoAccount()} <a class="link" href={href(routes.register)}>{m.navRegister()}</a></p>
+    <p class="mt-4 text-sm">{m.loginNoAccount()} <a class="link" href={routes.register()}>{m.navRegister()}</a></p>
     <p class="mt-2 text-sm">{m.loginDemoHint()}</p>
 </div>

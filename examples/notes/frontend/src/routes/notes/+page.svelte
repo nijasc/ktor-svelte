@@ -2,7 +2,7 @@
     import { api, field, isValidationError, IsoDateTime, NoteInput, Status, type Note, type NoteStats } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();
@@ -95,7 +95,7 @@
 <ul class="grid gap-2">
     {#each notes as note (note.id)}
         <li class="card bg-base-200 p-4" class:opacity-60={note.status === Status.ARCHIVED}>
-            <a class="link flex items-center gap-2 font-semibold" href={href(routes.notesId, { id: String(note.id) })}><Icon name={note.icon} size={18} /> {note.title}</a>
+            <a class="link flex items-center gap-2 font-semibold" href={routes.notesId({ id: note.id })}><Icon name={note.icon} size={18} /> {note.title}</a>
             <time class="text-xs opacity-60" datetime={note.createdAt}>{IsoDateTime.parse(note.createdAt).toLocaleString()}</time>
             <p class="my-2">{note.body}</p>
             <div class="flex gap-2">

@@ -1,8 +1,8 @@
 import { goto } from '$app/navigation';
 import { api, apiConfig, type User } from '#api';
-import { href, routes } from '#routes';
+import { routes } from '#routes';
 
-const PUBLIC_PATHS = [href(routes.home), href(routes.login), href(routes.register), href(routes.about)];
+const PUBLIC_PATHS = [routes.home(), routes.login(), routes.register(), routes.about()];
 
 export const session = $state<{ user: User | null; ready: boolean }>({ user: null, ready: false });
 
@@ -13,7 +13,7 @@ export function isPublicPath(path: string): boolean {
 export function watchUnauthorized(): void {
     apiConfig.onUnauthorized = () => {
         session.user = null;
-        if (!isPublicPath(location.pathname)) void goto(href(routes.login));
+        if (!isPublicPath(location.pathname)) void goto(routes.login());
     };
 }
 
@@ -30,5 +30,5 @@ export async function loadSession(): Promise<User | null> {
 export async function signOut(): Promise<void> {
     await api.session.delete();
     session.user = null;
-    await goto(href(routes.login));
+    await goto(routes.login());
 }

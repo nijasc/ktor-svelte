@@ -4,7 +4,7 @@
     import { api, field, isValidationError, loadPublicConfig, Registration } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
     import { session } from '#lib/session.svelte.ts';
 
     let draft = $state(Registration.empty());
@@ -24,7 +24,7 @@
         try {
             session.user = await api.users.create(draft);
             session.ready = true;
-            await goto(href(routes.board));
+            await goto(routes.board());
         } catch (error) {
             if (isValidationError(error)) errors = error.body.fields;
         } finally {
@@ -78,5 +78,5 @@
     {:else}
         <p id="registration-closed" class="alert">{m.problemRegistrationClosed()}</p>
     {/if}
-    <p class="mt-4 text-sm">{m.registerHaveAccount()} <a class="link" href={href(routes.login)}>{m.navSignIn()}</a></p>
+    <p class="mt-4 text-sm">{m.registerHaveAccount()} <a class="link" href={routes.login()}>{m.navSignIn()}</a></p>
 </div>

@@ -16,7 +16,7 @@
     } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
     import TaskForm from '#lib/components/TaskForm.svelte';
     import { formatBytes, formatDate, formatDateTime } from '#lib/format.ts';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
@@ -92,7 +92,7 @@
     async function remove() {
         await api.tasks.delete(task.id);
         toast(m.taskDeleted(), { kind: 'success' });
-        await goto(href(routes.board));
+        await goto(routes.board());
     }
 
     async function addComment(event: SubmitEvent) {
@@ -146,7 +146,7 @@
     <title>{task.title} - {m.appTitle()}</title>
 </svelte:head>
 
-<p class="mb-2 text-sm"><a class="link" href={href(routes.board)}>{m.navBoard()}</a></p>
+<p class="mb-2 text-sm"><a class="link" href={routes.board()}>{m.navBoard()}</a></p>
 
 {#if editing}
     <h1 class="mb-6 text-3xl font-bold">{m.taskEdit()}</h1>

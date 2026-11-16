@@ -3,7 +3,7 @@
     import { api, type Greeting } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
-    import { href, routes } from '#routes';
+    import { routes } from '#routes';
     import { session } from '#lib/session.svelte.ts';
 
     let greeting = $state<Greeting | undefined>(undefined);
@@ -33,12 +33,12 @@
         <p class="my-4 text-lg">{m.homeLead()}</p>
         <div class="flex flex-wrap gap-2">
             {#if session.user}
-                <a class="btn btn-primary" href={href(routes.board)}><Icon name="LayoutDashboard" size={18} /> {m.homeOpenBoard()}</a>
+                <a class="btn btn-primary" href={routes.board()}><Icon name="LayoutDashboard" size={18} /> {m.homeOpenBoard()}</a>
             {:else}
-                <a class="btn btn-primary" href={href(routes.login)}><Icon name="LogIn" size={18} /> {m.navSignIn()}</a>
-                <a class="btn btn-outline" href={href(routes.register)}><Icon name="UserPlus" size={18} /> {m.navRegister()}</a>
+                <a class="btn btn-primary" href={routes.login()}><Icon name="LogIn" size={18} /> {m.navSignIn()}</a>
+                <a class="btn btn-outline" href={routes.register()}><Icon name="UserPlus" size={18} /> {m.navRegister()}</a>
             {/if}
-            <a class="btn btn-ghost" href={href(routes.about)}><Icon name="Info" size={18} /> {m.navAbout()}</a>
+            <a class="btn btn-ghost" href={routes.about()}><Icon name="Info" size={18} /> {m.navAbout()}</a>
         </div>
         <p id="greeting" class="mt-6 min-h-6 text-sm" aria-live="polite">
             {#if greeting}{greeting.message} ({greeting.locale}, {greeting.theme}){/if}
