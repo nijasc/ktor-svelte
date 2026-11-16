@@ -135,6 +135,75 @@ function overridePublicConfig() {
     };
 }
 
+function routeMap(root) {
+    const section = root.querySelector('.routes');
+    const rows = root.querySelector('.routes-rows');
+    const filter = root.querySelector('.routes-filter');
+    const note = root.querySelector('.routes-note');
+    let all = [];
+
+    function fileButton(entry) {
+        const where = entry.line ? `${entry.file}:${entry.line}` : entry.file;
+        if (!entry.sourcePath) {
+            const text = document.createElement('span');
+            text.className = 'routes-file';
+            text.textContent = where ?? '';
+            return text;
+        }
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'routes-file';
+        button.textContent = where;
+        button.title = `Open ${where} in your editor`;
+        button.addEventListener('click', () => openInEditor({ path: entry.sourcePath, line: entry.line ?? 1 }));
+        return button;
+    }
+
+    function draw() {
+        const wanted = filter.value.trim().toLowerCase();
+        const shown = all.filter((entry) => `${entry.method} ${entry.path} ${entry.file ?? ''}`.toLowerCase().includes(wanted));
+        rows.replaceChildren(
+            ...shown.map((entry) => {
+                const row = document.createElement('div');
+                row.className = 'routes-row';
+                const method = document.createElement('span');
+                method.textContent = entry.method;
+                let path;
+                if (entry.method === 'PAGE' && !/[[\]]/.test(entry.path)) {
+                    path = document.createElement('a');
+                    path.href = entry.path;
+                } else {
+                    path = document.createElement('span');
+                }
+                path.className = 'path';
+                path.textContent = entry.path;
+                row.append(method, path, fileButton(entry));
+                return row;
+            })
+        );
+        note.textContent = shown.length === all.length ? `${all.length} in all` : `${shown.length} of ${all.length}`;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/routes', { headers: { accept: 'application/json' } });
+            const map = await response.json();
+            all = [...map.pages.map((page) => ({ method: 'PAGE', ...page })), ...map.routes.filter((route) => route.api)];
+            const docs = root.querySelector('.routes-docs');
+            docs.hidden = !map.docs;
+            if (map.docs) docs.href = map.docs;
+            draw();
+        } catch {
+            note.textContent = 'The route map could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    filter.addEventListener('input', draw);
+}
+
 const UNTRANSLATED = 'data-ktor-svelte-untranslated';
 const OUTLINE_UNTRANSLATED = 'ktor-svelte:outline-untranslated';
 
@@ -347,6 +416,18 @@ button.path:hover { text-decoration: underline; }
 .config-row input { min-width: 0; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
 .config-row.overridden span { color: #f3c969; }
 .config-note { margin: 0; padding: 4px 10px; color: #aaa; }
+.routes { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.routes summary { padding: 6px 10px; cursor: pointer; }
+.routes-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; }
+.routes-filter { flex: 1; min-width: 0; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
+.routes-docs { color: #9ecbff; }
+.routes-docs[hidden] { display: none; }
+.routes-note { color: #aaa; }
+.routes-row { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 8px; padding: 2px 10px; font-family: ui-monospace, monospace; }
+.routes-row a { color: #9ecbff; }
+.routes-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aaa; text-align: left; }
+button.routes-file { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+button.routes-file:hover { text-decoration: underline; }
 .untranslated { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .untranslated[hidden] { display: none; }
 .untranslated summary { padding: 6px 10px; cursor: pointer; }
@@ -530,6 +611,15 @@ function startPanel() {
                     <button type="button" class="config-reset">Reset all</button>
                 </div>
             </details>
+            <details class="routes">
+                <summary>Routes</summary>
+                <div class="routes-tools">
+                    <input type="search" class="routes-filter" placeholder="Filter by path, method or file" aria-label="Filter routes" />
+                    <span class="routes-note"></span>
+                    <a class="routes-docs" hidden>API docs</a>
+                </div>
+                <div class="routes-rows"></div>
+            </details>
             <details class="untranslated" hidden>
                 <summary>Not translated<span class="untranslated-count"></span></summary>
                 <label><input type="checkbox" class="untranslated-outline" /> Outline them on the page</label>
@@ -610,6 +700,7 @@ function startPanel() {
     });
     root.querySelector('.save').addEventListener('click', saveFixtures);
     configEditor(root);
+    routeMap(root);
     untranslatedTexts(root);
     const source = new EventSource('/_ktor-svelte/dev/requests');
     source.onopen = () => {
