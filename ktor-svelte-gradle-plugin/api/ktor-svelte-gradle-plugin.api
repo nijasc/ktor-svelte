@@ -357,6 +357,14 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDoctorTask
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteFormatTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+	public fun <init> ()V
+	public final fun format ()V
+	public abstract fun getExample ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPurpose ()Lorg/gradle/api/provider/Property;
+	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteGenerateSourcesTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public final fun generate ()V
