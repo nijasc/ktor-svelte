@@ -60,6 +60,22 @@ internal class ChangeDetector(
 internal fun debugArguments(port: Int): List<String> =
     if (port > 0) listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:$port") else emptyList()
 
+internal fun snapshotOfFolders(
+    classpath: Iterable<File>,
+    snapshots: File,
+    number: Int,
+): List<File> {
+    snapshots.listFiles().orEmpty().forEach { it.deleteRecursively() }
+    val target = snapshots.resolve(number.toString())
+    return classpath.mapIndexed { index, entry ->
+        if (!entry.isDirectory) return@mapIndexed entry
+        val copy = target.resolve("$index-${entry.name}")
+        entry.copyRecursively(copy, overwrite = true)
+        copy.mkdirs()
+        copy
+    }
+}
+
 internal fun stopProcessTree(process: Process) {
     val descendants = process.descendants().toList()
     descendants.forEach { it.destroy() }
@@ -113,6 +129,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
 
     @Transient
     private lateinit var devLog: DevLogFormatter
+
+    @Transient
+    private var appStarts = 0
 
     @Transient
     @Volatile
@@ -181,6 +200,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         } finally {
             running.forEach(::stopProcessTree)
             record.clear()
+            classpathSnapshots().deleteRecursively()
             Runtime.getRuntime().removeShutdownHook(stopAll)
         }
     }
@@ -234,6 +254,8 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         return start(LogSource.KOTLIN, command, projectDirectory.get().asFile, errors::onLine)
     }
 
+    private fun classpathSnapshots(): File = compileErrorsFile.get().asFile.resolveSibling("dev-classpath")
+
     private fun startApp(banner: ReadyBanner): Process {
         val command =
             listOf(
@@ -246,7 +268,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                     "-D$FRONTEND_DIR_SYSTEM_PROPERTY=${frontendDir.get().asFile.path}",
                     "-D$COMPILE_ERRORS_SYSTEM_PROPERTY=${compileErrorsFile.get().asFile.path}",
                     "-cp",
-                    appClasspath.asPath,
+                    snapshotOfFolders(appClasspath.files, classpathSnapshots(), ++appStarts).joinToString(File.pathSeparator) { it.path },
                     mainClass.get(),
                 )
         val client = frontendDir.get().asFile.resolve(GENERATED_CLIENT_DIR)
