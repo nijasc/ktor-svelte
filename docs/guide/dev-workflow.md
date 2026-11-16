@@ -89,6 +89,28 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
 
+Every restart costs you the app's startup time, so in development the app also logs what that time was spent on:
+
+```
+ktor-svelte: started in 2.3 s: 800 ms for the JVM and your code before install(Svelte), 120 ms in install(Svelte), 1.2 s in your code after it, 150 ms to open the port.
+```
+
+Most of it is usually your own module: opening the database, running migrations, loading seed data. Give those parts a name and they are listed, largest first:
+
+```kotlin
+fun Application.module() {
+    val database = startupStep("Database") { connect() }
+    startupStep("Migrations") { migrate(database) }
+    install(Svelte)
+}
+```
+
+```
+ktor-svelte: started in 2.3 s: ... Steps: Migrations 900 ms, Database 250 ms.
+```
+
+`startupStep` returns what its block returns and costs nothing in production, where the line is not logged. Turn the line off with `dev { startupTiming = false }`.
+
 Open `http://localhost:8080/_ktor-svelte/routes` to see every Ktor route next to every SvelteKit page, with the file and line of each route and a warning on routes that hide a page. Ask for `application/json` to get the same table as JSON. It exists only in development and answers only requests from this machine.
 
 Prefer separate terminals? Run these instead:
