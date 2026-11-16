@@ -142,7 +142,7 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 ./gradlew svelteDevAll
 ```
 
-The first page of the new app lists what was set up for the answers you gave, each with a link to its docs, and what to do next.
+`./gradlew dev` is short for the same task. The first page of the new app lists what was set up for the answers you gave, each with a link to its docs, and what to do next.
 
 | Question | Flag | Default | What you get |
 |---|---|---|---|
@@ -648,6 +648,21 @@ Stack traces from your app are shortened so the lines that matter stay on screen
 09:28:33  app             java.lang.IllegalStateException: boom  (seen 3 times since 09:28:32, stack trace hidden)
 ```
 
+The frames that come from your own source files are named first, right under the exception, each with a link that opens the file at that line. In the stack trace itself they keep their normal color, and every frame from a library is dimmed:
+
+```
+09:28:32  app      ERROR  Errors Request failed
+09:28:32  app             java.lang.IllegalStateException: No such note
+09:28:32  app                 your code: app.notes.NoteStore.find  file:///home/you/app/src/main/kotlin/app/notes/NoteStore.kt:42
+09:28:32  app                 your code: app.notes.RoutesKt$noteRoutes$1.invokeSuspend  file:///home/you/app/src/main/kotlin/app/notes/Routes.kt:17
+09:28:32  app             	at io.ktor.utils.io.ByteChannel.getClosedCause(ByteChannel.kt:350)
+09:28:32  app             	at app.notes.NoteStore.find(NoteStore.kt:42)
+09:28:32  app             	at app.notes.RoutesKt$noteRoutes$1.invokeSuspend(Routes.kt:17)
+09:28:32  app             	... framework frames hidden
+```
+
+A frame is yours when its file name and package match a file in your main source folders. Up to three are named first, and each `Caused by` gets its own.
+
 An error counts as the same when its log message and its exception line are the same. A restart forgets what was seen, so the first error after a Kotlin change always shows its stack trace. To see everything, run `./gradlew svelteDevAll --full-stack-traces`.
 
 After a Kotlin change the app restarts, and every page you have open loads its data again by itself. Only the `load` functions rerun, through SvelteKit's `refreshAll`, so what you typed into a form and the state of your components stay as they are. If your sessions do not survive a restart, such as with a signing key that is generated at startup, the refreshed page finds you signed out, exactly as a manual reload would. Turn it off with `dev { refreshAfterRestart = false }`.
@@ -707,6 +722,36 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 ```
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
+
+After every restart, `svelteDevAll` sums it up in one line: which file caused it, how long compiling and starting took, and whether the generated API client is different now:
+
+```
+ktor-svelte: restarted in 4.7 s after TaskRoutes.kt changed: 2.2 s to compile, 2.5 s to start. The API client changed: openapi.json, services.ts.
+```
+
+"To compile" runs from the moment the file was saved until the classes were written, so it includes the time Gradle takes to notice the change. When several files changed, the one saved last is named with the number of others. "The API client did not change" tells you the frontend has nothing new to pick up, and the list of files tells you where to look when it has.
+
+Every restart costs you the app's startup time, so in development the app also logs what that time was spent on:
+
+```
+ktor-svelte: started in 2.3 s: 800 ms for the JVM and your code before install(Svelte), 120 ms in install(Svelte), 1.2 s in your code after it, 150 ms to open the port.
+```
+
+Most of it is usually your own module: opening the database, running migrations, loading seed data. Give those parts a name and they are listed, largest first:
+
+```kotlin
+fun Application.module() {
+    val connection = startupStep("Database") { openDatabase() }
+    startupStep("Migrations") { runMigrations(connection) }
+    install(Svelte)
+}
+```
+
+```
+ktor-svelte: started in 2.3 s: ... Steps: Migrations 900 ms, Database 250 ms.
+```
+
+`startupStep` returns what its block returns and costs nothing in production, where the line is not logged. Turn the line off with `dev { startupTiming = false }`.
 
 Open `http://localhost:8080/_ktor-svelte/routes` to see every Ktor route next to every SvelteKit page, with the file and line of each route and a warning on routes that hide a page. Ask for `application/json` to get the same table as JSON. It exists only in development and answers only requests from this machine.
 
@@ -1655,6 +1700,35 @@ post("/api/notes") {
 The messages for these bounds are English and are the same in the browser and on the server. For another language, or friendlier wording than `Must match ^[a-z]+$.`, write the rule yourself with `check` and your own text.
 
 Errors use the JSON name, with paths such as `lines[1].sku` for nested values, `prices[eur].amount` for map values and `[0].sku` for the items of a received list. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
+
+## Cleaning up input
+
+People paste text with spaces around it and type their email address with capitals. Say once, on the field, how it should arrive, and no route cleans up strings by hand:
+
+```kotlin
+@Serializable
+data class SignUp(
+    @Trim @Lowercase
+    val email: String,
+    @Trim
+    @JsonSchema.MinLength(1)
+    val name: String,
+    @Trim @EmptyAsNull
+    val company: String? = null,
+)
+```
+
+| Annotation | What arrives in the route |
+|---|---|
+| `@Trim` | The text without whitespace at both ends |
+| `@Lowercase` | The text in lowercase, independent of the server's locale |
+| `@EmptyAsNull` | `null` when the text is empty, which is what a form sends for a field left blank. The property has to be nullable |
+
+They are applied in that order, so `@Trim @EmptyAsNull` turns a field of only spaces into `null`. This happens when the JSON body is received, before the bounds and your `Validated` rules run, so `@Trim @JsonSchema.MinLength(1)` refuses a name of only spaces without a rule of your own.
+
+On a `List<String>` or a `Map<String, String>` they apply to every item or value. They are found in nested classes, in lists of classes, in sealed subtypes with the default `type` discriminator, and on the property of a value class, so `value class Email(@Trim @Lowercase val value: String)` is clean wherever it is used.
+
+Only JSON request bodies are cleaned up, not query parameters, and the browser does not apply them: `validate()` in the generated TypeScript checks the text as typed. That only matters for a value that is valid after trimming but not before, which the server then accepts.
 
 With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](https://nijasc.github.io/ktor-svelte/main/features/typescript#generated-typescript).
 
@@ -2801,6 +2875,7 @@ install(Svelte) {
         panel = true
         browserLogs = true
         refreshAfterRestart = true
+        startupTiming = true
     }
 
     rateLimit {
@@ -2855,6 +2930,7 @@ install(Svelte) {
 | `dev.mode` | `Auto` follows Ktor's development mode. `Always` and `Never` force it |
 | `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
 | `dev.slowApiCall` | Logs API calls that take longer than this in development. `null` turns it off |
+| `dev.startupTiming` | Logs what the startup time was spent on in development, with the parts you wrapped in [`startupStep`](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow). On by default |
 | `dev.refreshAfterRestart` | After the app restarts in development, open pages rerun their `load` functions, so a Kotlin change shows up without a manual reload. On by default |
 | `dev.browserLogs` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log. On by default |
 | `dev.panel` | Shows a panel of recent API calls, with status, timing and validation errors, on pages proxied from Vite. On by default. See [Dev workflow](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) |
@@ -2900,6 +2976,7 @@ svelte {
     buildEnv = emptySet()
     addRuntimeDependency = true
     includeSourceMaps = false
+    shortTaskNames = true
     precompress = true
     dev {
         port = 5173
@@ -2920,6 +2997,7 @@ svelte {
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
 | `libraries` | Tailwind, DaisyUI, Lucide, i18n and typed routes. See [Frontend libraries](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
+| `shortTaskNames` | Registers `dev`, `sync`, `doctor` and `gen` as [short names](#short-task-names) for the tasks used most. On by default |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
@@ -2988,6 +3066,21 @@ If your build already has a task called `format` or `formatCheck`, ktor-svelte d
 ```
 
 A commit that fails the check is stopped with the command that fixes it. `git commit --no-verify` skips the hook once, and `./gradlew svelteGitHooks --remove` takes it out again. The hook lives in `.git`, which git does not share, so everyone on the team runs the task once. A pre-commit hook that something else installed is never replaced: the task stops and tells you to call the two tasks from your own hook.
+
+## Short task names
+
+The four tasks you type most have a short name:
+
+| Short | Same as |
+|---|---|
+| `./gradlew dev` | `svelteDevAll` |
+| `./gradlew sync` | `svelteSync` |
+| `./gradlew doctor` | `svelteDoctor` |
+| `./gradlew gen` | `svelteGenerateTs` |
+
+They are the same tasks under another name, so options work as well: `./gradlew doctor --fix`, `./gradlew dev --full-stack-traces`. `dev` and `gen` exist when the long tasks do, which is in a project with the `application` plugin.
+
+A short name that your build or another plugin already uses is left alone, and the long name keeps working. Set `shortTaskNames = false` to register none of them. The docs use the long names, because those always exist.
 
 ## Gradle tasks
 
