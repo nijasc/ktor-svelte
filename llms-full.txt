@@ -1,4 +1,4 @@
-# ktor-svelte 1.0.0
+# ktor-svelte 1.1.0
 
 > Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.
 
@@ -462,7 +462,7 @@ Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `b
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    id("io.github.nijasc.ktor-svelte") version "1.0.0"
+    id("io.github.nijasc.ktor-svelte") version "1.1.0"
 }
 ```
 <!-- x-release-please-end -->
@@ -518,7 +518,7 @@ The Gradle plugin adds the runtime for you. If you only want the library, add it
 
 <!-- x-release-please-start-version -->
 ```kotlin
-implementation("io.github.nijasc:ktor-svelte-server:1.0.0")
+implementation("io.github.nijasc:ktor-svelte-server:1.1.0")
 ```
 <!-- x-release-please-end -->
 
@@ -529,7 +529,7 @@ To keep Kotlin, Ktor and ktor-svelte on versions that are tested together, impor
 dependencyResolutionManagement {
     versionCatalogs {
         create("ktorSvelte") {
-            from("io.github.nijasc:ktor-svelte-catalog:1.0.0")
+            from("io.github.nijasc:ktor-svelte-catalog:1.1.0")
         }
     }
 }
@@ -941,6 +941,7 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 | `client.ts` | The small `fetch` wrapper, `ApiError` and `apiConfig` |
 | `index.ts` | Re-exports all of the above |
 | `openapi.json` | The OpenAPI document itself |
+| `.gitattributes` | Marks these files as generated and keeps their line endings the same on every machine, so Git on Windows does not warn about them and GitHub folds them in diffs |
 
 To see the output for your own API before installing anything, paste its OpenAPI document into the [generator playground](https://nijasc.github.io/ktor-svelte/features/playground).
 
@@ -1164,6 +1165,22 @@ try {
     if (isApiError(error, 'notes.get')) console.log(error.body.message);
 }
 ```
+
+When you only need one line to show, `errorMessage` turns anything a call can throw into text: the `message` of the error body when the server sent one, and otherwise a sentence for a timeout, for a lost connection, or for everything else:
+
+```ts
+import { api, errorMessage } from '#api';
+
+let problem = '';
+
+try {
+    await api.notes.create({ title: 'Buy milk' });
+} catch (error) {
+    problem = errorMessage(error);
+}
+```
+
+To change or translate the three built-in sentences, assign to `errorMessages.network`, `errorMessages.timeout` and `errorMessages.failed` once at startup.
 
 Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
 
@@ -1590,7 +1607,7 @@ Source: https://nijasc.github.io/ktor-svelte/features/frontend-libraries
 
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide, i18n, image optimization and error toasts, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, Lucide, i18n, image optimization, error toasts and typed routes, configured in Gradle with typed helpers on both sides.
 
 Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
 
@@ -1616,6 +1633,7 @@ svelte {
         lucide()
         images()
         toasts()
+        routes()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -1631,7 +1649,7 @@ Then apply it:
 ./gradlew svelteSync
 ```
 
-`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
+`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. The generated folder `src/lib/ktor-svelte` carries its own `.gitattributes`, which marks the files as generated and keeps their line endings the same on every machine. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
 
 **ktor-svelte owns `vite.config.ts`** once any library is on. Put your own Vite settings in `vite.user.ts`, and they are merged in:
 
@@ -1756,6 +1774,10 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 
 `toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](https://nijasc.github.io/ktor-svelte/features/calling-the-api#show-errors-automatically).
 
+## Routes
+
+`routes()` turns every page into a typed constant in TypeScript and Kotlin, for links and redirects that always point to a real page. See [Typed routes](https://nijasc.github.io/ktor-svelte/features/routes).
+
 ## i18n
 
 Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. `svelteInit` creates an empty file for every locale you configured, and never touches one that is already there. Files are flat, and `{name}` is a parameter:
@@ -1798,11 +1820,99 @@ Choose how the language is picked with `strategy`:
 | Strategy | URLs | Best for | Trade-off |
 |---|---|---|---|
 | `Cookie` (default) | `/about` | Apps behind a login | Prerendered pages hold the default language and switch on load, so others can flash briefly, and search engines mostly see one language |
-| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or pages won't be prerendered per language |
+| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or [typed routes](https://nijasc.github.io/ktor-svelte/features/routes), or pages won't be prerendered per language |
 
-On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy.
+On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy, and `call.localizeHref` does the same for redirects from Ktor.
 
 Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
+
+Source: https://nijasc.github.io/ktor-svelte/features/routes
+
+# Typed routes
+
+Every page in `src/routes` becomes a typed constant in TypeScript and in Kotlin, so a link or a redirect to a page that does not exist fails to compile.
+
+Turn it on in `build.gradle.kts` and run `./gradlew svelteSync`:
+
+```kotlin
+svelte {
+    libraries {
+        routes()
+    }
+}
+```
+
+A folder is a page when it holds a `+page.svelte`, `+page.ts`, `+page.js` or `+page.server.ts`. Route groups such as `(app)` are left out of the path, and layouts alone are not pages. If your routes live somewhere else, point to them with `routes { dir = layout.projectDirectory.dir("frontend/src/pages") }`.
+
+## In Svelte
+
+`#routes` exports `routes`, an object with one function per page. Each one returns the page's URL through SvelteKit's `resolve()` from `$app/paths`:
+
+```svelte
+<script lang="ts">
+    import { routes } from '#routes';
+
+    let { note } = $props();
+</script>
+
+<a href={routes.home()}>Home</a>
+<a href={routes.notesId({ id: note.id })}>{note.title}</a>
+```
+
+The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Numbers are accepted too, so an ID needs no `String()`. Since every call goes through `resolve()`, a base path and relative prerender links work as usual, and the same functions work with `goto`.
+
+`routeIds` holds the raw SvelteKit route IDs under the same names, such as `routeIds.notesId` for `/notes/[id]`. Use it to compare with `page.route.id`, or to call `resolve()` yourself.
+
+With [i18n](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#i18n) and `strategy = LocaleStrategy.UrlPrefix`, every route also puts the current language in front, such as `/de/notes/1`, so every language gets prerendered without calling `localizeHref` by hand. With the `Cookie` strategy, or without i18n, it is plain `resolve()`.
+
+## In Kotlin
+
+The same pages become `FrontendRoutes` in the generated package. Pages without parameters are constants, and pages with parameters are functions that encode their arguments:
+
+```kotlin
+import io.github.nijasc.ktorsvelte.FrontendRoutes
+import io.github.nijasc.ktorsvelte.localizeHref
+
+post("/api/notes") {
+    val note = notes.create(call.receive())
+    call.respondRedirect(call.localizeHref(FrontendRoutes.notesId(note.id.toString())))
+}
+
+get("/old-about") {
+    call.respondRedirect(FrontendRoutes.about, permanent = true)
+}
+```
+
+Optional parameters such as `[[lang]]` become nullable arguments, and rest parameters such as `[...path]` keep their slashes. With i18n, `call.localizeHref` adds the visitor's language for `UrlPrefix` and returns the path unchanged for `Cookie`.
+
+## Names
+
+A route's name is its path in camel case, without groups: `/` is `home`, `/about` is `about`, `/notes/[id]` is `notesId` and `/[[lang]]/docs/[...path]` is `langDocsPath`. A name that would start with a digit gets a `route` prefix, such as `route404`. When two pages would get the same name, such as `/blog-post` and `/blog/post`, sync fails and names both, so rename one of the folders.
+
+## Keeping it current
+
+`routes.ts` is a generated file like the others: commit it, and a production build fails if it is out of date. While `svelteDev` or `svelteDevAll` runs, adding, moving or deleting a page updates `routes.ts` at once. Under `svelteDevAll` `FrontendRoutes` follows and the app restarts. Otherwise it updates the next time Kotlin compiles.
+
+## Finding links that are still strings
+
+An app that turns typed routes on later still has links such as `href="/notes/{note.id}"`. `svelteVerifyRoutes` reads every `.svelte`, `.ts` and `.js` file under `src` and lists each `href`, `goto` and `redirect` whose path is one of your pages, with the call to write instead:
+
+```bash
+./gradlew svelteVerifyRoutes
+```
+
+```text
+src/routes/+page.svelte:12  href="/notes/{note.id}"  ->  routes.notesId({ id: note.id })
+src/lib/NoteForm.svelte:31  goto("/notes/" + created.id)  ->  routes.notesId({ id: created.id })
+```
+
+It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. It is not part of `check`. To keep new string links out, add it yourself:
+
+```kotlin
+tasks.check {
+    dependsOn("svelteVerifyRoutes")
+}
+```
 
 Source: https://nijasc.github.io/ktor-svelte/security
 
@@ -2410,7 +2520,7 @@ svelte {
 | `bunVersion` | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. Unset by default. See [Pin Bun](#pin-bun) |
 | `buildScript` | `package.json` script that builds the frontend |
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
-| `libraries` | Tailwind, DaisyUI, Lucide and i18n. See [Frontend libraries](https://nijasc.github.io/ktor-svelte/features/frontend-libraries) |
+| `libraries` | Tailwind, DaisyUI, Lucide, i18n and typed routes. See [Frontend libraries](https://nijasc.github.io/ktor-svelte/features/frontend-libraries) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
@@ -2434,14 +2544,14 @@ Scores
   Security              [#########-]  90%  10 of 11
   Performance           [##########] 100%  4 of 4
   Operations            [#######---]  66%  2 of 3
-  Developer experience  [##########] 100%  4 of 4
+  Developer experience  [##########] 100%  5 of 5
 
 Suggestions
   - [Security] Set maxJsonStringLength = 100_000, or the longest text your API accepts.
   - [Operations] Set healthEndpoint = true and point your orchestrator at /_ktor-svelte/health.
 ```
 
-The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
+The checks cover the origin check, security headers and CSP, error details, body and JSON limits, rate limits, the dev proxy, source maps, compression, caching, image optimization, health and request IDs, the sitemap address, a pinned Bun, generated TypeScript, error toasts, typed routes and dev tooling. A suggestion is advice, not an error: a public API may well do without `healthEndpoint`. Without the `application` plugin, only the Gradle settings are shown.
 
 ## Pin Bun
 
@@ -2464,12 +2574,13 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
 | `svelteInstall`, `svelteBuild`, `svelteBundle` | Install the frontend dependencies from the lockfile, build the frontend, and copy the build into the JAR's resources with its manifest. They run as part of `jar` and `processResources`, so you rarely call them yourself |
-| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, and says what to fix |
+| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix |
 | `svelteConfig` | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores security, performance, operations and developer experience, and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
+| `svelteVerifyRoutes` | Lists links to pages that are written as strings, with the [typed route](https://nijasc.github.io/ktor-svelte/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
 | `svelteCheck` | Runs your `check` script |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |
 | `svelteOutdated` | Lists outdated frontend dependencies |
@@ -2608,6 +2719,10 @@ The plugin needs to own `vite.config.ts` and the hooks files once frontend libra
 
 The frontend uses TypeScript 7, which SvelteKit 3 cannot load yet. It usually arrives through an automatic dependency update. Set `"typescript": "^6.0.0"` in `frontend/package.json` and install again. To keep it from coming back, tell your update bot to ignore major versions of `typescript`.
 
+### Cannot find module 'rolldown/parseAst', or another package that is installed
+
+The install was cut short: the package's folder exists in `node_modules`, but its files do not, and the package manager still reported success. `./gradlew svelteDoctor` names the packages that lost their files. Run `./gradlew svelteClean` and install again. If the same packages come back empty, the package manager's cache is the cause, so clear it with the command `svelteDoctor` prints, such as `bun pm cache rm`, and install once more.
+
 ### The frontend build failed with exit code 1
 
 ktor-svelte hides the package manager and Vite output while it succeeds and prints all of it when it fails, above this message. To see it every time, add `-Psvelte.verbose=true`.
@@ -2728,6 +2843,7 @@ What each release was built and tested with, read from the release's tagged sour
 
 | ktor-svelte | Ktor | Kotlin | JVM | Gradle tested | SvelteKit |
 |---|---|---|---|---|---|
+| 1.1.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 1.0.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.12.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.11.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
