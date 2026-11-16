@@ -450,6 +450,7 @@ class UtilityTasksTest {
         assertContains(output, "Vite stopped, so everything else is stopping too.")
         assertTrue(project.calls().contains("run dev --port $port --strictPort"))
         assertFalse(dir.resolve("build/ktor-svelte/dev-processes").exists(), "nothing is left to clean up after a normal stop")
+        assertFalse(dir.resolve("build/ktor-svelte/dev-classpath").exists(), "the copy the app ran from is removed")
     }
 
     @Test
