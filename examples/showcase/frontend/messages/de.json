@@ -103,6 +103,7 @@
   "task-delete-question": "Diese Aufgabe löschen?",
   "task-delete-warning": "Kommentare und Dateien werden mitgelöscht. Das lässt sich nicht rückgängig machen.",
   "action-cancel": "Abbrechen",
+  "action-close": "Schließen",
   "action-delete": "Löschen",
   "attachments-title": "Dateien",
   "attachments-empty": "Noch keine Dateien.",
