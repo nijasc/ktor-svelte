@@ -1,5 +1,6 @@
 import com.microsoft.playwright.Browser
 import com.microsoft.playwright.BrowserContext
+import com.microsoft.playwright.Locator
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
@@ -258,6 +259,41 @@ class DevModeBrowserTest {
         assertThat(page.locator("#tasks > li").first()).isVisible()
         page.reload()
         assertThat(page.locator("#signed-in-as")).hasText("Ada Lovelace")
+    }
+
+    @Test
+    fun `the dev panel replays an API call and copies it as a curl command`() {
+        context.grantPermissions(listOf("clipboard-read", "clipboard-write"))
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        val refused =
+            panel
+                .locator(".row")
+                .filter(Locator.FilterOptions().setHasText("/api/session"))
+                .filter(Locator.FilterOptions().setHasText("POST"))
+                .filter(Locator.FilterOptions().setHasText("401"))
+        waitFor("a refused sign in", 60) {
+            page.navigate("/login")
+            page.getByLabel("Email").fill(ADMIN_EMAIL)
+            page.getByLabel("Password").fill("not-the-password")
+            page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
+            page.waitForTimeout(1_500.0)
+            refused.count() > 0
+        }
+        panel.locator(".toggle").click()
+        val failed = refused.first()
+        val before = refused.count()
+
+        failed.getByText("curl").click()
+        assertThat(failed.getByText("Copied")).isVisible()
+        val command = page.evaluate("navigator.clipboard.readText()") as String
+        assertTrue(command.startsWith("curl -X POST '$APP/api/session'"), command)
+        assertContains(command, "-H 'content-type: application/json'")
+        assertContains(command, "-H 'X-Request-Id: ")
+        assertContains(command, "--data-raw '{\"email\":\"$ADMIN_EMAIL\",\"password\":\"not-the-password\"}'")
+
+        failed.getByText("Replay").click()
+        waitFor("the replayed call in the list", 20) { refused.count() == before + 1 }
+        assertThat(refused.first().getByText("Replay")).isEnabled()
     }
 
     @Test
