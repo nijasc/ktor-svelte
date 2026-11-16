@@ -249,6 +249,14 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `an id that is a value class in Kotlin is its own type in the generated client`() {
+        val types = File("frontend/src/lib/api/types.ts").readText().replace("\r\n", "\n")
+        assertContains(types, "export type AttachmentId = number & { readonly [brand]: 'AttachmentId' };")
+        assertContains(types, "export interface Attachment {\n    id: AttachmentId;\n    taskId: number;")
+        assertContains(types, "        id: AttachmentId(0),")
+    }
+
+    @Test
     fun `the limits the server uses are in the generated client as typed constants`() {
         val constants = File("frontend/src/lib/api/constants.ts").readText()
         assertEquals(
