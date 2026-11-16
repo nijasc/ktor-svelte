@@ -61,6 +61,10 @@ public final class io/github/nijasc/ktor/svelte/PageRequest {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/github/nijasc/ktor/svelte/PathParametersKt {
+	public static final fun pathParameter (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Lkotlin/reflect/KClass;)Ljava/lang/Object;
+}
+
 public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/Enum {
 	public static final field FixedWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 	public static final field SlidingWindow Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
