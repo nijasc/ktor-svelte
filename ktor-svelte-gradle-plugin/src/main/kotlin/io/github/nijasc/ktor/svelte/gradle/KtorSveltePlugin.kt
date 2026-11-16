@@ -613,7 +613,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         registerWithShortName(project, extension, "svelteDevAll", "dev", SvelteDevAllTask::class.java) { task ->
             configureToolTask(task, extension)
             task.description = "Runs Vite, the Kotlin compiler and the app together, and restarts the app when Kotlin changes."
-            task.dependsOn(install, main.map { it.output.classesDirs })
+            task.dependsOn(install, main.map { it.output })
             task.script.set(extension.dev.script)
             task.port.set(extension.dev.port)
             task.debugPort.set(extension.dev.debugPort)
