@@ -435,6 +435,32 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the generated data table pages through a route and shows typed columns`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val token = unique("Tabled").replace(" ", "")
+        (1..6).forEach { page.createTask("$token $it") }
+        page.navigationLink("Admin").click()
+        val table = page.locator("#all-tasks")
+        val rows = table.locator("tbody tr")
+        assertThat(table.locator("thead th")).hasText(arrayOf("Title", "Status", "Created by"))
+        assertThat(rows).hasCount(5)
+        assertThat(rows.first()).containsText("$token 6")
+        assertThat(rows.first()).containsText("To do")
+        assertThat(rows.first()).containsText("Ada Lovelace, ")
+        val previous = table.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Previous"))
+        val next = table.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Next"))
+        assertThat(previous).isDisabled()
+
+        next.click()
+        assertThat(rows.first()).containsText("$token 1")
+        assertThat(previous).isEnabled()
+        previous.click()
+        assertThat(rows.first()).containsText("$token 6")
+        assertThat(rows).hasCount(5)
+        assertThat(previous).isDisabled()
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

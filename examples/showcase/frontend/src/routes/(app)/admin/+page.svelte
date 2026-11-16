@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { api, Role, type User } from '#api';
+    import { api, Role, type Status, type User } from '#api';
+    import DataTable from '#components/DataTable.svelte';
     import { m } from '#i18n';
     import { formatDateTime } from '#lib/format.ts';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
@@ -8,6 +9,7 @@
     let { data }: PageProps = $props();
 
     let users = $derived<User[]>(data.users);
+    const statusLabels: Record<Status, () => string> = { TODO: m.statusTodo, DOING: m.statusDoing, DONE: m.statusDone };
 
     function replace(user: User) {
         users = users.map((item) => (item.id === user.id ? user : item));
@@ -78,4 +80,24 @@
             {/each}
         </tbody>
     </table>
+</div>
+
+<h2 class="mb-3 mt-10 text-xl font-semibold">{m.adminTasks()}</h2>
+<div id="all-tasks" class="max-w-3xl">
+    <DataTable
+        load={api.tasks.list}
+        query={{ limit: '5' }}
+        paging="pages"
+        key={(task) => task.id}
+        columns={[
+            { key: 'title', label: m.fieldTitle() },
+            { key: 'status', label: m.fieldStatus(), text: (task) => statusLabels[task.status]() },
+            { key: 'createdAt', label: m.taskCreatedBy(), text: (task) => `${task.creator.name}, ${formatDateTime(task.createdAt)}` }
+        ]}
+        empty={m.tableEmpty()}
+        loading={m.tableLoading()}
+        previous={m.tablePrevious()}
+        next={m.tableNext()}
+        retry={m.tableRetry()}
+    />
 </div>
