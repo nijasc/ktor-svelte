@@ -671,6 +671,8 @@ When Kotlin stops compiling, the app keeps running its last good version, and th
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
 
+**Save fixtures** in the panel's header downloads the calls this page made, with their answers, as a JSON file that [frontend tests can replay](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#fixtures-for-frontend-tests) without a backend.
+
 The panel also has a **Public config** section. It lists the values of your [`publicConfig`](https://nijasc.github.io/ktor-svelte/main/features/runtime-config) and lets you change them for this browser only: flip a feature flag, lower a limit, see the page with another name, without editing a config file and without a restart. Values are written as JSON, so text goes in double quotes. **Apply and reload** saves them in the browser's local storage and reloads the page, and from then on `loadPublicConfig()` and `readPublicConfig()` return the changed values in this browser. A yellow "config changed" mark on the API button reminds you, and **Reset all** goes back to what the server sends.
 
 Only the browser is told something different. The server keeps its own values, so a limit the server enforces is still enforced, and nobody else sees the change. It exists in development only, like the rest of the panel.
@@ -1514,6 +1516,35 @@ await api.notes.update(id, draft, { refresh: false });
 ```
 
 The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
+
+## Fixtures for frontend tests
+
+A frontend test should not need the backend running, and writing its answers by hand goes stale. Record them instead. In development, click through the part of the app you want to test, open the [dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) and press **Save fixtures**. You get `api-fixtures.json` with every call the page made and what the server answered:
+
+```json
+{
+    "recorded": "2026-11-16T12:00:00.000Z",
+    "calls": [
+        { "method": "GET", "path": "/api/notes?page=1", "status": 200, "response": { "items": [] } },
+        { "method": "POST", "path": "/api/notes", "status": 201, "request": { "title": "New" }, "response": { "id": 7 } }
+    ]
+}
+```
+
+In a test, let the client answer from that file:
+
+```ts
+import { api, apiConfig, fixtureFetch, type ApiFixtures } from '#api';
+import recorded from './api-fixtures.json';
+
+apiConfig.fetch = fixtureFetch(recorded satisfies ApiFixtures);
+
+const page = await api.notes.list({ page: 1 });
+```
+
+The calls go through the real generated client, so the test sees typed results, `ApiError` for a recorded 404 and validation errors for a recorded 422, exactly as the app does. A call is matched by its method and its path with the query. When the same call was recorded more than once, such as a list before and after a create, the answers come back in that order, and the last one repeats. A call that was never recorded fails with a message that names it.
+
+Look through the file before you commit it. It holds the bodies as they were sent and received, which can include a password you typed or data you would not put in the repository. **Clear** in the panel starts a new recording.
 
 ## Ask before a call
 

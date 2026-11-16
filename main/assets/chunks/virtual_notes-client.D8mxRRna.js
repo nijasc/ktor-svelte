@@ -496,6 +496,42 @@ export function prefetchOnHover(node: HTMLElement, call: () => Promise<unknown>)
         }
     };
 }
+
+export interface ApiFixture {
+    method: string;
+    path: string;
+    status: number;
+    request?: unknown;
+    response?: unknown;
+}
+
+export interface ApiFixtures {
+    recorded?: string;
+    calls: ApiFixture[];
+}
+
+export function fixtureFetch(fixtures: ApiFixtures): typeof fetch {
+    const answered = new Map<string, number>();
+    return (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const address = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        const url = new URL(address, 'http://fixtures.invalid');
+        const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+        const wanted = \`\${method} \${url.pathname}\${url.search}\`;
+        const recorded = fixtures.calls.filter((call) => \`\${call.method.toUpperCase()} \${call.path}\` === wanted);
+        if (recorded.length === 0) {
+            throw new Error(\`No fixture for \${wanted}. Make that call in the app, then save the fixtures from the dev panel again.\`);
+        }
+        const turn = answered.get(wanted) ?? 0;
+        answered.set(wanted, turn + 1);
+        const call = recorded[Math.min(turn, recorded.length - 1)];
+        const empty = call.response === undefined || call.status === 204;
+        const text = typeof call.response === 'string';
+        return new Response(empty ? null : text ? (call.response as string) : JSON.stringify(call.response), {
+            status: call.status,
+            headers: empty ? {} : { 'content-type': text ? 'text/plain' : 'application/json' }
+        });
+    }) as typeof fetch;
+}
 `,"form-state.svelte.ts":`import { errorMessage, isValidationError } from './client.js';
 
 export type FieldErrors = Record<string, string[]>;
