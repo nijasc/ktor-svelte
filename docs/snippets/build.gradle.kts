@@ -23,6 +23,7 @@ svelte {
         i18n {
             locales("en", "de")
         }
+        routes()
     }
 }
 
