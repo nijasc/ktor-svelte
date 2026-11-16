@@ -42,6 +42,15 @@ public final class io/github/nijasc/ktor/svelte/CookiesKt {
 	public static final fun writeCookie (Lio/ktor/server/application/ApplicationCall;Lio/github/nijasc/ktor/svelte/TypedCookie;Ljava/lang/Object;)V
 }
 
+public final class io/github/nijasc/ktor/svelte/DecimalSerializer : kotlinx/serialization/KSerializer {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/DecimalSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/math/BigDecimal;
+	public fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/math/BigDecimal;)V
+}
+
 public final class io/github/nijasc/ktor/svelte/DevMode : java/lang/Enum {
 	public static final field Always Lio/github/nijasc/ktor/svelte/DevMode;
 	public static final field Auto Lio/github/nijasc/ktor/svelte/DevMode;

@@ -254,6 +254,51 @@ const fromUrl = NoteId(Number(page.params.id));
 
 When you turn an existing `Long` field into a value class, or update to this version with value classes already in your DTOs, the frontend stops compiling where it builds such a value from a plain number. Wrap those places in the function, as above.
 
+## Money and durations
+
+Two kinds of value do not survive the trip to JavaScript as plain numbers or text: exact decimals, such as prices, and lengths of time.
+
+```kotlin no-check
+import io.github.nijasc.ktor.svelte.Decimal
+import kotlin.time.Duration
+
+@Serializable
+data class Invoice(val total: Decimal, val payWithin: Duration)
+```
+
+`Decimal` is `java.math.BigDecimal` with a serializer that writes it as text, `"1234.50"`, so no digit is lost on the way. A `kotlin.time.Duration` is written as ISO text, `"PT1H30M"`, as kotlinx.serialization does by default. In the generated client both have their own type and a few helpers:
+
+```ts no-check
+import { Decimal, IsoDuration, type Invoice } from '#api';
+
+declare const invoice: Invoice;
+
+Decimal.add(invoice.total, Decimal.from('0.10')); // exact: 0.1 + 0.2 is 0.3
+Decimal.times(invoice.total, 3);
+Decimal.compare(invoice.total, Decimal.from(100)) > 0;
+Decimal.format(invoice.total, 'de-DE', { style: 'currency', currency: 'EUR' });
+
+IsoDuration.toMillis(invoice.payWithin);
+IsoDuration.fromMillis(90 * 60 * 1000); // 'PT1H30M'
+IsoDuration.format(invoice.payWithin); // '1:30:00'
+```
+
+| Helper | What it does |
+|---|---|
+| `Decimal.from(text or number)` | Makes a `Decimal`, and throws for anything that is not a plain decimal number. |
+| `Decimal.add`, `subtract` | Exact, at the larger number of decimal places of the two. |
+| `Decimal.times(value, count)` | Exact, for a whole `count`, such as a quantity. |
+| `Decimal.compare` | -1, 0 or 1. `1.50` and `1.5` are equal. |
+| `Decimal.format(value, locale?, options?)` | Text for people, through `Intl.NumberFormat`, keeping the decimal places. |
+| `Decimal.toNumber` | A JavaScript number, when exactness no longer matters, such as for a chart. |
+| `IsoDuration.toMillis`, `fromMillis` | To and from milliseconds. |
+| `IsoDuration.add` | The sum of two. |
+| `IsoDuration.format` | A clock text such as `1:30:00`. |
+
+The helpers are only in `types.ts` when the API uses one of the two types. A `BigDecimal` with your own serializer is recognised too, when the serializer writes text and its descriptor is named `BigDecimal` or `java.math.BigDecimal`.
+
+A `Duration` field used to be generated as `string`. It is `IsoDuration` now, so code that assigns plain text to one needs `as IsoDuration`, or better `IsoDuration.fromMillis(...)`.
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.
