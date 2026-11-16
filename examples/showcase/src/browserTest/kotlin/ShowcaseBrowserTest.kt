@@ -503,6 +503,24 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a bar shows while the next page loads and leaves when it is there`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val bar = page.getByRole(AriaRole.PROGRESSBAR, Page.GetByRoleOptions().setName("Loading page"))
+        assertThat(bar).hasCount(0)
+        val held = java.util.concurrent.CopyOnWriteArrayList<Route>()
+        page.route("**/api/admin/users") { route -> held += route }
+
+        page.navigationLink("Admin").click()
+        assertThat(bar).hasAttribute("aria-busy", "true")
+        assertThat(page.locator("#users")).hasCount(0)
+        page.waitForCondition { held.isNotEmpty() }
+        held.forEach { it.resume() }
+
+        assertThat(page.locator("#users")).containsText(MEMBER_EMAIL)
+        assertThat(bar).hasCount(0)
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")
