@@ -170,6 +170,29 @@ public final class io/github/nijasc/ktor/svelte/PageRequest {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/github/nijasc/ktor/svelte/Patch {
+	public static final field Companion Lio/github/nijasc/ktor/svelte/Patch$Companion;
+	public final fun applyTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun contains (Lkotlin/reflect/KProperty1;)Z
+	public final fun getFields ()Ljava/util/Set;
+	public final fun has (Ljava/lang/String;)Z
+	public final fun isEmpty ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/Patch$Companion {
+	public final fun serializer (Lkotlinx/serialization/KSerializer;)Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/PatchSerializer : kotlinx/serialization/KSerializer {
+	public fun <init> (Lkotlinx/serialization/KSerializer;)V
+	public fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lio/github/nijasc/ktor/svelte/Patch;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public fun serialize (Lkotlinx/serialization/encoding/Encoder;Lio/github/nijasc/ktor/svelte/Patch;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
 public final class io/github/nijasc/ktor/svelte/PathParametersKt {
 	public static final fun pathParameter (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;Lkotlin/reflect/KClass;)Ljava/lang/Object;
 }
