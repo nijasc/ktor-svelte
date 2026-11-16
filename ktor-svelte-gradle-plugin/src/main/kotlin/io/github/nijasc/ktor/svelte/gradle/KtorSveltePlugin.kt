@@ -4,6 +4,8 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
 import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
+import io.github.nijasc.ktor.svelte.gradle.tasks.GitOutputSource
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildInfoTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
@@ -313,6 +315,15 @@ public class KtorSveltePlugin : Plugin<Project> {
         project.tasks.matching { it.name == "svelteDevAll" }.configureEach { it.dependsOn(sync) }
     }
 
+    private fun gitOutput(
+        project: Project,
+        vararg arguments: String,
+    ): Provider<String> =
+        project.providers.of(GitOutputSource::class.java) { source ->
+            source.parameters.directory.set(project.layout.projectDirectory)
+            source.parameters.arguments.set(arguments.toList())
+        }
+
     private fun wireGeneratedSources(
         project: Project,
         extension: SvelteExtension,
@@ -341,10 +352,20 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.onlyIf("libraries are configured") { !librarySpec.get().isEmpty }
                 task.mustRunAfter("svelteSync")
             }
+        val buildInfo =
+            project.tasks.register("svelteBuildInfo", SvelteBuildInfoTask::class.java) { task ->
+                task.group = TASK_GROUP
+                task.description = "Writes the version, commit and commit time of this build for the app to read."
+                task.version.set(project.provider { project.version.toString() })
+                task.commit.set(gitOutput(project, "rev-parse", "HEAD"))
+                task.commitTime.set(gitOutput(project, "log", "-1", "--format=%cI"))
+                task.outputDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/build-info"))
+            }
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         sourceSets.named("main") { main ->
             main.java.srcDir(generate.flatMap { it.kotlinDirectory })
             main.resources.srcDir(generate.flatMap { it.resourcesDirectory })
+            main.resources.srcDir(buildInfo.flatMap { it.outputDirectory })
         }
     }
 
