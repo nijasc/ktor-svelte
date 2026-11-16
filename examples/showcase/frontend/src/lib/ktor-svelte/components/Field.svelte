@@ -1,6 +1,7 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
     import type { HTMLInputAttributes, HTMLTextareaAttributes } from 'svelte/elements';
-    import { field, type FieldBounds } from '#api';
+    import { field, type FieldBounds, type FieldOptions } from '#api';
 
     interface Props extends Omit<HTMLInputAttributes, 'value' | 'class'> {
         label: string;
@@ -10,9 +11,21 @@
         hint?: string;
         multiline?: boolean;
         class?: string;
+        control?: Snippet<[{ id: string; options: FieldOptions }]>;
     }
 
-    let { label, value = $bindable(), bounds, errors, hint, multiline = false, id, class: className = '', ...rest }: Props = $props();
+    let {
+        label,
+        value = $bindable(),
+        bounds,
+        errors,
+        hint,
+        multiline = false,
+        id,
+        class: className = '',
+        control,
+        ...rest
+    }: Props = $props();
 
     const uid = $props.id();
     const inputId = $derived(id ?? uid);
@@ -23,7 +36,9 @@
 
 <div class={['grid gap-1', className]}>
     <label class="text-sm font-medium" for={inputId}>{label}</label>
-    {#if multiline}
+    {#if control}
+        {@render control({ id: inputId, options })}
+    {:else if multiline}
         <textarea id={inputId} class="textarea w-full" bind:value use:field={options} {...textareaRest}></textarea>
     {:else}
         <input id={inputId} class="input w-full" bind:value use:field={options} {...rest} />
