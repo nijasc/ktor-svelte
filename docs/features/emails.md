@@ -73,7 +73,7 @@ Svelte type-checks the components like every other file, so `svelteCheck` catche
 
 With [i18n](./i18n.md) turned on, each email is rendered once per language, with the same messages as the app. Use `m` in the component like on any page:
 
-```svelte
+```svelte no-check
 <script lang="ts">
     import { m } from '#i18n';
 
