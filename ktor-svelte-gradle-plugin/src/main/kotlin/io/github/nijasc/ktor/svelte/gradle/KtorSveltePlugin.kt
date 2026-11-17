@@ -51,12 +51,14 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaApplication
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.plugins.jvm.JvmTestSuite
 import org.gradle.api.provider.Provider
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskProvider
@@ -64,6 +66,7 @@ import org.gradle.jvm.tasks.Jar
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.gradle.process.CommandLineArgumentProvider
+import org.gradle.testing.base.TestingExtension
 import java.io.File
 import java.util.Properties
 
@@ -691,6 +694,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.javaLauncher.set(toolchains.launcherFor(toolchain))
             task.compileErrorsFile.set(project.layout.buildDirectory.file("ktor-svelte/compile-errors.json"))
         }
+        configureBrowserTests(project, extension, application)
         project.tasks.register("svelteSmokeTest", SvelteSmokeTestTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Packages the app, starts it in production mode and fails unless its pages and API routes are answered."
@@ -709,6 +713,51 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.openApiFile.set(extension.frontendDir.file(OPENAPI_FILE))
             task.projectDirectory.set(project.layout.projectDirectory)
             task.logFile.set(project.layout.buildDirectory.file("ktor-svelte/smoke-test.log"))
+        }
+    }
+
+    private fun configureBrowserTests(
+        project: Project,
+        extension: SvelteExtension,
+        application: JavaApplication,
+    ) {
+        val kit = "io.github.nijasc:ktor-svelte-test:${pluginVersion()}"
+        val browser = project.providers.gradleProperty("browser").orElse("chromium")
+        project.plugins.withId("jvm-test-suite") {
+            val suites = project.extensions.getByType(TestingExtension::class.java).suites
+            suites.withType(JvmTestSuite::class.java).matching { it.name == BROWSER_TEST_SUITE }.configureEach { suite ->
+                suite.dependencies { dependencies ->
+                    if (extension.addRuntimeDependency.get()) dependencies.implementation.add(kit)
+                }
+                suite.targets.configureEach { target ->
+                    target.testTask.configure { test ->
+                        test.inputs.property("browser", browser)
+                        test.systemProperty("browser", browser.get())
+                        val names = project.tasks.names
+                        if ("shadowJar" in names) {
+                            val jar = project.tasks.named("shadowJar", Jar::class.java).flatMap { it.archiveFile }
+                            test.dependsOn(if ("buildFatJar" in names) "buildFatJar" else "shadowJar")
+                            test.inputs.file(jar).withPathSensitivity(PathSensitivity.NONE)
+                            test.jvmArgumentProviders.add(
+                                CommandLineArgumentProvider { listOf("-D$BROWSER_TEST_JAR=${jar.get().asFile.path}") },
+                            )
+                        } else {
+                            val installed = project.tasks.named("installDist", Sync::class.java)
+                            val mainClass = application.mainClass
+                            test.dependsOn(installed)
+                            test.inputs.dir(installed.map { it.destinationDir })
+                            test.jvmArgumentProviders.add(
+                                CommandLineArgumentProvider {
+                                    listOf(
+                                        "-D$BROWSER_TEST_CLASSPATH=${installed.get().destinationDir.resolve("lib").path}${File.separator}*",
+                                        "-D$BROWSER_TEST_MAIN=${mainClass.get()}",
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -987,3 +1036,8 @@ private class FrontendDirArgument(
 }
 
 internal abstract class FrontendLock : BuildService<BuildServiceParameters.None>
+
+internal const val BROWSER_TEST_SUITE = "browserTest"
+internal const val BROWSER_TEST_JAR = "ktorSvelte.test.jar"
+internal const val BROWSER_TEST_CLASSPATH = "ktorSvelte.test.classpath"
+internal const val BROWSER_TEST_MAIN = "ktorSvelte.test.mainClass"
