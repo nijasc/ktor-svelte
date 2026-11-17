@@ -2,8 +2,10 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 
 import groovy.json.JsonSlurper
 import io.github.nijasc.ktor.svelte.gradle.DocLink
+import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
 import io.github.nijasc.ktor.svelte.gradle.libraries.EMAILS_DIR
+import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.RenderedComponent
 import io.github.nijasc.ktor.svelte.gradle.libraries.emailResources
 import io.github.nijasc.ktor.svelte.gradle.libraries.emailTemplates
@@ -13,10 +15,12 @@ import io.github.nijasc.ktor.svelte.gradle.renderTemplate
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -54,6 +58,16 @@ public abstract class SvelteEmailsTask : SvelteToolTask() {
     @get:Input
     public abstract val generatedPackage: Property<String>
 
+    @get:Input
+    public abstract val locales: ListProperty<String>
+
+    @get:Input
+    @get:Optional
+    public abstract val defaultLocale: Property<String>
+
+    @get:Input
+    public abstract val hasRuntimeDependency: Property<Boolean>
+
     @get:OutputDirectory
     public abstract val kotlinDirectory: DirectoryProperty
 
@@ -72,9 +86,15 @@ public abstract class SvelteEmailsTask : SvelteToolTask() {
         val packagePath = generatedPackage.get().replace('.', '/')
         writeOnlyWhatChanged(
             kotlinDirectory.get().asFile,
-            mapOf("$packagePath/Emails.kt" to emailsKotlin(generatedPackage.get(), templates)),
+            mapOf("$packagePath/Emails.kt" to emailsKotlin(generatedPackage.get(), templates, i18n(), hasRuntimeDependency.get())),
         )
         writeOnlyWhatChanged(resourcesDirectory.get().asFile, emailResources(templates))
+    }
+
+    private fun i18n(): I18nSpec? {
+        val configured = locales.get()
+        if (configured.isEmpty()) return null
+        return I18nSpec(configured, defaultLocale.getOrElse(configured.first()), LocaleStrategy.Cookie)
     }
 
     private fun renderComponents(frontend: File): String {
@@ -98,7 +118,10 @@ public abstract class SvelteEmailsTask : SvelteToolTask() {
                         "ktor-svelte renders the email templates with Node.js, but node is not on PATH." + DocLink.EMAILS.see(),
                     )
             }
-        runRuntimeQuietly(runtime, listOf(script.absolutePath, EMAILS_DIR, output.absolutePath))
+        runRuntimeQuietly(
+            runtime,
+            listOf(script.absolutePath, EMAILS_DIR, output.absolutePath) + listOfNotNull(locales.get().joinToString(",").ifEmpty { null }),
+        )
         return output.readText()
     }
 }

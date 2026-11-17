@@ -325,15 +325,36 @@ private fun emailFunction(
 internal fun emailsKotlin(
     generatedPackage: String,
     templates: List<EmailTemplate>,
+    i18n: I18nSpec? = null,
+    callExtension: Boolean = false,
 ): String {
+    val locale = if (i18n == null) kotlinString(DEFAULT_EMAIL_LOCALE) else "locale"
     val functions =
         templates
             .groupBy { it.name }
             .toSortedMap()
-            .map { (name, locales) -> emailFunction(name, locales.flatMap { it.props }.distinct(), kotlinString(DEFAULT_EMAIL_LOCALE)) }
+            .map { (name, locales) -> emailFunction(name, locales.flatMap { it.props }.distinct(), locale) }
             .joinToString("\n\n")
+    val withCall = i18n != null && callExtension
+    val imports =
+        buildString {
+            if (withCall) append("import io.github.nijasc.ktor.svelte.svelteLocale\nimport io.ktor.server.application.ApplicationCall\n")
+            append("import java.util.concurrent.ConcurrentHashMap\n")
+        }
+    val emails =
+        if (i18n == null) {
+            "public object Emails {\n$functions\n}\n"
+        } else {
+            "public class Emails private constructor(\n    public val locale: String,\n) {\n$functions\n\n" +
+                "    public companion object {\n" +
+                "        public val locales: List<String> = listOf(${i18n.locales.joinToString { kotlinString(it) }})\n" +
+                "        public val defaultLocale: String = ${kotlinString(i18n.defaultLocale)}\n\n" +
+                "        public fun forLocale(locale: String): Emails = Emails(if (locale in locales) locale else defaultLocale)\n" +
+                "    }\n}\n" +
+                if (withCall) "\npublic val ApplicationCall.emails: Emails get() = Emails.forLocale(svelteLocale)\n" else ""
+        }
     return fileHeader(generatedPackage) +
-        renderTemplate("Emails.kt.template", mapOf("functions" to functions, "resources" to EMAIL_RESOURCES))
+        renderTemplate("Emails.kt.template", mapOf("imports" to imports, "emails" to emails.trimEnd(), "resources" to EMAIL_RESOURCES))
 }
 
 internal fun emailResources(templates: List<EmailTemplate>): Map<String, String> =
