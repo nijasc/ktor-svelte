@@ -89,6 +89,7 @@ fun Application.module() {
         constants(BoardLimits)
         idempotency()
         frontendErrors()
+        webVitals { sampleRate = 1.0 }
         cookies(OnlyMineCookie)
         currentUser<User>(
             signInMessage = { it.messages.problemSignIn() },

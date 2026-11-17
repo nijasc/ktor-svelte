@@ -430,6 +430,8 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setSpaFallback (Ljava/lang/String;)V
 	public final fun setStatusEndpoint (Z)V
 	public final fun transport (Lkotlin/jvm/functions/Function1;)V
+	public final fun webVitals (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun webVitals$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
@@ -489,6 +491,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteMetrics {
 	public final fun getBodyTooLargeRefusals ()J
 	public final fun getCrossOriginRefusals ()J
 	public final fun getRateLimitRefusals ()J
+	public final fun getWebVitals ()Ljava/util/List;
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteMetricsKt {
@@ -561,6 +564,13 @@ public final class io/github/nijasc/ktor/svelte/SvelteTransportConfig {
 	public static synthetic fun json$default (Lio/github/nijasc/ktor/svelte/SvelteTransportConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun negotiation (Lkotlin/jvm/functions/Function1;)V
 	public final fun xml ()V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteWebVitalsConfig {
+	public final fun getPerClientPerMinute ()I
+	public final fun getSampleRate ()D
+	public final fun setPerClientPerMinute (I)V
+	public final fun setSampleRate (D)V
 }
 
 public final class io/github/nijasc/ktor/svelte/TimeZonesKt {
@@ -697,6 +707,16 @@ public final class io/github/nijasc/ktor/svelte/VersionConflict$Companion {
 public final class io/github/nijasc/ktor/svelte/VersionsKt {
 	public static final field VERSION_CONFLICT_CODE Ljava/lang/String;
 	public static final field VERSION_CONFLICT_MESSAGE Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/WebVital {
+	public final fun getAverage ()D
+	public final fun getCount ()J
+	public final fun getGood ()J
+	public final fun getName ()Ljava/lang/String;
+	public final fun getNeedsImprovement ()J
+	public final fun getPage ()Ljava/lang/String;
+	public final fun getPoor ()J
 }
 
 public final class io/github/nijasc/ktor/svelte/internal/dev/ExposedSqlCounter : org/jetbrains/exposed/v1/core/statements/GlobalStatementInterceptor {

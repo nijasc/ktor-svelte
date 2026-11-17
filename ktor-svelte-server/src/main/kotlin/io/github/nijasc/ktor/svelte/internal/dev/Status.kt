@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.Manifest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -53,6 +54,25 @@ internal suspend fun statusJson(
                 put("rateLimit", metrics.rateLimitRefusals)
             },
         )
+        val vitals = metrics.webVitals
+        if (vitals.isNotEmpty()) {
+            put(
+                "webVitals",
+                buildJsonArray {
+                    vitals.forEach { vital ->
+                        addJsonObject {
+                            put("page", vital.page)
+                            put("name", vital.name)
+                            put("count", vital.count)
+                            put("average", vital.average)
+                            put("good", vital.good)
+                            put("needsImprovement", vital.needsImprovement)
+                            put("poor", vital.poor)
+                        }
+                    }
+                },
+            )
+        }
     }.toString()
 
 internal fun devStatus(

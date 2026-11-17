@@ -27,7 +27,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | # | Feature | Pull request |
 |---|---|---|
 | 28 | Generated page loads |  |
-| 54 | Web vitals in metrics |  |
+| 30 | Kotlin browser test kit |  |
 
 ### In review
 
@@ -54,6 +54,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 16 | Nav metadata from routes | #326 |
 | 77 | Page metadata for sharing | #327 |
 | 29 | Frontend errors in the server log | #328 |
+| 54 | Web vitals in metrics | #329 |
 
 ### Next up
 
@@ -159,7 +160,6 @@ Features of this plan that are merged:
 | # | Feature | Size | Group |
 |---|---|---|---|
 | 66 | Inline page data | Large | 9 |
-| 30 | Kotlin browser test kit | Large | 10 |
 | 107 | Browser test recorder | Medium | 10 |
 | 47 | Accessibility check task | Large | 10 |
 | 105 | HTTPS in development | Medium | 11 |

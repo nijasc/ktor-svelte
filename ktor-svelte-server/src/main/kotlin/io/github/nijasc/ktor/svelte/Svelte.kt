@@ -12,6 +12,7 @@ import io.github.nijasc.ktor.svelte.internal.IdempotencyStore
 import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
 import io.github.nijasc.ktor.svelte.internal.StartupTiming
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
+import io.github.nijasc.ktor.svelte.internal.WEB_VITALS_PATH
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
@@ -81,6 +82,7 @@ import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGenerat
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.github.nijasc.ktor.svelte.internal.validation.installInputNormalisation
+import io.github.nijasc.ktor.svelte.internal.webVitalsRoute
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -231,6 +233,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.permissionSet?.names.orEmpty(),
             pluginConfig.guardsConfig.rules.map { GuardSpec(it.page, it.permission?.name) },
             FRONTEND_ERRORS_PATH.takeIf { pluginConfig.frontendErrorsConfig.enabled },
+            pluginConfig.webVitalsConfig.takeIf { it.enabled }?.let { "reportVitals('$WEB_VITALS_PATH', ${it.sampleRate});" },
             pluginConfig.preferencesSpec?.let {
                 PreferencesType(
                     it.typeName,
@@ -422,6 +425,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 catchAll(handler)
             }
             if (currentUser != null && currentUserPath != null) currentUserRoute(currentUserPath, currentUser)
+            if (pluginConfig.webVitalsConfig.enabled) {
+                webVitalsRoute(metrics.vitals, pluginConfig.webVitalsConfig.perClientPerMinute, pluginConfig.paramRouteList)
+            }
             if (pluginConfig.frontendErrorsConfig.enabled) {
                 frontendErrorRoute(pluginConfig.frontendErrorsConfig.perClientPerMinute, pluginConfig.frontendErrorsConfig.maxBodyBytes)
             }
