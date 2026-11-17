@@ -3711,6 +3711,35 @@ Every form needs the same few variables: the values being edited, whether they c
 - The helper uses runes, so it is a module of its own and not part of `#api`.
 - The draft should be plain data, the kind that goes into a JSON body. `dirty` compares it as JSON.
 
+### What changed
+
+Each field knows whether it differs from the saved value. Use it for a marker beside the field, and for a summary of the changes before saving:
+
+```svelte
+<script lang="ts">
+    import Field from '#components/Field.svelte';
+</script>
+
+<Field label="Title" bind:value={form.draft.title} changed={form.changed('title')} />
+
+{#if form.dirty}
+    <ul>
+        {#each form.changes as change (change.field)}
+            <li>{change.field}: {String(change.from)} -> {String(change.to)}</li>
+        {/each}
+    </ul>
+{/if}
+```
+
+| Name | What it is |
+| --- | --- |
+| `form.changed('title')` | `true` while the field differs from the saved value; reactive |
+| `form.changes` | every changed field as `{ field, from, to }`, in the order of the draft's fields |
+
+- Fields are compared as JSON, so a list or a nested object counts as changed when anything inside it changed, and changing a value back removes it from the list.
+- After a successful submit the sent values are the saved ones, so `changes` is empty again.
+- `<Field changed>` shows a small dot after the label, announced as "Changed"; pass a text instead of `true` for another language, such as `changed={form.changed('title') && m.fieldChanged()}`.
+
 ### Focus the first error
 
 When a submit fails validation, `formState` waits for the error messages to appear and then moves focus to the first field marked invalid, scrolled to the middle of the screen. Keyboard and screen reader users land right on the problem, and on a long form nobody has to scroll to find it.
