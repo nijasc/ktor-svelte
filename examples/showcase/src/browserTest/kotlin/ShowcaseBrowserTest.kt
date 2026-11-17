@@ -570,6 +570,26 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a click on a sortable header sorts the rows, and a second click reverses them`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val token = unique("Sorted").replace(" ", "")
+        listOf("b", "d", "a", "e", "c").forEach { page.createTask("$token $it") }
+        page.navigationLink("Admin").click()
+        val table = page.locator("#all-tasks")
+        val titles = table.locator("tbody tr td:nth-child(2)")
+        assertThat(titles).hasText(arrayOf("$token c", "$token e", "$token a", "$token d", "$token b"))
+        val header = table.locator("thead th").filter(com.microsoft.playwright.Locator.FilterOptions().setHasText("Title"))
+        header.getByRole(AriaRole.BUTTON).click()
+        assertThat(header).hasAttribute("aria-sort", "ascending")
+        assertThat(titles).hasText(arrayOf("$token a", "$token b", "$token c", "$token d", "$token e"))
+        header.getByRole(AriaRole.BUTTON).click()
+        assertThat(header).hasAttribute("aria-sort", "descending")
+        assertThat(titles).hasText(arrayOf("$token e", "$token d", "$token c", "$token b", "$token a"))
+        header.getByRole(AriaRole.BUTTON).click()
+        assertThat(header).not().hasAttribute("aria-sort", Pattern.compile(".*"))
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)

@@ -90,7 +90,7 @@
         paging="pages"
         key={(task) => task.id}
         columns={[
-            { key: 'title', label: m.fieldTitle() },
+            { key: 'title', label: m.fieldTitle(), sort: true },
             { key: 'status', label: m.fieldStatus(), text: (task) => statusLabels[task.status]() },
             { key: 'createdAt', label: m.taskCreatedBy(), text: (task) => `${task.creator.name}, ${formatDateTime(task.createdAt)}` }
         ]}
