@@ -3388,7 +3388,7 @@ Source: https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries
 
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide, i18n, image optimization, error toasts and typed routes, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, Lucide, i18n, image optimization, an installable app, error toasts and typed routes, configured in Gradle with typed helpers on both sides.
 
 Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
 
@@ -3642,6 +3642,55 @@ svelte {
 At build time, every image becomes AVIF and WebP in several widths, plus a fallback in the original format, inside a `<picture>` with `srcset`, `width` and `height`. Browsers download only the size and format they need, and the layout doesn't jump while the image loads. In the notes example, a 339 KB PNG becomes an 8 KB AVIF for a laptop screen. The files land in `_app/immutable/`, so browsers cache them for a year like any other hashed asset.
 
 Files in `frontend/static/` are copied as they are, because nothing in the build knows where they are used. Move images there to `src/lib/assets` to have them optimized. Processing uses `sharp`, which comes with prebuilt binaries for Windows, macOS and Linux. The first build with many large images takes longer, and later builds reuse Vite's cache.
+
+## Installable app
+
+`installable { }` makes the app installable, on phones and on desktops: a web manifest, icons in every size, a theme color and a small service worker with an offline page. Name, colors and icon are set once, here:
+
+```kotlin
+svelte {
+    libraries {
+        installable {
+            name = "Notes"
+            shortName = "Notes"
+            description = "Notes for the whole team"
+            themeColor = "#4f46e5"
+            backgroundColor = "#ffffff"
+            display = "standalone"
+            icon = file("app-icon.png")
+        }
+    }
+}
+```
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `name` | required | The name shown when the app is installed and in the app list |
+| `shortName` | `name` | The name under the icon on a home screen, where space is short |
+| `description` | none | What the app does, shown by some install dialogs |
+| `themeColor` | `#ffffff` | Color of the browser bar and the title bar of the installed app, as a hex color |
+| `backgroundColor` | `#ffffff` | Color of the splash screen while the app starts, and behind the maskable and Apple icons |
+| `display` | `standalone` | `standalone`, `fullscreen`, `minimal-ui` or `browser` |
+| `icon` | required | A square PNG of at least 512 pixels |
+
+`svelteSync` then writes:
+
+- `static/ktor-svelte/manifest.webmanifest`, with `start_url` and `scope` set to `/` and the default locale as `lang` when i18n is on.
+- `static/ktor-svelte/icon-48.png` to `icon-512.png` in nine sizes, `icon-maskable-192.png` and `icon-maskable-512.png` with the icon inside the safe zone on the background color, and `apple-touch-icon.png`.
+- `src/service-worker/index.ts` and its `tsconfig.json`, which SvelteKit builds and registers by itself.
+- The manifest link, the `theme-color` tag and the Apple icon in the head of every page, through the generated server hook.
+
+The icons are made from your PNG with plain Java, so nothing else needs to be installed. `svelteVerifySync` compares them by their pixels, so a build on another JDK, which may compress PNGs differently, does not count as a change. Commit the files like the rest of the generated ones. `static/ktor-svelte` carries its own `.gitattributes` that keeps the PNGs binary.
+
+**What the service worker does.** It caches the hashed files of the build, everything under `_app/immutable/`, when it is installed, and serves them from that cache. When a page cannot be loaded because there is no connection, it answers with an offline page in the app's colors, which reloads by itself once the connection is back. It never caches API responses or HTML pages, so a deploy is never hidden behind a stale copy, and requests to other sites, and anything but GET, go straight to the network. A new build installs a new worker, which takes over once every tab of the old version is closed and then deletes the old cache. Open tabs keep the files of the version they started with. Use `toasts { reloadPrompt() }` to offer a reload.
+
+The offline page is in English. To translate it, add `offline-title`, `offline-text` and `offline-retry` to your messages. The page uses the default locale, since a service worker cannot know the visitor's.
+
+On the server nothing needs setting up. The files are served like the rest of the build, without a long cache time, so a new manifest or worker is picked up right away. When the app answers `svelte(public = ...)` and asks for a sign-in everywhere else, `/service-worker.js` and `/ktor-svelte/*` stay public, since a browser fetches them without a session.
+
+Service workers only run on `https` or on `localhost`. Test on another device with [HTTPS in development](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#https-in-development). Turning `installable` off again removes the files, and browsers unregister the old worker when `/service-worker.js` no longer exists.
+
+If you already have `src/service-worker/index.ts`, sync stops instead of overwriting it.
 
 ## Toasts
 
