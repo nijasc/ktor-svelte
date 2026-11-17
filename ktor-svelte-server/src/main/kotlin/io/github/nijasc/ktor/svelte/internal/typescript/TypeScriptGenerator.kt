@@ -161,6 +161,7 @@ internal class TypeScriptGenerator(
             ) + loginPageSource() + (errorReportPath?.let { "\nreportErrors('$it');\n" } ?: "") + (vitalsCall?.let { "\n$it\n" } ?: ""),
             "form.ts" to typeScriptTemplate("form.ts"),
             FORM_STATE_FILE to typeScriptTemplate(FORM_STATE_FILE),
+            PENDING_WRITES_FILE to typeScriptTemplate(PENDING_WRITES_FILE),
             "types.ts" to
                 (if (errorCodes.isEmpty() && permissions.isEmpty()) types else types.removeSuffix("export {};\n")) +
                 validationHelpers.sorted().joinToString("") { "\n" + it.source } +
@@ -1461,6 +1462,7 @@ private val ERROR_CODE_HELPERS =
     |
     """.trimMargin()
 internal const val FORM_STATE_FILE = "form-state.svelte.ts"
+internal const val PENDING_WRITES_FILE = "pending-writes.svelte.ts"
 private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated merge=ktor-svelte"
 private val SERVICES_MODULE_NAMES =
     setOf(

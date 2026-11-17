@@ -2,6 +2,7 @@
 client.ts text eol=lf linguist-generated merge=ktor-svelte
 form.ts text eol=lf linguist-generated merge=ktor-svelte
 form-state.svelte.ts text eol=lf linguist-generated merge=ktor-svelte
+pending-writes.svelte.ts text eol=lf linguist-generated merge=ktor-svelte
 types.ts text eol=lf linguist-generated merge=ktor-svelte
 services.ts text eol=lf linguist-generated merge=ktor-svelte
 index.ts text eol=lf linguist-generated merge=ktor-svelte

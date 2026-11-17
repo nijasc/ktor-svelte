@@ -23,6 +23,7 @@ import {
     isVersionConflict,
     patchOf,
     request,
+    watchPendingWrites,
     type ApiFixtures,
     type RequestOptions,
     type UploadRules
@@ -921,5 +922,24 @@ const draft = { id: 7, title: 'Milk', createdAt: 'yesterday' };
 await request('POST', '/api/notes', { body: draft, omit: ['id', 'createdAt'] });
 await request('POST', '/api/notes', { body: [draft], omit: ['id'] });
 results.omitted = { bodies: omittedBodies, draftKept: JSON.stringify(draft) };
+
+const pendingSeen: number[] = [];
+let releaseWrite: (() => void) | undefined;
+apiConfig.fetch = (async (_url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') await new Promise<void>((resolve) => (releaseWrite = resolve));
+    if (init?.method === 'DELETE') return new Response('{}', { status: 500, headers: { 'content-type': 'application/json' } });
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+const stopWatching = watchPendingWrites((count) => pendingSeen.push(count));
+const slowWrite = request('POST', '/api/notes', { body: {} });
+await new Promise((resolve) => setTimeout(resolve, 5));
+const duringWrite = [...pendingSeen];
+await request('GET', '/api/notes');
+releaseWrite?.();
+await slowWrite;
+await request('DELETE', '/api/notes/1', { silent: true }).catch(() => undefined);
+stopWatching();
+await request('PUT', '/api/notes/1', { body: {} });
+results.pendingWrites = { duringWrite, all: pendingSeen };
 
 console.log(JSON.stringify(results));

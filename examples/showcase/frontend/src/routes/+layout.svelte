@@ -10,6 +10,7 @@
     import { m } from '#i18n';
     import { nav, routes } from '#routes';
     import { signOut } from '#lib/session.svelte.ts';
+    import { pendingWrites, warnBeforeLeaving } from '#lib/api/pending-writes.svelte.ts';
 
     let { children } = $props();
 
@@ -22,6 +23,8 @@
             return currentUser.user !== null && (!guard.permission || can(guard.permission));
         })
     );
+
+    $effect(() => warnBeforeLeaving());
 
     onMount(async () => {
         cookieConsent.banner({ text: m.consentText(), accept: m.consentAccept(), refuse: m.consentRefuse() });
@@ -44,6 +47,11 @@
             </a>
         {/each}
     </nav>
+    {#if pendingWrites.active}
+        <span id="saving" class="flex items-center gap-1 text-sm opacity-70" role="status">
+            <span class="loading loading-spinner loading-xs" aria-hidden="true"></span>{m.saving()}
+        </span>
+    {/if}
     <ThemeToggle id="theme" class="w-36" label={m.settingsTheme()} />
     <LocaleSwitch id="locale" class="w-28" label={m.settingsLanguage()} />
     {#if currentUser.user}

@@ -158,5 +158,6 @@
   "error-request-id": "Request ID:",
   "error-home": "Back to the start page",
   "session-ending": "You will be signed out soon.",
-  "session-extend": "Stay signed in"
+  "session-extend": "Stay signed in",
+  "saving": "Saving..."
 }

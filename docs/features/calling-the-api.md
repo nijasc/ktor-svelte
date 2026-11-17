@@ -653,6 +653,34 @@ With several instances of the app behind a load balancer, a repeat only finds th
 
 `retry` in `apiConfig` still applies to reads only. A write is retried when its own call says `retry`, so the decision stays next to the routes where you know the server side is on. To stop sending the header, set `apiConfig.idempotencyKeys = false`, which also stops writes from being retried.
 
+### Show that something is still saving
+
+`pendingWrites` knows whether any write is still on its way: every call that is not a `GET`, `HEAD` or `OPTIONS`, from anywhere in the app. Use it for a "Saving..." badge, and `warnBeforeLeaving()` asks before the tab is closed while one is running:
+
+```svelte no-check
+<script lang="ts">
+    import { pendingWrites, warnBeforeLeaving } from '#lib/api/pending-writes.svelte.ts';
+
+    $effect(() => warnBeforeLeaving());
+</script>
+
+{#if pendingWrites.active}
+    <span role="status">Saving...</span>
+{/if}
+```
+
+| Name | What it is |
+| --- | --- |
+| `pendingWrites.active` | `true` while at least one write is in flight; reactive |
+| `pendingWrites.count` | how many writes are in flight |
+| `warnBeforeLeaving()` | adds a `beforeunload` guard that only asks while a write is running, and returns the function that removes it; returning it from `$effect`, as above, removes it with the component |
+| `watchPendingWrites(listener)` | the same count without Svelte, from `#api`; returns a function that stops listening |
+
+- A write counts from the call until its answer, retries included, and also when it fails.
+- The browser shows its own "Leave site?" text; pages cannot change it.
+- `warnBeforeLeaving()` covers closing and reloading the tab. Navigations inside the app keep running the write.
+- Put both into your root layout once, as the showcase does.
+
 ### Uploads
 
 Uploads work with `FormData`. Ktor cannot infer a multipart body from `receiveMultipart`, so describe it once, and the generated function takes `body: FormData`:

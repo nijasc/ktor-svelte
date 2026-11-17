@@ -468,4 +468,13 @@ class GeneratedClientBehaviourTest {
         assertEquals("[{\"id\":7,\"title\":\"Milk\",\"createdAt\":\"yesterday\"}]", bodies[1])
         assertEquals("{\"id\":7,\"title\":\"Milk\",\"createdAt\":\"yesterday\"}", omitted.getValue("draftKept").jsonPrimitive.content)
     }
+
+    @Test
+    fun `writes in flight are counted, reads are not, and a failed write still ends`() {
+        val pending = runHarness().getValue("pendingWrites").jsonObject
+
+        fun counts(name: String) = pending.getValue(name).jsonArray.map { it.jsonPrimitive.content.toInt() }
+        assertEquals(listOf(0, 1), counts("duringWrite"))
+        assertEquals(listOf(0, 1, 0, 1, 0), counts("all"))
+    }
 }
