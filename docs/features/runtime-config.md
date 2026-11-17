@@ -97,3 +97,33 @@ An empty variable counts as not set.
 
 The generating run starts the app without your environment. It therefore does not stop for missing variables: a required one reads as its example, or as empty text. Code that runs at startup, such as connecting to the database, should already be skipped in that run or tolerate that, as it must today for `svelteGenerateTs` to work on a build server.
 
+## Secrets in the frontend build
+
+Everything in the frontend build is sent to browsers. A secret gets in there easily: a server-only variable imported in a component, a key pasted into a config file, a `.env` value Vite was told to expose. Nothing fails, and the key is public from the next deploy on.
+
+`svelteVerifySecrets` runs after `svelteBuild`, before the build is packed into the JAR, and looks for secret values in the built files. When it finds one, the build fails:
+
+```text
+ktor-svelte found secret values in the frontend build. Everything in that folder is sent to browsers.
+
+  SESSION_SIGN_KEY (declared as a secret)  _app/immutable/chunks/B3kq9.js
+  STRIPE_KEY (.env)                        _app/immutable/nodes/2.Dx1.js
+
+Read such values on the server only. A value that is meant to be public belongs in svelte { buildEnv }, or gets a name that starts with PUBLIC_.
+```
+
+It names the variable and the file, never the value. The values it looks for are:
+
+- the [declared environment variables](#environment-variables) marked as `secret`, with the value they have in the environment of the build
+- every value in `.env`, `.env.local`, `.env.production` and `.env.production.local`, next to `build.gradle.kts` and in the frontend folder
+
+Left out are variables listed in `buildEnv`, names that start with `PUBLIC_` or `VITE_`, values shorter than eight characters, and values that are one plain word, such as `production`. Those would be found in almost any build.
+
+The check can only find a secret whose value it knows. On a build server that does not have the production secrets, it has nothing to compare, which is one more reason to build with the real environment or not at all. To turn it off:
+
+```kotlin
+svelte {
+    verifySecrets = false
+}
+```
+
