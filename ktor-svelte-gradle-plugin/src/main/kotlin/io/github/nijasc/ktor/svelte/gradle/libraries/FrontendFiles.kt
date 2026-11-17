@@ -85,7 +85,9 @@ private const val PLAIN_TABLE_STYLE =
     "\n<style>\n" +
         "    .ktor-svelte-table-wrap {\n        overflow-x: auto;\n    }\n\n" +
         "    .ktor-svelte-table {\n        width: 100%;\n        border-collapse: collapse;\n        text-align: left;\n    }\n\n" +
-        "    .ktor-svelte-table-pager {\n        display: flex;\n        gap: 0.5rem;\n    }\n" +
+        "    .ktor-svelte-table-pager {\n        display: flex;\n        gap: 0.5rem;\n    }\n\n" +
+        "    .ktor-svelte-table-chooser-list {\n        display: grid;\n        gap: 0.25rem;\n" +
+        "        margin: 0.25rem 0;\n        padding: 0;\n        list-style: none;\n    }\n" +
         "</style>\n"
 
 private const val PLAIN_DROP_STYLE =
@@ -174,6 +176,8 @@ private fun dataTable(daisy: Boolean): String =
             "note" to if (daisy) "py-2 text-sm opacity-70" else "ktor-svelte-table-note",
             "button" to if (daisy) "btn btn-sm" else "ktor-svelte-table-button",
             "pager" to if (daisy) "flex gap-2 py-2" else "ktor-svelte-table-pager",
+            "chooser" to if (daisy) "mb-2" else "ktor-svelte-table-chooser",
+            "chooserList" to if (daisy) "menu bg-base-200 rounded-box mt-1 w-fit gap-1" else "ktor-svelte-table-chooser-list",
             "style" to if (daisy) "" else PLAIN_TABLE_STYLE,
         ),
     )
