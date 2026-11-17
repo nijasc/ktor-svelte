@@ -184,6 +184,63 @@ private fun breadcrumbs(daisy: Boolean): String =
         ),
     )
 
+private const val SIDEBAR_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-sidebar-layout {\n        display: grid;\n" +
+        "        grid-template-columns: 14rem 1fr;\n        gap: 1rem;\n    }\n\n" +
+        "    .ktor-svelte-sidebar-layout[data-collapsed='true'] {\n        grid-template-columns: 3.5rem 1fr;\n    }\n\n" +
+        "    .ktor-svelte-sidebar-list {\n        display: grid;\n        gap: 0.25rem;\n        margin: 0;\n        padding: 0;\n" +
+        "        list-style: none;\n    }\n\n" +
+        "    .ktor-svelte-sidebar-link {\n        display: flex;\n        gap: 0.5rem;\n        align-items: center;\n    }\n\n" +
+        "    .ktor-svelte-sidebar-menu,\n    .ktor-svelte-sidebar-backdrop {\n        display: none;\n    }\n\n" +
+        "    .ktor-svelte-sidebar-hidden {\n        position: absolute;\n        width: 1px;\n        height: 1px;\n" +
+        "        overflow: hidden;\n        clip: rect(0 0 0 0);\n        white-space: nowrap;\n    }\n\n" +
+        "    @media (max-width: 768px) {\n" +
+        "        .ktor-svelte-sidebar-layout,\n        .ktor-svelte-sidebar-layout[data-collapsed='true'] {\n" +
+        "            grid-template-columns: 1fr;\n        }\n\n" +
+        "        .ktor-svelte-sidebar-menu {\n            display: inline-block;\n            justify-self: start;\n        }\n\n" +
+        "        .ktor-svelte-sidebar-nav,\n        .ktor-svelte-sidebar-collapse {\n            display: none;\n        }\n\n" +
+        "        .ktor-svelte-sidebar-layout[data-open='true'] .ktor-svelte-sidebar-nav {\n            display: block;\n" +
+        "            position: fixed;\n            inset: 0 auto 0 0;\n            z-index: 50;\n            width: 16rem;\n" +
+        "            padding: 1rem;\n            overflow-y: auto;\n            background: Canvas;\n        }\n\n" +
+        "        .ktor-svelte-sidebar-layout[data-open='true'] .ktor-svelte-sidebar-backdrop {\n            display: block;\n" +
+        "            position: fixed;\n            inset: 0;\n            z-index: 40;\n            border: 0;\n" +
+        "            background: rgb(0 0 0 / 0.4);\n        }\n\n" +
+        "        .ktor-svelte-sidebar-layout[data-open='true'] .ktor-svelte-sidebar-hidden {\n            position: static;\n" +
+        "            width: auto;\n            height: auto;\n            clip: auto;\n        }\n" +
+        "    }\n" +
+        "</style>\n"
+
+private fun sidebar(
+    daisy: Boolean,
+    lucide: Boolean,
+): String =
+    renderTemplate(
+        "components/Sidebar.svelte",
+        mapOf(
+            "iconImport" to
+                if (lucide) "    import Icon from '../Icon.svelte';\n    import type { LucideIconName } from '../icons.js';\n" else "",
+            "iconType" to if (lucide) "LucideIconName" else "string",
+            "iconMarkup" to
+                if (lucide) {
+                    "                        {#if item.icon}<Icon name={item.icon} size={18} />{:else if collapsed}" +
+                        "<span aria-hidden=\"true\">{initial(item.label)}</span>{/if}"
+                } else {
+                    "                        {#if collapsed}<span aria-hidden=\"true\">{initial(item.label)}</span>{/if}"
+                },
+            "layout" to "ktor-svelte-sidebar-layout",
+            "sidebar" to "ktor-svelte-sidebar-nav" + if (daisy) " bg-base-200 rounded-box p-2" else "",
+            "list" to if (daisy) "menu w-full p-0" else "ktor-svelte-sidebar-list",
+            "link" to if (daisy) "" else "ktor-svelte-sidebar-link",
+            "menuButton" to "ktor-svelte-sidebar-menu" + if (daisy) " btn btn-sm" else "",
+            "backdrop" to "ktor-svelte-sidebar-backdrop",
+            "collapseButton" to "ktor-svelte-sidebar-collapse" + if (daisy) " btn btn-ghost btn-xs mt-2" else "",
+            "hiddenLabel" to "ktor-svelte-sidebar-hidden",
+            "content" to "ktor-svelte-sidebar-content",
+            "style" to SIDEBAR_STYLE,
+        ),
+    )
+
 private fun errorSummary(daisy: Boolean): String =
     renderTemplate(
         "components/ErrorSummary.svelte",
@@ -298,6 +355,7 @@ internal fun componentFiles(
         buildMap {
             if (daisy) put("$COMPONENTS_DIR/ThemeToggle.svelte", renderTemplate("components/ThemeToggle.svelte"))
             if (spec.routes) put("$COMPONENTS_DIR/Breadcrumbs.svelte", breadcrumbs(daisy))
+            put("$COMPONENTS_DIR/Sidebar.svelte", sidebar(daisy, spec.lucide))
             if (spec.i18n != null) {
                 put("$COMPONENTS_DIR/TimeAgo.svelte", renderTemplate("components/TimeAgo.svelte"))
                 val classes = mapOf("select" to if (daisy) "select select-sm" else "ktor-svelte-locale-switch")
