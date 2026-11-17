@@ -2862,6 +2862,34 @@ With several instances of the app behind a load balancer, a repeat only finds th
 
 `retry` in `apiConfig` still applies to reads only. A write is retried when its own call says `retry`, so the decision stays next to the routes where you know the server side is on. To stop sending the header, set `apiConfig.idempotencyKeys = false`, which also stops writes from being retried.
 
+### Show that something is still saving
+
+`pendingWrites` knows whether any write is still on its way: every call that is not a `GET`, `HEAD` or `OPTIONS`, from anywhere in the app. Use it for a "Saving..." badge, and `warnBeforeLeaving()` asks before the tab is closed while one is running:
+
+```svelte
+<script lang="ts">
+    import { pendingWrites, warnBeforeLeaving } from '#lib/api/pending-writes.svelte.ts';
+
+    $effect(() => warnBeforeLeaving());
+</script>
+
+{#if pendingWrites.active}
+    <span role="status">Saving...</span>
+{/if}
+```
+
+| Name | What it is |
+| --- | --- |
+| `pendingWrites.active` | `true` while at least one write is in flight; reactive |
+| `pendingWrites.count` | how many writes are in flight |
+| `warnBeforeLeaving()` | adds a `beforeunload` guard that only asks while a write is running, and returns the function that removes it; returning it from `$effect`, as above, removes it with the component |
+| `watchPendingWrites(listener)` | the same count without Svelte, from `#api`; returns a function that stops listening |
+
+- A write counts from the call until its answer, retries included, and also when it fails.
+- The browser shows its own "Leave site?" text; pages cannot change it.
+- `warnBeforeLeaving()` covers closing and reloading the tab. Navigations inside the app keep running the write.
+- Put both into your root layout once, as the showcase does.
+
 ### Uploads
 
 Uploads work with `FormData`. Ktor cannot infer a multipart body from `receiveMultipart`, so describe it once, and the generated function takes `body: FormData`:
@@ -7607,6 +7635,32 @@ The frontend gets the same enum and a `can` function:
 
 **The browser only decides what is shown**
 `can` in the browser decides what is shown. What is allowed is decided by the check on the route, so every hidden button needs one.
+
+## Owner checks
+
+Permissions say what someone may do in general; an owner check says whether one record is theirs. `requireOwner` takes the record you looked up and a rule, and answers for you when it is not theirs:
+
+```kotlin
+get("/api/drafts/{id}") {
+    val draft = call.requireOwner(drafts.find(call.pathParameter<Int>("id"))) { user: User, draft ->
+        draft.ownerId == user.id
+    }
+    call.respond(draft)
+}.ownerChecked()
+```
+
+| The call | Answer |
+| --- | --- |
+| No record (`null`) | `404` `{"message": "This does not exist."}` |
+| Nobody signed in | `401`, the same as everywhere else, including your `signInMessage` |
+| Somebody else's record | `404`, so a stranger cannot tell that it exists |
+| Somebody else's record, with `OtherOwner.Forbidden` | `403` with your `refusedMessage` |
+| The owner | the record, and your route goes on |
+
+- The user type is the one you gave `currentUser<User> { }`; write it on the rule's first parameter, as above, and Kotlin works out the rest.
+- Pass `OtherOwner.Forbidden` as the second argument when a 403 is more helpful than hiding the record, for example inside a team where everybody sees the list anyway.
+- `.ownerChecked()` describes the 401, 403 and 404 answers for the generated client, so `isApiError(error, 'drafts.get')` knows them. The compiler plugin cannot see answers that the plugin sends for you.
+- Use it together with [permissions](#permissions): a permission for what a role may do at all, an owner check for the one record.
 
 ## Page guards
 
@@ -12979,6 +13033,7 @@ Besides the settings, the plugin gives your routes these helpers:
 | `call.toast(...)` | Sends a toast with the answer | [Toasts from the server](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#toasts-from-the-server) |
 | `call.navigateTo(path)` | Tells the client to go to a page after the call | [Navigation from the server](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#navigation-from-the-server) |
 | `call.respondIfStale(sent, current) { record }` | Answers 409 with the current record when the write was based on an old version | [Two people, one record](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#two-people-one-record) |
+| `call.requireOwner(record) { user: User, record -> ... }` | Returns the record when it belongs to the caller, answers 404, 401 or 403 otherwise; `route.ownerChecked()` describes those answers | [Owner checks](https://nijasc.github.io/ktor-svelte/main/features/auth#owner-checks) |
 | `call.respondLoginRedirect()` | Redirects to `loginPage`, carrying the current page | [The login page](https://nijasc.github.io/ktor-svelte/main/features/auth#the-login-page) |
 | `route.timeout(30.seconds)` | Cancels the handler after the limit with a 503, and makes the generated call use it as its timeout | [A time limit per route](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#a-time-limit-per-route) |
 | `getPage<T>(path) { }` | A paged `GET` route with `cursor` and `limit` | [Page through long lists](https://nijasc.github.io/ktor-svelte/main/recipes/pagination) |
