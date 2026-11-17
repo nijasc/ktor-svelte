@@ -164,6 +164,33 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `preferences follow the user between devices, and the theme and language cookies with them`() {
+        val preferences = runHarness().getValue("preferences").jsonObject
+        val steps = preferences.getValue("steps").jsonArray.map { step -> step.jsonArray.joinToString(" | ") { it.jsonPrimitive.content } }
+        assertEquals(
+            listOf(
+                """a visitor has the defaults | {"theme":null,"locale":null,"compact":false} |  | null | 0 | 0""",
+                """a visitor changes things on this device only | {"theme":"nord","locale":null,"compact":true} | theme=nord | nord | 0 | 0""",
+                "signing in on a new device brings the saved theme and language | " +
+                    """{"theme":"dracula","locale":"de","compact":false} | theme=dracula locale=de | dracula | 0 | 1""",
+                "a theme picked on this device since then is saved | " +
+                    """{"theme":"light","locale":"de","compact":false} | theme=light locale=de | dracula | 1 | 1""",
+                "a change is shown at once and saved | " +
+                    """{"theme":"light","locale":"de","compact":true} | theme=light locale=de | dracula | 2 | 1""",
+                "a theme picked on another device arrives here | " +
+                    """{"theme":"nord","locale":"de","compact":true} | theme=nord locale=de | nord | 2 | 1""",
+                "someone with nothing saved keeps what this device shows, and it is saved | " +
+                    """{"theme":"nord","locale":"de","compact":false} | theme=nord locale=de | nord | 5 | 1""",
+                "a theme picked while the saved one was on its way wins | " +
+                    """{"theme":"ktor","locale":"de","compact":false} | theme=ktor locale=de | nord | 6 | 1""",
+                """after a 401 the defaults are back | {"theme":null,"locale":null,"compact":false} | theme=ktor locale=de | nord | 6 | 1""",
+            ),
+            steps,
+        )
+        assertEquals("""{"theme":"ktor","locale":"de","compact":false}""", preferences.getValue("lastSaved").jsonPrimitive.content)
+    }
+
+    @Test
     fun `GET requests are retried with backoff only when asked to`() {
         val results = runHarness()
 

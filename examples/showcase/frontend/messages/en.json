@@ -92,6 +92,7 @@
   "board-all": "All",
   "board-mine": "Open for me",
   "board-only-mine": "Only my tasks",
+  "board-compact": "Compact list",
   "board-search": "Search tasks",
   "board-empty": "No tasks match.",
   "board-shown": "{count, plural, one {# task} other {# tasks}} shown",

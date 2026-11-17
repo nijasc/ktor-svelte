@@ -248,6 +248,66 @@ Do not put either in the root `+layout.ts`. SvelteKit cannot show your error pag
 
 The guard in the browser is a convenience: it spares the visitor a page that would only fail. Anyone can skip it, so what must stay private is kept private by the API.
 
+## User preferences
+
+A theme, a language, a compact list: small choices that people expect to find again on their phone after making them on their laptop. Declare them as a class, and say how you keep them:
+
+```kotlin no-check
+@Serializable
+data class Preferences(
+    val theme: String? = null,
+    val locale: String? = null,
+    val compactBoard: Boolean = false,
+)
+
+install(Svelte) {
+    currentUser<User> { sessions.get<UserSession>()?.let { users.find(it.userId) } }
+    preferences<Preferences, User>(
+        defaults = Preferences(),
+        load = { user -> store.preferences(user.id) },
+        save = { user, preferences -> store.save(user.id, preferences) },
+    )
+}
+```
+
+You store them: a table, a JSON column, a document. `load` returns `null` for someone who has saved nothing yet, and they get the defaults. ktor-svelte adds the endpoint, the type and the store:
+
+```svelte no-check
+<script lang="ts">
+    import { preferences } from '#api';
+</script>
+
+<input
+    type="checkbox"
+    checked={preferences.value.compactBoard}
+    onchange={(event) => preferences.set({ compactBoard: event.currentTarget.checked })}
+/>
+<ul class:compact={preferences.value.compactBoard}>...</ul>
+```
+
+| | |
+| --- | --- |
+| `preferences.value` | The preferences, typed as your class and reactive. The defaults until the server has answered, and for a visitor |
+| `preferences.ready` | `false` until the first answer |
+| `preferences.set({ ... })` | Changes some of them. The page shows the change at once, and it is saved in the background |
+| `preferences.load()` | Resolves when they are loaded. Reading `value` starts loading on its own |
+
+The store loads once, loads again when someone signs in, and goes back to the defaults when they sign out. A visitor's changes stay in the page and are not saved. What is saved is checked like every request body, so `@JsonSchema` bounds on the class apply.
+
+### Theme and language
+
+A field called `theme` or `locale` is tied to the cookie that [DaisyUI themes](frontend-libraries.md#daisyui) and [i18n](frontend-libraries.md#i18n) use, so the generated switches keep working unchanged and their choice now belongs to the person:
+
+- Someone picks a theme or a language, with the generated switch or your own code. It is saved for them.
+- They sign in on another device. The saved theme is applied at once, and for a saved language the page loads again in that language.
+- They pick another theme on that device. That one is saved, and the first device shows it the next time a page loads there.
+
+The rule behind it: each browser remembers the value it last had in common with the server. If its cookie differs from that, the change was made here and is saved. If not, the saved value is newer and is shown.
+
+Keep preferences to plain values: text, numbers, booleans, enums and lists of them.
+
+The endpoint is `GET` and `PUT /api/preferences`, under your first API prefix. Pass `path = "/api/settings"` to move it.
+
 ## The login page
 
 Someone opens a link to a page that needs a session, or their session ends while they fill in a form. Both should end the same way: at the login page, and after signing in, back where they were. Say where the login page is:

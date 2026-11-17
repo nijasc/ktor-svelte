@@ -275,6 +275,28 @@ public final class io/github/nijasc/ktor/svelte/PermissionsKt {
 	public static final fun requires (Lio/ktor/server/routing/Route;[Ljava/lang/Enum;Lkotlin/jvm/functions/Function1;)Lio/ktor/server/routing/Route;
 }
 
+public final class io/github/nijasc/ktor/svelte/PreferencesAnswer {
+	public static final field Companion Lio/github/nijasc/ktor/svelte/PreferencesAnswer$Companion;
+	public fun <init> (Ljava/lang/Object;Z)V
+	public final fun getPreferences ()Ljava/lang/Object;
+	public final fun getSignedIn ()Z
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/PreferencesAnswer$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public fun <init> (Lkotlinx/serialization/KSerializer;)V
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lio/github/nijasc/ktor/svelte/PreferencesAnswer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lio/github/nijasc/ktor/svelte/PreferencesAnswer;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/PreferencesAnswer$Companion {
+	public final fun serializer (Lkotlinx/serialization/KSerializer;)Lkotlinx/serialization/KSerializer;
+}
+
 public final class io/github/nijasc/ktor/svelte/QueriesKt {
 	public static final fun describeQuery (Lio/ktor/server/routing/Route;Lkotlinx/serialization/descriptors/SerialDescriptor;)Lio/ktor/server/routing/Route;
 	public static final fun readQuery (Lio/ktor/server/application/ApplicationCall;Lkotlinx/serialization/KSerializer;)Ljava/lang/Object;
@@ -374,6 +396,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setNotFoundPage (Ljava/lang/String;)V
 	public final fun setOriginCheck (Z)V
 	public final fun setPermissions (Ljava/lang/Class;Ljava/util/List;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function3;)V
+	public final fun setPreferences (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;Ljava/lang/String;Lkotlin/reflect/KClass;Ljava/lang/String;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/util/reflect/TypeInfo;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;)V
 	public final fun setPublicBuildInfo (Z)V
 	public final fun setPublicConfig (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;)V
 	public final fun setPublicConfig (Lkotlin/jvm/functions/Function0;Lio/ktor/openapi/JsonSchema;)V

@@ -9,4 +9,5 @@ constants.ts text eol=lf linguist-generated merge=ktor-svelte
 cookies.ts text eol=lf linguist-generated merge=ktor-svelte
 current-user.svelte.ts text eol=lf linguist-generated merge=ktor-svelte
 guards.ts text eol=lf linguist-generated merge=ktor-svelte
+preferences.svelte.ts text eol=lf linguist-generated merge=ktor-svelte
 openapi.json text eol=lf linguist-generated merge=ktor-svelte

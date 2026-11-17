@@ -225,6 +225,25 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `preferences are saved per person and refused for visitors and when they are too long`() {
+        val visitor = anonymous()
+        assertEquals(
+            """{"preferences":{"theme":null,"locale":null,"compactBoard":false},"signedIn":false}""",
+            visitor.send("GET", "/api/preferences").body(),
+        )
+        assertEquals(401, visitor.send("PUT", "/api/preferences", """{"compactBoard":true}""").statusCode())
+
+        val saved = member.send("PUT", "/api/preferences", """{"theme":"nord","compactBoard":true}""")
+        assertEquals(200, saved.statusCode())
+        assertEquals(
+            """{"preferences":{"theme":"nord","locale":null,"compactBoard":true},"signedIn":true}""",
+            member.send("GET", "/api/preferences").body(),
+        )
+        assertEquals(422, member.send("PUT", "/api/preferences", """{"theme":"${"x".repeat(65)}"}""").statusCode())
+        member.send("PUT", "/api/preferences", """{}""")
+    }
+
+    @Test
     fun `a forged session cookie is refused`() {
         val response = anonymous().send("GET", "/api/me", null, "Cookie" to "showcase_session=userId%3D%2523i1")
         assertEquals(401, response.statusCode())

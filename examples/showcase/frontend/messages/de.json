@@ -92,6 +92,7 @@
   "board-all": "Alle",
   "board-mine": "Offen für mich",
   "board-only-mine": "Nur meine Aufgaben",
+  "board-compact": "Kompakte Liste",
   "board-search": "Aufgaben suchen",
   "board-empty": "Keine Aufgabe passt.",
   "board-shown": "{count, plural, one {# Aufgabe} other {# Aufgaben}} angezeigt",

@@ -49,6 +49,16 @@ enum class Role { ADMIN, MEMBER }
 
 enum class Permission { ManageUsers, DeleteAnyTask, DeleteAnyFile }
 
+const val MAX_THEME_LENGTH = 64
+const val MAX_LOCALE_LENGTH = 16
+
+@Serializable
+data class Preferences(
+    @JsonSchema.MaxLength(MAX_THEME_LENGTH) val theme: String? = null,
+    @JsonSchema.MaxLength(MAX_LOCALE_LENGTH) val locale: String? = null,
+    val compactBoard: Boolean = false,
+)
+
 fun permissionsOf(user: User): Set<Permission> = if (user.role == Role.ADMIN) Permission.entries.toSet() else emptySet()
 
 @Serializable

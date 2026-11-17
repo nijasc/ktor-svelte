@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { api, BoardLimits, cookies, isAbortError, latest, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
+    import { api, BoardLimits, cookies, isAbortError, latest, preferences, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
     import { chartSeries } from '#charts';
     import Icon from '#icon';
     import { m } from '#i18n';
@@ -117,6 +117,16 @@
             <input id="mine" class="checkbox checkbox-sm" type="checkbox" bind:checked={mine} onchange={pickMine} />
             {m.boardOnlyMine()}
         </label>
+        <label class="flex items-center gap-2 text-sm" for="compact">
+            <input
+                id="compact"
+                class="checkbox checkbox-sm"
+                type="checkbox"
+                checked={preferences.value.compactBoard}
+                onchange={(event) => preferences.set({ compactBoard: event.currentTarget.checked })}
+            />
+            {m.boardCompact()}
+        </label>
     </div>
     <div class="flex flex-wrap gap-2" role="group" aria-label={m.fieldStatus()}>
         <button class="btn btn-sm" type="button" aria-pressed={status === undefined} class:btn-active={status === undefined} onclick={() => pickStatus(undefined)}>
@@ -146,9 +156,14 @@
 </div>
 
 {#if tasks.length > 0}<p id="shown" class="mb-2 text-sm opacity-70">{m.boardShown({ count: tasks.length })}</p>{/if}
-<ul id="tasks" class="grid gap-3">
+<ul id="tasks" class="grid" class:gap-3={!preferences.value.compactBoard} class:gap-1={preferences.value.compactBoard} data-compact={preferences.value.compactBoard}>
     {#each tasks as task (task.id)}
-        <li class="card bg-base-200 p-4" class:opacity-70={task.status === Status.DONE}>
+        <li
+            class="card bg-base-200"
+            class:p-4={!preferences.value.compactBoard}
+            class:p-2={preferences.value.compactBoard}
+            class:opacity-70={task.status === Status.DONE}
+        >
             <div class="flex flex-wrap items-center gap-2">
                 <a class="link flex items-center gap-2 font-semibold" href={routes.tasksId({ id: task.id })} use:prefetchOnHover={() => api.tasks.get(task.id)}>
                     <Icon name={task.icon} size={18} />

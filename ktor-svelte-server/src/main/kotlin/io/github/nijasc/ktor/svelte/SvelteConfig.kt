@@ -45,6 +45,8 @@ public class SvelteConfig internal constructor() {
         private set
     internal var permissionSet: PermissionSet? = null
         private set
+    internal var preferencesSpec: PreferencesSpec? = null
+        private set
     internal var publicConfigProvider: (() -> String)? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -191,6 +193,58 @@ public class SvelteConfig internal constructor() {
             permissionSet == null,
         ) { "permissions is already set to ${permissionSet?.type?.simpleName}. An app has one enum of permissions." }
         permissionSet = PermissionSet(type, names, userType, refusedMessage, of)
+    }
+
+    public inline fun <reified T : Any, reified U : Any> preferences(
+        defaults: T,
+        path: String? = null,
+        noinline load: suspend ApplicationCall.(U) -> T?,
+        noinline save: suspend ApplicationCall.(U, T) -> Unit,
+    ) {
+        setPreferences(
+            typeName = T::class.simpleName ?: "Preferences",
+            schema = KotlinxJsonSchemaInference.buildSchema(typeOf<T>()),
+            defaultsJson = Json { encodeDefaults = true }.encodeToString(serializer<T>(), defaults),
+            userType = U::class,
+            path = path,
+            valueType = typeInfo<T>(),
+            answerType = typeInfo<PreferencesAnswer<T>>(),
+            defaults = defaults,
+            load = { user -> load(user as U) },
+            save = { user, value -> save(user as U, value as T) },
+        )
+    }
+
+    @PublishedApi
+    internal fun setPreferences(
+        typeName: String,
+        schema: JsonSchema,
+        defaultsJson: String,
+        userType: KClass<*>,
+        path: String?,
+        valueType: TypeInfo,
+        answerType: TypeInfo,
+        defaults: Any,
+        load: suspend ApplicationCall.(Any) -> Any?,
+        save: suspend ApplicationCall.(Any, Any) -> Unit,
+    ) {
+        check(
+            preferencesSpec == null,
+        ) { "preferences is already set to ${preferencesSpec?.typeName}. An app has one class of preferences." }
+        require(path == null || path.startsWith("/")) { "preferences: the path must start with a slash, but is '$path'." }
+        preferencesSpec =
+            PreferencesSpec(
+                typeName,
+                Json.encodeToString(JsonSchema.serializer(), schema),
+                defaultsJson,
+                userType,
+                path,
+                valueType,
+                answerType,
+                defaults,
+                load,
+                save,
+            )
     }
 
     public fun guards(configure: SvelteGuardsConfig.() -> Unit) {

@@ -40,6 +40,18 @@ internal class GuardSpec(
     val permission: String?,
 )
 
+internal const val PREFERENCES_FILE = "preferences.svelte.ts"
+private const val PREFERENCES_TYPE = "UserPreferences"
+private const val PREFERENCES_STORE = "preferences"
+
+internal class PreferencesType(
+    val typeName: String,
+    val schema: String,
+    val path: String,
+    val defaultsJson: String,
+    val cookies: Map<String, String>,
+)
+
 internal class CurrentUserType(
     val typeName: String,
     val schema: String,
@@ -59,9 +71,11 @@ internal class TypeScriptGenerator(
     private val loginPage: String? = null,
     private val permissions: List<String> = emptyList(),
     private val guards: List<GuardSpec> = emptyList(),
+    private val preferences: PreferencesType? = null,
 ) {
     private val declaredCookies = cookies
-    private val sideSchemas = listOfNotNull(publicConfigSchema, currentUser?.schema).map { Json.parseToJsonElement(it) }
+    private val sideSchemas =
+        listOfNotNull(publicConfigSchema, currentUser?.schema, preferences?.schema).map { Json.parseToJsonElement(it) }
     private val cookies = cookies.filterNot { it.httpOnly }
     private val cookieFile = this.cookies.isNotEmpty() || cookies.any { it.category != null }
 
@@ -89,7 +103,8 @@ internal class TypeScriptGenerator(
             (if (usesDates) DATE_FORMATS.values else emptyList()) + (if (usesQuantities) QUANTITY_FORMATS.values else emptyList())
         validationHelpers.clear()
         operations.clear()
-        val types = typesSource(schemas) + publicConfigDeclaration(schemas) + currentUserDeclaration(schemas)
+        val types =
+            typesSource(schemas) + publicConfigDeclaration(schemas) + currentUserDeclaration(schemas) + preferencesDeclaration(schemas)
         val taken =
             schemas.keys.map(::typeName) +
                 filtered
@@ -107,6 +122,10 @@ internal class TypeScriptGenerator(
         check(permissions.isEmpty() || currentUser != null) { "permissions needs currentUser, which says who the permissions belong to." }
         check(permissions.isEmpty() || (PERMISSION_TYPE !in taken && CAN_FUNCTION !in taken)) {
             "permissions exports '$PERMISSION_TYPE' and '$CAN_FUNCTION', and the generated client already uses one of the names. " +
+                "Rename the class or the route that takes it."
+        }
+        check(preferences == null || (PREFERENCES_TYPE !in taken && PREFERENCES_STORE !in taken)) {
+            "preferences exports '$PREFERENCES_STORE' and '$PREFERENCES_TYPE', and the generated client already uses one of the names. " +
                 "Rename the class or the route that takes it."
         }
         check(guards.isEmpty() || currentUser != null) { "guards needs currentUser, which says who is signed in." }
@@ -148,11 +167,13 @@ internal class TypeScriptGenerator(
             "index.ts" to typeScriptTemplate("index.ts") + (if (constants.isEmpty()) "" else "export * from './constants.js';\n") +
                 (if (cookieFile) "export * from './cookies.js';\n" else "") +
                 (if (currentUser != null) "export * from './${CURRENT_USER_FILE.removeSuffix(".ts")}.js';\n" else "") +
-                (if (guards.isNotEmpty()) "export * from './${GUARDS_FILE.removeSuffix(".ts")}.js';\n" else ""),
+                (if (guards.isNotEmpty()) "export * from './${GUARDS_FILE.removeSuffix(".ts")}.js';\n" else "") +
+                (if (preferences != null) "export * from './${PREFERENCES_FILE.removeSuffix(".ts")}.js';\n" else ""),
             *(if (constants.isEmpty()) emptyArray() else arrayOf(CONSTANTS_FILE to constantsSource(constants))),
             *(if (cookieFile) arrayOf(COOKIES_FILE to cookiesSource(declaredCookies)) else emptyArray()),
             *(currentUser?.let { arrayOf(CURRENT_USER_FILE to currentUserSource(it)) } ?: emptyArray()),
             *(if (guards.isEmpty()) emptyArray() else arrayOf(GUARDS_FILE to guardsSource())),
+            *(preferences?.let { arrayOf(PREFERENCES_FILE to preferencesSource(it)) } ?: emptyArray()),
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
     }
@@ -300,9 +321,42 @@ internal class TypeScriptGenerator(
 
     private fun currentUserDeclaration(schemas: Map<String, JsonElement>): String {
         val user = currentUser ?: return ""
-        val same = schemas.keys.firstOrNull { typeName(it) == user.typeName }
-        if (same != null) return "\nexport type $CURRENT_USER_TYPE = ${typeName(same)};\n"
-        return "\n" + declaration(CURRENT_USER_TYPE, Json.parseToJsonElement(user.schema).jsonObject, mutableSetOf(), schemas)
+        return sideDeclaration(CURRENT_USER_TYPE, user.typeName, user.schema, schemas)
+    }
+
+    private fun preferencesDeclaration(schemas: Map<String, JsonElement>): String {
+        val declared = preferences ?: return ""
+        return sideDeclaration(PREFERENCES_TYPE, declared.typeName, declared.schema, schemas)
+    }
+
+    private fun sideDeclaration(
+        name: String,
+        kotlinName: String,
+        schema: String,
+        schemas: Map<String, JsonElement>,
+    ): String {
+        val same = schemas.keys.firstOrNull { typeName(it) == kotlinName }
+        if (same != null) return "\nexport type $name = ${typeName(same)};\n"
+        return "\n" + declaration(name, Json.parseToJsonElement(schema).jsonObject, mutableSetOf(), schemas)
+    }
+
+    private fun preferencesSource(declared: PreferencesType): String {
+        val fields =
+            Json
+                .parseToJsonElement(declared.schema)
+                .jsonObject
+                .objectAt("properties")
+                .orEmpty()
+                .keys
+        val bound = declared.cookies.filterKeys { it in fields }
+        val cookies = bound.entries.joinToString(", ") { (field, cookie) -> "${propertyKey(field)}: ${quoted(cookie)}" }
+        val defaults = prettyJson.encodeToString(JsonElement.serializer(), Json.parseToJsonElement(declared.defaultsJson))
+        return "import { preferenceStore, type PreferenceState } from './client.js';\n" +
+            "import type { $PREFERENCES_TYPE } from './types.js';\n\n" +
+            "const defaults: Required<$PREFERENCES_TYPE> = $defaults;\n\n" +
+            "const state = \$state<PreferenceState<Required<$PREFERENCES_TYPE>>>({ value: defaults, ready: false });\n\n" +
+            "export const $PREFERENCES_STORE = preferenceStore<Required<$PREFERENCES_TYPE>>(" +
+            "${quoted(declared.path)}, state, defaults, {${if (cookies.isEmpty()) "" else " $cookies "}});\n"
     }
 
     private fun currentUserSource(user: CurrentUserType): String {

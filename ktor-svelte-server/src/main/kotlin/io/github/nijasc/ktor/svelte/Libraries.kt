@@ -7,8 +7,8 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.acceptLanguageItems
 import io.ktor.server.request.path
 
-private const val LOCALE_COOKIE = "ktor_svelte_locale"
-private const val THEME_COOKIE = "ktor_svelte_theme"
+internal const val LOCALE_COOKIE = "ktor_svelte_locale"
+internal const val THEME_COOKIE = "ktor_svelte_theme"
 
 public val ApplicationCall.svelteLocale: String
     get() =
