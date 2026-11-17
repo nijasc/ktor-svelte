@@ -473,6 +473,13 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `a route's time limit becomes the call's default timeout, which the options can still change`() {
+        val source = services("""{"/api/reports":{"get":{"x-ktor-svelte-timeout":5000}},"/api/notes":{"get":{}}}""")
+        assertContains(source, "request<unknown>('GET', '/api/reports', { timeout: 5000, ...options, operation: ")
+        assertContains(source, "request<unknown>('GET', '/api/notes', { ...options, operation: ")
+    }
+
+    @Test
     fun `required query parameters make the query argument required`() {
         val source =
             services(
