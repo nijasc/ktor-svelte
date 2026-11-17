@@ -24,6 +24,7 @@ export interface ApiConfig {
     fetch?: typeof fetch;
     onUnauthorized?: (response: Response) => void;
     dedupeGets?: boolean;
+    idempotencyKeys?: boolean;
     timeout?: number;
     onNewBuild?: (build: string) => void;
     onError?: (error: unknown) => void;
@@ -281,13 +282,15 @@ const RETRIED_STATUSES = [502, 503, 504];
 
 function retryPlan(method: string, own: boolean | RetryConfig | undefined): Required<RetryConfig> | undefined {
     const chosen = own ?? apiConfig.retry;
-    if (method !== 'GET' || !chosen) return undefined;
+    if (!chosen) return undefined;
+    if (method !== 'GET' && (!own || apiConfig.idempotencyKeys === false)) return undefined;
     const config = chosen === true ? {} : chosen;
     return { attempts: config.attempts ?? 3, delay: config.delay ?? 300, maxDelay: config.maxDelay ?? 5000 };
 }
 
 function isRetryable(error: unknown): boolean {
     if (isTimeoutError(error) || error instanceof TypeError) return true;
+    if (error instanceof ApiError && error.status === 409 && errorCode(error) === 'idempotency.inProgress') return true;
     return error instanceof ApiError && RETRIED_STATUSES.includes(error.status);
 }
 
@@ -379,6 +382,10 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
     const merged = new Headers(apiConfig.headers);
     merged.set('Accept', accept);
     if (!merged.has('X-Request-Id') && isSameOrigin(url)) merged.set('X-Request-Id', newRequestId());
+    const write = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+    if (write && apiConfig.idempotencyKeys !== false && !merged.has('Idempotency-Key') && isSameOrigin(url)) {
+        merged.set('Idempotency-Key', newRequestId());
+    }
     const zone = apiConfig.sendTimeZone === false || !isSameOrigin(url) ? undefined : timeZone();
     if (zone && !merged.has('X-Time-Zone')) merged.set('X-Time-Zone', zone);
     new Headers(headers).forEach((value, key) => merged.set(key, value));
