@@ -47,6 +47,16 @@ internal fun assistantGuide(
         appendLine(
             "- To add or change an endpoint: edit the Kotlin route, then run `./gradlew svelteGenerateTs`. In dev mode this happens on restart.",
         )
+        if (spec.i18n != null) {
+            appendLine()
+            appendLine("## Numbers, money and dates")
+            appendLine()
+            appendLine(
+                "Format them with `formatNumber`, `formatMoney`, `formatDate`, `formatDateTime` and `formatTime` from `#format`, " +
+                    "and with `call.formats` in Kotlin. Both print the same text for the visitor's language. " +
+                    "Do not call `toLocaleString` or `Intl` for these.",
+            )
+        }
         if (spec.components) {
             appendLine()
             appendLine("## Components")

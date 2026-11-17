@@ -36,7 +36,10 @@ internal fun frontendFiles(
         if (spec.usesCss) put("$GENERATED_DIR/app.css", appCss(spec))
         if (spec.daisy != null) put("$GENERATED_DIR/theme.ts", themeSource(spec.daisy))
         if (spec.lucide) put("$GENERATED_DIR/Icon.svelte", renderTemplate("Icon.svelte"))
-        if (spec.i18n != null && messages != null) put("$GENERATED_DIR/i18n.ts", i18nSource(spec.i18n, messages))
+        if (spec.i18n != null && messages != null) {
+            put("$GENERATED_DIR/i18n.ts", i18nSource(spec.i18n, messages))
+            put(FORMAT_HELPER, formatSource(spec.i18n))
+        }
         if (spec.usesHooks) {
             put("$GENERATED_DIR/server-hooks.ts", serverHooks(spec))
             put("src/hooks.server.ts", HOOKS_SERVER)

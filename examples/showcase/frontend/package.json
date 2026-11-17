@@ -10,7 +10,8 @@
         "#theme": "./src/lib/ktor-svelte/theme.ts",
         "#icon": "./src/lib/ktor-svelte/Icon.svelte",
         "#routes": "./src/lib/ktor-svelte/routes.ts",
-        "#components/*": "./src/lib/ktor-svelte/components/*"
+        "#components/*": "./src/lib/ktor-svelte/components/*",
+        "#format": "./src/lib/ktor-svelte/format.ts"
     },
     "scripts": {
         "dev": "vite dev",

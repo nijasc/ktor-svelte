@@ -1,0 +1,133 @@
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+
+public enum class DateStyle { Short, Medium, Long }
+
+internal class LocaleFormats(
+    val decimal: String,
+    val group: String,
+    val minus: String,
+    val money: String,
+    val dateShort: String,
+    val dateMedium: String,
+    val dateLong: String,
+    val dateTimeShort: String,
+    val dateTimeMedium: String,
+    val time: String,
+    val monthsShort: List<String>,
+    val monthsLong: List<String>,
+    val amPm: List<String>,
+    val currencies: Map<String, Pair<String, Int>>,
+)
+
+private val PATTERN_TOKEN = Regex("'([^']*)'|y+|M+|d+|H+|h+|m+|a")
+private val GROUP_GAP = Regex("\\B(?=(\\d{3})+(?!\\d))")
+private val SOME_DIGIT = Regex("[1-9]")
+
+public class Formats private constructor(
+    public val locale: String,
+    private val data: LocaleFormats,
+) {
+    private fun exact(value: Number): BigDecimal =
+        when (value) {
+            is BigDecimal -> value
+            is Double -> BigDecimal(value)
+            is Float -> BigDecimal(value.toDouble())
+            else -> BigDecimal(value.toLong())
+        }
+
+    private fun localized(
+        value: BigDecimal,
+        decimals: Int,
+    ): Pair<Boolean, String> {
+        val digits = value.abs().setScale(decimals, RoundingMode.HALF_UP).toPlainString()
+        val whole = digits.substringBefore('.').replace(GROUP_GAP, data.group)
+        val text = if ('.' in digits) whole + data.decimal + digits.substringAfter('.') else whole
+        return (value.signum() < 0 && SOME_DIGIT.containsMatchIn(digits)) to text
+    }
+
+    public fun formatNumber(
+        value: Number,
+        decimals: Int = 0,
+    ): String {
+        val (negative, text) = localized(exact(value), decimals)
+        return (if (negative) data.minus else "") + text
+    }
+
+    public fun formatMoney(
+        amount: Number,
+        currency: String,
+    ): String {
+        val (symbol, decimals) = data.currencies[currency] ?: (currency to 2)
+        val (negative, text) = localized(exact(amount), decimals)
+        return (if (negative) data.minus else "") + data.money.replace("#,##0.00", text).replace("\u00a4", symbol)
+    }
+
+    private fun two(value: Int): String = value.toString().padStart(2, '0')
+
+    private fun fill(
+        pattern: String,
+        at: LocalDateTime,
+    ): String =
+        PATTERN_TOKEN.replace(pattern) { match ->
+            val token = match.value
+            val quoted = match.groups[1]
+            val long = token.length >= 2
+            val hour = if (at.hour % 12 == 0) 12 else at.hour % 12
+            when {
+                quoted != null -> quoted.value
+                token[0] == 'y' -> if (token.length == 2) two(at.year % 100) else at.year.toString()
+                token[0] == 'M' && token.length >= 4 -> data.monthsLong[at.monthValue - 1]
+                token[0] == 'M' && token.length == 3 -> data.monthsShort[at.monthValue - 1]
+                token[0] == 'M' -> if (long) two(at.monthValue) else at.monthValue.toString()
+                token[0] == 'd' -> if (long) two(at.dayOfMonth) else at.dayOfMonth.toString()
+                token[0] == 'H' -> if (long) two(at.hour) else at.hour.toString()
+                token[0] == 'h' -> if (long) two(hour) else hour.toString()
+                token[0] == 'm' -> two(at.minute)
+                else -> data.amPm[if (at.hour < 12) 0 else 1]
+            }
+        }
+
+    public fun formatDate(
+        value: LocalDate,
+        style: DateStyle = DateStyle.Medium,
+    ): String {
+        val pattern =
+            when (style) {
+                DateStyle.Short -> data.dateShort
+                DateStyle.Medium -> data.dateMedium
+                DateStyle.Long -> data.dateLong
+            }
+        return fill(pattern, value.atStartOfDay())
+    }
+
+    public fun formatDateTime(
+        value: Instant,
+        zone: ZoneId,
+        style: DateStyle = DateStyle.Medium,
+    ): String = fill(if (style == DateStyle.Short) data.dateTimeShort else data.dateTimeMedium, LocalDateTime.ofInstant(value, zone))
+
+    public fun formatTime(
+        value: Instant,
+        zone: ZoneId,
+    ): String = fill(data.time, LocalDateTime.ofInstant(value, zone))
+
+    public companion object {
+        public val defaultLocale: String = {{defaultLocale}}
+
+        private val tables: Map<String, LocaleFormats> by lazy {
+            mapOf(
+{{tables}},
+            )
+        }
+
+        public fun forLocale(locale: String): Formats {
+            val resolved = if (locale in tables) locale else defaultLocale
+            return Formats(resolved, tables.getValue(resolved))
+        }
+    }
+}

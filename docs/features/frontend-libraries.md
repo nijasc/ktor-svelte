@@ -263,6 +263,46 @@ call.messages.notesCount(notes.size, "Inbox")
 
 In the browser the choice of form comes from `Intl.PluralRules`. In Kotlin it comes from rules that are generated for the configured languages, checked against the browser's for the languages the plugin knows: the western and northern European ones, the Slavic and Baltic ones, Romanian, Hebrew, Arabic, and those without plural forms such as Japanese, Chinese and Korean. A language outside that list is treated like English in Kotlin.
 
+### Numbers, money and dates
+
+A price on the page and the same price in an email from the server should read the same. With `toLocaleString` in the browser and `NumberFormat` on the JVM they often do not: the two carry different versions of the locale data, and disagree about spaces, month names and where the currency sign goes.
+
+With `i18n` on, both sides get the same five functions, generated from one table for the configured languages:
+
+```ts no-check
+import { formatDate, formatDateTime, formatMoney, formatNumber, formatTime } from '#format';
+
+formatNumber(1234567.891, 2); // 1,234,567.89   or  1.234.567,89
+formatMoney(order.total, 'EUR'); // the euro sign and 1,234.50, in the order the language uses
+formatDate(note.dueOn); // Mar 7, 2026      or  07.03.2026
+formatDateTime(note.createdAt); // Dec 24, 2026, 3:05 PM
+formatTime(note.createdAt);
+```
+
+```kotlin no-check
+val formats = call.formats
+formats.formatMoney(order.total, "EUR")
+formats.formatDate(note.dueOn)
+formats.formatDateTime(note.createdAt, call.timeZone)
+```
+
+What is supported, and nothing else, so the two sides cannot drift apart:
+
+| Function | Input | Output |
+|---|---|---|
+| `formatNumber(value, decimals = 0)` | A number, or decimal text such as a `Decimal` | Grouped in threes, rounded half up to exactly `decimals` places. |
+| `formatMoney(amount, currency)` | As above, and a currency code | The sign and decimal places of the currency for 37 common currencies, the code and two places for others. |
+| `formatDate(value, style)` | An ISO date, or a `Date`. In Kotlin a `LocalDate` | `short` (3/7/26), `medium` (Mar 7, 2026, the default) or `long` (March 7, 2026). |
+| `formatDateTime(value, style)` | An ISO date-time, or a `Date`. In Kotlin an `Instant` and a `ZoneId` | `short` or `medium` date with the time in hours and minutes. |
+| `formatTime(value)` | As above | Hours and minutes, with AM and PM where the language uses them. |
+
+- The language is the visitor's, as for messages. Every function takes a locale as its last argument in TypeScript, and `Formats.forLocale(...)` gives another one in Kotlin.
+- Dates and times are printed in the browser's time zone in TypeScript. In Kotlin you pass the zone, and [`call.timeZone`](calling-the-api.md#the-visitors-time-zone) is the visitor's.
+- The table covers 64 locales. A region without its own entry uses its language, and a language that is not in the table is formatted like English.
+- Not covered: weekday names, seconds, time zone names, compact numbers such as 1.2K, percent, and digits other than 0 to 9. For those, format on one side only.
+
+The data comes from the JDK's copy of the Unicode locale data and is fixed in each plugin version, so a new JDK or browser does not change what your app prints.
+
 ### Messages nobody translated yet
 
 A key has to exist in every language file, or the build fails. The quick way to get past that is to paste the English text into the other files and translate later, and "later" is easy to forget. In development the [dev panel](../guide/dev-workflow.md) shows a **Not translated** section whenever you look at the app in another language than the default one. It lists every message on the page whose text is the same as in the default language, with its key.

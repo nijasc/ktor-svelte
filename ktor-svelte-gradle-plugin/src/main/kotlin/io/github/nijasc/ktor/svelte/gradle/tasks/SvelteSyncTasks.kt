@@ -65,6 +65,7 @@ internal fun updatedPackageJson(
     val aliases =
         buildMap {
             if (spec.i18n != null) put("#i18n", "./$GENERATED_DIR/i18n.ts")
+            if (spec.i18n != null) put("#format", "./$GENERATED_DIR/format.ts")
             if (spec.daisy != null) put("#theme", "./$GENERATED_DIR/theme.ts")
             if (spec.lucide) put("#icon", "./$GENERATED_DIR/Icon.svelte")
             if (spec.routes) put("#routes", "./$GENERATED_DIR/routes.ts")

@@ -23,6 +23,10 @@ They are generated. An edit is overwritten, and `./gradlew check` fails when the
 - A failed call throws `ApiError`. Use `isValidationError`, `errorMessage` and the other helpers exported by `#api`.
 - To add or change an endpoint: edit the Kotlin route, then run `./gradlew svelteGenerateTs`. In dev mode this happens on restart.
 
+## Numbers, money and dates
+
+Format them with `formatNumber`, `formatMoney`, `formatDate`, `formatDateTime` and `formatTime` from `#format`, and with `call.formats` in Kotlin. Both print the same text for the visitor's language. Do not call `toLocaleString` or `Intl` for these.
+
 ## Pages and links
 
 Link to pages through `import { routes } from '#routes'`, such as `href={routes.home()}`. Do not write page paths as strings.
