@@ -33,6 +33,7 @@ class ComponentsTest {
                 "NavigationProgress.svelte",
                 "NumberInput.svelte",
                 "PasswordStrength.svelte",
+                "Sidebar.svelte",
                 "masks.ts",
             ),
             files.keys
