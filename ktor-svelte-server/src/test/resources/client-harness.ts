@@ -9,6 +9,8 @@ import {
     fixtureFetch,
     typedCookie,
     userStore,
+    matchGuard,
+    type PageGuard,
     loginPath,
     afterLogin,
     type UserState,
@@ -620,6 +622,13 @@ grantedNow = null;
 await allowed.reload();
 canStep('a visitor, whatever the answer lists');
 results.permissions = canSteps;
+const harnessGuards: PageGuard<'Manage'>[] = [{ page: '/admin', permission: 'Manage' }, { page: '/admin/help' }, { page: '/board' }];
+results.guards = ['/admin', '/admin/', '/admin/users/4', '/admin/help', '/admin/help/x', '/administrators', '/board', '/', '/about'].map(
+    (path) => {
+        const found = matchGuard(harnessGuards, path);
+        return `${path} -> ${found ? found.page + (found.permission ? ` (${found.permission})` : '') : 'open'}`;
+    }
+);
 allowed.clear();
 apiConfig.sessionWarning = undefined;
 apiConfig.fetch = undefined;
