@@ -435,6 +435,31 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteReadme writes its section between the markers and leaves the rest of the README alone`() {
+        val project = TestProject(dir).apply { buildScript(applicationBuild) }
+        val readme = dir.resolve("README.md")
+        readme.writeText("# Sample\n\nIntro.\n\n<!-- ktor-svelte:start -->\nold\n<!-- ktor-svelte:end -->\n\nOutro.\n")
+        dir.resolve(".env.example").writeText("# Port the server listens on.\n# PORT=8080\n")
+
+        assertContains(project.run("svelteReadme").output, "ktor-svelte: updated the section in README.md.")
+
+        val text = readme.readText()
+        assertTrue(text.startsWith("# Sample\n\nIntro.\n\n<!-- ktor-svelte:start -->\n\n### Commands\n"), text)
+        assertTrue(text.endsWith("\n\n<!-- ktor-svelte:end -->\n\nOutro.\n"), text)
+        assertContains(text, "| `./gradlew svelteDevAll` |")
+        assertContains(text, "| App | http://localhost:8080 |")
+        assertContains(text, "| `PORT` | app | Port the server listens on. |")
+        assertContains(project.run("svelteReadme", "--check").output, "is up to date")
+
+        readme.writeText(text.replace("http://localhost:8080", "http://localhost:9999"))
+        assertContains(project.runAndFail("svelteReadme", "--check").output, "is out of date. Run svelteReadme")
+
+        readme.writeText("# Sample\n")
+        assertContains(project.run("svelteReadme").output, "has no <!-- ktor-svelte:start --> and <!-- ktor-svelte:end --> lines")
+        assertEquals("# Sample\n", readme.readText())
+    }
+
+    @Test
     fun `the short task names are the same tasks under another name, options included`() {
         val project = project()
         project.buildScript(applicationBuild)

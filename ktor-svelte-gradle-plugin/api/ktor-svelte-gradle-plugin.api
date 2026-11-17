@@ -564,6 +564,22 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteOutdatedTa
 	public final fun outdated ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteReadmeTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getAppUrl ()Lorg/gradle/api/provider/Property;
+	public abstract fun getBuildEnv ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getCheck ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDevPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getEnvironmentExample ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getHttps ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHttpsPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getReadmeFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getTaskNames ()Lorg/gradle/api/provider/SetProperty;
+	public abstract fun getTaskPrefix ()Lorg/gradle/api/provider/Property;
+	public final fun write ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRecordTestTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getBrowser ()Lorg/gradle/api/provider/Property;
