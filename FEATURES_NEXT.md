@@ -78,6 +78,8 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 17 | One-step `svelteUpgrade` | #392 |
 | 150 | README section | #390 |
 | 151 | Pages-to-routes diagram | #391 |
+| 152 | Doc links in generated code | #395 |
+| 153 | Naming conventions check | #396 |
 
 ### Next up
 
@@ -211,8 +213,6 @@ Features of this plan that are merged:
 | 52 | Installable app (PWA) | Large | 11 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 152 | Doc links in generated code | Small | 14 |
-| 153 | Naming conventions check | Medium | 14 |
 
 ## Scope
 
