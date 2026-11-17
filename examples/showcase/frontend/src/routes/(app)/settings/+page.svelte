@@ -59,7 +59,6 @@
         <Field
             id="profile-name"
             label={m.fieldName()}
-            autocomplete="name"
             bind:value={profile.name}
             bounds={ProfileInput.bounds.name}
             errors={profileErrors.name}

@@ -145,6 +145,8 @@ class ShowcaseBrowserTest {
         val name = unique("Newcomer")
         page.register(name, password = "short")
         assertThat(page.getByRole(AriaRole.ALERT)).hasText("Must be at least 10 characters.")
+        assertThat(page.getByLabel("Password")).hasAttribute("autocomplete", "new-password")
+        assertThat(page.getByLabel("Email")).hasAttribute("autocomplete", "username")
         assertThat(page.getByLabel("Password")).hasAttribute("aria-invalid", "true")
         assertThat(page.getByLabel("Password")).isFocused()
 
@@ -271,6 +273,7 @@ class ShowcaseBrowserTest {
     fun `a generated field ties its label, hint, bounds and errors to the input`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/settings")
+        assertThat(page.locator("#profile-name")).hasAttribute("autocomplete", "name")
         val next = page.getByLabel("New password")
         assertThat(next).hasAttribute("minlength", "10")
         assertThat(next).hasAttribute("type", "password")

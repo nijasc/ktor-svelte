@@ -484,7 +484,7 @@ internal class TypeScriptGenerator(
         val required = schema.stringList("required")
         val lines =
             schema.objectAt("properties").orEmpty().mapNotNull { (name, value) ->
-                val attributes = inputAttributes(value.jsonObject, name in required)
+                val attributes = inputAttributes(value.jsonObject, name in required) + hintAttributes(name, value.jsonObject)
                 if (attributes.isEmpty()) {
                     null
                 } else {
@@ -493,6 +493,18 @@ internal class TypeScriptGenerator(
             }
         if (lines.isEmpty()) return ""
         return "    bounds: {\n${lines.joinToString("\n")}\n    },\n"
+    }
+
+    private fun hintAttributes(
+        name: String,
+        schema: JsonObject,
+    ): List<Pair<String, String>> {
+        if ("string" !in schema.typeNames() && nonNullOption(schema)?.typeNames()?.contains("string") != true) return emptyList()
+        val hint = inputHint(name, schema.stringAt("format") ?: nonNullOption(schema)?.stringAt("format")) ?: return emptyList()
+        return listOfNotNull(
+            hint.autocomplete?.let { "autocomplete" to literal(JsonPrimitive(it)) },
+            hint.type?.let { "type" to literal(JsonPrimitive(it)) },
+        )
     }
 
     private fun inputAttributes(

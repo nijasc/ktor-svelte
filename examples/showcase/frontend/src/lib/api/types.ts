@@ -76,6 +76,7 @@ export const Attachment = {
     }),
     bounds: {
         taskId: { required: true },
+        name: { autocomplete: 'name' },
         size: { required: true },
     },
 };
@@ -183,6 +184,10 @@ export const Login = {
         email: '',
         password: '',
     }),
+    bounds: {
+        email: { autocomplete: 'email', type: 'email' },
+        password: { autocomplete: 'current-password', type: 'password' },
+    },
 };
 
 export interface PasswordChange {
@@ -236,7 +241,7 @@ export const ProfileInput = {
         name: '',
     }),
     bounds: {
-        name: { required: true, minlength: 1, maxlength: 80 },
+        name: { required: true, minlength: 1, maxlength: 80, autocomplete: 'name' },
     },
     validate: (value: ProfileInput): Record<string, string[]> => {
         const errors: Record<string, string[]> = {};
@@ -262,9 +267,9 @@ export const Registration = {
         password: '',
     }),
     bounds: {
-        email: { maxlength: 190 },
-        name: { required: true, minlength: 1, maxlength: 80 },
-        password: { required: true, minlength: 10, maxlength: 200 },
+        email: { maxlength: 190, autocomplete: 'email', type: 'email' },
+        name: { required: true, minlength: 1, maxlength: 80, autocomplete: 'name' },
+        password: { required: true, minlength: 10, maxlength: 200, autocomplete: 'current-password', type: 'password' },
     },
     validate: (value: Registration): Record<string, string[]> => {
         const errors: Record<string, string[]> = {};
@@ -472,6 +477,8 @@ export const User = {
     }),
     bounds: {
         id: { required: true },
+        email: { autocomplete: 'email', type: 'email' },
+        name: { autocomplete: 'name' },
     },
 };
 
@@ -487,6 +494,7 @@ export const UserRef = {
     }),
     bounds: {
         id: { required: true },
+        name: { autocomplete: 'name' },
     },
 };
 

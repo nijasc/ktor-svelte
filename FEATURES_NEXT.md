@@ -45,6 +45,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 121 | Focus the first error | #351 |
 | 122 | Changed-field markers | #352 |
 | 123 | Send only what changed | #353 |
+| 124 | Autocomplete hints from names | #354 |
 
 ### Next up
 
@@ -182,7 +183,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 124 | Autocomplete hints from names | Small | 14 |
 | 125 | Password strength meter | Small | 14 |
 | 126 | Money and number inputs | Medium | 14 |
 | 127 | Multi-step forms | Medium | 14 |

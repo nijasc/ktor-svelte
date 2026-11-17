@@ -670,7 +670,7 @@ class TypeScriptGeneratorTest {
         assertContains(
             source,
             "    bounds: {\n" +
-                "        name: { required: true, minlength: 2, maxlength: 80, pattern: '^[a-z]+$' },\n" +
+                "        name: { required: true, minlength: 2, maxlength: 80, pattern: '^[a-z]+$', autocomplete: 'name' },\n" +
                 "        age: { min: 0, max: 129 },\n" +
                 "        price: { max: 9.5 },\n" +
                 "    },\n",
@@ -740,8 +740,28 @@ class TypeScriptGeneratorTest {
                 "        title: { required: true, minlength: 1 },\n" +
                 "        empty: { minlength: 0 },\n" +
                 "        nullableTitle: { minlength: 1 },\n" +
+                "        name: { autocomplete: 'name' },\n" +
                 "    },\n",
         )
+    }
+
+    @Test
+    fun `fields named like an email, a password or a name get autocomplete and an input type`() {
+        val source =
+            types(
+                """{"Signup":{"type":"object","properties":{
+                "email":{"type":"string"},"password":{"type":"string","format":"strong-password"},
+                "givenName":{"type":"string"},"family_name":{"type":["string","null"]},"mobilePhone":{"type":"string"},
+                "website":{"type":"string","format":"uri"},"homepageVisits":{"type":"integer"},"note":{"type":"string"}}}}""",
+            )
+        assertContains(source, "        email: { autocomplete: 'email', type: 'email' },")
+        assertContains(source, "        password: { autocomplete: 'new-password', type: 'password' },")
+        assertContains(source, "        givenName: { autocomplete: 'given-name' },")
+        assertContains(source, "        family_name: { autocomplete: 'family-name' },")
+        assertContains(source, "        mobilePhone: { autocomplete: 'tel', type: 'tel' },")
+        assertContains(source, "        website: { autocomplete: 'url', type: 'url' },")
+        assertFalse("homepageVisits:" in source.substringAfter("bounds:"))
+        assertFalse("note:" in source.substringAfter("bounds:"))
     }
 
     @Test
