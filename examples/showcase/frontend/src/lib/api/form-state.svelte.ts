@@ -36,6 +36,7 @@ export interface FormState<T> {
     submit<R>(send: (draft: T) => Promise<R>): Promise<R | undefined>;
     submitChanges<R>(send: (changes: Patch<T>) => Promise<R>): Promise<R | undefined>;
     focusFirstError(): Promise<void>;
+    setErrors(errors: FieldErrors): void;
 }
 
 export function formState<T extends object>(initial: T, options: FormStateOptions<T> = {}): FormState<T> {
@@ -217,6 +218,177 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         reset,
         submit,
         submitChanges,
-        focusFirstError
+        focusFirstError,
+        setErrors(next: FieldErrors) {
+            errors = next;
+        }
+    };
+}
+
+export interface FormWizardOptions<T> extends FormStateOptions<T> {
+    steps: readonly (readonly (keyof T & string)[])[];
+    keep?: string;
+}
+
+export interface FormWizard<T> extends FormState<T> {
+    readonly step: number;
+    readonly count: number;
+    readonly first: boolean;
+    readonly last: boolean;
+    readonly reached: number;
+    readonly fields: readonly (keyof T & string)[];
+    next(): boolean;
+    back(): void;
+    goTo(step: number): void;
+}
+
+function topField(path: string): string {
+    return path.split(/[.[]/)[0];
+}
+
+function storage(): Storage | undefined {
+    try {
+        return typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
+    } catch {
+        return undefined;
+    }
+}
+
+export function formWizard<T extends object>(initial: T, options: FormWizardOptions<T>): FormWizard<T> {
+    if (options.steps.length === 0) throw new Error('formWizard needs at least one step.');
+    const kept = options.keep ? storage()?.getItem(options.keep) : null;
+    let restored: { step: number; reached: number; draft: T } | undefined;
+    try {
+        restored = kept ? JSON.parse(kept) : undefined;
+    } catch {
+        restored = undefined;
+    }
+    const form = formState<T>(initial, { ...options, focusErrors: options.focusErrors });
+    if (restored?.draft) form.draft = restored.draft;
+    const lastStep = options.steps.length - 1;
+    let step = $state(Math.min(restored?.step ?? 0, lastStep));
+    let reached = $state(Math.min(Math.max(restored?.reached ?? 0, restored?.step ?? 0), lastStep));
+
+    $effect(() => {
+        if (!options.keep) return;
+        const snapshot = JSON.stringify({ step, reached, draft: $state.snapshot(form.draft) });
+        try {
+            storage()?.setItem(options.keep, snapshot);
+        } catch {
+            return;
+        }
+    });
+
+    function stepOf(field: string): number {
+        const index = options.steps.findIndex((fields) => (fields as readonly string[]).includes(topField(field)));
+        return index === -1 ? lastStep : index;
+    }
+
+    function errorsOn(fields: readonly string[]): FieldErrors {
+        const all = options.validate?.($state.snapshot(form.draft) as T) ?? {};
+        return Object.fromEntries(Object.entries(all).filter(([path, messages]) => messages.length > 0 && fields.includes(topField(path))));
+    }
+
+    function next(): boolean {
+        const found = errorsOn(options.steps[step] as readonly string[]);
+        form.setErrors(found);
+        if (Object.keys(found).length > 0) {
+            if (options.focusErrors !== false) void form.focusFirstError();
+            return false;
+        }
+        if (step < lastStep) {
+            step += 1;
+            reached = Math.max(reached, step);
+        }
+        return true;
+    }
+
+    function back() {
+        if (step > 0) step -= 1;
+    }
+
+    function goTo(target: number) {
+        if (target >= 0 && target <= reached) step = target;
+    }
+
+    async function submit<R>(send: (draft: T) => Promise<R>): Promise<R | undefined> {
+        const result = await form.submit(send);
+        const failed = Object.keys(form.errors);
+        if (failed.length > 0) {
+            step = Math.min(...failed.map(stepOf));
+            if (options.focusErrors !== false) void form.focusFirstError();
+        } else if (result !== undefined && options.keep) {
+            storage()?.removeItem(options.keep);
+        }
+        return result;
+    }
+
+    function reset(next?: T) {
+        form.reset(next);
+        step = 0;
+        reached = 0;
+        if (options.keep) storage()?.removeItem(options.keep);
+    }
+
+    return {
+        get draft() {
+            return form.draft;
+        },
+        set draft(value: T) {
+            form.draft = value;
+        },
+        get dirty() {
+            return form.dirty;
+        },
+        get changes() {
+            return form.changes;
+        },
+        changed: (name) => form.changed(name),
+        get submitting() {
+            return form.submitting;
+        },
+        get checking() {
+            return form.checking;
+        },
+        get errors() {
+            return form.errors;
+        },
+        get error() {
+            return form.error;
+        },
+        get message() {
+            return form.message;
+        },
+        get conflict() {
+            return form.conflict;
+        },
+        keepMine: () => form.keepMine(),
+        takeTheirs: (value) => form.takeTheirs(value),
+        reset,
+        submit,
+        submitChanges: (send) => form.submitChanges(send),
+        focusFirstError: () => form.focusFirstError(),
+        setErrors: (errors) => form.setErrors(errors),
+        get step() {
+            return step;
+        },
+        get count() {
+            return options.steps.length;
+        },
+        get first() {
+            return step === 0;
+        },
+        get last() {
+            return step === lastStep;
+        },
+        get reached() {
+            return reached;
+        },
+        get fields() {
+            return options.steps[step];
+        },
+        next,
+        back,
+        goTo
     };
 }
