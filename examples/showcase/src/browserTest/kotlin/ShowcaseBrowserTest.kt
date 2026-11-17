@@ -1,6 +1,8 @@
 import com.microsoft.playwright.BrowserContext
+import com.microsoft.playwright.Locator
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Route
+import com.microsoft.playwright.assertions.LocatorAssertions
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import com.microsoft.playwright.options.AriaRole
 import com.microsoft.playwright.options.Cookie
@@ -739,6 +741,30 @@ class ShowcaseBrowserTest {
         assertThat(page).hasURL(LOGIN)
         assertThat(page.locator("#signed-in-as")).hasCount(0)
         assertThat(page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName("Sign in"))).isVisible()
+    }
+
+    @Test
+    fun `a session about to end is announced, can be extended, and ends on the page when it is not`() {
+        ShowcaseServer(directory.resolve("short-sessions"), sessionSeconds = 6).use { short ->
+            BrowserSession(short).use { browser ->
+                val visitor = browser.newContext().newPage()
+                visitor.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+                val warning = visitor.locator("#session-ending")
+                assertThat(warning).containsText("You will be signed out soon.")
+                assertThat(visitor.locator("#signed-in-as")).hasText("Ada Lovelace")
+
+                val extended =
+                    visitor.waitForResponse({ it.url().endsWith("/api/current-user/extend") }) {
+                        warning.getByRole(AriaRole.BUTTON, Locator.GetByRoleOptions().setName("Stay signed in")).click()
+                    }
+                assertEquals(200, extended.status())
+                assertEquals("POST", extended.request().method())
+                assertThat(visitor.locator("#signed-in-as")).hasText("Ada Lovelace")
+
+                assertThat(visitor.locator("#signed-in-as")).hasCount(0, LocatorAssertions.HasCountOptions().setTimeout(15_000.0))
+                assertThat(warning).hasCount(0)
+            }
+        }
     }
 
     @Test

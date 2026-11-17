@@ -36,6 +36,7 @@ fun loginFrom(path: String): Pattern = Pattern.compile(".*/login\\?next=" + java
 class ShowcaseServer(
     dataDirectory: Path,
     appName: String = "Showcase under test",
+    sessionSeconds: Int? = null,
 ) : AutoCloseable {
     val port: Int = ServerSocket(0).use { it.localPort }
     val url: String = "http://localhost:$port"
@@ -54,6 +55,7 @@ class ShowcaseServer(
                     environment()["SHOWCASE_INSECURE_COOKIES"] = "true"
                     environment()["SHOWCASE_LOGIN_ATTEMPTS"] = "1000"
                     environment()["SESSION_SIGN_KEY"] = SIGN_KEY
+                    if (sessionSeconds != null) environment()["SHOWCASE_SESSION_SECONDS"] = sessionSeconds.toString()
                 }.redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                 .start()
