@@ -190,7 +190,45 @@ const label = `${build.version ?? 'dev'} (${build.commit?.slice(0, 7) ?? 'no com
 
 It is off by default, because it tells every visitor which version and commit is running. For values only signed-in users or admins should see, leave it off and return `buildInfo` from a route of your own.
 
+## Smoke test
+
+Tests run the app in development mode, from class folders. What you deploy is a JAR in production mode, and some mistakes only exist there: a frontend that did not make it into the JAR, a page that is no longer prerendered, a variable the app needs to start. `svelteSmokeTest` checks the thing you ship:
+
+```bash
+./gradlew svelteSmokeTest
+```
+
+```text
+ktor-svelte: build/libs/my-app-all.jar runs in production mode on port 55269.
+  200  /
+  200  /about
+  200  /login
+  200  /_app/immutable/assets/0.CtcRfiw7.css
+  200  GET /api/greeting
+  401  GET /api/me
+  401  GET /api/tasks
+ktor-svelte: the production build answered 3 pages, 1 asset, 3 API routes correctly.
+```
+
+The task packages the app the way you do, with `buildFatJar` or `shadowJar` when the project has them and `installDist` otherwise, starts it on a free port without the development flag, and requests:
+
+- Every prerendered page. Each must answer 200 with HTML.
+- One file of the frontend build, which must answer 200.
+- Every `GET` route of the API that needs no path parameter and no required query parameter. It sends no session, so 401 and 403 are correct answers. A 404 or a server error is not.
+
+Then it stops the app. If anything was answered wrongly, or the app did not start, the build fails and says what happened. The app's output is in `build/ktor-svelte/smoke-test.log`.
+
+```bash
+./gradlew svelteSmokeTest --path=/_ktor-svelte/health --skip=/api/export
+```
+
+`--path` adds a path that must answer with a status below 400, and `--skip` leaves an API route out, for a `GET` route that is slow or does something. Both can be given more than once. `--start-seconds` gives a slow app more than the 60 seconds it has to start.
+
+The app gets the environment of the build, so it needs what it needs in production, such as a database. That is why the task is not part of `check`: run it in the pipeline, where that environment exists. The port is passed as the `PORT` variable and as `-port`, which `EngineMain` reads, so an app that takes its port from somewhere else cannot be tested this way.
+
 ## Checklist
+
+- `./gradlew svelteSmokeTest` passes.
 
 - The JAR was built without `-Psvelte.skip=true` or `-Psvelte.dev=true`.
 - The app runs without `-Dio.ktor.development=true`.
