@@ -50,6 +50,8 @@ Your Ktor routes and classes become a typed client, so the frontend breaks at co
 | [Two people, one record](./calling-the-api.md#two-people-one-record) | A version check that refuses a save over someone else's change | Ktor plugin, Generated client |
 | [Path parameters](../reference/ktor.md#path-parameters) | `call.pathParameter<T>(name)` reads a path parameter as a number, UUID or enum | Ktor plugin |
 | [Paged lists](../recipes/pagination.md) | `Page<T>` and `getPage` on the server, `pages()` in the browser | Ktor plugin, Generated client |
+| [Only some fields](./calling-the-api.md#only-some-fields) | `?fields=id,title` sends only those fields, and the client's return type narrows to them | Ktor plugin, Generated client |
+| [Included relations](./calling-the-api.md#included-relations) | `?include=author` adds related objects, typed so the field exists only when asked for | Ktor plugin, Generated client |
 | [Uploads](../recipes/uploads.md) | `FormData` bodies with upload progress, and size and type rules shared by both sides | Ktor plugin, Generated client |
 | [Live updates](../recipes/live-updates.md) | Server-sent events become async generators in the client | Ktor plugin, Generated client |
 | [In load functions](./calling-the-api.md#in-load-functions) | `apiWith(event)` runs every call through SvelteKit's `fetch` | Generated client |
@@ -188,11 +190,13 @@ The dev loop, the dev panel and the tools around them.
 | [Server error overlay](../guide/dev-workflow.md) | A failed call shows the exception and a link to your code in the browser | Ktor plugin |
 | [Browser logs in your console](../guide/dev-workflow.md) | `console.log` and browser errors land in the dev log | Ktor plugin |
 | [Restart summary and startup timing](../guide/dev-workflow.md) | What caused a restart, how long it took, and where startup time went | Gradle, Ktor plugin |
+| [Multiple frontends](../guide/multiple-frontends.md) | A public site and an admin area as two SvelteKit projects under their own path prefixes, in one app and one JAR | Ktor plugin, Gradle |
 | [HTTPS in development](../guide/dev-workflow.md#https-in-development) | Develop with `Secure` cookies and service workers | Gradle |
 | [When a port is still in use](../guide/dev-workflow.md#when-a-port-is-still-in-use) | Leftover processes from a crash are cleaned up | Gradle |
 | [Debugging](../guide/dev-workflow.md) | Run configurations to debug Kotlin and the frontend, in one click | Gradle |
 | [Live templates](../guide/checks-and-tooling.md#sveltelivetemplates) | `ksget`, `ksapi` and more for IntelliJ and WebStorm | Gradle |
 | [Checks and tooling](../guide/checks-and-tooling.md) | Every verify task, what it catches and when it runs | Gradle |
+| [Naming rules](../guide/checks-and-tooling.md#svelteverifynaming) | `svelteVerifyNaming` checks pages, API routes, DTOs and message keys against the rules you set | Gradle |
 | [svelteDoctor](../guide/checks-and-tooling.md#sveltedoctor) | Checks the setup and fixes what it can with `--fix` | Gradle |
 | [svelteConfig](../guide/checks-and-tooling.md#svelteconfig) | Every setting on both sides, scored with suggestions | Gradle |
 | [Format both sides](../guide/checks-and-tooling.md#format-and-formatcheck) | `format` and `formatCheck` for Kotlin and the frontend | Gradle |

@@ -71,7 +71,7 @@ internal fun frontendFiles(
             put(CONFIRM_HELPER, renderTemplate("confirm.ts", mapOf("daisy" to (spec.daisy != null).toString())))
             put(MODAL_HELPER, renderTemplate("modal.ts"))
         }
-    }
+    }.withDocLinks()
 
 private const val PLAIN_FIELD_STYLE =
     "\n<style>\n" +
@@ -404,7 +404,7 @@ internal fun iconSources(
     return mapOf(
         "$GENERATED_DIR/icons.ts" to icons,
         "$GENERATED_DIR/icons.json" to json(entries.map { it.first }) + "\n",
-    )
+    ).withDocLinks()
 }
 
 internal fun iconConstant(file: String): String {

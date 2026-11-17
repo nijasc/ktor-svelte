@@ -29,6 +29,7 @@ And let a git hook keep formatting and generated files right on every commit:
 | [`svelteVerifyLoads`](#svelteverifyloads) | API calls in `load` without SvelteKit's `fetch` | No | Always |
 | [`svelteVerifyLinks`](#svelteverifylinks) | Internal links that lead nowhere | No | With `--strict` |
 | [`svelteVerifyMessages`](#svelteverifymessages) | i18n messages nothing uses | No | With `--strict` |
+| [`svelteVerifyNaming`](#svelteverifynaming) | Pages, API routes, DTOs and message keys that break your naming rules | No | With `--strict` |
 | [`svelteVerifyApiRoutes`](#svelteverifyapiroutes) | API routes nothing in the frontend calls | No | With `--strict` |
 | [`svelteApiChanges`](#svelteapichanges) | API changes that can break callers | No | With `--strict` |
 | [`svelteVerifyA11y`](#svelteverifya11y) | Accessibility problems on prerendered pages | No | Always |
@@ -147,6 +148,48 @@ ktor-svelte: 1 message(s) are in every locale file but used nowhere. Add --stric
 ```
 
 **Strict:** `--strict` fails the build. Details: [Messages nothing uses](../features/frontend-libraries.md#messages-nothing-uses).
+
+### svelteVerifyNaming
+
+**Catches:** names that break your project's own naming rules: page folders, API routes, DTOs and i18n message keys.
+
+There are no default rules. The task checks only what you set in `svelte { naming { } }`, and does nothing until you set one:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.gradle.NamingStyle
+
+svelte {
+    naming {
+        pages(NamingStyle.KebabCase)
+        apiRoutes(NamingStyle.KebabCase)
+        dtos.set("[A-Z][A-Za-z0-9]*(?<!Dto)")
+        messageKeys(NamingStyle.KebabCase)
+    }
+}
+```
+
+```bash
+./gradlew svelteVerifyNaming
+```
+
+```text
+page 'taskList' in /(app)/taskList  ->  not kebab-case
+api route 'taskComments' in /api/taskComments  ->  not kebab-case
+dto 'UserDto'  ->  not matching [A-Z][A-Za-z0-9]*(?<!Dto)
+ktor-svelte: 3 name(s) break the naming rules. Add --strict, or set naming { strict = true }, to fail the build on them.
+```
+
+| Setting in `naming { }` | Checks |
+|---|---|
+| `pages` | Each folder of a page under `src/routes`. Groups such as `(app)` and parameters such as `[id]` are skipped |
+| `apiRoutes` | Each segment of every API path, from the generated `src/lib/api/openapi.json`. Path parameters are skipped |
+| `dtos` | The name of every class in the API, from the same file |
+| `messageKeys` | Every key in the message files |
+| `strict` | `true` fails the build, like `--strict` |
+
+Each rule is a regular expression that the whole name must match. `NamingStyle.KebabCase`, `CamelCase`, `PascalCase` and `SnakeCase` set a common one: `pages(NamingStyle.KebabCase)`.
+
+**Strict:** `--strict`, or `strict = true` in `naming { }`, fails the build. API routes and DTOs need [`generateTs`](../features/typescript.md), because the task reads the API description the generator writes.
 
 ### svelteVerifyApiRoutes
 
@@ -284,6 +327,33 @@ Suggestions
 
 A suggestion is advice, not an error, and the task never fails on one. Details: [Review your configuration](../reference/gradle.md#review-your-configuration).
 
+### svelteReadme
+
+**Writes:** the part of the project's `README.md` that says how to run this app: the commands, the addresses in development and the environment variables. It takes them from the build, so the README does not go stale when a port or a variable changes.
+
+Put two marker lines where the section belongs, then run the task:
+
+```text
+## Development
+
+<!-- ktor-svelte:start -->
+<!-- ktor-svelte:end -->
+```
+
+```bash
+./gradlew svelteReadme
+```
+
+Everything between the markers is replaced, and nothing outside them is touched. Without the markers, or without a `README.md`, the task writes nothing and says how to add them. The section has three tables:
+
+| Table | Comes from |
+|---|---|
+| Commands | The tasks of the project: `svelteDevAll`, `build`, `shadowJar` or `buildFatJar` when there is one, `run`, `check`, `svelteSync svelteGenerateTs` and `svelteDoctor`. In a subproject they carry its path, such as `./gradlew :web:build` |
+| Addresses in development | The app at `http://localhost:8080`, Vite at `dev.port`, the HTTPS address when `dev.https` is on, and the debugger at `dev.debugPort` |
+| Environment variables | The variables the app declares, read from the [`.env.example`](../features/runtime-config.md#env-example) the app writes, and the names in `svelte { buildEnv }` |
+
+**Strict:** `./gradlew svelteReadme --check` fails when the section differs from what the task would write, so CI can catch a README that someone forgot to update. Add it to `check` the way [any other check](#make-a-check-part-of-check) is added.
+
 ### format and formatCheck
 
 One command formats Kotlin and the frontend, and one checks them:
@@ -420,7 +490,7 @@ tasks.check {
 }
 ```
 
-`svelteVerifyMessages`, `svelteVerifyApiRoutes` and `svelteApiChanges` have the same `strict` setting. Keep `svelteVerifyA11y` and `svelteSmokeTest` out of `check`: they need a browser or the production environment, which belongs in the pipeline.
+`svelteVerifyMessages`, `svelteVerifyNaming`, `svelteVerifyApiRoutes` and `svelteApiChanges` have the same `strict` setting. Keep `svelteVerifyA11y` and `svelteSmokeTest` out of `check`: they need a browser or the production environment, which belongs in the pipeline.
 
 ## Full example
 

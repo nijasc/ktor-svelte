@@ -5,12 +5,14 @@ import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.Patch
 import io.github.nijasc.ktor.svelte.ToastKind
 import io.github.nijasc.ktor.svelte.can
+import io.github.nijasc.ktor.svelte.includes
 import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.query
 import io.github.nijasc.ktor.svelte.queryOf
 import io.github.nijasc.ktor.svelte.receiveForm
 import io.github.nijasc.ktor.svelte.requireUser
 import io.github.nijasc.ktor.svelte.respondIfStale
+import io.github.nijasc.ktor.svelte.sparseFields
 import io.github.nijasc.ktor.svelte.toast
 import io.github.nijasc.ktor.svelte.uploadForm
 import io.github.nijasc.ktor.svelte.validate
@@ -73,6 +75,8 @@ fun Route.taskRoutes(
             val page: Page<Task> = tasks.page(filter, query.cursor, query.limit)
             call.respond(page)
         }.queryOf<TaskQuery>()
+            .sparseFields<Task>()
+            .includes<Task> { relation<Comment?>("lastComment") { items -> tasks.lastComments(items.map { it.id }) } }
 
         post {
             val input = call.receive<TaskInput>()

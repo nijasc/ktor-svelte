@@ -160,18 +160,18 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             RequestResolver(pluginConfig.apiPrefixList, pluginConfig.spaFallback, pluginConfig.notFoundPage, pluginConfig.paramRouteList)
         val devUrl = resolveDevServerUrl(pluginConfig.devConfig.url, System.getenv(DEV_SERVER_VARIABLE))
         val allowRemote = pluginConfig.devConfig.allowRemote
+        val devProxyActive = isDevProxyActive(pluginConfig.devConfig.mode, application)
+        val clientFeatures =
+            listOfNotNull(
+                "panel".takeIf { pluginConfig.devConfig.panel },
+                "logs".takeIf { pluginConfig.devConfig.browserLogs },
+                "refresh".takeIf { pluginConfig.devConfig.refreshAfterRestart },
+                "errors".takeIf { pluginConfig.devConfig.panel && pluginConfig.devConfig.errorOverlay },
+            )
         val devProxy =
-            if (isDevProxyActive(pluginConfig.devConfig.mode, application)) {
+            if (devProxyActive) {
                 requireAllowedTarget(devUrl, allowRemote)
-                DevProxy(
-                    devUrl,
-                    listOfNotNull(
-                        "panel".takeIf { pluginConfig.devConfig.panel },
-                        "logs".takeIf { pluginConfig.devConfig.browserLogs },
-                        "refresh".takeIf { pluginConfig.devConfig.refreshAfterRestart },
-                        "errors".takeIf { pluginConfig.devConfig.panel && pluginConfig.devConfig.errorOverlay },
-                    ),
-                )
+                DevProxy(devUrl, clientFeatures)
             } else {
                 null
             }
@@ -219,7 +219,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 require(!resolver.isApiPath(frontend.prefix)) {
                     "The frontend under ${frontend.prefix} is inside the API prefixes ${pluginConfig.apiPrefixList}. Give it a path of its own."
                 }
-                MountedFrontend(frontend, createFrontendStore(frontend, application))
+                val frontendDevUrl = frontend.devUrl ?: System.getProperty(frontendDevUrlProperty(frontend.name))
+                val frontendProxy =
+                    if (devProxyActive && frontendDevUrl != null) {
+                        requireAllowedTarget(frontendDevUrl, allowRemote)
+                        DevProxy(frontendDevUrl, clientFeatures)
+                    } else {
+                        null
+                    }
+                MountedFrontend(frontend, createFrontendStore(frontend, application), frontendProxy, frontendDevUrl)
             }
         val mounted =
             frontends.sortedByDescending { it.config.prefix.length }.map { frontend ->
@@ -232,8 +240,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     frontend.store,
                     RequestResolver(emptyList(), frontend.config.spaFallback, frontend.config.notFoundPage, frontend.config.paramRouteList),
                     AssetResponder(frontend.store, pluginConfig.cacheConfig, frontendPolicy, frontendInjector),
-                    null,
-                    devUrl,
+                    frontend.devProxy,
+                    frontend.devUrl ?: devUrl,
                     allowRemote,
                     prefix = frontend.config.prefix,
                     isApiPath = resolver::isApiPath,
@@ -297,6 +305,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 )
             },
             { application.pageLoadSpecs() },
+            pluginConfig.frontendList.map { Path(frontendClientOutput(it)) },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
@@ -386,8 +395,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         frontends.forEach { frontend ->
             if (frontend.store.manifest() == null) {
                 val message = missingFrontendBuildMessage(frontend.config)
-                check(application.developmentMode) { message }
-                application.log.warn(message)
+                check(application.developmentMode || frontend.devProxy != null) { message }
+                if (frontend.devProxy == null) application.log.warn(message)
             }
         }
 
@@ -620,7 +629,8 @@ public fun Route.svelte(public: List<String> = emptyList()) {
         catchAll(handler, privateResponses = true)
         return
     }
-    val paths = ((if (handler.proxiesToVite) public + VITE_DEV_PATHS else public) + INSTALLABLE_APP_PATHS).distinct()
+    val vitePaths = handler.vitePrefixes.flatMap { prefix -> VITE_DEV_PATHS.map { prefix + it } }
+    val paths = (public + vitePaths + INSTALLABLE_APP_PATHS).distinct()
     paths.forEach { path ->
         val routePath = if (path.endsWith("/*")) path.removeSuffix("*") + "{svelte-path...}" else path
         route(routePath) { handle { handler.handle(call) } }
@@ -685,6 +695,8 @@ private fun isDevProxyActive(
 private class MountedFrontend(
     val config: SvelteFrontendConfig,
     val store: AssetStore,
+    val devProxy: DevProxy?,
+    val devUrl: String?,
 )
 
 private fun missingFrontendBuildMessage(frontend: SvelteFrontendConfig): String =

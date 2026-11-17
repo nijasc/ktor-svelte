@@ -96,6 +96,7 @@ Features that are off until you call them, such as `frontendErrors()`, `webVital
 | `source` | `SvelteSource.Classpath` | Where the build comes from. `SvelteSource.Directory(path)` serves a build from disk |
 | `routing` | `SvelteRouting.Automatic` | `Manual` lets you place the frontend yourself with [`svelte()`](#route-svelte), for example behind authentication. See [Auth](../features/auth.md) |
 | `cache { }` | see below | `Cache-Control` values |
+| `frontend(prefix) { }` | none | Another SvelteKit build served under a path prefix such as `"/admin"`, with its own `source`, `spaFallback`, `notFoundPage`, `paramRoutes`, `devUrl` and `generateTsOutput`. See [Multiple frontends](../guide/multiple-frontends.md) |
 | `sitemap` | `true` | Serves a generated `/sitemap.xml` and `/robots.txt` when the build has none. See [Sitemap and robots.txt](../features/endpoints.md#sitemap-and-robots-txt) |
 | `siteUrl` | `null` | Public address used in the sitemap, such as `https://example.com`. `null` takes it from the request |
 | `defaultFavicon` | `true` | Serves a ktor-svelte favicon while the app has none of its own. See [Default favicon](../features/endpoints.md#default-favicon) |

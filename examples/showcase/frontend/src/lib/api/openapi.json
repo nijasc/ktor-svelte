@@ -5,6 +5,57 @@
         "version": "1.0"
     },
     "paths": {
+        "/api/admin/emails/welcome": {
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailPreview"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
         "/api/admin/users": {
             "get": {
                 "summary": "",
@@ -888,7 +939,73 @@
                     {
                         "session": []
                     }
-                ]
+                ],
+                "x-ktor-svelte-fields": {
+                    "type": "Task",
+                    "fields": [
+                        "id",
+                        "title",
+                        "description",
+                        "status",
+                        "priority",
+                        "labels",
+                        "icon",
+                        "assignee",
+                        "creator",
+                        "dueOn",
+                        "createdAt",
+                        "updatedAt",
+                        "comments",
+                        "attachments",
+                        "version"
+                    ]
+                },
+                "x-ktor-svelte-include": {
+                    "type": "Task",
+                    "relations": {
+                        "lastComment": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "title": "showcase.Comment",
+                            "required": [
+                                "id",
+                                "author",
+                                "body",
+                                "createdAt"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "author": {
+                                    "type": "object",
+                                    "title": "showcase.UserRef",
+                                    "required": [
+                                        "id",
+                                        "name"
+                                    ],
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "body": {
+                                    "type": "string"
+                                },
+                                "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/tasks/{id}": {
@@ -3874,6 +3991,26 @@
                         "type": "string",
                         "maxLength": 200,
                         "minLength": 10
+                    }
+                }
+            },
+            "EmailPreview": {
+                "type": "object",
+                "title": "EmailPreview",
+                "required": [
+                    "subject",
+                    "html",
+                    "text"
+                ],
+                "properties": {
+                    "subject": {
+                        "type": "string"
+                    },
+                    "html": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
                     }
                 }
             },

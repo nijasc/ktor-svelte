@@ -30,8 +30,10 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteLiveTemplatesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteReadmeTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRecordTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRenameTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRoutesDiagramTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSmokeTestTask
@@ -46,6 +48,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLeaksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLoadsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyMessagesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyNamingTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
@@ -66,6 +69,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.PathSensitivity
@@ -170,6 +174,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         project.pluginManager.withPlugin("application") {
             project.tasks.named("run", JavaExec::class.java) { run ->
                 run.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
+                run.jvmArgumentProviders.add(FrontendDirectoriesArgument(frontendDirectoryArguments(project, extension)))
                 if (devMode) run.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
             }
             registerGenerateTs(project, extension)
@@ -390,6 +395,19 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                 },
             )
         }
+        project.tasks.register("svelteVerifyNaming", SvelteVerifyNamingTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Lists names that break the rules in svelte { naming { } }. Add --strict to fail the build on them."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.messagesDirectory.set(messages)
+            task.locales.set(librarySpec.map { it.i18n?.locales.orEmpty() })
+            task.pages.set(extension.naming.pages)
+            task.apiRoutes.set(extension.naming.apiRoutes)
+            task.dtos.set(extension.naming.dtos)
+            task.messageKeys.set(extension.naming.messageKeys)
+            task.strict.convention(extension.naming.strict)
+        }
         project.tasks.register("svelteVerifyMessages", SvelteVerifyMessagesTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Lists i18n messages that nothing uses. Add --strict to fail on them."
@@ -408,6 +426,13 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.group = TASK_GROUP
             task.description = "Lists API routes that nothing in the frontend calls. Add --strict to fail on them."
             task.frontendDir.set(extension.frontendDir)
+        }
+        project.tasks.register("svelteRoutesDiagram", SvelteRoutesDiagramTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Writes a Mermaid diagram of which page calls which API route. Add --output=docs/routes.md to pick the file."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.projectDirectory.set(project.layout.projectDirectory)
         }
         project.tasks.register("svelteVerifyLoads", SvelteVerifyLoadsTask::class.java) { task ->
             task.group = TASK_GROUP
@@ -712,6 +737,22 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.offline.set(project.gradle.startParameter.isOffline)
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
+        project.tasks.register("svelteReadme", SvelteReadmeTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description =
+                "Writes the commands, addresses and environment variables of the app between the markers in README.md. " +
+                "Add --check to fail when it is out of date."
+            task.readmeFile.set(project.layout.projectDirectory.file("README.md"))
+            task.environmentExample.set(project.layout.projectDirectory.file(".env.example"))
+            task.taskPrefix.set(if (project == project.rootProject) "" else "${project.path}:")
+            task.taskNames.set(project.provider { project.tasks.names.toSet() })
+            task.appUrl.set(hasApplicationPlugin.flatMap { if (it) project.provider { DEFAULT_APP_URL } else project.provider { null } })
+            task.devPort.set(extension.dev.port)
+            task.debugPort.set(extension.dev.debugPort)
+            task.https.set(extension.dev.https)
+            task.httpsPort.set(extension.dev.httpsPort)
+            task.buildEnv.set(extension.buildEnv.map { it.toList() })
+        }
         project.tasks.register("svelteLiveTemplates", SvelteLiveTemplatesTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Writes IntelliJ live templates for routes, DTOs and client calls. Add --install to copy them into the IDE."
@@ -933,7 +974,23 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         task.classpath = developmentClasspath(project)
         task.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
         task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
+        task.jvmArgumentProviders.add(FrontendDirectoriesArgument(frontendDirectoryArguments(project, extension)))
     }
+
+    private fun frontendDirectoryArguments(
+        project: Project,
+        extension: SvelteExtension,
+    ): Provider<List<String>> =
+        project.provider {
+            extension.frontends
+                .map { frontend ->
+                    serverFrontendName(frontend.basePath.get()) to
+                        frontend.frontendDir
+                            .get()
+                            .asFile.absolutePath
+                }.sortedBy { it.first }
+                .map { (name, path) -> "-D$FRONTEND_DIR_SYSTEM_PROPERTY.$name=$path" }
+        }
 
     private fun serializeFrontendTasks(project: Project) {
         val lock =
@@ -1119,6 +1176,8 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             frontend.outputDir.convention(extension.outputDir)
             frontend.buildScript.convention(extension.buildScript)
             frontend.basePath.convention("/" + frontend.name)
+            val position = extension.frontends.size
+            frontend.devPort.convention(extension.dev.port.map { it + position })
             val suffix = frontendTaskSuffix(frontend.name)
             val install =
                 project.tasks.register("svelteInstall$suffix", SvelteInstallTask::class.java) { task ->
@@ -1200,6 +1259,31 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                     task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/frontends/${frontend.name}"))
                     task.onlyIf("$SKIP_PROPERTY and $DEV_PROPERTY are not set") { !skipFrontend }
                 }
+            project.tasks.register("svelteDev$suffix", SvelteDevTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.frontendDir.set(frontend.frontendDir)
+                task.description = "Starts the Vite dev server of the frontend '${frontend.name}'."
+                task.dependsOn(install)
+                task.script.set(extension.dev.script)
+                task.port.set(frontend.devPort)
+                task.spec.set(frontend.devPort.map { port -> LibrarySpec(null, null, false, null, port, "") })
+                task.messagesDirectory.set(frontend.frontendDir.map { it.dir("messages") })
+                task.routesDirectory.set(frontend.frontendDir.map { it.dir("src/routes") })
+            }
+            project.tasks.matching { it.name == "svelteDevAll" }.configureEach { task ->
+                task as SvelteDevAllTask
+                task.dependsOn(install)
+                task.frontendDirectories.putAll(
+                    frontend.basePath.zip(frontend.frontendDir) { base, folder ->
+                        mapOf(
+                            serverFrontendName(base) to folder.asFile.absolutePath,
+                        )
+                    },
+                )
+                task.frontendPorts.putAll(
+                    frontend.basePath.zip(frontend.devPort) { base, number -> mapOf(serverFrontendName(base) to number) },
+                )
+            }
             project.pluginManager.withPlugin("java") { wireResources(project, bundle) }
             project.pluginManager.withPlugin("base") {
                 project.tasks.named("clean", Delete::class.java) { clean ->
@@ -1293,6 +1377,13 @@ internal fun isFolderInsideFrontend(output: String): Boolean {
     }
     val segments = output.split('/', '\\').filter { it.isNotEmpty() && it != "." }
     return segments.isNotEmpty() && ".." !in segments
+}
+
+private class FrontendDirectoriesArgument(
+    @get:Input
+    val arguments: Provider<List<String>>,
+) : CommandLineArgumentProvider {
+    override fun asArguments(): Iterable<String> = arguments.get()
 }
 
 private class FrontendDirArgument(

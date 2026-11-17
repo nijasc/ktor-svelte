@@ -16,11 +16,18 @@ public class SvelteFrontendConfig internal constructor(
     public var source: SvelteSource = SvelteSource.Classpath
     public var spaFallback: String? = "200.html"
     public var notFoundPage: String? = "404.html"
+    public var devUrl: String? = null
+    public var generateTsOutput: String? = null
 
     public fun paramRoutes(vararg routes: String) {
         paramRouteList = routes.toList()
     }
 }
+
+internal fun frontendDevUrlProperty(name: String): String = "ktor.svelte.devUrl.$name"
+
+internal fun frontendClientOutput(frontend: SvelteFrontendConfig): String =
+    frontend.generateTsOutput ?: ((System.getProperty("ktor.svelte.frontendDir.${frontend.name}") ?: frontend.name) + "/src/lib/api")
 
 internal fun checkFrontendPrefix(prefix: String) {
     val segments = prefix.removePrefix("/").split('/')

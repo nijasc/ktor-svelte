@@ -142,6 +142,21 @@ class TaskStore(
             rows.map { Comment(it[Comments.id], authors.getValue(it[Comments.authorId]), it[Comments.body], instant(it[Comments.createdAt])) }
         }
 
+    suspend fun lastComments(taskIds: List<Int>): List<Comment?> =
+        query {
+            val rows =
+                Comments
+                    .selectAll()
+                    .where { Comments.taskId inList taskIds }
+                    .orderBy(Comments.id)
+                    .toList()
+                    .associateBy { it[Comments.taskId] }
+            val authors = users.refs(rows.values.map { it[Comments.authorId] })
+            taskIds.map { id ->
+                rows[id]?.let { Comment(it[Comments.id], authors.getValue(it[Comments.authorId]), it[Comments.body], instant(it[Comments.createdAt])) }
+            }
+        }
+
     suspend fun comment(
         taskId: Int,
         author: User,

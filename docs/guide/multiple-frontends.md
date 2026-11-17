@@ -29,6 +29,8 @@ install(Svelte) {
 | `spaFallback` | `"200.html"` | The page for paths that have no page of their own, inside this frontend |
 | `notFoundPage` | `"404.html"` | The page for missing paths, when there is no fallback |
 | `paramRoutes(...)` | none | Like the main `paramRoutes`, with paths relative to the prefix |
+| `devUrl` | set by `svelteDevAll` | The Vite of this frontend in development. Without one, development serves its build |
+| `generateTsOutput` | `src/lib/api` in the frontend's folder | Where its copy of the typed client goes, when `generateTs` is on |
 
 Outside development, a frontend without a build stops the start, like the main frontend does. In development it is a warning.
 
@@ -50,10 +52,21 @@ svelte {
 | `outputDir` | `outputDir` of the main frontend, `"build"` | Adapter output, a folder inside its `frontendDir` |
 | `buildScript` | `buildScript` of the main frontend, `"build"` | `package.json` script that builds it |
 | `basePath` | `"/"` and the name, such as `"/admin"` | The path prefix it is built for. Set it for a nested prefix, such as `"/admin/reports"` for the frontend `admin-reports` |
+| `devPort` | the next port after `dev.port`, such as `5174` | Port of its Vite |
 
 Each frontend gets its own tasks, named after it: `svelteInstallAdmin`, `svelteBuildAdmin` and `svelteBundleAdmin`. They run with the main frontend's tasks when the JAR is built, and `svelteBundleAdmin` puts the build under `ktor-svelte/frontends/admin/`, where `install(Svelte) { frontend("/admin") }` reads it. The settings that are not per frontend, such as `packageManager`, `bunVersion`, `precompress` and `includeSourceMaps`, apply to every frontend.
 
 When no page of the build loads its files from `/admin/_app/`, `svelteBundleAdmin` warns: the base path is missing from the frontend's Vite config.
+
+## The typed client
+
+With `generateTs = true`, every frontend gets the same generated client as the main one, in its own `src/lib/api`, so the admin pages call the API with the same types. The frontend's folder comes from Gradle (`svelteDevAll`, `run` and `svelteGenerateTs` pass it to the app); without Gradle it is the folder named like the frontend, or set `generateTsOutput`.
+
+## In development
+
+`svelteDevAll` starts one Vite per frontend, each on its own `devPort`, and tells the app where they are, so `/admin` shows the admin project with hot reload while `/` shows the main one. Through the app's port, the dev panel and the browser logs work on every frontend.
+
+Vite serves a project with a base path under that path, so the app forwards `/admin/...` to the admin Vite as it is. To run one frontend's Vite on its own, use `svelteDevAdmin`, and give the app its address with `devUrl`.
 
 ## In the frontend project
 
@@ -65,11 +78,12 @@ import adapter from '@sveltejs/adapter-static';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    plugins: [sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true }), paths: { base: '/admin' } })]
+    plugins: [sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true }), paths: { base: '/admin' } })],
+    server: { hmr: { clientPort: 5174, protocol: 'ws' } }
 });
 ```
 
-Links inside it go through `resolve()` from `$app/paths`, as SvelteKit asks for any app with a base path.
+Links inside it go through `resolve()` from `$app/paths`, as SvelteKit asks for any app with a base path. The `hmr` line points hot reload at the frontend's own Vite, on its `devPort`.
 
 ## Limits
 
@@ -78,4 +92,6 @@ These parts of ktor-svelte know only the main frontend for now:
 - The sitemap and `robots.txt`, the default favicon and the language redirect of i18n.
 - The startup warning about Ktor routes that hide a page, the route table and the route map of the dev panel.
 - The build fingerprint in `X-Ktor-Svelte-Build` and in the status endpoint.
+- `svelteVerifyTs` checks the main frontend's client only.
+- The typed page routes (`FrontendRoutes`) and the generated Kotlin of `libraries { }` come from the main frontend.
 - In Gradle, `libraries { }` with `svelteSync`, the `svelteVerify...` checks, `svelteVerifyLeaks`, `svelteCheck` and the other frontend tools work on the main frontend. Another frontend is installed, built and packaged; add what it needs to its own `package.json`.

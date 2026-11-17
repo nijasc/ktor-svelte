@@ -189,6 +189,10 @@ public final class io/github/nijasc/ktor/svelte/FieldChecksKt {
 	public static final fun fieldCheck (Lio/ktor/server/routing/Route;Ljava/lang/String;Lkotlin/jvm/functions/Function3;)Lio/ktor/server/routing/Route;
 }
 
+public final class io/github/nijasc/ktor/svelte/IncludesKt {
+	public static final fun includes (Lio/ktor/server/routing/Route;Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lio/ktor/server/routing/Route;
+}
+
 public final class io/github/nijasc/ktor/svelte/LatencyBucket {
 	public final fun getCount ()J
 	public final fun getUpToMillis ()Ljava/lang/Long;
@@ -457,6 +461,10 @@ public final synthetic class io/github/nijasc/ktor/svelte/Sensitive$Impl : io/gi
 	public fun <init> ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/SparseFieldsKt {
+	public static final fun sparseFields (Lio/ktor/server/routing/Route;Ljava/lang/String;Ljava/util/List;)Lio/ktor/server/routing/Route;
+}
+
 public final class io/github/nijasc/ktor/svelte/Stamps {
 	public static final field Companion Lio/github/nijasc/ktor/svelte/Stamps$Companion;
 	public fun <init> (Lkotlin/time/Instant;Lkotlin/time/Instant;Ljava/lang/String;Ljava/lang/String;)V
@@ -621,12 +629,16 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteFrontendConfig {
+	public final fun getDevUrl ()Ljava/lang/String;
+	public final fun getGenerateTsOutput ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
 	public final fun getNotFoundPage ()Ljava/lang/String;
 	public final fun getPrefix ()Ljava/lang/String;
 	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
 	public final fun getSpaFallback ()Ljava/lang/String;
 	public final fun paramRoutes ([Ljava/lang/String;)V
+	public final fun setDevUrl (Ljava/lang/String;)V
+	public final fun setGenerateTsOutput (Ljava/lang/String;)V
 	public final fun setNotFoundPage (Ljava/lang/String;)V
 	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
 	public final fun setSpaFallback (Ljava/lang/String;)V
@@ -649,6 +661,12 @@ public final class io/github/nijasc/ktor/svelte/SvelteIdempotencyConfig {
 	public final fun getTtl-UwyO8pc ()J
 	public final fun setMaxEntries (I)V
 	public final fun setTtl-LRDsOJo (J)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteIncludesConfig {
+	public fun <init> ()V
+	public final fun addRelation (Ljava/lang/String;Lkotlinx/serialization/KSerializer;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function3;)V
+	public final fun getRelations ()Ljava/util/List;
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteInternalAccessConfig {
