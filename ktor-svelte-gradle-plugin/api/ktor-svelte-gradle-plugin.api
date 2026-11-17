@@ -610,6 +610,15 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRenameTask
 	public final fun rename ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRoutesDiagramTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getOutput ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getRoutesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public final fun write ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRunConfigurationsTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public final fun generate ()V
