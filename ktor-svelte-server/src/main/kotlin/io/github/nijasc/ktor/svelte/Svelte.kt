@@ -170,7 +170,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val configInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
         val pageLoads = pluginConfig.pageLoadsConfig
         require(pageLoads.inlineTimeout.isPositive()) { "pageLoads: inlineTimeout must be positive, but is ${pageLoads.inlineTimeout}." }
-        val pageData = pageLoads.takeIf { it.inline && it.pages.isNotEmpty() }?.let { PageDataInliner(it.pages.toList(), it.inlineTimeout) }
+        val pageData = pageLoads.takeIf { it.inline }?.let { PageDataInliner({ application.pageLoadSpecs() }, it.inlineTimeout) }
         val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector, pageData)
         val internalAccess = InternalAccess(pluginConfig.internalAccessConfig)
         val docsOutsideDevelopment = pluginConfig.apiDocs && !application.developmentMode && internalAccess.isConfigured
@@ -254,8 +254,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     mapOf("theme" to THEME_COOKIE, "locale" to LOCALE_COOKIE),
                 )
             },
-            pluginConfig.pageLoadsConfig.pages
-                .toList(),
+            { application.pageLoadSpecs() },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }

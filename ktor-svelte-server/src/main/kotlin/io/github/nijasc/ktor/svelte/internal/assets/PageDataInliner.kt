@@ -30,14 +30,14 @@ private val FORWARDED_HEADERS = listOf(HttpHeaders.Cookie, HttpHeaders.Authoriza
 private val ROUTE_PARAMETER = Regex("\\{([^}/]+)}")
 
 internal class PageDataInliner(
-    pages: List<PageLoadSpec>,
+    pages: () -> List<PageLoadSpec>,
     private val timeout: Duration,
 ) {
     @Volatile
     var operationSource: () -> List<GeneratedOperation> = { emptyList() }
 
-    private val operations by lazy { operationSource().associateBy { it.name } }
-    private val patterns = pages.map { page -> page to pagePattern(page.page) }
+    private val operations by lazy { operationSource().associateBy { "${it.method} ${it.path}" } }
+    private val patterns by lazy { pages().map { page -> page to pagePattern(page.page) } }
     private val http: HttpClient = HttpClient.newBuilder().connectTimeout(timeout.toJavaDuration()).build()
 
     suspend fun elementFor(call: ApplicationCall): String? {
@@ -47,7 +47,7 @@ internal class PageDataInliner(
             patterns.firstNotNullOfOrNull { (page, pattern) ->
                 pattern.matchEntire(path)?.let { match -> page to pageParameters(page.page).zip(match.groupValues.drop(1)).toMap() }
             } ?: return null
-        val urls = page.data.map { data -> urlOf(data.operation, data.params, values) ?: return null }
+        val urls = page.data.map { data -> urlOf(data.route, data.params, values) ?: return null }
         val local = call.request.local
         val base = "${if (local.scheme == "https") "https" else "http"}://127.0.0.1:${local.localPort}"
         val bodies =
@@ -68,11 +68,11 @@ internal class PageDataInliner(
     }
 
     private fun urlOf(
-        operation: String,
+        route: String,
         params: Map<String, String>,
         values: Map<String, String>,
     ): String? {
-        val found = operations[operation]?.takeIf { it.method == "GET" && !it.needsInput } ?: return null
+        val found = operations[route]?.takeIf { it.method == "GET" && !it.needsInput } ?: return null
         val filled = found.pathParameters.associateWith { name -> values[params[name] ?: name] ?: return null }
         return ROUTE_PARAMETER.replace(found.path) { match ->
             filled[match.groupValues[1]].orEmpty().decodeURLPart().encodeURLPathPart()

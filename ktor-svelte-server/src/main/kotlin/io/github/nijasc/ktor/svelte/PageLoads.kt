@@ -2,45 +2,60 @@ package io.github.nijasc.ktor.svelte
 
 import io.github.nijasc.ktor.svelte.internal.typescript.PageDataSpec
 import io.github.nijasc.ktor.svelte.internal.typescript.PageLoadSpec
+import io.github.nijasc.ktor.svelte.internal.typescript.routeKeyOf
 import io.github.nijasc.ktor.svelte.internal.typescript.validPageDataKey
+import io.ktor.server.application.Application
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.RoutingNode
+import io.ktor.server.routing.application
+import io.ktor.util.AttributeKey
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-public class SveltePageLoadsConfig internal constructor() {
-    internal val pages: MutableList<PageLoadSpec> = mutableListOf()
+internal val PageLoadsKey: AttributeKey<MutableList<PageLoadSpec>> = AttributeKey("ktor-svelte-page-loads")
 
+internal fun Application.pageLoadSpecs(): List<PageLoadSpec> =
+    attributes.getOrNull(PageLoadsKey)?.let { pages -> synchronized(pages) { pages.toList() } }.orEmpty()
+
+public class SveltePageLoadsConfig internal constructor() {
     public var inline: Boolean = false
 
     public var inlineTimeout: Duration = 2.seconds
-
-    public fun page(
-        path: String,
-        configure: SveltePageLoadConfig.() -> Unit,
-    ) {
-        val clean = path.trimEnd('/').ifEmpty { "/" }
-        require(isPagePath(path) && path.none { it in "?#*" }) {
-            "pageLoads takes the path of a page, such as \"/tasks/[id]\", but got '$path'."
-        }
-        require(pages.none { it.page == clean }) { "The page '$clean' has two pageLoads." }
-        val page = SveltePageLoadConfig().apply(configure)
-        require(page.data.isNotEmpty()) { "pageLoads: '$clean' loads nothing. Add data(\"key\", \"group.operation\")." }
-        pages += PageLoadSpec(clean, page.data.toList())
-    }
 }
 
-public class SveltePageLoadConfig internal constructor() {
+public class SveltePageLoadConfig internal constructor(
+    private val page: String,
+) {
     internal val data: MutableList<PageDataSpec> = mutableListOf()
 
     public fun data(
         key: String,
-        operation: String,
+        route: Route,
         params: Map<String, String> = emptyMap(),
     ) {
         require(validPageDataKey(key)) { "data takes a name the page reads as data.$key, so it must be a JavaScript name, but got '$key'." }
-        require(data.none { it.key == key }) { "The page loads '$key' twice." }
-        require(
-            '.' in operation,
-        ) { "data takes the operation as the generated client names it, such as \"tasks.get\", but got '$operation'." }
-        data += PageDataSpec(key, operation, params)
+        require(data.none { it.key == key }) { "The page '$page' loads '$key' twice." }
+        val (method, path) =
+            (route as? RoutingNode)?.let(::routeKeyOf)
+                ?: throw IllegalArgumentException("data takes the route that get(\"...\") { } returns, but got '$route'.")
+        require(method == "GET") { "pageLoad: '$page' loads $method $path. A page load only reads: use a GET route." }
+        data += PageDataSpec(key, method, path, params)
+    }
+}
+
+public fun Route.pageLoad(
+    page: String,
+    configure: SveltePageLoadConfig.() -> Unit,
+) {
+    val clean = page.trimEnd('/').ifEmpty { "/" }
+    require(isPagePath(page) && page.none { it in "?#*" }) {
+        "pageLoad takes the pattern of a page, such as FrontendRoutes.Patterns.tasksId (\"/tasks/[id]\"), but got '$page'."
+    }
+    val load = SveltePageLoadConfig(clean).apply(configure)
+    require(load.data.isNotEmpty()) { "pageLoad: '$clean' loads nothing. Add data(\"key\", route)." }
+    val pages = application.attributes.computeIfAbsent(PageLoadsKey) { mutableListOf() }
+    synchronized(pages) {
+        require(pages.none { it.page == clean }) { "The page '$clean' has two pageLoad blocks." }
+        pages += PageLoadSpec(clean, load.data.toList())
     }
 }

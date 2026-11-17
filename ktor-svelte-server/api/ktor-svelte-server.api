@@ -245,6 +245,10 @@ public final class io/github/nijasc/ktor/svelte/PageKt {
 	public static final fun pagedRoute (Lio/ktor/server/routing/Route;Ljava/lang/String;IILio/ktor/util/reflect/TypeInfo;Lkotlin/jvm/functions/Function3;)Lio/ktor/server/routing/Route;
 }
 
+public final class io/github/nijasc/ktor/svelte/PageLoadsKt {
+	public static final fun pageLoad (Lio/ktor/server/routing/Route;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+}
+
 public final class io/github/nijasc/ktor/svelte/PageRequest {
 	public fun <init> (Ljava/lang/String;I)V
 	public fun <init> (Ljava/lang/String;IZ)V
@@ -602,14 +606,13 @@ public final class io/github/nijasc/ktor/svelte/SvelteMetricsKt {
 }
 
 public final class io/github/nijasc/ktor/svelte/SveltePageLoadConfig {
-	public final fun data (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
-	public static synthetic fun data$default (Lio/github/nijasc/ktor/svelte/SveltePageLoadConfig;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)V
+	public final fun data (Ljava/lang/String;Lio/ktor/server/routing/Route;Ljava/util/Map;)V
+	public static synthetic fun data$default (Lio/github/nijasc/ktor/svelte/SveltePageLoadConfig;Ljava/lang/String;Lio/ktor/server/routing/Route;Ljava/util/Map;ILjava/lang/Object;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SveltePageLoadsConfig {
 	public final fun getInline ()Z
 	public final fun getInlineTimeout-UwyO8pc ()J
-	public final fun page (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
 	public final fun setInline (Z)V
 	public final fun setInlineTimeout-LRDsOJo (J)V
 }
