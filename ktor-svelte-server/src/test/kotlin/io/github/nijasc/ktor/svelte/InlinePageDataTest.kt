@@ -39,35 +39,35 @@ class InlinePageDataTest {
                             install(Svelte) {
                                 source = SvelteSource.Directory(build)
                                 dev { mode = DevMode.Never }
-                                pageLoads {
-                                    this.inline = inline
-                                    page("/tasks/[id]") {
-                                        data("task", "tasks.get")
-                                        data("members", "members.list")
-                                    }
-                                    page("/broken/[id]") { data("thing", "broken.get") }
-                                }
+                                pageLoads { this.inline = inline }
                             }
                             routing {
-                                get("/api/tasks/{id}") {
-                                    val who =
-                                        call.request
-                                            .header("Cookie")
-                                            ?.substringAfter("who=")
-                                            .orEmpty()
-                                    call.respondText(
-                                        """{"id":"${call.parameters["id"]}","who":"$who","title":"</script><b>"}""",
-                                        ContentType.Application.Json,
-                                    )
+                                val task =
+                                    get("/api/tasks/{id}") {
+                                        val who =
+                                            call.request
+                                                .header("Cookie")
+                                                ?.substringAfter("who=")
+                                                .orEmpty()
+                                        call.respondText(
+                                            """{"id":"${call.parameters["id"]}","who":"$who","title":"</script><b>"}""",
+                                            ContentType.Application.Json,
+                                        )
+                                    }
+                                val members = get("/api/members") { call.respondText("""["Ada"]""", ContentType.Application.Json) }
+                                val broken =
+                                    get("/api/broken/{id}") {
+                                        call.respondText(
+                                            """{"message":"no"}""",
+                                            ContentType.Application.Json,
+                                            HttpStatusCode.InternalServerError,
+                                        )
+                                    }
+                                pageLoad("/tasks/[id]") {
+                                    data("task", task)
+                                    data("members", members)
                                 }
-                                get("/api/members") { call.respondText("""["Ada"]""", ContentType.Application.Json) }
-                                get("/api/broken/{id}") {
-                                    call.respondText(
-                                        """{"message":"no"}""",
-                                        ContentType.Application.Json,
-                                        HttpStatusCode.InternalServerError,
-                                    )
-                                }
+                                pageLoad("/broken/[id]") { data("thing", broken) }
                             }
                         }
                     },

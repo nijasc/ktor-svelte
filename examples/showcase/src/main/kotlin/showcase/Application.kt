@@ -117,16 +117,7 @@ fun Application.module() {
             signedIn(FrontendRoutes.board, "/tasks", FrontendRoutes.settings)
             permission(Permission.ManageUsers, FrontendRoutes.admin)
         }
-        pageLoads {
-            inline = true
-            page("/tasks/[id]") {
-                data("task", "tasks.get")
-                data("comments", "tasks.getComments")
-                data("attachments", "tasks.getAttachments")
-                data("activity", "tasks.getActivity")
-                data("members", "members.list")
-            }
-        }
+        pageLoads { inline = true }
         maxApiBodySize = MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES
         paramRoutes("/tasks/[id]")
         publicConfig(

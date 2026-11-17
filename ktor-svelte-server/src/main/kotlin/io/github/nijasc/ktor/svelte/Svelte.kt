@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.internal.BuildFingerprint
 import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.github.nijasc.ktor.svelte.internal.FRONTEND_ERRORS_PATH
 import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
+import io.github.nijasc.ktor.svelte.internal.HEALTH_STARTING_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
 import io.github.nijasc.ktor.svelte.internal.IdempotencyStore
@@ -13,6 +14,7 @@ import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
 import io.github.nijasc.ktor.svelte.internal.StartupTiming
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
 import io.github.nijasc.ktor.svelte.internal.WEB_VITALS_PATH
+import io.github.nijasc.ktor.svelte.internal.WarmUp
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
@@ -23,16 +25,23 @@ import io.github.nijasc.ktor.svelte.internal.assets.PageDataInliner
 import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
+import io.github.nijasc.ktor.svelte.internal.assets.frontendResourceRoot
 import io.github.nijasc.ktor.svelte.internal.constantGetPaths
+import io.github.nijasc.ktor.svelte.internal.dev.CaughtEmails
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.DevRequestLog
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.TypedCookiesKey
 import io.github.nijasc.ktor.svelte.internal.dev.browserLogRoute
 import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
+import io.github.nijasc.ktor.svelte.internal.dev.devClearSiteDataRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devCookieRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devEmailRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devEnvironmentRoute
+import io.github.nijasc.ktor.svelte.internal.dev.devMigrationsRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devRuntimeRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devStatus
 import io.github.nijasc.ktor.svelte.internal.dev.installDevHttps
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
@@ -85,6 +94,7 @@ import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGenerat
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.github.nijasc.ktor.svelte.internal.validation.installInputNormalisation
+import io.github.nijasc.ktor.svelte.internal.warmUpBaseUrl
 import io.github.nijasc.ktor.svelte.internal.webVitalsRoute
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -170,7 +180,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val configInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
         val pageLoads = pluginConfig.pageLoadsConfig
         require(pageLoads.inlineTimeout.isPositive()) { "pageLoads: inlineTimeout must be positive, but is ${pageLoads.inlineTimeout}." }
-        val pageData = pageLoads.takeIf { it.inline && it.pages.isNotEmpty() }?.let { PageDataInliner(it.pages.toList(), it.inlineTimeout) }
+        val pageData = pageLoads.takeIf { it.inline }?.let { PageDataInliner({ application.pageLoadSpecs() }, it.inlineTimeout) }
         val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector, pageData)
         val internalAccess = InternalAccess(pluginConfig.internalAccessConfig)
         val docsOutsideDevelopment = pluginConfig.apiDocs && !application.developmentMode && internalAccess.isConfigured
@@ -200,8 +210,36 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             } else {
                 null
             }
-        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles, defaultFavicon)
+        val frontends =
+            pluginConfig.frontendList.map { frontend ->
+                require(!resolver.isApiPath(frontend.prefix)) {
+                    "The frontend under ${frontend.prefix} is inside the API prefixes ${pluginConfig.apiPrefixList}. Give it a path of its own."
+                }
+                MountedFrontend(frontend, createFrontendStore(frontend, application))
+            }
+        val mounted =
+            frontends.sortedByDescending { it.config.prefix.length }.map { frontend ->
+                val frontendPolicy = pageContentSecurityPolicy(frontend.store, securityHeaders, devProxy != null)
+                if (frontendPolicy != null && !application.developmentMode) {
+                    application.launch(Dispatchers.IO) { frontendPolicy.precomputeAll() }
+                }
+                val frontendInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(frontend.store, it) }
+                SvelteHandler(
+                    frontend.store,
+                    RequestResolver(emptyList(), frontend.config.spaFallback, frontend.config.notFoundPage, frontend.config.paramRouteList),
+                    AssetResponder(frontend.store, pluginConfig.cacheConfig, frontendPolicy, frontendInjector),
+                    null,
+                    devUrl,
+                    allowRemote,
+                    prefix = frontend.config.prefix,
+                    isApiPath = resolver::isApiPath,
+                )
+            }
+        val handler =
+            SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles, defaultFavicon, mounted = mounted)
         application.attributes.put(SvelteHandlerKey, handler)
+        val caughtEmails = if (application.developmentMode && pluginConfig.devConfig.catchEmails) CaughtEmails(application.log) else null
+        application.attributes.put(MailerKey, mailerFor(pluginConfig.mailer, caughtEmails))
         val metrics = SvelteMetrics()
         application.attributes.put(SvelteMetricsKey, metrics)
 
@@ -254,8 +292,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     mapOf("theme" to THEME_COOKIE, "locale" to LOCALE_COOKIE),
                 )
             },
-            pluginConfig.pageLoadsConfig.pages
-                .toList(),
+            { application.pageLoadSpecs() },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
@@ -316,6 +353,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 application.log.info(startupTiming.line(System.currentTimeMillis(), application.startupSteps().toList()))
             }
         }
+        val warmUp = WarmUp(pluginConfig.warmUpPathList)
+        if (!warmUp.done) {
+            application.subscribeWhileRunning(ServerReady, { it === application.environment }) {
+                application.launch {
+                    val baseUrl = runCatching { warmUpBaseUrl(application.engine.resolvedConnectors()) }.getOrNull()
+                    warmUp.run(application, baseUrl)
+                }
+            }
+        }
         application.onOwn(ApplicationStarted) {
             if (summary.isNotEmpty()) application.log.info("ktor-svelte settings:\n" + summary.joinToString("\n") { "  $it" })
             val manifest = store.manifest()
@@ -332,6 +378,13 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
             if (devProxy == null) application.log.warn(MISSING_BUILD_MESSAGE)
+        }
+        frontends.forEach { frontend ->
+            if (frontend.store.manifest() == null) {
+                val message = missingFrontendBuildMessage(frontend.config)
+                check(application.developmentMode) { message }
+                application.log.warn(message)
+            }
         }
 
         if (pluginConfig.idempotencyConfig.enabled) {
@@ -370,6 +423,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             devRequests.install(application)
             devRequests.sensitive.install(application)
             devRequests.countSql(application)
+            devRequests.measurePayloads(application)
             onCall { call -> devRequests.started(call) }
             on(ResponseSent) { call -> devRequests.finished(call) }
         }
@@ -454,6 +508,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (devRequests != null && devProxy != null) {
                 val healthChecks = pluginConfig.healthCheckList.toList()
                 devCookieRoutes(allowRemote, devRequests.sensitive)
+                devEnvironmentRoute(allowRemote, devRequests.sensitive) { application.environment.config }
+                devMigrationsRoute(allowRemote) { application.environment.classLoader }
+                devRuntimeRoute(allowRemote)
+                devClearSiteDataRoute(allowRemote)
+                caughtEmails?.let { devEmailRoutes(allowRemote, it) }
                 devRequestRoutes(
                     devRequests,
                     allowRemote,
@@ -521,7 +580,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 val health = HealthReport(pluginConfig.healthCheckList.toList())
                 get(HEALTH_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-store")
-                    if (health.isUp(call, frontendReady = store.manifest() != null || devProxy != null)) {
+                    if (!warmUp.done) {
+                        call.respondText(HEALTH_STARTING_JSON, ContentType.Application.Json, HttpStatusCode.ServiceUnavailable)
+                    } else if (health.isUp(call, frontendReady = store.manifest() != null || devProxy != null)) {
                         call.respondText(HEALTH_UP_JSON, ContentType.Application.Json)
                     } else {
                         call.respondText(HEALTH_DOWN_JSON, ContentType.Application.Json, HttpStatusCode.ServiceUnavailable)
@@ -607,6 +668,24 @@ private fun isDevProxyActive(
         DevMode.Auto -> application.developmentMode
         DevMode.Always -> true
         DevMode.Never -> false
+    }
+
+private class MountedFrontend(
+    val config: SvelteFrontendConfig,
+    val store: AssetStore,
+)
+
+private fun missingFrontendBuildMessage(frontend: SvelteFrontendConfig): String =
+    "ktor-svelte found no build of the frontend under ${frontend.prefix}. Add svelte { frontend(\"${frontend.name}\") { } } " +
+        "to the Gradle build, or point source at its build folder." + DocLink.MULTIPLE_FRONTENDS.see()
+
+private fun createFrontendStore(
+    frontend: SvelteFrontendConfig,
+    application: Application,
+): AssetStore =
+    when (val source = frontend.source) {
+        SvelteSource.Classpath -> ClasspathAssetStore(application.environment.classLoader, frontendResourceRoot(frontend.name))
+        is SvelteSource.Directory -> DirectoryAssetStore(source.path, rescanOnEveryRead = application.developmentMode)
     }
 
 private fun createStore(

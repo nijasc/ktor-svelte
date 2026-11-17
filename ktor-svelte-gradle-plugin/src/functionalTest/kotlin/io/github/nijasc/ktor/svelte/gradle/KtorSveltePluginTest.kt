@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle
 
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.zip.ZipFile
@@ -31,6 +32,44 @@ class KtorSveltePluginTest {
         toolName: String = "bun",
         lockfile: String = "bun.lock",
     ) = TestProject(dir, toolName, lockfile).apply { buildScript(javaBuild) }
+
+    @Test
+    fun `email rendering uses pinned Node and prefixes PATH in quiet and verbose modes`() {
+        assumeTrue(System.getProperty("os.name").startsWith("Linux"))
+        assumeTrue(System.getProperty("os.arch") in listOf("amd64", "x86_64"))
+        assumeTrue(!File("/etc/alpine-release").isFile)
+        val project = project("npm", "package-lock.json")
+        project.buildScript(
+            javaBuild.replace("addRuntimeDependency = false", "addRuntimeDependency = false\n    nodeVersion = \"22.12.0\""),
+        )
+        project.frontend.resolve("src/emails").mkdirs()
+        project.frontend.resolve("src/emails/Welcome.svelte").writeText("<h1>Welcome</h1>")
+        val gradleHome = dir.resolve("gradle-home")
+        val home = gradleHome.resolve("ktor-svelte/node/22.12.0/linux-x64")
+        val bin = home.resolve("bin").apply { mkdirs() }
+        home.resolve(".complete").writeText("22.12.0")
+        bin.resolve("node").apply {
+            writeText(
+                """
+                #!/bin/sh
+                case "${'$'}1" in
+                  *npm-cli.js) mkdir -p node_modules ;;
+                  *) printf '%s\n' "${'$'}PATH" >> "${project.frontend.resolve("node-paths.txt").absolutePath}"
+                     printf '[]' > "${'$'}3" ;;
+                esac
+                """.trimIndent() + "\n",
+            )
+            setExecutable(true)
+        }
+
+        for (verbose in listOf(false, true)) {
+            val result = project.run("svelteEmails", "--rerun-tasks", "-g", gradleHome.absolutePath, "-Psvelte.verbose=$verbose")
+            assertEquals(TaskOutcome.SUCCESS, result.task(":svelteEmails")?.outcome)
+        }
+        val paths = project.frontend.resolve("node-paths.txt").readLines()
+        assertEquals(2, paths.size)
+        assertTrue(paths.all { it.startsWith(bin.absolutePath + File.pathSeparator) })
+    }
 
     @Test
     fun `jar contains frontend files and manifest`() {
@@ -139,6 +178,22 @@ class KtorSveltePluginTest {
         assertEquals(TaskOutcome.UP_TO_DATE, result.task(":svelteBuild")?.outcome)
         assertEquals(TaskOutcome.UP_TO_DATE, result.task(":svelteBundle")?.outcome)
         assertEquals(emptyList(), project.calls())
+    }
+
+    @Test
+    fun `a build that ran the frontend ends with how long each step took`() {
+        val project = project()
+        val first = project.run("jar", "--configuration-cache")
+        assertContains(first.output, "ktor-svelte build times:")
+        assertTrue(Regex("frontend build +\\d+\\.\\ds").containsMatchIn(first.output), first.output)
+        assertTrue(Regex("bundling +\\d+\\.\\ds").containsMatchIn(first.output), first.output)
+        assertContains(first.output, "  total ")
+
+        assertFalse("ktor-svelte build times:" in project.run("jar", "--configuration-cache").output)
+
+        project.buildScript(javaBuild + "\nsvelte { timingSummary = false }\n")
+        project.frontend.resolve("app.txt").writeText("changed")
+        assertFalse("ktor-svelte build times:" in project.run("jar").output)
     }
 
     @Test

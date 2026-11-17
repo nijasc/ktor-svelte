@@ -75,8 +75,9 @@ internal class TypeScriptGenerator(
     private val preferences: PreferencesType? = null,
     private val errorReportPath: String? = null,
     private val vitalsCall: String? = null,
-    private val pageLoads: List<PageLoadSpec> = emptyList(),
 ) {
+    private var pageLoads: List<PageLoadSpec> = emptyList()
+
     private val declaredCookies = cookies
     private val sideSchemas =
         listOfNotNull(publicConfigSchema, currentUser?.schema, preferences?.schema).map { Json.parseToJsonElement(it) }
@@ -96,8 +97,10 @@ internal class TypeScriptGenerator(
     fun generate(
         openApiJson: String,
         routeFiles: Map<String, String> = emptyMap(),
+        pageLoads: List<PageLoadSpec> = emptyList(),
     ): Map<String, String> {
         this.routeFiles = routeFiles
+        this.pageLoads = pageLoads
         val document = Json.parseToJsonElement(openApiJson).jsonObject
         val filtered = withNullableReferences(withDeclaredErrors(withApiPathsOnly(document)))
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()

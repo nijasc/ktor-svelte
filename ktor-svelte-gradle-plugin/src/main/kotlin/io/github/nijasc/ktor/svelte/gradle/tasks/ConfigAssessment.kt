@@ -63,7 +63,7 @@ internal fun assess(
     )
     check(
         Area.OPERATIONS,
-        gradle["bunVersion"].let { it != null && it != "not pinned" },
+        listOf("bunVersion", "nodeVersion").any { name -> gradle[name].let { it != null && it != "not pinned" } },
         "Every machine builds with the same Bun",
         "Set svelte { bunVersion = \"1.3.14\" } so CI and new laptops download the same Bun instead of needing one installed.",
     )

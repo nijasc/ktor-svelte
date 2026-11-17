@@ -113,7 +113,7 @@ internal fun installTypeScriptGeneration(
     errorReportPath: String? = null,
     vitalsCall: String? = null,
     preferences: PreferencesType? = null,
-    pageLoads: List<PageLoadSpec> = emptyList(),
+    pageLoads: () -> List<PageLoadSpec> = { emptyList() },
 ) {
     val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
     val generateOnly = verifyReport != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
@@ -149,11 +149,10 @@ internal fun installTypeScriptGeneration(
             preferences,
             errorReportPath,
             vitalsCall,
-            pageLoads,
         )
 
     application.onOwn(ApplicationStarted) {
-        val succeeded = generate(application, output, generator, verifyReport, pageLoads.map { it.page })
+        val succeeded = generate(application, output, generator, verifyReport, pageLoads())
         if (generateOnly) Runtime.getRuntime().halt(if (succeeded) 0 else 1)
     }
 }
@@ -163,7 +162,7 @@ private fun generate(
     output: Path,
     generator: TypeScriptGenerator,
     verifyReport: Path?,
-    loadedPages: List<String> = emptyList(),
+    pageLoads: List<PageLoadSpec> = emptyList(),
 ): Boolean {
     if (findFrontendRoot(output) == null) {
         application.log.warn("ktor-svelte did not generate TypeScript: no package.json found at or above ${output.absolute()}.")
@@ -177,11 +176,11 @@ private fun generate(
                 .content
         val routing = application.pluginOrNull(RoutingRoot)
         val routeFiles = routing?.let { root -> routeSources(root).mapValues { it.value.file } }.orEmpty()
-        val files = generator.generate(openApiJson, routeFiles)
+        val files = generator.generate(openApiJson, routeFiles, pageLoads)
         val projectDirectory = Path("").absolute()
         val environmentFile = environmentExample(DeclaredEnvironment.variables())?.let { mapOf(ENV_EXAMPLE_FILE to it) }.orEmpty()
         val routesDirectory = findFrontendRoot(output)!!.resolve("src/routes")
-        val pageFiles = pageLoadFiles(routesDirectory, loadedPages)
+        val pageFiles = pageLoadFiles(routesDirectory, pageLoads.map { it.page })
         if (verifyReport != null) {
             val stale =
                 (
@@ -225,7 +224,7 @@ internal fun pageLoadFiles(
                 pageDirectory(routes, page)
                     ?: error("pageLoads: no +page.svelte for '$page' under $routes.")
             val file = directory.resolve("+page.ts")
-            val handWritten = file.exists() && file.readText().isNotBlank() && !file.readText().startsWith(PAGE_LOAD_MARKER)
+            val handWritten = file.exists() && file.readText().isNotBlank() && !file.readText().startsWith(PAGE_LOAD_PREFIX)
             if (handWritten) null else routes.relativize(file).toString().replace('\\', '/') to pageModuleSource(page)
         }.toMap()
 
@@ -238,7 +237,7 @@ internal fun orphanPageLoads(
         files
             .filter { it.fileName.toString() == "+page.ts" }
             .filter { routes.relativize(it).toString().replace('\\', '/') !in generated }
-            .filter { it.readText().startsWith(PAGE_LOAD_MARKER) }
+            .filter { it.readText().startsWith(PAGE_LOAD_PREFIX) }
             .toList()
     }
 }

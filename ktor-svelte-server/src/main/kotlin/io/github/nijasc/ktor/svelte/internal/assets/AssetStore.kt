@@ -17,8 +17,9 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.relativeTo
 
-private const val MANIFEST_RESOURCE = "ktor-svelte/manifest.json"
-private const val PUBLIC_RESOURCE_ROOT = "ktor-svelte/public"
+internal const val RESOURCE_ROOT = "ktor-svelte"
+
+internal fun frontendResourceRoot(name: String): String = "$RESOURCE_ROOT/frontends/$name"
 
 internal fun isHiddenPath(path: String): Boolean = path.split('/').any { it.startsWith(".") && it != ".well-known" }
 
@@ -32,16 +33,17 @@ internal interface AssetStore {
 
 internal class ClasspathAssetStore(
     private val classLoader: ClassLoader,
+    private val root: String = RESOURCE_ROOT,
 ) : AssetStore {
     private val cachedManifest: Manifest? by lazy {
         classLoader
-            .getResourceAsStream(MANIFEST_RESOURCE)
+            .getResourceAsStream("$root/manifest.json")
             ?.use { stream -> Manifest.parse(stream.readBytes().decodeToString()) }
     }
 
     override fun manifest(): Manifest? = cachedManifest
 
-    override fun open(path: String): InputStream? = classLoader.getResourceAsStream("$PUBLIC_RESOURCE_ROOT/$path")
+    override fun open(path: String): InputStream? = classLoader.getResourceAsStream("$root/public/$path")
 }
 
 internal class DirectoryAssetStore(

@@ -27,6 +27,9 @@ public class SvelteConfig internal constructor() {
     internal var paramRouteList: List<String> = emptyList()
         private set
 
+    internal var warmUpPathList: List<String> = emptyList()
+        private set
+
     internal val cacheConfig: SvelteCacheConfig = SvelteCacheConfig()
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
@@ -34,6 +37,7 @@ public class SvelteConfig internal constructor() {
     internal val rateLimitConfig: SvelteRateLimitConfig = SvelteRateLimitConfig()
     internal val internalAccessConfig: SvelteInternalAccessConfig = SvelteInternalAccessConfig()
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
+    internal val frontendList: MutableList<SvelteFrontendConfig> = mutableListOf()
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
     internal val constantHolders: MutableList<Any> = mutableListOf()
     internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
@@ -68,6 +72,7 @@ public class SvelteConfig internal constructor() {
     public var originCheck: Boolean = true
     public var hideErrorDetails: Boolean = true
     public var apiCompression: Boolean = true
+    public var mailer: Mailer? = null
     public var inlinePublicConfig: Boolean = true
     public var buildHeader: Boolean = true
     public var requestIds: Boolean = true
@@ -92,6 +97,20 @@ public class SvelteConfig internal constructor() {
 
     public fun paramRoutes(vararg routes: String) {
         paramRouteList = routes.toList()
+    }
+
+    public fun frontend(
+        prefix: String,
+        configure: SvelteFrontendConfig.() -> Unit = {},
+    ) {
+        checkFrontendPrefix(prefix)
+        require(frontendList.none { it.prefix == prefix }) { "The frontend under $prefix is declared twice." }
+        frontendList += SvelteFrontendConfig(prefix).apply(configure)
+    }
+
+    public fun warmUp(vararg paths: String) {
+        require(paths.all { it.startsWith("/") }) { "warmUp paths start with a slash, such as \"/api/notes\"." }
+        warmUpPathList = paths.toList()
     }
 
     public fun healthCheck(check: suspend () -> Boolean) {
@@ -386,6 +405,7 @@ public class SvelteDevConfig internal constructor() {
     public var refreshAfterRestart: Boolean = true
     public var errorOverlay: Boolean = true
     public var startupTiming: Boolean = true
+    public var catchEmails: Boolean = true
 }
 
 @KtorDsl

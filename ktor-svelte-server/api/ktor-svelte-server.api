@@ -90,6 +90,22 @@ public final class io/github/nijasc/ktor/svelte/DevMode : java/lang/Enum {
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/DevMode;
 }
 
+public final class io/github/nijasc/ktor/svelte/Email {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getBcc ()Ljava/util/List;
+	public final fun getCc ()Ljava/util/List;
+	public final fun getFrom ()Ljava/lang/String;
+	public final fun getHtml ()Ljava/lang/String;
+	public final fun getReplyTo ()Ljava/lang/String;
+	public final fun getSubject ()Ljava/lang/String;
+	public final fun getText ()Ljava/lang/String;
+	public final fun getTo ()Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface annotation class io/github/nijasc/ktor/svelte/EmptyAsNull : java/lang/annotation/Annotation {
 }
 
@@ -189,6 +205,14 @@ public final synthetic class io/github/nijasc/ktor/svelte/Lowercase$Impl : io/gi
 	public fun <init> ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/MailKt {
+	public static final fun getMailer (Lio/ktor/server/application/Application;)Lio/github/nijasc/ktor/svelte/Mailer;
+}
+
+public abstract interface class io/github/nijasc/ktor/svelte/Mailer {
+	public abstract fun send (Lio/github/nijasc/ktor/svelte/Email;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public final class io/github/nijasc/ktor/svelte/NavigationKt {
 	public static final fun navigateTo (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;)V
 }
@@ -243,6 +267,10 @@ public final class io/github/nijasc/ktor/svelte/PageKt {
 	public static final field DEFAULT_PAGE_LIMIT I
 	public static final field LARGEST_PAGE_LIMIT I
 	public static final fun pagedRoute (Lio/ktor/server/routing/Route;Ljava/lang/String;IILio/ktor/util/reflect/TypeInfo;Lkotlin/jvm/functions/Function3;)Lio/ktor/server/routing/Route;
+}
+
+public final class io/github/nijasc/ktor/svelte/PageLoadsKt {
+	public static final fun pageLoad (Lio/ktor/server/routing/Route;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/PageRequest {
@@ -462,6 +490,8 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun constants ([Ljava/lang/Object;)V
 	public final fun cookies ([Lio/github/nijasc/ktor/svelte/TypedCookie;)V
 	public final fun dev (Lkotlin/jvm/functions/Function1;)V
+	public final fun frontend (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun frontend$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun frontendErrors (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun frontendErrors$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun getAccessLog ()Z
@@ -477,6 +507,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getHideErrorDetails ()Z
 	public final fun getInlinePublicConfig ()Z
 	public final fun getLoginPage ()Ljava/lang/String;
+	public final fun getMailer ()Lio/github/nijasc/ktor/svelte/Mailer;
 	public final fun getMaxApiBodySize ()Ljava/lang/Long;
 	public final fun getMaxJsonDepth ()Ljava/lang/Integer;
 	public final fun getMaxJsonStringLength ()Ljava/lang/Integer;
@@ -515,6 +546,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setHideErrorDetails (Z)V
 	public final fun setInlinePublicConfig (Z)V
 	public final fun setLoginPage (Ljava/lang/String;)V
+	public final fun setMailer (Lio/github/nijasc/ktor/svelte/Mailer;)V
 	public final fun setMaxApiBodySize (Ljava/lang/Long;)V
 	public final fun setMaxJsonDepth (Ljava/lang/Integer;)V
 	public final fun setMaxJsonStringLength (Ljava/lang/Integer;)V
@@ -533,6 +565,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setSpaFallback (Ljava/lang/String;)V
 	public final fun setStatusEndpoint (Z)V
 	public final fun transport (Lkotlin/jvm/functions/Function1;)V
+	public final fun warmUp ([Ljava/lang/String;)V
 	public final fun webVitals (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun webVitals$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 }
@@ -540,6 +573,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun getAllowRemote ()Z
 	public final fun getBrowserLogs ()Z
+	public final fun getCatchEmails ()Z
 	public final fun getErrorOverlay ()Z
 	public final fun getMode ()Lio/github/nijasc/ktor/svelte/DevMode;
 	public final fun getPanel ()Z
@@ -549,6 +583,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun getUrl ()Ljava/lang/String;
 	public final fun setAllowRemote (Z)V
 	public final fun setBrowserLogs (Z)V
+	public final fun setCatchEmails (Z)V
 	public final fun setErrorOverlay (Z)V
 	public final fun setMode (Lio/github/nijasc/ktor/svelte/DevMode;)V
 	public final fun setPanel (Z)V
@@ -556,6 +591,18 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun setSlowApiCall-BwNAW2A (Lkotlin/time/Duration;)V
 	public final fun setStartupTiming (Z)V
 	public final fun setUrl (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteFrontendConfig {
+	public final fun getName ()Ljava/lang/String;
+	public final fun getNotFoundPage ()Ljava/lang/String;
+	public final fun getPrefix ()Ljava/lang/String;
+	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
+	public final fun getSpaFallback ()Ljava/lang/String;
+	public final fun paramRoutes ([Ljava/lang/String;)V
+	public final fun setNotFoundPage (Ljava/lang/String;)V
+	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
+	public final fun setSpaFallback (Ljava/lang/String;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteFrontendErrorsConfig {
@@ -602,14 +649,13 @@ public final class io/github/nijasc/ktor/svelte/SvelteMetricsKt {
 }
 
 public final class io/github/nijasc/ktor/svelte/SveltePageLoadConfig {
-	public final fun data (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
-	public static synthetic fun data$default (Lio/github/nijasc/ktor/svelte/SveltePageLoadConfig;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)V
+	public final fun data (Ljava/lang/String;Lio/ktor/server/routing/Route;Ljava/util/Map;)V
+	public static synthetic fun data$default (Lio/github/nijasc/ktor/svelte/SveltePageLoadConfig;Ljava/lang/String;Lio/ktor/server/routing/Route;Ljava/util/Map;ILjava/lang/Object;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SveltePageLoadsConfig {
 	public final fun getInline ()Z
 	public final fun getInlineTimeout-UwyO8pc ()J
-	public final fun page (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
 	public final fun setInline (Z)V
 	public final fun setInlineTimeout-LRDsOJo (J)V
 }
