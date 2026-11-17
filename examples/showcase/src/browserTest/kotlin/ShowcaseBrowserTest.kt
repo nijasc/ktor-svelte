@@ -688,6 +688,34 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the admin sidebar collapses to icons, remembers it, and is a drawer on a small screen`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/admin")
+        val sidebar = page.getByRole(AriaRole.NAVIGATION, Page.GetByRoleOptions().setName("Admin sections"))
+        assertThat(sidebar.getByRole(AriaRole.LINK)).hasCount(2)
+        assertThat(sidebar.getByRole(AriaRole.LINK).first()).hasAttribute("aria-current", "page")
+        val layout = page.locator("[data-collapsed]")
+        page.button("Collapse").click()
+        assertThat(layout).hasAttribute("data-collapsed", "true")
+        assertThat(sidebar.getByRole(AriaRole.LINK).first()).hasAttribute("title", "Admin")
+        page.reload()
+        assertThat(layout).hasAttribute("data-collapsed", "true")
+        page.button("Expand").click()
+        assertThat(layout).hasAttribute("data-collapsed", "false")
+
+        page.setViewportSize(500, 800)
+        assertThat(sidebar).not().isVisible()
+        page.button("Menu").click()
+        assertThat(sidebar).isVisible()
+        page.keyboard().press("Escape")
+        assertThat(sidebar).not().isVisible()
+        page.button("Menu").click()
+        sidebar.getByRole(AriaRole.LINK, com.microsoft.playwright.Locator.GetByRoleOptions().setName("All tasks")).click()
+        assertThat(page).hasURL(Pattern.compile(".*/admin/tasks$"))
+        assertThat(sidebar).not().isVisible()
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
