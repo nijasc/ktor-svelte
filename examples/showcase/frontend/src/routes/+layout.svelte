@@ -3,6 +3,7 @@
     import { page } from '$app/state';
     import { can, cookieConsent, currentUser, loadPublicConfig, matchGuard, pageGuards } from '#api';
     import LocaleSwitch from '#components/LocaleSwitch.svelte';
+    import FocusHeading from '#components/FocusHeading.svelte';
     import NavigationProgress from '#components/NavigationProgress.svelte';
     import ThemeToggle from '#components/ThemeToggle.svelte';
     import Icon from '#icon';
@@ -35,6 +36,7 @@
 </script>
 
 <NavigationProgress label={m.navLoading()} />
+<FocusHeading />
 <a class="btn btn-sm sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50" href="#content">{m.skipToContent()}</a>
 
 <header class="navbar bg-base-100 border-b border-base-300 flex-wrap gap-2 px-4">

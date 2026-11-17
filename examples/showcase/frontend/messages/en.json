@@ -178,5 +178,9 @@
   "email-welcome-title": "Hello {name}",
   "email-welcome-text": "Your account is ready. The tasks, comments and files of your team are waiting for you.",
   "email-welcome-action": "Open the board",
-  "email-footer": "You get this email because someone created an account with this address on the ktor-svelte showcase."
+  "email-footer": "You get this email because someone created an account with this address on the ktor-svelte showcase.",
+  "sidebar-label": "Admin sections",
+  "sidebar-collapse": "Collapse",
+  "sidebar-expand": "Expand",
+  "sidebar-menu": "Menu"
 }

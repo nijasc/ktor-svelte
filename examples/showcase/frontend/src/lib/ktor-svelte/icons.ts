@@ -2069,6 +2069,7 @@ export const icons: Partial<Record<LucideIconName, () => Promise<{ default: Comp
     Languages: () => import('@lucide/svelte/icons/languages'),
     LayoutDashboard: () => import('@lucide/svelte/icons/layout-dashboard'),
     Lightbulb: () => import('@lucide/svelte/icons/lightbulb'),
+    ListChecks: () => import('@lucide/svelte/icons/list-checks'),
     LogIn: () => import('@lucide/svelte/icons/log-in'),
     LogOut: () => import('@lucide/svelte/icons/log-out'),
     MessageSquare: () => import('@lucide/svelte/icons/message-square'),
@@ -2085,4 +2086,5 @@ export const icons: Partial<Record<LucideIconName, () => Promise<{ default: Comp
     Star: () => import('@lucide/svelte/icons/star'),
     Trash: () => import('@lucide/svelte/icons/trash'),
     UserPlus: () => import('@lucide/svelte/icons/user-plus'),
+    Users: () => import('@lucide/svelte/icons/users'),
 };

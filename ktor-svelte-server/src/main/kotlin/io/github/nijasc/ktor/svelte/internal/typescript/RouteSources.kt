@@ -156,3 +156,19 @@ private fun skipAttributes(input: DataInputStream) {
         input.skipBytes(input.readInt())
     }
 }
+
+internal fun routeKeyOf(node: RoutingNode): Pair<String, String>? {
+    val chain = generateSequence(node) { it.parent }.toList().asReversed()
+    val method = chain.firstNotNullOfOrNull { (it.selector as? HttpMethodRouteSelector)?.method?.value } ?: return null
+    val path =
+        chain.fold("") { path, current ->
+            when (val selector = current.selector) {
+                is PathSegmentConstantRouteSelector -> "$path/${selector.value}"
+                is PathSegmentParameterRouteSelector -> path + parameterSegment(selector.prefix, selector.name, selector.suffix)
+                is PathSegmentOptionalParameterRouteSelector -> path + parameterSegment(selector.prefix, selector.name, selector.suffix)
+                is PathSegmentTailcardRouteSelector -> "$path/{${selector.name}...}"
+                else -> path
+            }
+        }
+    return method to path.ifEmpty { "/" }
+}

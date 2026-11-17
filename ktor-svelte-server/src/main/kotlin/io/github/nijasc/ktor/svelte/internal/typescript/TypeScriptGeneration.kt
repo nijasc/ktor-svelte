@@ -20,10 +20,12 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolute
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteExisting
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
@@ -111,6 +113,7 @@ internal fun installTypeScriptGeneration(
     errorReportPath: String? = null,
     vitalsCall: String? = null,
     preferences: PreferencesType? = null,
+    pageLoads: () -> List<PageLoadSpec> = { emptyList() },
 ) {
     val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
     val generateOnly = verifyReport != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
@@ -149,7 +152,7 @@ internal fun installTypeScriptGeneration(
         )
 
     application.onOwn(ApplicationStarted) {
-        val succeeded = generate(application, output, generator, verifyReport)
+        val succeeded = generate(application, output, generator, verifyReport, pageLoads())
         if (generateOnly) Runtime.getRuntime().halt(if (succeeded) 0 else 1)
     }
 }
@@ -159,6 +162,7 @@ private fun generate(
     output: Path,
     generator: TypeScriptGenerator,
     verifyReport: Path?,
+    pageLoads: List<PageLoadSpec> = emptyList(),
 ): Boolean {
     if (findFrontendRoot(output) == null) {
         application.log.warn("ktor-svelte did not generate TypeScript: no package.json found at or above ${output.absolute()}.")
@@ -172,21 +176,27 @@ private fun generate(
                 .content
         val routing = application.pluginOrNull(RoutingRoot)
         val routeFiles = routing?.let { root -> routeSources(root).mapValues { it.value.file } }.orEmpty()
-        val files = generator.generate(openApiJson, routeFiles)
+        val files = generator.generate(openApiJson, routeFiles, pageLoads)
         val projectDirectory = Path("").absolute()
         val environmentFile = environmentExample(DeclaredEnvironment.variables())?.let { mapOf(ENV_EXAMPLE_FILE to it) }.orEmpty()
+        val routesDirectory = findFrontendRoot(output)!!.resolve("src/routes")
+        val pageFiles = pageLoadFiles(routesDirectory, pageLoads.map { it.page })
         if (verifyReport != null) {
             val stale =
                 (
                     staleFiles(
                         output,
                         files,
-                    ) + staleFiles(projectDirectory, environmentFile)
+                    ) + staleFiles(projectDirectory, environmentFile) + staleFiles(routesDirectory, pageFiles) +
+                        orphanPageLoads(routesDirectory, pageFiles.keys)
                 ).map { it.absolute().normalize().toString() }
             verifyReport.parent?.createDirectories()
             verifyReport.writeText(stale.joinToString("") { "$it\n" })
         } else {
-            val changed = writeIfChanged(output, files) + writeIfChanged(projectDirectory, environmentFile)
+            orphanPageLoads(routesDirectory, pageFiles.keys).forEach { it.deleteExisting() }
+            val changed =
+                writeIfChanged(output, files) + writeIfChanged(projectDirectory, environmentFile) +
+                    writeIfChanged(routesDirectory, pageFiles)
             if (changed.isNotEmpty()) application.log.info("ktor-svelte updated ${changed.joinToString()} in $output")
             routing?.let { root ->
                 writeIfChanged(
@@ -202,4 +212,65 @@ private fun generate(
         application.log.error("ktor-svelte could not generate TypeScript", failure)
         false
     }
+}
+
+internal fun pageLoadFiles(
+    routes: Path,
+    pages: List<String>,
+): Map<String, String> =
+    pages
+        .mapNotNull { page ->
+            val directory =
+                pageDirectory(routes, page)
+                    ?: error("pageLoads: no +page.svelte for '$page' under $routes.")
+            val file = directory.resolve("+page.ts")
+            val handWritten = file.exists() && file.readText().isNotBlank() && !file.readText().startsWith(PAGE_LOAD_PREFIX)
+            if (handWritten) null else routes.relativize(file).toString().replace('\\', '/') to pageModuleSource(page)
+        }.toMap()
+
+internal fun orphanPageLoads(
+    routes: Path,
+    generated: Set<String>,
+): List<Path> {
+    if (!routes.exists()) return emptyList()
+    return Files.walk(routes).use { files ->
+        files
+            .filter { it.fileName.toString() == "+page.ts" }
+            .filter { routes.relativize(it).toString().replace('\\', '/') !in generated }
+            .filter { it.readText().startsWith(PAGE_LOAD_PREFIX) }
+            .toList()
+    }
+}
+
+private fun pageDirectory(
+    routes: Path,
+    page: String,
+): Path? {
+    if (!routes.exists()) return null
+    val wanted = page.trim('/').split('/').filter { it.isNotEmpty() }
+    return Files.walk(routes).use { files ->
+        files
+            .filter { it.fileName.toString() == "+page.svelte" }
+            .map { it.parent }
+            .filter { directory ->
+                routes
+                    .relativize(directory)
+                    .map { it.toString() }
+                    .filter { it.isNotEmpty() && !(it.startsWith("(") && it.endsWith(")")) } == wanted
+            }.findFirst()
+            .orElse(null)
+    }
+}
+
+internal fun generatedOperations(
+    application: Application,
+    apiPrefixes: List<String>,
+    excludedPaths: List<String>,
+): List<GeneratedOperation> {
+    val openApiJson =
+        OpenApiDocSource
+            .Routing(schemaInference = BrandedSchemaInference)
+            .read(application, OpenApiDoc(info = OpenApiInfo(title = "API", version = "1.0")))
+            .content
+    return TypeScriptGenerator(apiPrefixes, excludedPaths).also { it.generate(openApiJson) }.operations.toList()
 }
