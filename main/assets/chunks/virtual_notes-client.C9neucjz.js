@@ -136,6 +136,7 @@ interface InternalOptions extends RequestOptions {
     operation?: string;
     upload?: UploadRules;
     multipart?: boolean;
+    omit?: readonly string[];
 }
 
 export interface UploadRules {
@@ -360,14 +361,22 @@ function timeZone(): string | undefined {
     return ownTimeZone;
 }
 
+function withoutKeys(body: unknown, keys: readonly string[]): unknown {
+    if (body === null || typeof body !== 'object' || Array.isArray(body) || isRawBody(body)) return body;
+    const copy: Record<string, unknown> = { ...(body as Record<string, unknown>) };
+    for (const key of keys) delete copy[key];
+    return copy;
+}
+
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
     const {
         query,
         typedHeaders,
-        body: given,
+        body: sent,
         operation,
         upload,
         multipart,
+        omit,
         fetch: customFetch,
         headers,
         onUploadProgress,
@@ -378,6 +387,7 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
         refresh,
         ...init
     } = options;
+    const given = omit?.length ? withoutKeys(sent, omit) : sent;
     const body = multipart && given !== undefined && !isRawBody(given) ? toFormData(given as Record<string, unknown>) : given;
     const plan = streaming ? undefined : retryPlan(method, retry);
     const chosenRetry = retry ?? apiConfig.retry;

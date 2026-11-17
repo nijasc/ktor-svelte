@@ -1617,6 +1617,35 @@ Types without annotations get no `validate()`, just as the server skips them. On
 
 Rules in `Validated.rules()` and in `validate { }` inside a route only run on the server, so their errors arrive with the 422. See [Validation](https://nijasc.github.io/ktor-svelte/main/features/validation) for the rules themselves, and for `formState`, which does this bookkeeping for you.
 
+### Read-only fields
+
+Fields the server fills in, such as an ID or a creation time, are marked with Ktor's `@JsonSchema.ReadOnly`. They become `readonly` in TypeScript, and the generated functions that send the class leave them out:
+
+```kotlin
+import io.ktor.openapi.JsonSchema
+
+@Serializable
+data class Ticket(
+    @JsonSchema.ReadOnly val id: Long = 0,
+    val title: String,
+    @JsonSchema.ReadOnly val createdAt: String = "",
+)
+```
+
+```ts
+export interface Ticket {
+    readonly id: number;
+    title: string;
+    readonly createdAt?: string;
+}
+
+export const ticketsCreate = (body: Omit<Ticket, 'id' | 'createdAt'>, options?: RequestOptions) => ...
+```
+
+- A call that sends a `Ticket` takes `Omit<Ticket, 'id' | 'createdAt'>`, so you cannot pass an ID by mistake, and a whole record you edited can still be passed: the client takes the read-only fields out of the body before it is sent. Your object is not changed.
+- Give read-only fields a default in Kotlin, as above, so `call.receive<Ticket>()` works on a body without them, and set the real values on the server.
+- Only the fields of the class that is the body itself are left out, not those of nested classes, lists or upload forms.
+
 ### Enums
 
 Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
