@@ -3,6 +3,7 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
 import io.github.nijasc.ktor.svelte.DECIMAL_SERIAL_NAME
+import io.github.nijasc.ktor.svelte.presetOf
 import io.ktor.openapi.AdditionalProperties
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonSchemaInference
@@ -58,15 +59,20 @@ internal object BrandedSchemaInference : JsonSchemaInference {
         }
         return when (descriptor.kind) {
             StructureKind.CLASS, StructureKind.OBJECT -> {
-                val elements =
-                    (0 until descriptor.elementsCount).associate {
-                        descriptor.getElementName(it) to
-                            descriptor.getElementDescriptor(it)
-                    }
+                val elements = (0 until descriptor.elementsCount).associateBy { descriptor.getElementName(it) }
                 schema.copy(
                     properties =
                         schema.properties?.mapValues { (name, property) ->
-                            elements[name]?.let { branded(property, it, depth + 1) } ?: property
+                            val index = elements[name] ?: return@mapValues property
+                            val format = descriptor.getElementAnnotations(index).firstNotNullOfOrNull(::presetOf)?.format
+                            val inner = branded(property, descriptor.getElementDescriptor(index), depth + 1)
+                            if (format != null &&
+                                inner is ReferenceOr.Value
+                            ) {
+                                ReferenceOr.Value(inner.value.copy(format = format))
+                            } else {
+                                inner
+                            }
                         },
                 )
             }

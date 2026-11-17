@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.internal.typescript
 
 import io.github.nijasc.ktor.svelte.internal.validation.ConstraintMessages
+import io.github.nijasc.ktor.svelte.internal.validation.RulePresets
 import io.github.nijasc.ktor.svelte.internal.validation.formatNumber
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -560,6 +561,7 @@ internal class TypeScriptGenerator(
             schema.objectAt("properties").orEmpty().values.any { value ->
                 val property = value.jsonObject
                 CONSTRAINT_KEYWORDS.any { property.numberAt(it) != null || (it == "pattern" && property.stringAt(it) != null) } ||
+                    RulePresets.forFormat(property.stringAt("format")) != null ||
                     referencedSchema(property)?.let { raw ->
                         raw !in visiting && (schemas[raw] as? JsonObject)?.let { hasValidator(it, schemas, visiting + raw) } == true
                     } == true
@@ -590,13 +592,14 @@ internal class TypeScriptGenerator(
         val minLength = schema.numberAt("minLength")?.toInt()
         val maxLength = schema.numberAt("maxLength")?.toInt()
         val pattern = (schema["pattern"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val preset = RulePresets.forFormat(schema.stringAt("format"))
         val lower = schema.numberAt("minimum")?.let { it to false } ?: schema.numberAt("exclusiveMinimum")?.let { it to true }
         val upper = schema.numberAt("maximum")?.let { it to false } ?: schema.numberAt("exclusiveMaximum")?.let { it to true }
         val lines = mutableListOf<String>()
         if (isRequiredInput(schema, required) && isNumber(schema)) {
             lines += "        if (typeof $access !== 'number' || Number.isNaN($access)) ${fail(REQUIRED_MESSAGE)}"
         }
-        if (minLength != null || maxLength != null || pattern != null) {
+        if (minLength != null || maxLength != null || pattern != null || preset != null) {
             lines += "        if (typeof $access === 'string') {"
             if (minLength != null || maxLength != null) lines += "            const length = [...$access].length;"
             minLength?.let { lines += "            if (length < $it) ${fail(ConstraintMessages.minLength(it))}" }
@@ -604,6 +607,11 @@ internal class TypeScriptGenerator(
             pattern?.let {
                 validationHelpers += ValidationHelper.MATCHES
                 lines += "            if (!matches(${literal(JsonPrimitive(it))}, $access)) ${fail(ConstraintMessages.pattern(it))}"
+            }
+            preset?.let {
+                validationHelpers += ValidationHelper.MATCHES
+                val passes = it.checks.joinToString(" && ") { check -> "matches(${literal(JsonPrimitive(check.pattern))}, $access)" }
+                lines += "            if (!($passes)) ${fail(it.message)}"
             }
             lines += "        }"
         }
