@@ -158,6 +158,24 @@ class GenerateTsTest {
     }
 
     @Test
+    fun `each other frontend gets the same typed client in its own folder`() {
+        val main = frontend()
+        val admin = frontend()
+        val adminOutput = admin.resolve("src/lib/api")
+
+        generatedApi(main.resolve("src/lib/api")) {
+            frontend("/admin") {
+                source = SvelteSource.Directory(fixtureBuild())
+                generateTsOutput = adminOutput.toString()
+            }
+        }
+
+        listOf("services.ts", "types.ts", "client.ts").forEach { file ->
+            assertEquals(main.resolve("src/lib/api/$file").readText(), adminOutput.resolve(file).readText(), file)
+        }
+    }
+
+    @Test
     fun `declared error responses join the typed errors of every endpoint`() {
         val output = frontend().resolve("src/lib/api")
 
