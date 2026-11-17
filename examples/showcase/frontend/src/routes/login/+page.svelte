@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { api, isApiError, Login } from '#api';
+    import { afterLogin, api, isApiError, Login } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { routes } from '#routes';
@@ -15,7 +15,7 @@
         message = '';
         try {
             await api.session.create(draft);
-            await goto(routes.board());
+            await goto(afterLogin(routes.board()));
         } catch (error) {
             if (isApiError(error, 'session.create')) message = error.body.message;
             else message = m.loginFailed();

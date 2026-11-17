@@ -431,7 +431,7 @@ Run `svelteSync` once. It writes `src/lib/ktor-svelte/toasts.ts` and a `src/hook
 Some errors are left to you, because a toast would be the wrong answer:
 
 - 422 validation errors, which your form shows next to the fields.
-- 401, which `apiConfig.onUnauthorized` handles.
+- 401, which [the login page](auth.md#the-login-page) or `apiConfig.onUnauthorized` handles.
 - Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
 
 The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, give one a button with `action: { label: 'Undo', run: restore }`, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.

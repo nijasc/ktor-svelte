@@ -9,6 +9,8 @@ import {
     fixtureFetch,
     typedCookie,
     userStore,
+    loginPath,
+    afterLogin,
     type UserState,
     isRateLimitError,
     isUploadError,
@@ -547,5 +549,89 @@ await members.load();
 memberStep('and the next load asks again');
 results.currentUser = memberSteps;
 apiConfig.fetch = undefined;
+
+const pageHost = globalThis as unknown as { location?: unknown };
+const hadLocation = 'location' in pageHost;
+const assigned: string[] = [];
+function standOn(path: string) {
+    const address = new URL(path, 'https://app.example');
+    pageHost.location = {
+        href: address.href,
+        origin: address.origin,
+        pathname: address.pathname,
+        search: address.search,
+        hash: address.hash,
+        assign: (target: string) => assigned.push(`assign ${target}`)
+    };
+}
+async function sentToLogin(path: string, setup: () => void = () => {}, options: { silent?: boolean } = {}, status = 401): Promise<string[]> {
+    const went: string[] = [];
+    assigned.length = 0;
+    apiConfig.retry = undefined;
+    apiConfig.onError = undefined;
+    apiConfig.onUnauthorized = undefined;
+    apiConfig.baseUrl = '';
+    apiConfig.loginPage = '/login';
+    apiConfig.onNavigate = (target) => went.push(target);
+    standOn(path);
+    setup();
+    apiConfig.fetch = (async () => new Response('{}', { status })) as typeof fetch;
+    await request('GET', '/api/notes', options).catch(() => undefined);
+    went.push('the call failed first');
+    await new Promise((resolve) => realTimeout(resolve, 20));
+    went.push(...assigned);
+    apiConfig.onNavigate = undefined;
+    apiConfig.onUnauthorized = undefined;
+    apiConfig.loginPage = undefined;
+    apiConfig.baseUrl = '';
+    return went;
+}
+const loginRedirects = {
+    fromAPage: await sentToLogin('/notes/7?tab=files#top'),
+    fromTheLoginPage: await sentToLogin('/login?next=%2Fboard'),
+    silentCall: await sentToLogin('/notes', () => {}, { silent: true }),
+    otherStatus: await sentToLogin('/notes', () => {}, {}, 403),
+    ownHandler: await sentToLogin('/notes', () => {
+        apiConfig.onUnauthorized = () => assigned.push('own handler');
+    }),
+    noLoginPage: await sentToLogin('/notes', () => {
+        apiConfig.loginPage = undefined;
+    }),
+    withoutRouter: await sentToLogin('/notes', () => {
+        apiConfig.onNavigate = undefined;
+    }),
+    otherOrigin: await sentToLogin('/notes', () => {
+        apiConfig.baseUrl = 'https://other.example';
+    })
+};
+apiConfig.fetch = undefined;
+apiConfig.loginPage = '/login';
+standOn('/board?mine=true');
+const loginPaths = [
+    loginPath(),
+    loginPath('/tasks/4'),
+    loginPath(new URL('https://app.example/tasks/4?tab=files')),
+    loginPath('/login/'),
+    loginPath('//other.example/x')
+];
+standOn('/login?next=%2Ftasks%2F4%3Ftab%3Dfiles');
+const returns = [
+    afterLogin('/board'),
+    afterLogin('/board', '/login'),
+    afterLogin('/board', '/login?next=https%3A%2F%2Fother.example'),
+    afterLogin('/board', '/login?next=%2F%2Fother.example'),
+    afterLogin('/board', new URL('https://app.example/login?next=%2Fsettings')),
+    afterLogin()
+];
+apiConfig.loginPage = undefined;
+let withoutLoginPage = 'no error';
+try {
+    loginPath('/tasks');
+} catch (error) {
+    withoutLoginPage = (error as Error).message;
+}
+results.login = { redirects: loginRedirects, paths: loginPaths, returns, withoutLoginPage };
+if (hadLocation) Reflect.deleteProperty(pageHost, 'location');
+else Reflect.deleteProperty(pageHost, 'location');
 
 console.log(JSON.stringify(results));

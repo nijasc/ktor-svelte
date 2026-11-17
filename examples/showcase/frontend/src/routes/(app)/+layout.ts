@@ -1,13 +1,12 @@
 import { redirect } from '@sveltejs/kit';
-import { currentUser } from '#api';
-import { routes } from '#routes';
+import { currentUser, loginPath } from '#api';
 import type { LayoutLoad } from './$types';
 
 export const prerender = false;
 export const ssr = false;
 
-export const load: LayoutLoad = async () => {
+export const load: LayoutLoad = async ({ url }) => {
     const user = await currentUser.load();
-    if (!user) redirect(307, routes.login());
+    if (!user) redirect(307, loginPath(url));
     return { user };
 };

@@ -56,23 +56,20 @@ fun Application.sessionAuth(users: Users) {
 - The `login` limit allows five attempts per minute and client, on top of the default limit for all API writes.
 - `errorResponse` adds the 401 to the typed errors of every endpoint, because `authenticate` answers it outside your route.
 
-In the frontend, send users to the login page whenever the API says they are signed out:
+Add `loginPage = "/login"` to `install(Svelte)`, and the generated client sends users to the login page whenever the API says they are signed out, with the page they were on. [The login page](../features/auth.md#the-login-page) has the details. The login form then signs in and goes back:
 
 ```ts no-check
 import { goto } from '$app/navigation';
-import { api, apiConfig, isApiError } from '#api';
-
-apiConfig.onUnauthorized = () => goto('/login');
+import { afterLogin, api, isApiError } from '#api';
 
 try {
-    const user = await api.session.create({ email, password });
+    await api.session.create({ email, password });
+    await goto(afterLogin('/'));
 } catch (error) {
     if (isApiError(error, 'session.create')) message = error.body.message;
     else throw error;
 }
 ```
-
-Put the `onUnauthorized` line in your root `+layout.ts`, so it runs once in the browser.
 
 ## Typed cookies
 

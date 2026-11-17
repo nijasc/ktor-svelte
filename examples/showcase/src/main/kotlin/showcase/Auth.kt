@@ -4,8 +4,8 @@ import io.github.nijasc.ktor.svelte.currentUserChanged
 import io.github.nijasc.ktor.svelte.fieldCheck
 import io.github.nijasc.ktor.svelte.requireUser
 import io.github.nijasc.ktor.svelte.respondError
+import io.github.nijasc.ktor.svelte.respondLoginRedirect
 import io.github.nijasc.ktor.svelte.user
-import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -73,7 +73,7 @@ fun Application.configureAuth(
                 if (call.request.path().startsWith("/api/")) {
                     call.respond(HttpStatusCode.Unauthorized, Problem(call.messages.problemSignIn()))
                 } else {
-                    call.respondRedirect(FrontendRoutes.login)
+                    call.respondLoginRedirect()
                 }
             }
         }

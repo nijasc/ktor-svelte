@@ -114,20 +114,25 @@ class DevModeBrowserTest {
             visitEveryPageUntilViteIsSettled()
         }
 
+        fun reachBoard(page: Page): Boolean {
+            val soon = Page.WaitForURLOptions().setTimeout(5_000.0)
+            page.navigate("/board")
+            page.waitForURL(Pattern.compile(".*/(board|login(\\?next=.*)?)$"), soon)
+            if (!page.url().endsWith("/board")) {
+                page.getByLabel("Email").fill(ADMIN_EMAIL)
+                page.getByLabel("Password").fill(ADMIN_PASSWORD)
+                page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
+                page.waitForURL(Pattern.compile(".*/board$"), soon)
+            }
+            return true
+        }
+
         private fun visitEveryPageUntilViteIsSettled() {
             val context = browser.newContext(Browser.NewContextOptions().setBaseURL(APP).setLocale("en-US"))
             context.addCookies(listOf(com.microsoft.playwright.options.Cookie("cookie-consent", "preferences").setUrl(APP)))
             try {
                 val page = context.newPage()
-                waitFor("the first sign in", 120) {
-                    page.navigate("/board")
-                    page.waitForURL(Pattern.compile(".*/login$"), Page.WaitForURLOptions().setTimeout(5_000.0))
-                    page.getByLabel("Email").fill(ADMIN_EMAIL)
-                    page.getByLabel("Password").fill(ADMIN_PASSWORD)
-                    page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
-                    page.waitForURL(Pattern.compile(".*/board$"), Page.WaitForURLOptions().setTimeout(5_000.0))
-                    true
-                }
+                waitFor("the first sign in", 120) { reachBoard(page) }
                 waitFor("Vite to stop optimizing dependencies", 120) {
                     val seen = log.length()
                     listOf("/", "/about", "/board").forEach { path ->
@@ -222,15 +227,7 @@ class DevModeBrowserTest {
     @Test
     fun `an open page loads its data again after the app restarts, without a reload`() {
         val routes = File(project, "src/main/kotlin/showcase/TaskRoutes.kt")
-        waitFor("the board after signing in", 60) {
-            page.navigate("/board")
-            page.waitForURL(Pattern.compile(".*/login$"), Page.WaitForURLOptions().setTimeout(5_000.0))
-            page.getByLabel("Email").fill(ADMIN_EMAIL)
-            page.getByLabel("Password").fill(ADMIN_PASSWORD)
-            page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
-            page.waitForURL(Pattern.compile(".*/board$"), Page.WaitForURLOptions().setTimeout(5_000.0))
-            true
-        }
+        waitFor("the board after signing in", 60) { reachBoard(page) }
         assertThat(page.locator("#tasks > li").first()).isVisible()
         val loads = java.util.concurrent.CopyOnWriteArrayList<String>()
         page.onRequest { request -> if ("/api/tasks" in request.url()) loads += request.url() }
@@ -253,7 +250,7 @@ class DevModeBrowserTest {
     @Test
     fun `signing in works through the dev proxy and the board loads its data`() {
         page.navigate("/board")
-        assertThat(page).hasURL(Pattern.compile(".*/login$"))
+        assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
         assertThat(page.getByRole(AriaRole.BANNER).getByRole(AriaRole.LINK).last()).hasText("Sign in")
         page.getByLabel("Email").fill(ADMIN_EMAIL)
         page.getByLabel("Password").fill(ADMIN_PASSWORD)
@@ -577,7 +574,7 @@ class DevModeBrowserTest {
     @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
-        assertThat(page).hasURL(Pattern.compile(".*/login$"))
+        assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
         assertThat(page.getByRole(AriaRole.BANNER).getByRole(AriaRole.LINK).last()).hasText("Sign in")
         page.getByLabel("Email").fill(ADMIN_EMAIL)
         page.getByLabel("Password").fill(ADMIN_PASSWORD)
@@ -603,7 +600,7 @@ class DevModeBrowserTest {
         assertThat(panel.locator(".cookies-note")).containsText("Reload the page to see it without them.")
         assertThat(row("showcase_session")).hasCount(0)
         page.reload()
-        assertThat(page).hasURL(Pattern.compile(".*/login$"))
+        assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
     }
 
     @Test

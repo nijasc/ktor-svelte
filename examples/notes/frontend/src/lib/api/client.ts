@@ -23,6 +23,7 @@ export interface ApiConfig {
     headers: Record<string, string>;
     fetch?: typeof fetch;
     onUnauthorized?: (response: Response) => void;
+    loginPage?: string;
     dedupeGets?: boolean;
     idempotencyKeys?: boolean;
     timeout?: number;
@@ -440,7 +441,40 @@ function noticeNavigation(response: Response, url: string) {
     setTimeout(() => apiConfig.onNavigate?.(path), 0);
 }
 
-async function checked(response: Response, url: string, operation: string | undefined): Promise<Response> {
+function insideApp(path: string | null | undefined): path is string {
+    return typeof path === 'string' && /^\/(?![/\\])/.test(path);
+}
+
+type PageAddress = string | { pathname: string; search: string; hash?: string };
+
+function pathOf(address: PageAddress): string {
+    return typeof address === 'string' ? address : address.pathname + address.search + (address.hash ?? '');
+}
+
+export function loginPath(from?: PageAddress): string {
+    const page = apiConfig.loginPage;
+    if (!page) throw new Error('loginPath needs the login page. Say it once on the server: install(Svelte) { loginPage = "/login" }.');
+    const here = from === undefined ? (typeof location === 'undefined' ? undefined : pathOf(location)) : pathOf(from);
+    if (!insideApp(here)) return page;
+    const onLoginPage = (here.split(/[?#]/)[0].replace(/\/$/, '') || '/') === (page.replace(/\/$/, '') || '/');
+    return onLoginPage ? page : `${page}?next=${encodeURIComponent(here)}`;
+}
+
+export function afterLogin(fallback = '/', from?: PageAddress): string {
+    const address = from === undefined ? (typeof location === 'undefined' ? '' : pathOf(location)) : pathOf(from);
+    const query = address.split('#')[0].split('?')[1] ?? '';
+    const next = new URLSearchParams(query).get('next');
+    return insideApp(next) ? next : fallback;
+}
+
+function toLogin(silent: boolean | undefined) {
+    if (silent || !apiConfig.loginPage || typeof location === 'undefined') return;
+    const target = loginPath();
+    if (target === apiConfig.loginPage) return;
+    setTimeout(() => (apiConfig.onNavigate ?? ((path: string) => location.assign(path)))(target), 0);
+}
+
+async function checked(response: Response, url: string, operation: string | undefined, silent?: boolean): Promise<Response> {
     noticeBuild(response);
     noticeToasts(response, url);
     if (response.ok) noticeNavigation(response, url);
@@ -448,7 +482,10 @@ async function checked(response: Response, url: string, operation: string | unde
         if (response.status === 401) for (const watcher of userWatchers) watcher.gone();
         else if (response.headers.get('x-ktor-svelte-user') === 'changed') for (const watcher of userWatchers) watcher.changed();
     }
-    if (response.status === 401) apiConfig.onUnauthorized?.(response);
+    if (response.status === 401) {
+        if (apiConfig.onUnauthorized) apiConfig.onUnauthorized(response);
+        else if (isSameOrigin(url)) toLogin(silent);
+    }
     if (!response.ok) {
         const requestId = response.headers.get('x-request-id') ?? undefined;
         throw new ApiError(response.status, await parseResponse(response), url, operation, requestId, retryAfter(response));
@@ -511,7 +548,8 @@ export async function request<T>(method: string, path: string, options: Internal
     const { url, operation, send, attempt } = prepare(method, path, options, 'application/json');
     const run = async (silent = options.silent) => {
         try {
-            const result = (await attempt(async () => parseResponse(await checked(await send(), url, operation)))) as T;
+            const answer = async () => parseResponse(await checked(await send(), url, operation, options.silent));
+            const result = (await attempt(answer)) as T;
             noticeWrite(method, options);
             return result;
         } catch (error) {
@@ -543,7 +581,7 @@ export async function* stream<T>(method: string, path: string, options: Internal
     const { url, operation, send } = prepare(method, path, options, 'text/event-stream', true);
     let response: Response;
     try {
-        response = await checked(await send(), url, operation);
+        response = await checked(await send(), url, operation, options.silent);
     } catch (error) {
         report(error, options.silent);
         throw error;

@@ -203,6 +203,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
         if (pluginConfig.requestIds) installRequestIds(application)
         installConfigReport(application, pluginConfig)
+        val loginPage = pluginConfig.loginPage
+        require(loginPage == null || (isPagePath(loginPage) && '?' !in loginPage && '#' !in loginPage)) {
+            "loginPage takes the path of a page in this app, such as \"/login\" or FrontendRoutes.login, but is '$loginPage'."
+        }
+        loginPage?.let { application.attributes.put(LoginPageKey, it) }
         val currentUser = pluginConfig.currentUserSpec
         val currentUserPath =
             currentUser?.let { it.path ?: (pluginConfig.apiPrefixList.firstOrNull() ?: "/api").trimEnd('/') + "/$CURRENT_USER_ROUTE" }
@@ -218,6 +223,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.errorCodeSet?.names.orEmpty(),
             pluginConfig.typedCookies.map { it.spec() },
             currentUser?.let { CurrentUserType(it.typeName, it.schema, currentUserPath.orEmpty()) },
+            loginPage,
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
