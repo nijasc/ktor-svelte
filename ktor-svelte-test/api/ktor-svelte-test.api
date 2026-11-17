@@ -1,3 +1,12 @@
+public final class io/github/nijasc/ktor/svelte/test/AccessibilityCheck {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/test/AccessibilityCheck;
+	public static final fun main ([Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/test/AccessibilityKt {
+	public static final fun accessibilityProblems (Lcom/microsoft/playwright/Page;)Ljava/util/List;
+}
+
 public final class io/github/nijasc/ktor/svelte/test/ApiFailure : java/lang/AssertionError {
 	public fun <init> (ILjava/lang/String;Ljava/lang/String;)V
 	public final fun getBody ()Ljava/lang/String;

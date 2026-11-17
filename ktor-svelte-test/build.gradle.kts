@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     api(libs.playwright)
+    api(libs.axe.playwright)
     api(libs.serialization.json)
     api(platform(libs.junit.bom))
     api(libs.junit.jupiter.api)
