@@ -81,6 +81,21 @@ export const errorMessages = {
     failed: 'Something went wrong. Please try again.'
 };
 
+export type Patch<T> = { [K in keyof T]?: T[K] };
+
+export function patchOf<T extends object>(before: T, after: T): Patch<T> {
+    const patch: Patch<T> = {};
+    for (const key of Object.keys(after) as (keyof T)[]) {
+        const next = after[key] === undefined ? null : after[key];
+        if (JSON.stringify(before[key] ?? null) !== JSON.stringify(next)) patch[key] = next as T[keyof T];
+    }
+    return patch;
+}
+
+export function applyPatch<T extends object>(target: T, patch: Patch<T>): T {
+    return { ...target, ...patch };
+}
+
 export interface VersionConflict<T = unknown> {
     message: string;
     code: 'version.conflict';

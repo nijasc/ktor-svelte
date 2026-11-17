@@ -1573,6 +1573,37 @@ The message is the code's name as a sentence unless you say otherwise. There are
 
 An app has one enum of error codes. A class of your API named `ErrorCode` clashes with the generated type and stops generation.
 
+### Changing some fields
+
+A `PUT` replaces a record, so the browser has to send every field, also the ones the visitor never touched. A `PATCH` sends only what changed, but then the server has to tell a field that was left out from one that was set to null, and a nullable Kotlin property cannot: both arrive as null. `Patch<T>` can, without a second DTO:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.Patch
+
+patch("/api/notes/{id}") {
+    val patch = call.receive<Patch<NoteInput>>()
+    val stored = notes.find(id)
+    val updated = patch.applyTo(stored.toInput())
+    call.respond(notes.save(id, updated))
+}
+```
+
+- `applyTo` returns the given object with the sent fields replaced. A field that was not sent keeps its value, and one sent as null becomes null.
+- The result is checked like a received object: the bounds from annotations and the `Validated` rules, answered with the usual 422. `@Trim` and the other normalisers apply to the sent fields.
+- A field the class does not have, null for a property that is not nullable, or a value of the wrong type is a 400.
+- `NoteInput::title in patch`, `patch.has("title")` and `patch.fields` say what was sent, for a route that treats one field specially.
+
+In the generated client the body is the class with every field optional, and null allowed where the class allows it:
+
+```ts
+import { api, patchOf } from '#api';
+
+await api.notes.patch(note.id, { dueOn: null });
+await api.notes.patch(note.id, patchOf(original, draft));
+```
+
+`patchOf(before, after)` is the fields that differ between two objects, with null for the ones that were cleared, so an edit form sends what the visitor changed and nothing else. `applyPatch(target, patch)` does on the client what `applyTo` does on the server, for showing the result before the answer is there. `Patch<T>` is the type of both.
+
 ### Two people, one record
 
 Two people open the same record, both change it, both save. Without a check the second save silently replaces the first. With a version, the second one is told.
