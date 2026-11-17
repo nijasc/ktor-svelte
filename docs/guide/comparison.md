@@ -2,6 +2,13 @@
 
 ktor-svelte is one way to put a Ktor API and a SvelteKit frontend together. This page compares it with the common alternatives, so you can tell whether it fits before you start.
 
+## The short answer
+
+- **Choose ktor-svelte** when the backend is on the JVM, you want one artifact to deploy, and you want the frontend to fail at compile time when the API changes.
+- **Choose SvelteKit with `adapter-node`** when you need server-side rendering on every request.
+- **Choose a CDN plus a separate API** when the frontend has its own team and release schedule, or a very high share of the traffic.
+- **Serve the build by hand** only for a small app with a few pages.
+
 ## At a glance
 
 | | ktor-svelte | SvelteKit `adapter-node` in front of Ktor | Static frontend on a CDN, Ktor API elsewhere | Ktor `staticResources` by hand |
@@ -19,23 +26,38 @@ ktor-svelte is one way to put a Ktor API and a SvelteKit frontend together. This
 
 SvelteKit runs as its own Node server, renders pages per request, and calls Ktor from `+page.server.ts` or forwards `/api` to it.
 
-Pick this when you need per-request server-side rendering: pages with personal data that search engines must see, or first paint from data that changes on every request. You also get `+server.ts` endpoints and form actions.
+**Pick this when** you need per-request server-side rendering: pages with personal data that search engines must see, or first paint from data that changes on every request. You also get `+server.ts` endpoints and form actions.
 
-The cost is two runtimes to deploy, monitor and scale, auth that has to work in both, and a hop between them. With ktor-svelte, prerendered pages cover content known at build time, and pages that need API data render in the browser. The [FAQ](../reference/faq.md) explains this choice in more detail.
+**The cost** is two runtimes to deploy, monitor and scale, auth that has to work in both, and a hop between them.
+
+**With ktor-svelte**, prerendered pages cover content known at build time, and pages that need API data render in the browser. The [FAQ](../reference/faq.md) explains this choice in more detail.
 
 ## A static frontend on a CDN with a separate Ktor API
 
 The frontend is built with `adapter-static` and uploaded to a CDN or object storage, and the browser calls Ktor on another domain.
 
-Pick this when the frontend has a very high share of traffic, or a team that deploys it on its own schedule. The CDN serves files from close to the user.
+**Pick this when** the frontend has a very high share of traffic, or a team that deploys it on its own schedule. The CDN serves files from close to the user.
 
-The cost is two deployments that must stay compatible, CORS and its preflight requests, and cookies that need `SameSite=None` or a shared parent domain. ktor-svelte keeps one origin, so cookies and the origin check work without extra configuration. You can still put a CDN in front of the single app: hashed files under `/_app/immutable/` are marked cacheable forever.
+**The cost** is two deployments that must stay compatible, CORS and its preflight requests, and cookies that need `SameSite=None` or a shared parent domain.
+
+**With ktor-svelte**, there is one origin, so cookies and the origin check work without extra configuration. You can still put a CDN in front of the single app: hashed files under `/_app/immutable/` are marked cacheable forever.
 
 ## Ktor serving the build with `staticResources`
 
 You copy the SvelteKit build into your resources yourself and serve it with Ktor's static content support.
 
-This works for a small app with only a few pages. Everything ktor-svelte adds is left to you: wiring the frontend build into Gradle, the SPA fallback that does not swallow API 404s, redirects for trailing slashes, real 404s for missing chunks after a deploy, precompressed files, CSP hashes for SvelteKit's inline scripts, the dev proxy and the TypeScript client.
+**This works** for a small app with only a few pages.
+
+**Everything ktor-svelte adds is left to you:**
+
+- wiring the frontend build into Gradle,
+- the SPA fallback that does not swallow API 404s,
+- redirects for trailing slashes,
+- real 404s for missing chunks after a deploy,
+- precompressed files,
+- CSP hashes for SvelteKit's inline scripts,
+- the dev proxy,
+- and the TypeScript client.
 
 ## Other full-stack frameworks
 
@@ -49,3 +71,5 @@ This works for a small app with only a few pages. Everything ktor-svelte adds is
 - The frontend and the backend are deployed by different teams on different schedules.
 - The app mounts under a sub-path, which ktor-svelte does not support yet.
 - You want SvelteKit's `+page.server.ts`, `+server.ts` or form actions. In ktor-svelte, Ktor routes take their place.
+
+Still deciding? The [examples](../examples.md) run with one command, and [Getting started](getting-started.md) creates a project in a couple of minutes.
