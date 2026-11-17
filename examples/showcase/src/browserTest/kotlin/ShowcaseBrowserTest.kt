@@ -654,6 +654,28 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the rows of a table are reached with the arrow keys and opened with Enter`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val token = unique("Keys").replace(" ", "")
+        (1..3).forEach { page.createTask("$token $it") }
+        page.navigationLink("Admin").click()
+        val rows = page.locator("#all-tasks tbody tr[data-row]")
+        assertThat(rows.first()).containsText("$token 3")
+        assertThat(rows.first()).hasAttribute("tabindex", "0")
+        assertThat(rows.nth(1)).hasAttribute("tabindex", "-1")
+        rows.first().focus()
+        page.keyboard().press("ArrowDown")
+        page.keyboard().press("ArrowDown")
+        assertThat(rows.nth(2)).isFocused()
+        assertThat(rows.nth(2)).hasAttribute("tabindex", "0")
+        page.keyboard().press("ArrowUp")
+        assertThat(rows.nth(1)).isFocused()
+        page.keyboard().press("Enter")
+        assertThat(page).hasURL(Pattern.compile(".*/tasks/\\d+$"))
+        assertThat(page.locator("#task-title")).containsText("$token 2")
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)

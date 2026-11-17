@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
     import { api, Role, type Status, type User } from '#api';
     import DataTable from '#components/DataTable.svelte';
     import { m } from '#i18n';
@@ -103,6 +104,7 @@
         ]}
         empty={m.tableEmpty()}
         noResults={m.tableNoResults()}
+        onopen={(task) => goto(routes.tasksId({ id: task.id }))}
         loading={m.tableLoading()}
         previous={m.tablePrevious()}
         next={m.tableNext()}
