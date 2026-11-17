@@ -811,6 +811,8 @@ try {
 When a route knows how long it may take, say so on the route. The generated function then uses that as its timeout, and the server stops the handler when the time is up:
 
 ```kotlin
+import kotlin.time.Duration.Companion.seconds
+
 get("/api/reports/summary") {
     call.respond(listOf("Summary"))
 }.timeout(30.seconds)
