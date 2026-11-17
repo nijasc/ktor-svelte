@@ -1,4 +1,4 @@
-# ktor-svelte 1.1.0
+# ktor-svelte 1.2.0
 
 > Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.
 
@@ -15,6 +15,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 - [Project structure](https://nijasc.github.io/ktor-svelte/guide/project-structure)
 - [Dev workflow](https://nijasc.github.io/ktor-svelte/guide/dev-workflow)
 - [Deployment](https://nijasc.github.io/ktor-svelte/guide/deployment)
+- [Browser tests](https://nijasc.github.io/ktor-svelte/guide/browser-tests)
 - [Examples](https://nijasc.github.io/ktor-svelte/examples)
 
 ## Features

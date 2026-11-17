@@ -1,4 +1,4 @@
-# ktor-svelte 1.1.0
+# ktor-svelte 1.2.0
 
 > Ship a Ktor API and a SvelteKit frontend as one app: one JAR, one port, and a TypeScript client that matches your routes.
 
@@ -141,6 +141,8 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 ```bash
 ./gradlew svelteDevAll
 ```
+
+`./gradlew dev` is short for the same task. The first page of the new app lists what was set up for the answers you gave, each with a link to its docs, and what to do next.
 
 | Question | Flag | Default | What you get |
 |---|---|---|---|
@@ -462,7 +464,7 @@ Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `b
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    id("io.github.nijasc.ktor-svelte") version "1.1.0"
+    id("io.github.nijasc.ktor-svelte") version "1.2.0"
 }
 ```
 <!-- x-release-please-end -->
@@ -482,7 +484,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     plugins: [sveltekit({ adapter: adapter({ fallback: '200.html' }) })],
-    server: { hmr: { clientPort: 5173 } }
+    server: { hmr: { clientPort: 5173, protocol: 'ws' } }
 });
 ```
 
@@ -518,7 +520,7 @@ The Gradle plugin adds the runtime for you. If you only want the library, add it
 
 <!-- x-release-please-start-version -->
 ```kotlin
-implementation("io.github.nijasc:ktor-svelte-server:1.1.0")
+implementation("io.github.nijasc:ktor-svelte-server:1.2.0")
 ```
 <!-- x-release-please-end -->
 
@@ -529,7 +531,7 @@ To keep Kotlin, Ktor and ktor-svelte on versions that are tested together, impor
 dependencyResolutionManagement {
     versionCatalogs {
         create("ktorSvelte") {
-            from("io.github.nijasc:ktor-svelte-catalog:1.1.0")
+            from("io.github.nijasc:ktor-svelte-catalog:1.2.0")
         }
     }
 }
@@ -639,9 +641,75 @@ All three write to one console in the same shape, so you can tell them apart at 
 
 Each source has its own color, and warnings and errors stand out. Compiler errors and browser stack traces point to your files as `file:///...:line:column` links, which IntelliJ opens at that line when you click them. Browser frames such as `http://localhost:8080/src/routes/+page.svelte:12:5` are turned into links to the file in `frontend/`. App lines keep the time and level your logging framework printed, and show the logger's class name when it isn't `Application`. Vite's start banner, its copies of browser console messages, which ktor-svelte forwards itself, and Gradle's build failure boilerplate are left out, because the ready message above already lists the URLs and the compiler errors say what failed. Colors are off when `CI` or `NO_COLOR` is set, or the terminal is `dumb`.
 
+Stack traces from your app are shortened so the lines that matter stay on screen. Runs of frames from Netty, coroutines and the Ktor engine become one `... framework frames hidden` line, and your own frames stay. When the same error is logged again, only its first line is printed, with how often it has happened and since when:
+
+```text
+09:28:33  app      ERROR  Errors Request failed
+09:28:33  app             java.lang.IllegalStateException: boom  (seen 3 times since 09:28:32, stack trace hidden)
+```
+
+The frames that come from your own source files are named first, right under the exception, each with a link that opens the file at that line. In the stack trace itself they keep their normal color, and every frame from a library is dimmed:
+
+```
+09:28:32  app      ERROR  Errors Request failed
+09:28:32  app             java.lang.IllegalStateException: No such note
+09:28:32  app                 your code: app.notes.NoteStore.find  file:///home/you/app/src/main/kotlin/app/notes/NoteStore.kt:42
+09:28:32  app                 your code: app.notes.RoutesKt$noteRoutes$1.invokeSuspend  file:///home/you/app/src/main/kotlin/app/notes/Routes.kt:17
+09:28:32  app             	at io.ktor.utils.io.ByteChannel.getClosedCause(ByteChannel.kt:350)
+09:28:32  app             	at app.notes.NoteStore.find(NoteStore.kt:42)
+09:28:32  app             	at app.notes.RoutesKt$noteRoutes$1.invokeSuspend(Routes.kt:17)
+09:28:32  app             	... framework frames hidden
+```
+
+A frame is yours when its file name and package match a file in your main source folders. Up to three are named first, and each `Caused by` gets its own.
+
+An error counts as the same when its log message and its exception line are the same. A restart forgets what was seen, so the first error after a Kotlin change always shows its stack trace. To see everything, run `./gradlew svelteDevAll --full-stack-traces`.
+
+After a Kotlin change the app restarts, and every page you have open loads its data again by itself. Only the `load` functions rerun, through SvelteKit's `refreshAll`, so what you typed into a form and the state of your components stay as they are. If your sessions do not survive a restart, such as with a signing key that is generated at startup, the refreshed page finds you signed out, exactly as a manual reload would. Turn it off with `dev { refreshAfterRestart = false }`.
+
 When Kotlin stops compiling, the app keeps running its last good version, and the compiler errors appear in the browser in Vite's error overlay, with the file and line of each. Click the file to open it in your editor, or press Esc to hide the overlay until the errors change. It disappears once the code compiles again.
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
+
+The **Status** section shows what the app is running with, in plain rows: the versions of ktor-svelte, Ktor, Kotlin and Java, the version and commit of your own build, whether your health checks pass, whether Vite is reachable, how many requests the security guards refused, and the settings in effect, such as the API prefixes, the body limit and the rate limits. It is what the [status endpoint](https://nijasc.github.io/ktor-svelte/features/endpoints#status-endpoint) and the startup log tell you, without `statusEndpoint = true` and without reading JSON. Open it again to refresh it.
+
+The **Cookies** section shows what this browser sends, as the server reads it. Each cookie is listed with its text. A [typed cookie](https://nijasc.github.io/ktor-svelte/recipes/sessions#typed-cookies) also shows its type, its options and the value the server reads from it, and it is listed even when the browser has not set it, with the default it reads as. A value that does not fit its type is marked. A cookie that holds a Ktor session shows the session object the server gets from it, with [sensitive fields](https://nijasc.github.io/ktor-svelte/features/validation#sensitive-fields) hidden. That includes `HttpOnly` cookies, which the browser's own tools show but scripts cannot read.
+
+**Clear** next to a cookie ends that one, and **Clear all** ends every cookie the browser sent, which signs you out. It is the quick way to see the app as a first-time visitor. The server ends them, so `HttpOnly` cookies go too. A cookie that was set for a path other than `/` and is not a typed cookie cannot be ended this way, because the request does not say which path it belongs to.
+
+The **Routes** section of the panel is a map of the whole app: every page with the Svelte file behind it, and every API route with its method and the Kotlin file and line that answers it. Type into the filter to narrow it down by path, method or file name. A page without parameters is a link that takes you there, a file name opens that file in your editor, and when `apiDocs` is on there is a link to the API docs. It answers "where does this URL come from" without searching the project.
+
+**Save fixtures** in the panel's header downloads the calls this page made, with their answers, as a JSON file that [frontend tests can replay](https://nijasc.github.io/ktor-svelte/features/calling-the-api#fixtures-for-frontend-tests) without a backend.
+
+The **Accessibility** section checks the page you are looking at with [axe](https://github.com/dequelabs/axe-core), the engine behind most accessibility tests, so you find a missing label or a low contrast while you build the page and not when CI or a user does. Open the section and it lists what axe found, worst first as axe ranks it, with how many elements each problem affects and a link to the rule's explanation. Click a problem and the elements get a red outline and scroll into view. **Check again** runs it once more after you changed something.
+
+It needs `axe-core` in your frontend, and tells you so when it is missing:
+
+```bash
+cd frontend && bun add -d axe-core
+```
+
+axe only sees what is on the screen at that moment, so open the dialog or the menu you want checked first. A page without findings is not proof that it is accessible. It is the automatic part of the check.
+
+The panel also has a **Public config** section. It lists the values of your [`publicConfig`](https://nijasc.github.io/ktor-svelte/features/runtime-config) and lets you change them for this browser only: flip a feature flag, lower a limit, see the page with another name, without editing a config file and without a restart. Values are written as JSON, so text goes in double quotes. **Apply and reload** saves them in the browser's local storage and reloads the page, and from then on `loadPublicConfig()` and `readPublicConfig()` return the changed values in this browser. A yellow "config changed" mark on the API button reminds you, and **Reset all** goes back to what the server sends.
+
+Only the browser is told something different. The server keeps its own values, so a limit the server enforces is still enforced, and nobody else sees the change. It exists in development only, like the rest of the panel.
+
+When an API call from the page fails with an exception on the server, the browser shows it the way Vite shows a frontend error: an overlay with the exception, its message and the stack trace without the framework frames, and a link to the first line of your own code in it. Click it or press Escape to close it. You do not have to switch to the terminal to see why a call answered 500.
+
+The overlay only appears for calls the open page made itself, and only for exceptions that reach Ktor. An exception your own `StatusPages` handler turns into an answer is yours, and shows up as its status in the list. Turn the overlay off with `dev { errorOverlay = false }`. It needs the panel, so `panel = false` turns it off too.
+
+Click the path of a call and the Kotlin route that answered it opens in your editor, at its line. The app hands this to Vite's "open in editor", the same one Vite's error overlay uses: it finds the editor that is running, or takes the one named in the `LAUNCH_EDITOR` environment variable, such as `idea` or `code`. Hovering a call shows the file and line. Only this machine can ask for it, and only for files of routes that are in the list.
+
+When your app uses [Exposed](https://www.jetbrains.com/exposed/), each call also shows what it cost in the database, such as `7 SQL, 12 ms`: the number of statements it ran and the time they took together. When one statement ran five times or more in a single call, the line says so in yellow, with the statement on hover. That is the usual sign of a query inside a loop, the kind that is fast with ten rows and slow with ten thousand.
+
+This needs no setup and no code: ktor-svelte registers itself with Exposed when both are in the app. Statements count for the call that started them, also when they run on another thread or in a child coroutine. It works with Exposed 1.0 and newer, and only measures while the dev panel is on.
+
+When a page asks for the same thing twice, the second call is marked: `asked for twice within 12 ms, from src/routes/+layout.svelte:33 and from src/routes/board/+page.svelte:18`. That happens easily when a layout and a page both load the same data, and it costs a second trip to the server and the database for nothing. The two files tell you where to remove one, or to share the result. Only `GET` calls made within two seconds of each other count, a replay from the panel does not, and the line numbers are those of the code the browser runs, which can be a few lines off your source.
+
+Each call has two buttons. **Replay** sends it again, with the same method, path, headers and body, so you can repeat a call after changing the Kotlin code without clicking through the page again. **curl** copies it as a `curl` command, with its body and its `X-Request-Id`, to paste into a terminal or a bug report. The command carries no cookies, so add your session yourself for a call that needs one. It carries the body as it was sent, except for fields you marked [`@Sensitive`](https://nijasc.github.io/ktor-svelte/features/validation#sensitive-fields), so look at it before you share it.
+
+The buttons work for calls this page made, since that is where the body is known, and for every `GET`. For other calls, such as an upload or one from another tab, they are disabled.
 
 Browser console output lands in the same console as your app. Every `console.log`, `info`, `debug`, `warn` and `error`, uncaught errors and unhandled promise rejections are sent to the app and logged by the `ktor-svelte.browser` logger, with the page they came from:
 
@@ -695,6 +763,38 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
 
+The app that `svelteDevAll` starts runs from a copy of your compiled classes and resources, taken at the moment it starts. So nothing changes underneath a running app: while the compiler rewrites class files, the app keeps answering from what it started with, and then it is restarted once, as a whole. A change in `src/main/resources` restarts it too. Ktor's own auto-reload, which watches the class folders and reloads inside the running process, has nothing to react to and stays out of the way. Without that, a Kotlin change was applied twice, once by each, and requests in between failed.
+
+After every restart, `svelteDevAll` sums it up in one line: which file caused it, how long compiling and starting took, and whether the generated API client is different now:
+
+```
+ktor-svelte: restarted in 4.7 s after TaskRoutes.kt changed: 2.2 s to compile, 2.5 s to start. The API client changed: openapi.json, services.ts.
+```
+
+"To compile" runs from the moment the file was saved until the classes were written, so it includes the time Gradle takes to notice the change. When several files changed, the one saved last is named with the number of others. "The API client did not change" tells you the frontend has nothing new to pick up, and the list of files tells you where to look when it has.
+
+Every restart costs you the app's startup time, so in development the app also logs what that time was spent on:
+
+```
+ktor-svelte: started in 2.3 s: 800 ms for the JVM and your code before install(Svelte), 120 ms in install(Svelte), 1.2 s in your code after it, 150 ms to open the port.
+```
+
+Most of it is usually your own module: opening the database, running migrations, loading seed data. Give those parts a name and they are listed, largest first:
+
+```kotlin
+fun Application.module() {
+    val connection = startupStep("Database") { openDatabase() }
+    startupStep("Migrations") { runMigrations(connection) }
+    install(Svelte)
+}
+```
+
+```
+ktor-svelte: started in 2.3 s: ... Steps: Migrations 900 ms, Database 250 ms.
+```
+
+`startupStep` returns what its block returns and costs nothing in production, where the line is not logged. Turn the line off with `dev { startupTiming = false }`.
+
 Open `http://localhost:8080/_ktor-svelte/routes` to see every Ktor route next to every SvelteKit page, with the file and line of each route and a warning on routes that hide a page. Ask for `application/json` to get the same table as JSON. It exists only in development and answers only requests from this machine.
 
 Prefer separate terminals? Run these instead:
@@ -711,9 +811,61 @@ In development mode the runtime proxies to Vite if it is reachable, otherwise se
 
 The proxy only answers requests from this machine, so your frontend source is not open to everyone on your network, even though Ktor listens on all interfaces. Requests from elsewhere get your built files, or a 403 if there are none. It never forwards cookies or `Authorization` headers. It also refuses to start if `dev.url` points at another machine. To test from your phone or use Vite in another container, set `dev { allowRemote = true }`, and only on a network you trust.
 
-The proxy forwards HTTP only. POST, PUT, PATCH and DELETE requests are forwarded too, with their body, so Vite endpoints and SvelteKit form actions work in dev. Paths under your API prefixes are never proxied, whatever the method. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
+The proxy forwards HTTP only. POST, PUT, PATCH and DELETE requests are forwarded too, with their body, so Vite endpoints and SvelteKit form actions work in dev. Paths under your API prefixes are never proxied, whatever the method. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite, and `protocol: 'ws'` keeps that working on a page served over HTTPS. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
 
-With two terminals, if a Gradle process is killed rather than stopped normally, Vite or the app can keep running and hold its port. Run `./gradlew --stop`, or stop the process listening on that port. `svelteDevAll` stops its children even when its terminal is closed.
+## HTTPS in development
+
+Some things only work on a page served over HTTPS: cookies marked `Secure`, service workers on any host but `localhost`, and sign-in providers that refuse plain HTTP callback URLs. To develop with them, turn HTTPS on:
+
+```kotlin
+svelte {
+    dev {
+        https = true
+        httpsPort = 8443
+    }
+}
+```
+
+`svelteDevAll` then serves the app at `https://localhost:8443` as well as on its usual port, and the ready banner and the browser it opens use the HTTPS address. A small proxy in the Gradle task ends TLS and passes each request on to the app, WebSockets included. Your app keeps listening on plain HTTP, so `application.conf` and `embeddedServer` stay as they are.
+
+The certificate is made on the first run with the JDK's `keytool`: a development certificate authority for your user, and a certificate for `localhost`, `127.0.0.1` and `::1` signed by it. Both live in `~/.ktor-svelte/dev-https`, and every project on your computer shares them. The certificate for `localhost` is renewed after about a year.
+
+Your browser does not trust the authority until you tell it to. The first run prints the command for your system, such as `certutil -addstore -user Root` on Windows. ktor-svelte never runs it for you. Firefox keeps its own list, so import `ca.crt` there under Settings, Certificates, Authorities. Without that step the page still works after you accept the browser's warning, but service workers and some sign-in providers refuse an untrusted certificate.
+
+Anyone who has the files in `~/.ktor-svelte/dev-https` can sign certificates your browser then trusts, so keep that folder to yourself and do not copy it to other machines. When you stop using HTTPS in development, delete the folder and remove the authority from your system's trust store.
+
+In development mode the app treats requests from this proxy as HTTPS: `call.request.origin.scheme` is `https` and the port is the HTTPS port, so redirects, absolute URLs and `Secure` cookies come out right. It only does so for requests from this machine that carry the proxy's mark, and never outside development mode.
+
+Vite's hot reload still talks to Vite over plain `ws` on its own port, which browsers allow from a secure page on `localhost`. Projects from `svelteInit` and the generated `vite.config.ts` set `protocol: 'ws'` for that. A hand-written `vite.config.ts` needs it too:
+
+```ts
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+    plugins: [sveltekit()],
+    server: { hmr: { clientPort: 5173, protocol: 'ws' } }
+});
+```
+
+## When a port is still in use
+
+`svelteDevAll` stops Vite, the compiler and the app when it ends, even when its terminal is closed. If it gets killed hard, such as when the Gradle daemon or the IDE crashes, they can keep running and hold their ports. The next `svelteDevAll` cleans that up by itself: it remembers the processes it started in `build/ktor-svelte/dev-processes`, and stops the ones that are still alive before it starts new ones. It tells you which:
+
+```text
+ktor-svelte: stopping what an earlier svelteDevAll of this project left running: node (PID 4242), java (PID 4310).
+```
+
+It only ever stops processes it started itself. When some other program holds Vite's port or the debug port, the task stops before starting anything and names it:
+
+```text
+Port 5173, which Vite needs, is in use by node.exe (PID 9120). svelteDevAll did not start it, so it was left alone.
+Stop it, or use another port with svelte { dev { port = 5174 } }.
+```
+
+The app's own port is set in your Ktor configuration, which Gradle does not read, so a foreign program on that port shows up as the app's own "Address already in use" error in the log.
+
+With two terminals instead of `svelteDevAll`, nothing is remembered: run `./gradlew --stop`, or stop the process listening on that port yourself.
 
 Source: https://nijasc.github.io/ktor-svelte/guide/deployment
 
@@ -788,6 +940,46 @@ docker build -t my-app .
 docker run -p 8080:8080 --env-file .env my-app
 ```
 
+## Railway
+
+`./gradlew svelteDeploy` writes `.railway/railway.ts`, Railway's infrastructure-as-code file, from what the project already knows:
+
+```ts
+import { defineRailway, github, preserve, project, service } from "railway/iac";
+
+export default defineRailway(() => {
+    const app = service("shop", {
+        source: github("acme/shop"),
+        build: "./gradlew buildFatJar --no-daemon",
+        start: "java -jar build/libs/shop-all.jar",
+        healthcheck: "/_ktor-svelte/health",
+        healthcheckTimeout: 120,
+        env: {
+            DATABASE_URL: preserve(),
+            SESSION_SIGN_KEY: preserve(),
+        },
+    });
+
+    return project("shop", {
+        resources: [app],
+    });
+});
+```
+
+| Part | Where it comes from |
+|---|---|
+| Names | The Gradle project name. |
+| `source` | The `origin` remote, when it is on GitHub. Left out otherwise. |
+| `build` and `start` | `buildFatJar` when the Ktor plugin is applied, `shadowJar` with Shadow, `installDist` otherwise. Left out when the project has a `Dockerfile`, because Railway builds with the Dockerfile it finds. |
+| `healthcheck` | The built-in health endpoint. Turn it on with `healthEndpoint = true`. |
+| `env` | The required variables in [`.env.example`](https://nijasc.github.io/ktor-svelte/features/runtime-config#environment-variables). `preserve()` keeps the value you set in Railway, so no secret is written to the file. |
+
+The file is written once and is yours from then on: add a database, replicas or domains to it as Railway's reference describes. Running the task again refuses to replace it unless you pass `--force`.
+
+To use it, install Railway's package where the file is (`npm install railway`), then `railway login`, `railway link`, `railway config plan` to see what would change and `railway config apply` to do it. Set the listed variables in Railway before the first deploy.
+
+Railway is the only host so far. `--host` exists for the ones to come, and another value says so.
+
 ## A plain server
 
 Copy the JAR to the server and run it as a service. A minimal systemd unit:
@@ -822,13 +1014,349 @@ Most deployments put nginx, Caddy, a cloud load balancer or a platform router in
 - Set `adapter({ precompress: true })` in `frontend/vite.config.ts`, or keep `svelte { precompress = true }`, so files are compressed once at build time instead of on every request.
 - Hashed files under `_app/immutable/` are cached for a year, so returning visitors only download what changed after a deploy.
 
+## Request log
+
+To see every request in your production logs, turn the access log on:
+
+```kotlin
+install(Svelte) {
+    accessLog = true
+}
+```
+
+```text
+method=GET path=/api/notes status=200 ms=12 id=8b0c6a52-5f0e-4a51-9a7e-0e5d6f0c1a2b
+method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8d70
+```
+
+Each line has the method, the path without its query string, the status, how long the app took in milliseconds, and the request ID that the browser also shows for a failed call. The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again. Requests for build assets under `/_app/` are not logged.
+
+## Errors from the browser
+
+An error in the browser happens on someone else's computer, and in production nobody tells you about it. Turn reporting on and it reaches the log of your app:
+
+```kotlin
+install(Svelte) {
+    frontendErrors()
+}
+```
+
+```text
+WARN  ktor-svelte.frontend Frontend error on /board: TypeError: x is not a function (at save (app.js:1:2))
+WARN  ktor-svelte.frontend Frontend error on /notes: ApiError: Request to /api/notes failed with status 503, after the API call with request ID 9f2c41
+```
+
+The generated client then reports every error that nothing caught: uncaught exceptions, promises that were rejected and never handled, and errors SvelteKit caught while loading or rendering a page. Each line names the page, the first place in the stack, and for a failed API call its [request ID](https://nijasc.github.io/ktor-svelte/features/calling-the-api#request-ids), so you can find the same request in the server's own log. Failed calls that the server answered with a 4xx are left out: those are answers, not faults.
+
+It is off by default, because it adds an endpoint that anyone can post to. That endpoint is kept small:
+
+- One browser reports an error once, and at most ten different errors per page load.
+- One client address may send ten reports a minute. Set `perClientPerMinute` for another number. The rest get a 429.
+- A report may be 8 KB. Set `maxBodyBytes` for another size.
+- What is logged is cut to one line of limited length, so a report cannot write lines of its own into your log.
+- The page is logged without its query string.
+
+```kotlin
+install(Svelte) {
+    frontendErrors {
+        perClientPerMinute = 30
+    }
+}
+```
+
+The lines go to the logger `ktor-svelte.frontend` at `WARN`, so your logging setup decides where they end up. In development the browser's console already reaches the dev log, and this works there too.
+
+## Page timings
+
+Your API's slow calls show in the server's log. A slow page does not: its time is spent in the browser. `webVitals` has browsers report it:
+
+```kotlin
+install(Svelte) {
+    webVitals()
+}
+```
+
+One page load in ten then measures the usual five timings and sends them once, when the page is left:
+
+| Name | What it measures | Good up to | Poor above |
+| --- | --- | --- | --- |
+| `TTFB` | Time until the first byte of the page arrived | 800 ms | 1800 ms |
+| `FCP` | Time until something was painted | 1800 ms | 3000 ms |
+| `LCP` | Time until the largest element was painted | 2500 ms | 4000 ms |
+| `INP` | The slowest reaction to a click or a key | 200 ms | 500 ms |
+| `CLS` | How much the layout moved while loading | 0.1 | 0.25 |
+
+The app adds them to its metrics, per page:
+
+```kotlin
+application.svelteMetrics.webVitals.forEach { vital ->
+    println("${vital.page} ${vital.name}: ${vital.count} loads, average ${vital.average}, ${vital.poor} poor")
+}
+```
+
+Each entry has the `page`, the `name`, a `count`, the `average`, and how many loads were `good`, `needsImprovement` and `poor`. Hand them to your metrics system from there. The [status endpoint](https://nijasc.github.io/ktor-svelte/features/endpoints#status-endpoint) lists them too, under `webVitals`.
+
+Pages are grouped by route and not by address: `/notes/my-first-note` counts for `/notes/[slug]` when that is one of your `paramRoutes`, and a segment that is a number or an id becomes `[id]`. At most 100 pages are kept, and the rest are counted together.
+
+Like error reporting, this is off by default, because it adds an endpoint anyone can post to:
+
+- `sampleRate` is the share of page loads that report, `0.1` unless you set it.
+- One client address may send ten reports a minute, or `perClientPerMinute`.
+- A report may be 2 KB, only the five names are accepted, and only values that a real page could have.
+
+The timings are measured with the browser's own `PerformanceObserver`, with no extra package. They are close to what the `web-vitals` library reports, not identical: `INP` here is the slowest interaction of the page load. The numbers are kept in memory and start again when the app restarts.
+
+## Build info
+
+Every build knows what it is. The Gradle plugin writes the project's `version`, the git commit and the time of that commit into the JAR, and the app reads them without any setup:
+
+```kotlin
+get("/api/about") {
+    val build = call.application.buildInfo
+    call.respondText("Version ${build.version} (${build.shortCommit})")
+}
+```
+
+`buildInfo.version`, `commit` and `time` are `null` when the build could not know them: no `version` in `build.gradle.kts`, or no git repository. The time is the commit's, not the clock's, so building the same commit twice gives the same JAR.
+
+The browser can read the same values once you allow it:
+
+```kotlin
+install(Svelte) {
+    publicBuildInfo = true
+}
+```
+
+```ts
+import { loadBuildInfo } from '#api';
+
+const build = await loadBuildInfo();
+const label = `${build.version ?? 'dev'} (${build.commit?.slice(0, 7) ?? 'no commit'})`;
+```
+
+It is off by default, because it tells every visitor which version and commit is running. For values only signed-in users or admins should see, leave it off and return `buildInfo` from a route of your own.
+
+## Smoke test
+
+Tests run the app in development mode, from class folders. What you deploy is a JAR in production mode, and some mistakes only exist there: a frontend that did not make it into the JAR, a page that is no longer prerendered, a variable the app needs to start. `svelteSmokeTest` checks the thing you ship:
+
+```bash
+./gradlew svelteSmokeTest
+```
+
+```text
+ktor-svelte: build/libs/my-app-all.jar runs in production mode on port 55269.
+  200  /
+  200  /about
+  200  /login
+  200  /_app/immutable/assets/0.CtcRfiw7.css
+  200  GET /api/greeting
+  401  GET /api/me
+  401  GET /api/tasks
+ktor-svelte: the production build answered 3 pages, 1 asset, 3 API routes correctly.
+```
+
+The task packages the app the way you do, with `buildFatJar` or `shadowJar` when the project has them and `installDist` otherwise, starts it on a free port without the development flag, and requests:
+
+- Every prerendered page. Each must answer 200 with HTML.
+- One file of the frontend build, which must answer 200.
+- Every `GET` route of the API that needs no path parameter and no required query parameter. It sends no session, so 401 and 403 are correct answers. A 404 or a server error is not.
+
+Then it stops the app. If anything was answered wrongly, or the app did not start, the build fails and says what happened. The app's output is in `build/ktor-svelte/smoke-test.log`.
+
+```bash
+./gradlew svelteSmokeTest --path=/_ktor-svelte/health --skip=/api/export
+```
+
+`--path` adds a path that must answer with a status below 400, and `--skip` leaves an API route out, for a `GET` route that is slow or does something. Both can be given more than once. `--start-seconds` gives a slow app more than the 60 seconds it has to start.
+
+The app gets the environment of the build, so it needs what it needs in production, such as a database. That is why the task is not part of `check`: run it in the pipeline, where that environment exists. The port is passed as the `PORT` variable and as `-port`, which `EngineMain` reads, so an app that takes its port from somewhere else cannot be tested this way.
+
 ## Checklist
+
+- `./gradlew svelteSmokeTest` passes.
 
 - The JAR was built without `-Psvelte.skip=true` or `-Psvelte.dev=true`.
 - The app runs without `-Dio.ktor.development=true`.
 - Secrets come from the environment.
 - `XForwardedHeaders` is installed when a proxy sits in front.
 - `GET /_ktor-svelte/health` answers 200 if your platform checks health.
+
+Source: https://nijasc.github.io/ktor-svelte/guide/browser-tests
+
+# Browser tests
+
+Tests that drive a real browser against the packaged app, written in Kotlin.
+
+A unit test cannot tell you that the login page still logs someone in. A browser test can, and with ktor-svelte both halves of the app are in one build, so the test can be Kotlin too: it starts the JAR you ship, opens a browser, and uses your typed routes and your own classes.
+
+## Set up
+
+Add a test suite called `browserTest`:
+
+```kotlin
+plugins {
+    `jvm-test-suite`
+}
+
+testing {
+    suites {
+        register<JvmTestSuite>("browserTest") {
+            useJUnitJupiter()
+            dependencies {
+                implementation(project())
+            }
+        }
+    }
+}
+```
+
+The name is what the ktor-svelte plugin looks for. For that suite it:
+
+- adds `io.github.nijasc:ktor-svelte-test`, which brings [Playwright](https://playwright.dev/java/),
+- packages the app before the tests, with `buildFatJar` or `shadowJar` when the project has them and `installDist` otherwise,
+- tells the tests where the packaged app is,
+- passes the browser on: `./gradlew browserTest -Pbrowser=firefox`. Chromium unless you say so, and `webkit` is the third.
+
+`implementation(project())` gives the tests your typed routes and your classes. Tests go in `src/browserTest/kotlin`.
+
+## A test
+
+```kotlin
+import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
+import io.github.nijasc.ktor.svelte.test.BrowserTest
+import io.github.nijasc.ktor.svelte.test.problems
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class NotesBrowserTest : BrowserTest() {
+    @Test
+    fun `a new note shows up in the list`() {
+        val problems = page.problems()
+        val note: Note = api.post("/api/notes", NoteInput(title = "Written by a test"))
+
+        page.navigate(FrontendRoutes.notes)
+        assertThat(page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName(note.title))).isVisible()
+        assertEquals(emptyList(), problems)
+    }
+}
+```
+
+`BrowserTest` gives every test:
+
+| | |
+| --- | --- |
+| `page` | A fresh Playwright page in its own browser context, so tests do not share cookies. Paths are relative to the app |
+| `context` | That context, and `newContext()` for a second visitor in the same test |
+| `api` | The app's API, called from that context: with its cookies, so as whoever the page is signed in as |
+| `app` | The running app, with its `url` and its `log` file |
+
+The app is started once and shared by all tests of the run. It is started the way production starts it, without the development flag, on a free port.
+
+## Record a test
+
+The slow part of a browser test is finding the right way to name each element. Let the browser tell you: click through the app once, and the steps are written down.
+
+```bash
+./gradlew svelteRecordTest --name=SignIn
+```
+
+The task packages and starts the app and opens it in a browser, with Playwright's recorder next to it. Do what the test should do. The recorder's toolbar can also add assertions: that an element is visible, or has a text. Close the browser, and the steps are in `src/browserTest/kotlin/SignInBrowserTest.kt`:
+
+```kotlin
+class SignInBrowserTest : BrowserTest() {
+    @Test
+    fun `sign in`() {
+        page.navigate(FrontendRoutes.login)
+        page.getByLabel("Email").fill("ada@example.com")
+        page.getByLabel("Password").fill("secret")
+        page.getByRole(AriaRole.BUTTON, Page.GetByRoleOptions().setName("Sign in")).click()
+        assertThat(page.locator("#signed-in-as")).containsText("Ada Lovelace")
+    }
+}
+```
+
+An address of your app is written as its typed route, `FrontendRoutes.tasksId("12")` for `/tasks/12`, so the test breaks at compile time when the page moves. An address with a query string stays a path.
+
+It is a starting point to edit, and the file is yours. What it typed in is in the file as you typed it, passwords too, so replace those before you commit. The task never replaces a test that is already there. Add `-Pbrowser=firefox` to record in another browser.
+
+## The API with your own classes
+
+`api` sends and reads JSON with kotlinx.serialization, so a request body and an answer are your classes:
+
+```kotlin
+val user: User = api.post("/api/session", Login("ada@example.com", "secret"))
+val notes: List<Note> = api.get("/api/notes")
+val changed: Note = api.put("/api/notes/${note.id}", NoteInput(title = "Renamed"))
+api.delete("/api/notes/${note.id}")
+```
+
+An answer of 400 or above fails the test with the status and the body. To check a refusal, catch it or ask for the status alone:
+
+```kotlin
+val refused = assertFailsWith<ApiFailure> { api.get<List<Note>>("/api/notes") }
+assertEquals(401, refused.status)
+assertEquals(403, api.status("DELETE", "/api/admin/users/1"))
+```
+
+Because `api` shares the page's cookies, signing in through `api` signs the page in, which is much faster than filling in the login form in every test.
+
+## What the app needs
+
+The app runs with the environment of the build. Override `environment` for what the tests should set, such as a fresh database:
+
+```kotlin
+class NotesBrowserTest : BrowserTest() {
+    override val environment = mapOf("DATABASE_URL" to "jdbc:h2:mem:tests", "ADMIN_PASSWORD" to "secret")
+}
+```
+
+Test classes with the same environment share one app. A class with another environment gets its own.
+
+`page.problems()` collects what went wrong while the test ran: errors in the console, uncaught exceptions and answers of 500 and above. Assert that it is empty at the end of a test, and a broken page fails even when the thing you looked at happened to work.
+
+## Accessibility
+
+Many accessibility problems can be found by a machine: an image without a text, text that is too pale to read, a form field without a label. [axe](https://github.com/dequelabs/axe-core) finds them, and a task runs it on your app with no test to write:
+
+```bash
+./gradlew svelteVerifyA11y
+```
+
+```text
+axe found 2 accessibility problems on 4 pages:
+  /about in the light theme shadcn-light: image-alt: Images must have alternative text ([img])
+  /about in the dark theme dracula: color-contrast: Elements must meet minimum color contrast ratio thresholds ([#content > p])
+```
+
+The task packages the app, starts it, and opens every prerendered page in a browser, twice: once light and once dark. With `daisyUi` it uses your `defaultTheme` and your `prefersDark` theme, because contrast is where themes differ. Without it the browser asks for light and for dark colors. It checks the rules of WCAG 2.1 at levels A and AA.
+
+- `--path=/pricing` adds a page that is not prerendered. Pages behind a login cannot be checked this way, because the task is not signed in: check those in a browser test.
+- `-Pbrowser=firefox` picks another browser.
+- It is not part of `check`. It needs a browser, which is downloaded the first time, and the environment the app needs.
+
+In a browser test the same check is one call, for any page in any state:
+
+```kotlin
+page.navigate(FrontendRoutes.settings)
+assertEquals(emptyList(), page.accessibilityProblems())
+```
+
+A machine finds about a third of what makes a page hard to use. A clean run means the easy mistakes are gone, not that the page is accessible.
+
+## Browsers
+
+Playwright downloads the browser the first time it is used. A fresh Linux machine, such as a CI runner, also lacks system packages that a browser needs. Playwright's own command line installs both, and it is on the suite's classpath, so a small task runs it:
+
+```kotlin
+tasks.register<JavaExec>("installBrowsers") {
+    classpath = sourceSets["browserTest"].runtimeClasspath
+    mainClass = "com.microsoft.playwright.CLI"
+    args("install", "--with-deps", providers.gradleProperty("browser").orElse("chromium").get())
+}
+```
+
+The port goes to the app as the `PORT` variable and as `-port`, as with the [smoke test](https://nijasc.github.io/ktor-svelte/guide/deployment#smoke-test), so the app has to read one of them.
 
 Source: https://nijasc.github.io/ktor-svelte/examples
 
@@ -910,7 +1438,7 @@ The first start creates two people, `ada@example.com` as admin and `grace@exampl
 | `src/main/kotlin/showcase/Database.kt`, `src/main/resources/db/migration/` | Exposed on an embedded H2 database, with Flyway migrations |
 | `src/main/kotlin/showcase/TaskRoutes.kt` | Paged and filtered lists, typed errors in the language of the person, multipart uploads with a size and type check, and downloads that browsers never run as a page |
 | `src/main/kotlin/showcase/Model.kt` | `@JsonSchema` bounds, `Validated` rules and a sealed `Activity` that becomes a TypeScript union |
-| `frontend/src/lib/session.svelte.ts`, `frontend/src/routes/+layout.ts` | One place that knows who is signed in, and `apiConfig.onUnauthorized` |
+| `src/main/kotlin/showcase/Application.kt`, `frontend/src/routes/+layout.svelte` | `currentUser<User>` and `loginPage`, declared once, and the generated `currentUser` store that the header reads |
 | `frontend/src/routes/(app)/+layout.ts` | A layout group for the pages that need a session |
 | `frontend/src/routes/(app)/board/+page.svelte` | Search as you type with `latest`, filters, "load more" with a cursor, and `prefetchOnHover` |
 | `frontend/src/routes/(app)/tasks/[id]/+page.svelte` | Uploads with a progress bar, comments, `Activity.match` and a confirm dialog |
@@ -1051,6 +1579,223 @@ post("/api/notes/{id}/attachments") { /* ... */ }.describe {
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
 ```
 
+Types and their fields are documented the same way. Put Ktor's `@JsonSchema.Description` on a class or a property, and it becomes JSDoc on the interface or the field. `@JsonSchema.DeprecatedSchema` on a property, or `deprecated = true` in `describe { }` on a route, becomes `@deprecated`, which editors show struck through at every use:
+
+```kotlin
+@Serializable
+@JsonSchema.Description("A note with its tags and its icon.")
+data class Note(
+    val id: Int,
+    @JsonSchema.Description("Lowercase words the list can be filtered by.")
+    val tags: List<String>,
+    @JsonSchema.DeprecatedSchema
+    val color: String? = null,
+)
+```
+
+```ts
+/** A note with its tags and its icon. */
+export interface Note {
+    id: number;
+    /** Lowercase words the list can be filtered by. */
+    tags: string[];
+    /** @deprecated */
+    color?: string | null;
+}
+```
+
+Kotlin's own documentation comments and `@Deprecated` do not exist at runtime, where the schema is read, so they cannot be picked up. The annotations are the way to say it once for both sides.
+
+Every generated function also names the Kotlin file its route is declared in, as an `@see` line, whether you describe the route or not:
+
+```ts
+/** @see notes/Routes.kt */
+export const notesCreate = (body: NoteInput, options?: RequestOptions) => ...
+```
+
+The path is the file's package folder and name, so it is the same on every machine. The line number is left out on purpose: it would change the generated file every time you edit above a route. To jump to the exact line, use the route list at `/_ktor-svelte/routes` while the app runs in development.
+
+## Routes nothing calls
+
+A call to a route that no longer exists does not compile. The other direction needs a task: `svelteVerifyApiRoutes` lists the API routes that nothing in the frontend calls, so you can see what is safe to remove:
+
+```bash
+./gradlew svelteVerifyApiRoutes
+```
+
+```text
+GET /api/notes/export  ->  nothing in the frontend calls api.notes.export
+```
+
+A route counts as called when `api.notes.export`, a client from `apiWith`, the `notes` object or the `notesExport` function is used anywhere outside the generated folders, even when it is only passed along. The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service. Add `--strict` to fail the build instead.
+
+## What changed for callers
+
+The frontend in the same repository is checked by the compiler. A mobile app, another service or a webhook sender is not, and for them a renamed field is an outage. `svelteApiChanges` compares the committed `openapi.json` with the one on another git revision and lists what a caller would notice:
+
+```bash
+./gradlew svelteApiChanges
+```
+
+```text
+API changes against origin/main: 2 that can break callers, 3 other.
+
+Can break callers
+  GET /api/tasks  query  limit            was string, is integer
+  POST /api/tasks  request  folder        is new and required
+
+Other changes
+  GET /api/tasks  response  items[].version  added
+  POST /api/tasks  request  version          added
+  PATCH /api/tasks/{id}                      added
+```
+
+It compares with `origin/main` unless you name another revision, such as the last release:
+
+```bash
+./gradlew svelteApiChanges --against=v1.1.0
+```
+
+What counts as able to break a caller:
+
+- A route that is gone.
+- In a response: a field that is gone, has another type, or can now be missing.
+- In a request or the query: a field that is new and required, has become required, or has another type.
+
+A new route, a new response field, a new optional request field and a request field that is no longer read are listed under the other changes.
+
+The task reads the committed file and never starts your app, so run it after `svelteGenerateTs`. It only reports. Add `--strict` to fail the build on a change that can break callers, which is what you want in a pipeline for an API with callers you do not control.
+
+Two limits. It compares the type as the OpenAPI document states it, so a query parameter that was a plain string and is now an enum is listed as changed, even when every old call still works. And it looks at the first successful response of a route, not at the error responses.
+
+## Shared constants
+
+A page size, a maximum number of labels, a list of plans: values like these are needed on both sides, and when they are typed in twice, one side changes and the other does not. Keep them in a Kotlin object and name it in `install(Svelte)`:
+
+```kotlin
+object Limits {
+    const val PAGE_SIZE = 20
+    const val MAX_LABELS = 5
+    val PLANS = listOf("free", "team")
+    val LABEL = Regex("[a-z0-9-]{1,20}")
+}
+
+install(Svelte) {
+    generateTs = true
+    constants(Limits)
+}
+```
+
+`svelteGenerateTs` writes them to `constants.ts` next to the client, and `#api` exports the object under its Kotlin name:
+
+```ts
+import { Limits } from '#api';
+
+const next = await api.notes.list({ limit: Limits.PAGE_SIZE });
+```
+
+```ts
+export const Limits = {
+    LABEL: '[a-z0-9-]{1,20}',
+    MAX_LABELS: 5,
+    PAGE_SIZE: 20,
+    PLANS: ['free', 'team']
+} as const;
+```
+
+Every public `const val` and `val` of the object is shared, under the name it has in Kotlin. Private and internal ones stay out, so the object can hold more than it shares. The values can be text, numbers, booleans, enums (by name), `Regex` (as its pattern text), and lists, sets and maps of those. Because the object is `as const`, TypeScript knows the exact values: `Limits.PLANS[number]` is `'free' | 'team'`.
+
+A value of another type stops generation with a message that names the property. That includes a `Duration` property, whose type is not visible from outside the object: share `timeout.inWholeMilliseconds` instead.
+
+Like the rest of the client, `constants.ts` is checked by `svelteVerifyTs`, so a changed constant with a stale client fails `check`.
+
+## IDs that cannot be mixed up
+
+A note ID and a user ID are both numbers, so nothing stops code from passing one where the other belongs. In Kotlin a value class prevents that:
+
+```kotlin
+@JvmInline
+@Serializable
+value class NoteId(val value: Long)
+
+@Serializable
+data class Note(val id: NoteId, val authorId: UserId, val title: String)
+```
+
+The generated client keeps the distinction. In JSON the ID is still a plain number, but in TypeScript it is its own type:
+
+```ts
+export type NoteId = number & { readonly [brand]: 'NoteId' };
+
+export interface Note {
+    id: NoteId;
+    authorId: UserId;
+    title: string;
+}
+```
+
+```ts
+import { api, NoteId } from '#api';
+
+const note = await api.notes.get(5);
+await api.notes.delete(note.id);
+await api.users.get(note.id); // fine today: path parameters take any number or text
+const copy: Note = { ...note, authorId: note.id }; // does not compile: NoteId is not UserId
+
+const fromUrl = NoteId(Number(page.params.id));
+```
+
+- Values that come from the server already have the type. To make one from a plain value, such as a route parameter, call the function of the same name: `NoteId(5)`.
+- A branded ID is still a number or text to everything that only reads it: it can be printed, compared and passed to a path parameter.
+- This applies to a value class over `Int`, `Long`, `Double` or `String`, wherever it appears in a DTO: alone, optional, in a list or as the values of a map. Value classes over anything else, or with validation annotations on the property, are generated as their underlying type, as before.
+
+When you turn an existing `Long` field into a value class, or update to this version with value classes already in your DTOs, the frontend stops compiling where it builds such a value from a plain number. Wrap those places in the function, as above.
+
+## Money and durations
+
+Two kinds of value do not survive the trip to JavaScript as plain numbers or text: exact decimals, such as prices, and lengths of time.
+
+```kotlin
+import io.github.nijasc.ktor.svelte.Decimal
+import kotlin.time.Duration
+
+@Serializable
+data class Invoice(val total: Decimal, val payWithin: Duration)
+```
+
+`Decimal` is `java.math.BigDecimal` with a serializer that writes it as text, `"1234.50"`, so no digit is lost on the way. A `kotlin.time.Duration` is written as ISO text, `"PT1H30M"`, as kotlinx.serialization does by default. In the generated client both have their own type and a few helpers:
+
+```ts
+import { Decimal, IsoDuration, type Invoice } from '#api';
+
+declare const invoice: Invoice;
+
+Decimal.add(invoice.total, Decimal.from('0.10')); // exact: 0.1 + 0.2 is 0.3
+Decimal.times(invoice.total, 3);
+Decimal.compare(invoice.total, Decimal.from(100)) > 0;
+Decimal.format(invoice.total, 'de-DE', { style: 'currency', currency: 'EUR' });
+
+IsoDuration.toMillis(invoice.payWithin);
+IsoDuration.fromMillis(90 * 60 * 1000); // 'PT1H30M'
+IsoDuration.format(invoice.payWithin); // '1:30:00'
+```
+
+| Helper | What it does |
+|---|---|
+| `Decimal.from(text or number)` | Makes a `Decimal`, and throws for anything that is not a plain decimal number. |
+| `Decimal.add`, `subtract` | Exact, at the larger number of decimal places of the two. |
+| `Decimal.times(value, count)` | Exact, for a whole `count`, such as a quantity. |
+| `Decimal.compare` | -1, 0 or 1. `1.50` and `1.5` are equal. |
+| `Decimal.format(value, locale?, options?)` | Text for people, through `Intl.NumberFormat`, keeping the decimal places. |
+| `Decimal.toNumber` | A JavaScript number, when exactness no longer matters, such as for a chart. |
+| `IsoDuration.toMillis`, `fromMillis` | To and from milliseconds. |
+| `IsoDuration.add` | The sum of two. |
+| `IsoDuration.format` | A clock text such as `1:30:00`. |
+
+The helpers are only in `types.ts` when the API uses one of the two types. A `BigDecimal` with your own serializer is recognised too, when the serializer writes text and its descriptor is named `BigDecimal` or `java.math.BigDecimal`.
+
+A `Duration` field used to be generated as `string`. It is `IsoDuration` now, so code that assigns plain text to one needs `as IsoDuration`, or better `IsoDuration.fromMillis(...)`.
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.
@@ -1080,6 +1825,39 @@ const lines = (await api.notes.getActivity(id)).map((item) =>
 ```
 
 Use `@SerialName` for short type names. Without it, the type name is the fully qualified class name.
+
+## Resource routes
+
+Most APIs have a few things that can be listed, read, created, changed and deleted, and for each of them the same five routes. `resource` registers them with the paths, statuses and names that the generated client expects:
+
+```kotlin
+routing {
+    resource<Note, Int>("/api/notes") {
+        missing<Problem> { Problem("That note does not exist.") }
+        list<NoteQuery> { query -> store.list(query.search, query.tag) }
+        get { id -> store.find(id) }
+        create<NoteInput> { input -> store.create(input) }
+        update<NoteInput> { id, input -> store.update(id, input) }
+        delete { id -> store.delete(id) }
+    }
+}
+```
+
+| Block | Route | Returns | Client |
+| --- | --- | --- | --- |
+| `list { }` | `GET /api/notes` | The list | `api.notes.list()` |
+| `get { id -> }` | `GET /api/notes/{id}` | The item, or `null` for a 404 | `api.notes.get(id)` |
+| `create<Input> { input -> }` | `POST /api/notes` | The new item, sent with a 201 | `api.notes.create(input)` |
+| `update<Input> { id, input -> }` | `PUT /api/notes/{id}` | The changed item, or `null` for a 404 | `api.notes.update(id, input)` |
+| `delete { id -> }` | `DELETE /api/notes/{id}` | `true`, or `false` for a 404. A 204 is sent | `api.notes.delete(id)` |
+
+Each block returns its answer and does not call `respond`. That is what lets the types line up without anything being inferred: `Note` is the type of every answer, the type you name on `create` and `update` is the body, and the second type of `resource` is the type of the id, so `api.notes.get` takes a `number` here. Leave the second type out and the id is a string. An id that is not of that type is a 404.
+
+These are ordinary Ktor routes. Every block is optional, a block that is left out is no route, and `call` is there in each block for anything else you need. Nothing is stored or generated for you: the blocks are your code.
+
+- `list<NoteQuery> { query -> }` reads the query string into a `@Serializable` class, and the client gets the same fields as a typed query.
+- `missing<Problem> { ... }` says what a 404 looks like. It comes first in the block, and the client then knows the type of that error for `get`, `update` and `delete`. Without it a 404 has no body of yours.
+- Other routes of the same thing, such as `POST /api/notes/{id}/archive`, go next to the resource in a normal `route("/api/notes") { }`.
 
 ## Getting exact types
 
@@ -1182,6 +1960,164 @@ try {
 
 To change or translate the three built-in sentences, assign to `errorMessages.network`, `errorMessages.timeout` and `errorMessages.failed` once at startup.
 
+### Error codes
+
+A page that has to tell "this email is taken" from "the last admin cannot leave" should not compare status numbers or message text. Give the errors names, in one enum, and name it in `install(Svelte)`:
+
+```kotlin
+enum class AccountError { EmailTaken, LastAdmin }
+
+install(Svelte) {
+    generateTs = true
+    errorCodes<AccountError>()
+}
+```
+
+A route answers with a code, either directly or by throwing from anywhere below it:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.ApiException
+import io.github.nijasc.ktor.svelte.respondError
+
+post("/api/register") {
+    call.respondError(AccountError.EmailTaken, HttpStatusCode.Conflict)
+}
+
+put("/api/admin/users/{id}/role") {
+    throw ApiException(AccountError.LastAdmin, HttpStatusCode.Conflict)
+}
+```
+
+The answer is `{ "message": "Email taken.", "code": "EmailTaken" }` with the given status, 400 when none is given. The generated client knows the enum as the type `ErrorCode`, so a mistyped or removed code no longer compiles:
+
+```ts
+import { api, ErrorCode, hasErrorCode } from '#api';
+
+try {
+    await api.register.create(form);
+} catch (error) {
+    if (hasErrorCode(error, ErrorCode.EmailTaken)) emailProblem = error.body.message;
+    else throw error;
+}
+```
+
+The message is the code's name as a sentence unless you say otherwise. There are three places to say otherwise, and the first that applies wins:
+
+- One answer: `call.respondError(code, status, message = "...")`, or the `message` of `ApiException`.
+- Every answer, on the server: `errorCodes<AccountError> { call, code -> ... }` returns the text for a code, or null to leave it. It gets the call, so it can translate.
+- In the browser: `setCodeMessages({ EmailTaken: 'That email already has an account.' })` once at startup. `errorMessage`, and so the toasts of `toasts()`, then use this text for the code and ignore what the server sent. A value can be a function, for a translation that depends on the current language.
+
+An app has one enum of error codes. A class of your API named `ErrorCode` clashes with the generated type and stops generation.
+
+### Query parameters as a class
+
+A list route usually reads its query string one parameter at a time, converts each by hand and guesses what to do with a wrong one, and the generated client sees a handful of optional strings. Describe the query as a class instead:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.query
+import io.github.nijasc.ktor.svelte.queryOf
+
+@Serializable
+data class NoteQuery(
+    val search: String? = null,
+    val status: Status? = null,
+    val mine: Boolean = false,
+    @JsonSchema.Minimum(1.0) @JsonSchema.Maximum(100.0) val limit: Int = 20,
+    val tags: List<String> = emptyList(),
+)
+
+get("/api/notes") {
+    val query = call.query<NoteQuery>()
+    call.respond(notes.find(query))
+}.queryOf<NoteQuery>()
+```
+
+- `call.query<NoteQuery>()` reads the query string into the class. Numbers, booleans and enums are converted, a parameter that is given several times fills a list, and what is not there takes the property's default.
+- A value that does not fit, such as `limit=many` or an unknown status, and a missing parameter without a default, are answered with the same 422 as a request body, with the field named. The `JsonSchema` annotations and `Validated` rules apply too.
+- Parameters the class does not have are ignored, and an empty one counts as not given, as a form sends it for an empty field.
+- `.queryOf<NoteQuery>()` tells the generated client about the parameters. Without it the function has no `query` argument.
+
+The generated function takes the same fields with their types:
+
+```ts
+await api.notes.list({ status: Status.OPEN, mine: true, limit: 50, tags: ['home', 'food'] });
+```
+
+The properties can be text, numbers, booleans, enums, value classes over those, types that are written as text such as dates, and lists of them. A nested class is refused when the route is declared.
+
+### Changing some fields
+
+A `PUT` replaces a record, so the browser has to send every field, also the ones the visitor never touched. A `PATCH` sends only what changed, but then the server has to tell a field that was left out from one that was set to null, and a nullable Kotlin property cannot: both arrive as null. `Patch<T>` can, without a second DTO:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.Patch
+
+patch("/api/notes/{id}") {
+    val patch = call.receive<Patch<NoteInput>>()
+    val stored = notes.find(id)
+    val updated = patch.applyTo(stored.toInput())
+    call.respond(notes.save(id, updated))
+}
+```
+
+- `applyTo` returns the given object with the sent fields replaced. A field that was not sent keeps its value, and one sent as null becomes null.
+- The result is checked like a received object: the bounds from annotations and the `Validated` rules, answered with the usual 422. `@Trim` and the other normalisers apply to the sent fields.
+- A field the class does not have, null for a property that is not nullable, or a value of the wrong type is a 400.
+- `NoteInput::title in patch`, `patch.has("title")` and `patch.fields` say what was sent, for a route that treats one field specially.
+
+In the generated client the body is the class with every field optional, and null allowed where the class allows it:
+
+```ts
+import { api, patchOf } from '#api';
+
+await api.notes.patch(note.id, { dueOn: null });
+await api.notes.patch(note.id, patchOf(original, draft));
+```
+
+`patchOf(before, after)` is the fields that differ between two objects, with null for the ones that were cleared, so an edit form sends what the visitor changed and nothing else. `applyPatch(target, patch)` does on the client what `applyTo` does on the server, for showing the result before the answer is there. `Patch<T>` is the type of both.
+
+### Two people, one record
+
+Two people open the same record, both change it, both save. Without a check the second save silently replaces the first. With a version, the second one is told.
+
+Give the record a number that changes on every save, a counter or the time of the last change, send it out with the record and take it back with an update:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.respondIfStale
+
+@Serializable
+data class Note(val id: Int, val title: String, val version: Long)
+
+@Serializable
+data class NoteUpdate(val title: String, val version: Long? = null)
+
+put("/api/notes/{id}") {
+    val update = call.receive<NoteUpdate>()
+    val stored = notes.find(id)
+    if (call.respondIfStale(update.version, stored.version) { stored }) return@put
+    call.respond(notes.save(id, update))
+}
+```
+
+When the version that came in is not the stored one, `respondIfStale` answers 409 with the code `version.conflict` and the record as it is now, and returns true. The block that gives the record only runs then. An update without a version is not checked, so make the field required if every client must send it. The third argument is the message, for your own wording or language.
+
+In the browser, `isVersionConflict` recognises the answer and gives you the other person's record:
+
+```ts
+import { api, isVersionConflict, type Note } from '#api';
+
+try {
+    note = await api.notes.update(note.id, draft, { silent: true });
+} catch (error) {
+    if (!isVersionConflict<Note>(error)) throw error;
+    theirs = error.body.current;
+}
+```
+
+From there the two usual ways out are one line each. To load their version, show `theirs` and start over. To save yours anyway, set `draft.version = theirs.version` and send again.
+
+[`formState`](https://nijasc.github.io/ktor-svelte/features/validation) does the bookkeeping: after a conflict, `form.conflict` holds their record, `form.takeTheirs()` resets the form to it, and `form.keepMine()` takes over their version so the next `form.submit` goes through. Pass `takeTheirs` a value when the form's type is not the record's type.
+
 Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
 
 ```kotlin
@@ -1276,6 +2212,107 @@ To refresh the files without your dev server, for example in CI, run the task be
 ./gradlew svelteGenerateTs
 ```
 
+## In load functions
+
+Inside a SvelteKit `load` function, every call has to go through the `fetch` SvelteKit gives you. `apiWith(event)`, shown above, does that for all calls at once. For a single call, pass `fetch` as the last argument:
+
+```ts
+import { api } from '#api';
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ fetch, params }) => {
+    const note = await api.notes.get(params.id, { fetch });
+    return { note };
+};
+```
+
+With its own `fetch`, SvelteKit knows which requests a page depends on, reuses a response it already has during hydration, and can rerun the load when you invalidate it. Without it, the call still works, but the browser console warns with `window_fetch_in_load`.
+
+`svelteVerifyLoads` finds the calls that forgot. It reads every `+page.ts`, `+page.js`, `+layout.ts` and `+layout.js`, and fails with the file, the line and the call:
+
+```bash
+./gradlew svelteVerifyLoads
+```
+
+```text
+src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  use apiWith(event), or pass { fetch } as the last argument
+```
+
+It is not part of `check`. The [lint rule](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.
+
+## Refresh the page after a write
+
+After you create, change or delete something, the lists and details on the page are out of date. Tell the client what to do after a successful write, once, in your root layout, and every page keeps itself current:
+
+```ts
+import { refreshAll } from '$app/navigation';
+import { apiConfig } from '#api';
+
+apiConfig.onWrite = () => void refreshAll();
+```
+
+`onWrite` runs after every POST, PUT, PATCH and DELETE that succeeds, and `refreshAll` reruns the `load` functions of the page you are on. Writes that finish together, such as three calls in a `Promise.all`, cause one refresh, not three. A failed write does not trigger it, and neither does a read.
+
+A call that should not refresh the page, such as saving a draft while the user types, opts out:
+
+```ts
+await api.notes.update(id, draft, { refresh: false });
+```
+
+The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
+
+## Fixtures for frontend tests
+
+A frontend test should not need the backend running, and writing its answers by hand goes stale. Record them instead. In development, click through the part of the app you want to test, open the [dev panel](https://nijasc.github.io/ktor-svelte/guide/dev-workflow) and press **Save fixtures**. You get `api-fixtures.json` with every call the page made and what the server answered:
+
+```json
+{
+    "recorded": "2026-11-16T12:00:00.000Z",
+    "calls": [
+        { "method": "GET", "path": "/api/notes?page=1", "status": 200, "response": { "items": [] } },
+        { "method": "POST", "path": "/api/notes", "status": 201, "request": { "title": "New" }, "response": { "id": 7 } }
+    ]
+}
+```
+
+In a test, let the client answer from that file:
+
+```ts
+import { api, apiConfig, fixtureFetch, type ApiFixtures } from '#api';
+import recorded from './api-fixtures.json';
+
+apiConfig.fetch = fixtureFetch(recorded satisfies ApiFixtures);
+
+const page = await api.notes.list({ page: 1 });
+```
+
+The calls go through the real generated client, so the test sees typed results, `ApiError` for a recorded 404 and validation errors for a recorded 422, exactly as the app does. A call is matched by its method and its path with the query. When the same call was recorded more than once, such as a list before and after a create, the answers come back in that order, and the last one repeats. A call that was never recorded fails with a message that names it.
+
+Look through the file before you commit it. It holds the bodies as they were sent and received, which can include data you would not put in the repository. Fields marked [`@Sensitive`](https://nijasc.github.io/ktor-svelte/features/validation#sensitive-fields), such as a password, are saved as `***`. **Clear** in the panel starts a new recording.
+
+## Ask before a call
+
+A call that deletes something should ask first. `confirmed` asks, and only calls when the answer is yes:
+
+```ts
+import { api } from '#api';
+import { confirmed } from '#lib/ktor-svelte/confirm.ts';
+
+const deleted = await confirmed('Delete this note?', () => api.notes.delete(id), {
+    details: 'It cannot be restored.',
+    confirm: 'Delete',
+    danger: true
+});
+```
+
+It resolves to what the call returned, or to `undefined` when the answer was no.
+
+With DaisyUI on, the question is a modal in your theme. While the call runs, both buttons are disabled, so it cannot be sent twice. When it fails, the modal stays open and shows the error's `message`, and the user can try again or cancel. `danger: true` makes the confirm button red and puts the focus on Cancel. Escape cancels.
+
+Without DaisyUI it is the browser's own `confirm`, and a failed call rejects as usual.
+
+`svelteSync` writes the helper to `src/lib/ktor-svelte/confirm.ts` for every project that has generated files. The button labels default to `confirmMessages.confirm` and `confirmMessages.cancel`, which you can set once, such as to your translations.
+
 ## Show errors automatically
 
 Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:
@@ -1293,20 +2330,85 @@ Run `svelteSync` once. It writes `src/lib/ktor-svelte/toasts.ts` and a `src/hook
 Some errors are left to you, because a toast would be the wrong answer:
 
 - 422 validation errors, which your form shows next to the fields.
-- 401, which `apiConfig.onUnauthorized` handles.
+- 401, which [the login page](https://nijasc.github.io/ktor-svelte/features/auth#the-login-page) or `apiConfig.onUnauthorized` handles.
 - Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
 
-The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
+The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, give one a button with `action: { label: 'Undo', run: restore }`, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
+
+## Toasts from the server
+
+Often the route knows best what to tell the user: that the note was saved, that it was the last free seat, that the export will arrive by mail. Say it there:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.ToastKind
+import io.github.nijasc.ktor.svelte.toast
+
+post("/api/notes") {
+    val note = store.create(call.receive<Note>())
+    call.toast("Note saved", ToastKind.Success)
+    call.respond(HttpStatusCode.Created, note)
+}
+```
+
+With `toasts()` on, the browser shows it when the answer arrives, and no component has to know. The kinds are `Info`, `Success`, `Warning` and `Error`. With [i18n](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#i18n), pass a message in the visitor's language, such as `call.toast(call.messages.noteSaved())`.
+
+The toast travels in a response header, so the body and its type stay what they are, and it works with any status, also with an error or an empty 204. Call `toast` before you respond. A response carries up to five toasts of up to 500 characters each.
+
+The generated client reads the header on answers from your own origin only, so another server cannot put words into your app. Without `toasts()`, set `apiConfig.onToast = (message, kind) => ...` to show them your way, and nothing is shown until you do. Calls made on the server during SSR do not show toasts.
+
+## Navigation from the server
+
+"Create it, then open it" is the same few lines in every form: wait for the answer, read the ID, call `goto`. The route already knows where to go, so let it say so:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.navigateTo
+
+post("/api/notes") {
+    val note = store.create(call.receive<Note>())
+    call.navigateTo("/notes/${note.id}")
+    call.respond(HttpStatusCode.Created, note)
+}
+```
+
+With [typed routes](https://nijasc.github.io/ktor-svelte/features/routes) on, write `call.navigateTo(FrontendRoutes.notesId(note.id))`, and a renamed page cannot leave a stale path behind.
+
+After the call succeeded, the browser opens that page with SvelteKit's `goto`, so it is a client-side navigation and not a reload. The code that awaited the call runs first, so it can still use the result. A failed call navigates nowhere.
+
+With `toasts()` on, this is wired up for you. Without it, add one line to your root layout:
+
+```ts
+import { goto } from '$app/navigation';
+import { apiConfig } from '#api';
+
+apiConfig.onNavigate = (path) => void goto(path);
+```
+
+The path has to be one inside your app: `navigateTo` refuses anything that does not start with a single `/`, and the client ignores such a header as well, and reads it on answers from your own origin only. So the header cannot be used to send a visitor to another site.
 
 ## Reload after a deploy
 
-Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API:
+Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API.
+
+The toasts library has that prompt ready. Turn it on in Gradle and run `svelteSync`:
+
+```kotlin
+svelte {
+    libraries {
+        toasts { reloadPrompt() }
+    }
+}
+```
+
+After a deploy, the next API call shows "A new version is available." with a Reload button. The toast stays until the visitor reloads or closes it, and it shows once, not after every call. Change the texts through `toastMessages.newBuild` and `toastMessages.reload`.
+
+To do something else, set the handler yourself. Your handler wins over the prompt:
 
 ```ts
 import { apiConfig } from '#api';
+import { toast } from '#lib/ktor-svelte/toasts';
 
 apiConfig.onNewBuild = () => {
-    showToast('A new version is available.', { action: 'Reload', onAction: () => location.reload() });
+    toast('We just shipped an update.', { duration: 0, action: { label: 'Reload', run: () => location.reload() } });
 };
 ```
 
@@ -1343,6 +2445,91 @@ try {
 ```
 
 A per-call `timeout` wins over `apiConfig.timeout`, and your own `signal` still works next to it. Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
+
+## Retries
+
+A GET that fails because the network dropped, the request timed out, or a proxy answered 502, 503 or 504 often works a moment later. Turn retries on once, and the client tries again by itself:
+
+```ts
+import { apiConfig } from '#api';
+
+apiConfig.retry = true;
+```
+
+It then makes up to three attempts, waiting 300 ms before the second and 600 ms before the third. Only GET requests are retried, because repeating a write could do the work twice. Every other answer, such as a 404 or a 500, fails at once as before, and `apiConfig.onError` only hears about the last failure.
+
+To change the numbers, pass them instead of `true`. A single call can also set its own, or opt out:
+
+```ts
+apiConfig.retry = { attempts: 5, delay: 200, maxDelay: 2000 };
+
+const notes = await api.notes.list({ retry: false });
+const report = await api.reports.get(id, { retry: { attempts: 2 } });
+```
+
+`delay` doubles after every attempt until it reaches `maxDelay`. A call that is aborted through its `signal` stops waiting at once, and each attempt gets the full `timeout`.
+
+### Rate limits
+
+When the server refuses a call with 429, the error says how long to wait. `isRateLimitError` narrows it, and `retryAfter` is the wait in milliseconds, read from the `Retry-After` header:
+
+```ts
+import { api, isRateLimitError } from '#api';
+
+let notice = '';
+
+try {
+    await api.notes.create({ title: 'Buy milk' });
+} catch (error) {
+    if (isRateLimitError(error)) {
+        const seconds = Math.ceil((error.retryAfter ?? 60_000) / 1000);
+        notice = `Too many requests. Try again in ${seconds} seconds.`;
+    }
+}
+```
+
+With retries on, the client waits and sends the call again by itself, once, when the wait is no longer than `maxDelay`, which is five seconds unless you change it. That also applies to writes: a call the rate limit refused never reached your route, so sending it again cannot do the work twice. A longer wait is not sat out, and the error reaches you at once.
+
+### Writes that are safe to send twice
+
+A `GET` can be repeated without harm. A `POST` cannot: when the answer is lost on the way back, the browser does not know whether the order was placed, and sending it again may place it twice. That is why only `GET` requests are retried above.
+
+An idempotency key removes the doubt. The generated client adds a header, `Idempotency-Key`, with a fresh random value to every write, and uses the same value when it sends that call again. Turn on the server side, and a repeated key is answered with the stored first answer instead of doing the work again:
+
+```kotlin
+install(Svelte) {
+    idempotency()
+}
+```
+
+Now a write can be retried, when the call asks for it:
+
+```ts
+await api.orders.create(order, { retry: true });
+```
+
+- The repeat gets the same status, body and headers as the first answer, plus `Idempotency-Replayed: true`. [Toasts and navigation from the server](#toasts-from-the-server) are repeated with it, since the first ones never arrived.
+- An answer with a status of 500 and above is not kept, so the retry does the work. A repeat that arrives while the first is still running is answered with 409 and the code `idempotency.inProgress`, which the client waits for and retries.
+- A key counts for one caller (the same `Authorization` and `Cookie` headers), one method and one path. Somebody else sending the same key gets their own result.
+- Answers are kept for ten minutes, at most 10,000 of them, in memory: `idempotency { ttl = 30.minutes; maxEntries = 50_000 }`. With several instances of the app behind a load balancer, a repeat only finds the answer on the instance that gave it.
+- Streamed answers and answers above 1 MiB are not kept. Reads and routes outside the API prefixes are not looked at.
+
+`retry` in `apiConfig` still applies to reads only. A write is retried when its own call says `retry`, so the decision stays next to the routes where you know the server side is on. To stop sending the header, set `apiConfig.idempotencyKeys = false`.
+
+## The visitor's time zone
+
+The server usually runs in UTC, and the visitor does not. The generated client sends the browser's time zone with every call to your app, and a route reads it as `call.timeZone`:
+
+```kotlin
+get("/api/report") {
+    val today = java.time.LocalDate.now(call.timeZone)
+    call.respondText("Report for $today")
+}
+```
+
+It is a `java.time.ZoneId`, such as `Europe/Zurich`, taken from the `X-Time-Zone` header. A request without the header, or with a name the JDK does not know, gets `defaultTimeZone` from `install(Svelte)`, which is `UTC` unless you change it. That covers requests the client does not make, such as a plain link to a download.
+
+The header only goes to your own origin, never to a `baseUrl` on another host. To stop sending it, set `apiConfig.sendTimeZone = false`.
 
 ## Search as you type
 
@@ -1406,6 +2593,59 @@ The messages for these bounds are English and are the same in the browser and on
 
 Errors use the JSON name, with paths such as `lines[1].sku` for nested values, `prices[eur].amount` for map values and `[0].sku` for the items of a received list. `check(::title, ...)` names the field from the property, so renaming it in the IDE keeps the error in sync. If the property has a different `@SerialName`, pass the name as a string instead.
 
+## Cleaning up input
+
+People paste text with spaces around it and type their email address with capitals. Say once, on the field, how it should arrive, and no route cleans up strings by hand:
+
+```kotlin
+@Serializable
+data class SignUp(
+    @Trim @Lowercase
+    val email: String,
+    @Trim
+    @JsonSchema.MinLength(1)
+    val name: String,
+    @Trim @EmptyAsNull
+    val company: String? = null,
+)
+```
+
+| Annotation | What arrives in the route |
+|---|---|
+| `@Trim` | The text without whitespace at both ends |
+| `@Lowercase` | The text in lowercase, independent of the server's locale |
+| `@EmptyAsNull` | `null` when the text is empty, which is what a form sends for a field left blank. The property has to be nullable |
+
+They are applied in that order, so `@Trim @EmptyAsNull` turns a field of only spaces into `null`. This happens when the JSON body is received, before the bounds and your `Validated` rules run, so `@Trim @JsonSchema.MinLength(1)` refuses a name of only spaces without a rule of your own.
+
+On a `List<String>` or a `Map<String, String>` they apply to every item or value. They are found in nested classes, in lists of classes, in sealed subtypes with the default `type` discriminator, and on the property of a value class, so `value class Email(@Trim @Lowercase val value: String)` is clean wherever it is used.
+
+Only JSON request bodies are cleaned up, not query parameters, and the browser does not apply them: `validate()` in the generated TypeScript checks the text as typed. That only matters for a value that is valid after trimming but not before, which the server then accepts.
+
+## Sensitive fields
+
+The development tools show a lot of what travels between browser and server, and some of it should not be shown: a password, a token, an API key. Mark such a field once:
+
+```kotlin
+@Serializable
+data class Login(
+    val email: String,
+    @Sensitive
+    val password: String,
+)
+```
+
+From then on the field's value is replaced by `***` wherever ktor-svelte itself displays or stores it:
+
+- in the `curl` command the [dev panel](https://nijasc.github.io/ktor-svelte/guide/dev-workflow) copies
+- in the [fixtures](https://nijasc.github.io/ktor-svelte/features/calling-the-api#fixtures-for-frontend-tests) it saves, for request and response bodies
+- in browser console output that is forwarded to the dev log
+- in the request list and the slow call log, for a query parameter of that name
+
+It works for requests and for responses, in nested classes too, and by the JSON name of the field, so `@SerialName("api_key")` masks `api_key`.
+
+Two things to know. Masking goes by name: once `password` is marked in one class, every field and query parameter called `password` is masked in those places, in any class. So give a sensitive field a telling name, not `value` or `next`. And it changes nothing about your API: the field is received and returned as before. Keeping a value out of a response is still done by not putting it into the response class.
+
 With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](https://nijasc.github.io/ktor-svelte/features/typescript#generated-typescript).
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
@@ -1416,7 +2656,92 @@ For a rule that depends on the route, such as comparing against a database, call
 <input bind:value={draft.title} use:field={{ bounds: NoteInput.bounds.title, errors: errors.title, errorClass: 'text-error' }} />
 ```
 
-The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty.
+The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty. If the input has a hint of its own, pass the hint's id as `describedBy`, and it stays in `aria-describedby` next to the error.
+
+With `libraries { components() }`, the generated [`<Field>`](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#field) wraps this action together with the label and a hint.
+
+## Form state
+
+Every form needs the same few variables: the values being edited, whether they changed, whether a submit is running, and the errors that came back. `formState` holds them, so a form is its inputs and one function:
+
+```svelte
+<script lang="ts">
+    import { api, field, NoteInput } from '#api';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate, resetOnSuccess: true });
+
+    async function create() {
+        const note = await form.submit((draft) => api.notes.create(draft));
+        if (note) console.log('created', note.id);
+    }
+</script>
+
+<form onsubmit={(event) => { event.preventDefault(); void create(); }}>
+    <input bind:value={form.draft.title} use:field={{ bounds: NoteInput.bounds.title, errors: form.errors.title }} />
+    <p role="alert">{form.message}</p>
+    <button disabled={form.submitting}>Create</button>
+    <button type="button" disabled={!form.dirty} onclick={() => form.reset()}>Discard</button>
+</form>
+```
+
+| | |
+|---|---|
+| `form.draft` | The values being edited, deeply reactive, so `bind:value={form.draft.title}` works |
+| `form.dirty` | `true` while the draft differs from the last saved values |
+| `form.submitting` | `true` while `submit` waits for the server. A second `submit` in that time does nothing |
+| `form.errors` | Errors per field, from `validate` or from a 422 answer. Hand them to `use:field` |
+| `form.error`, `form.message` | Any other failure of the last submit, and its text for the user. `message` is empty when there is none |
+| `form.reset()` | Back to the last saved values, with the errors cleared. `form.reset(values)` makes `values` the saved ones, such as after loading a record |
+| `form.submit(send)` | Runs `validate` first and stops on errors without calling the server. Otherwise calls `send` with a plain copy of the draft and returns its result, or `undefined` when it failed |
+
+After a successful submit the sent values are the saved ones, so the form is no longer dirty. That suits an edit form. For a form that creates something, `resetOnSuccess: true` empties it again.
+
+`submit` never throws: a failed call ends up in `errors` or `error`. The failure still reaches `apiConfig.onError`, so with [toasts](https://nijasc.github.io/ktor-svelte/features/calling-the-api#show-errors-automatically) on, the user sees it without any markup of yours.
+
+The helper uses runes, so it is a module of its own and not part of `#api`. The draft should be plain data, the kind that goes into a JSON body. `dirty` compares it as JSON.
+
+## Checks only the server can make
+
+Whether an email address is taken, or a coupon code exists, cannot be decided in the browser. Without help, the visitor learns it after sending the whole form. A check route answers the question for one value:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.fieldCheck
+
+routing {
+    fieldCheck("/api/checks/email") { email ->
+        if (email == "ada@example.com") "That email address already has an account." else null
+    }
+}
+```
+
+The block gets the value and returns what is wrong with it, or null when it is fine. It runs inside the route, so `call` is there for the current user or the language. The route is a `GET` with the value in the query, never cached, and part of the generated client like any other.
+
+`formState` asks it while the visitor types:
+
+```svelte
+<script lang="ts">
+    import { api, field, Registration } from '#api';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<Registration>(Registration.empty(), {
+        validate: Registration.validate,
+        checks: { email: api.checks.getEmail }
+    });
+</script>
+
+<input type="email" bind:value={form.draft.email} use:field={{ errors: form.errors.email }} />
+```
+
+- The call waits until typing has paused for 300 ms (`checkDelay`), and an answer that arrives for an older value is dropped.
+- The answer is part of `form.errors.email`, next to the errors from `validate` and from a 422, so it shows up the same way with no extra markup.
+- While a check says no, `form.submit` does not send. `form.checking` is true while an answer is awaited.
+- An empty value and the value the form started with are not checked. A profile form does not tell its owner that their own email is taken.
+- A check that fails, because the server is unreachable or answers with an error, says nothing. The real answer comes when the form is sent.
+
+A check does not replace the rule in the route that saves: two people can pass the check at the same moment. Keep the rule there and treat the check as the earlier, friendlier message.
+
+A check route also tells anyone who asks whether a value exists. For email addresses that reveals who has an account, so put the route under a [rate limit](https://nijasc.github.io/ktor-svelte/features/calling-the-api#rate-limits), as you would the sign-in route.
 
 Source: https://nijasc.github.io/ktor-svelte/features/transport
 
@@ -1492,11 +2817,348 @@ routing {
 
 Pages served by a plain `svelte()` get `private` caching, so shared proxies do not keep them. Paths in the `public` list keep normal caching.
 
-In the browser, react to expired sessions in one place:
+## The current user
+
+Every app with a login needs to know who is signed in, on both sides. Say once how the server finds that person:
+
+```kotlin
+install(Svelte) {
+    currentUser<User> { sessions.get<UserSession>()?.let { users.find(it.userId) } }
+}
+```
+
+The block gets the call and returns the user, or `null` when nobody is signed in. `User` is any `@Serializable` class. Whatever it holds is sent to the browser, so leave the password hash out of it.
+
+From that one line the frontend gets `currentUser`, typed as your class:
+
+```svelte
+<script lang="ts">
+    import { currentUser } from '#api';
+</script>
+
+{#if currentUser.user}
+    <span>{currentUser.user.name}</span>
+{:else if currentUser.ready}
+    <a href="/login">Sign in</a>
+{/if}
+```
+
+| | |
+| --- | --- |
+| `currentUser.user` | The signed-in user, or `null`. Reactive |
+| `currentUser.ready` | `false` until the first answer is there, so you can tell "nobody" from "not known yet" |
+| `currentUser.signedIn` | `true` when there is a user |
+| `currentUser.load()` | Asks the server once and resolves to the user. Every later call resolves to what is known, without a request |
+| `currentUser.reload()` | Asks again |
+| `currentUser.set(user)`, `currentUser.clear()` | Set or forget the user by hand |
+
+`load()` is what a layout uses to protect its pages:
 
 ```ts
-apiConfig.onUnauthorized = () => goto('/login');
+import { redirect } from '@sveltejs/kit';
+import { currentUser } from '#api';
+
+export const load = async () => {
+    const user = await currentUser.load();
+    if (!user) redirect(307, '/login');
+    return { user };
+};
 ```
+
+The store has to learn when the user changes. Tell it from the routes that change it, with one line each:
+
+```kotlin
+post("/api/session") {
+    val user = users.check(call.receive<Login>()) ?: return@post call.respond(HttpStatusCode.Unauthorized)
+    call.sessions.set(UserSession(user.id))
+    call.currentUserChanged()
+    call.respond(user)
+}
+
+delete("/api/session") {
+    call.sessions.clear<UserSession>()
+    call.currentUserChanged()
+    call.respond(HttpStatusCode.NoContent)
+}
+```
+
+`currentUserChanged()` adds a header to the response. The generated client sees it and loads the user again, before your own code continues after the call, so a `goto` right after signing in lands on a page that already knows the user. Call it after a profile change too, and the name in the header of the page follows. A 401 from any API call clears the store.
+
+How it works: the plugin serves `GET /api/current-user`, under your first API prefix, which answers `{"user": ...}` and is never cached. Pass `path = "/api/whoami"` to `currentUser` to move it. The endpoint is open to everyone and answers `{"user": null}` to a visitor. It runs outside any `authenticate` block, so the block that finds the user reads the session or checks the token itself, and `call.principal()` is empty there.
+
+### In routes
+
+The same declaration gives every route the user, typed:
+
+```kotlin
+get("/api/tasks") {
+    val user: User = call.requireUser()
+    call.respond(tasks.visibleTo(user))
+}
+
+get("/api/greeting") {
+    val user = call.user<User>()
+    call.respond(Greeting(if (user == null) "Hello" else "Hello, ${user.name}"))
+}
+```
+
+| | |
+| --- | --- |
+| `call.user<User>()` | The signed-in user, or `null` |
+| `call.requireUser<User>()` | The signed-in user. For a visitor the route ends there with a 401 and `{"message": "Sign in first."}` |
+
+Both work in any route, inside or outside `authenticate`, and need no user store passed along. The user is looked up once per call, however often a route and its helpers ask. `currentUserChanged()` forgets that answer, so a route that signs someone in can ask again and gets the new user.
+
+The 401 message is yours to set, for example to translate it:
+
+```kotlin
+currentUser<User>(signInMessage = { call -> call.messages.signInFirst() }) {
+    sessions.get<UserSession>()?.let { users.find(it.userId) }
+}
+```
+
+To have the 401 in the generated types of your routes, declare it once with `errorResponse<YourError>(HttpStatusCode.Unauthorized)`.
+
+### When the session ends
+
+A session that ends while someone fills in a long form costs them the form. The server knows when that will be, so say it, next to how the user is found:
+
+```kotlin
+currentUser<User>(
+    sessionEnds = { sessions.get<UserSession>()?.ends },
+    extendSession = { sessions.get<UserSession>()?.let { sessions.set(it.copy(ends = Instant.now().plusSeconds(1800))) } },
+) {
+    sessions.get<UserSession>()?.let { users.find(it.userId) }
+}
+```
+
+`sessionEnds` returns the `Instant` the session ends at, or `null` when it has no end. ktor-svelte does not own your session, so the end is whatever your session says: a field in the session cookie as here, a row in a table, or the expiry of a token. `extendSession` is optional and does whatever makes your session last longer.
+
+The store then knows three more things:
+
+| | |
+| --- | --- |
+| `currentUser.sessionEnds` | The `Date` the session ends at, or `null` |
+| `currentUser.sessionEnding` | `true` in the last two minutes. Reactive, so a warning is an `{#if}` |
+| `currentUser.extend()` | Runs `extendSession` on the server and takes the new end |
+
+```svelte
+{#if currentUser.sessionEnding}
+    <div class="alert alert-warning" role="status">
+        You will be signed out soon.
+        <button type="button" onclick={() => currentUser.extend()}>Stay signed in</button>
+    </div>
+{/if}
+```
+
+Set `apiConfig.sessionWarning` to another number of milliseconds to warn earlier or later.
+
+The end stays right without extra requests. The answer of the current user endpoint carries it, and so does every API response, in a header, so a session that grows with each request is known to last longer after each one. The server sends the time that is left and not a clock time, so a wrong clock on the visitor's computer does not matter.
+
+When the time is up, the store asks the server once. If the session is really over, `currentUser.user` becomes `null` and the page shows it at that moment, not at the next click.
+
+## Permissions
+
+A "Delete" button that the API then refuses is a bug, and so is a hidden button for something the API would allow. Both come from writing the rule twice. Write it once, as an enum and one function from the user to what they may do:
+
+```kotlin
+enum class Permission { NotesRead, NotesDelete, UsersManage }
+
+install(Svelte) {
+    currentUser<User> { sessions.get<UserSession>()?.let { users.find(it.userId) } }
+    permissions<Permission, User> { user ->
+        if (user.role == Role.Admin) Permission.entries.toSet() else setOf(Permission.NotesRead)
+    }
+}
+```
+
+On the server, check it where it matters:
+
+```kotlin
+requires(Permission.UsersManage) {
+    route("/api/admin") {
+        get("/users") { call.respond(users.all()) }
+    }
+}
+
+delete("/api/notes/{id}") {
+    call.requirePermission(Permission.NotesDelete)
+    notes.delete(call.parameters["id"])
+    call.respond(HttpStatusCode.NoContent)
+}
+```
+
+| | |
+| --- | --- |
+| `requires(...) { }` | Every route inside needs the permissions |
+| `call.requirePermission(...)` | The same check inside one route |
+| `call.can(permission)` | `true` or `false`, for a rule with more to it, such as "admins, or the author" |
+
+A visitor gets a 401 and a signed-in user without the permission a 403 with `{"message": "You are not allowed to do that."}`. Pass `refusedMessage = { call -> ... }` to `permissions` for your own words. The permissions of a user are worked out once per call.
+
+The frontend gets the same enum and a `can` function:
+
+```svelte
+<script lang="ts">
+    import { can, Permission } from '#api';
+</script>
+
+{#if can(Permission.NotesDelete)}
+    <button onclick={remove}>Delete</button>
+{/if}
+```
+
+`can('NotesDelete')` works too, and a name that is not in the enum does not compile. The answer is reactive and comes with the current user, so it changes when someone signs in or out, with no request of its own. Rename a permission in Kotlin and every `can` that used the old name fails `svelteCheck`.
+
+`can` in the browser decides what is shown. What is allowed is decided by the check on the route, so every hidden button needs one.
+
+## Page guards
+
+Which pages need a signed-in user, and which a permission, is one more rule that both sides have to agree on. Declare it once, by page:
+
+```kotlin
+install(Svelte) {
+    guards {
+        signedIn(FrontendRoutes.board, FrontendRoutes.settings, "/tasks")
+        permission(Permission.UsersManage, FrontendRoutes.admin)
+    }
+}
+```
+
+A guard covers the page and everything below it: `/tasks` also covers `/tasks/4`. When two guards cover a page, the deeper one decides.
+
+**The API below the same name is closed by the server.** With the guards above, every route under `/api/tasks` answers a visitor with a 401, and every route under `/api/admin` answers a user without `UsersManage` with a 403. This is the part that protects your data, and it needs no `authenticate` or `requires` around those routes. A route with another name, such as `/api/stats` for the board page, is not covered and keeps its own check.
+
+**The pages are guarded in the browser by one generated function.** Use it in the layout of the route group that holds the pages:
+
+```ts
+// src/routes/(app)/+layout.ts
+import { signedInUser } from '#api';
+
+export const ssr = false;
+
+export const load = async ({ url }) => ({ user: await signedInUser(url) });
+```
+
+`signedInUser(url)` resolves to the user, typed and never `null`. A visitor is sent to [the login page](#the-login-page) with the way back, and a user without the permission that the page's guard asks for gets your error page with a 403. `guardPages` does the same for a layout that has no use for the user: `export const load = guardPages;`. It only acts on pages that a guard covers.
+
+Do not put either in the root `+layout.ts`. SvelteKit cannot show your error page for an error from the root layout, and the visitor would see a bare "Forbidden".
+
+The guard in the browser is a convenience: it spares the visitor a page that would only fail. Anyone can skip it, so what must stay private is kept private by the API.
+
+## User preferences
+
+A theme, a language, a compact list: small choices that people expect to find again on their phone after making them on their laptop. Declare them as a class, and say how you keep them:
+
+```kotlin
+@Serializable
+data class Preferences(
+    val theme: String? = null,
+    val locale: String? = null,
+    val compactBoard: Boolean = false,
+)
+
+install(Svelte) {
+    currentUser<User> { sessions.get<UserSession>()?.let { users.find(it.userId) } }
+    preferences<Preferences, User>(
+        defaults = Preferences(),
+        load = { user -> store.preferences(user.id) },
+        save = { user, preferences -> store.save(user.id, preferences) },
+    )
+}
+```
+
+You store them: a table, a JSON column, a document. `load` returns `null` for someone who has saved nothing yet, and they get the defaults. ktor-svelte adds the endpoint, the type and the store:
+
+```svelte
+<script lang="ts">
+    import { preferences } from '#api';
+</script>
+
+<input
+    type="checkbox"
+    checked={preferences.value.compactBoard}
+    onchange={(event) => preferences.set({ compactBoard: event.currentTarget.checked })}
+/>
+<ul class:compact={preferences.value.compactBoard}>...</ul>
+```
+
+| | |
+| --- | --- |
+| `preferences.value` | The preferences, typed as your class and reactive. The defaults until the server has answered, and for a visitor |
+| `preferences.ready` | `false` until the first answer |
+| `preferences.set({ ... })` | Changes some of them. The page shows the change at once, and it is saved in the background |
+| `preferences.load()` | Resolves when they are loaded. Reading `value` starts loading on its own |
+
+The store loads once, loads again when someone signs in, and goes back to the defaults when they sign out. A visitor's changes stay in the page and are not saved. What is saved is checked like every request body, so `@JsonSchema` bounds on the class apply.
+
+### Theme and language
+
+A field called `theme` or `locale` is tied to the cookie that [DaisyUI themes](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#daisyui) and [i18n](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#i18n) use, so the generated switches keep working unchanged and their choice now belongs to the person:
+
+- Someone picks a theme or a language, with the generated switch or your own code. It is saved for them.
+- They sign in on another device. The saved theme is applied at once, and for a saved language the page loads again in that language.
+- They pick another theme on that device. That one is saved, and the first device shows it the next time a page loads there.
+
+The rule behind it: each browser remembers the value it last had in common with the server. If its cookie differs from that, the change was made here and is saved. If not, the saved value is newer and is shown.
+
+Keep preferences to plain values: text, numbers, booleans, enums and lists of them.
+
+The endpoint is `GET` and `PUT /api/preferences`, under your first API prefix. Pass `path = "/api/settings"` to move it.
+
+## The login page
+
+Someone opens a link to a page that needs a session, or their session ends while they fill in a form. Both should end the same way: at the login page, and after signing in, back where they were. Say where the login page is:
+
+```kotlin
+install(Svelte) {
+    loginPage = "/login"
+}
+```
+
+With [typed routes](https://nijasc.github.io/ktor-svelte/features/routes) that is `loginPage = FrontendRoutes.login`. Three things follow from it.
+
+**A 401 from the API opens the login page.** The generated client sends the browser to `/login?next=...`, with the page the visitor was on. There is no `apiConfig.onUnauthorized` to write. It does not happen on the login page itself, where a 401 means a wrong password, and not for calls made with `silent: true`. If you do set `apiConfig.onUnauthorized`, yours runs instead.
+
+**The server's redirect carries the page too.** Use it where Ktor's authentication turns a visitor away:
+
+```kotlin
+install(Authentication) {
+    session<UserSession>("session") {
+        validate { session -> users.find(session.userId)?.let { session } }
+        challenge {
+            if (call.request.path().startsWith("/api/")) call.respond(HttpStatusCode.Unauthorized) else call.respondLoginRedirect()
+        }
+    }
+}
+```
+
+`respondLoginRedirect()` answers with a redirect to `/login?next=%2Fboard` for a visitor who asked for `/board`.
+
+**After signing in, go back.** `afterLogin` reads the page from the address, and takes your fallback when there is none:
+
+```ts
+import { goto } from '$app/navigation';
+import { afterLogin, api } from '#api';
+
+await api.session.create(draft);
+await goto(afterLogin('/board'));
+```
+
+A layout that protects its pages in the browser builds the same address with `loginPath`:
+
+```ts
+import { redirect } from '@sveltejs/kit';
+import { currentUser, loginPath } from '#api';
+
+export const load = async ({ url }) => {
+    const user = await currentUser.load();
+    if (!user) redirect(307, loginPath(url));
+    return { user };
+};
+```
+
+Only a path inside your app is accepted as the page to go back to. An address of another site in `next` is ignored on both sides, so a crafted link to your login page cannot send someone elsewhere after they sign in.
 
 In development mode, `svelte(public = ...)` also opens the paths Vite needs, so hot reload works on your login page.
 
@@ -1547,6 +3209,90 @@ In development the function runs on every request for the config and for every p
 
 It is served as JSON from `/_ktor-svelte/config.json` to anyone who asks, so **never put secrets in it**. In SvelteKit, call `loadPublicConfig` only in the browser, because prerendering has no server to ask.
 
+## Trying other values in development
+
+To see the frontend with another value, you do not have to change the config: the [dev panel](https://nijasc.github.io/ktor-svelte/guide/dev-workflow) can override `publicConfig` values for your browser only.
+
+## Environment variables
+
+An app that reads `System.getenv` here and there finds out one variable at a time what is missing, in production, and nobody knows the full list. Declare them in one place instead:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.EnvironmentScope
+import io.github.nijasc.ktor.svelte.environment
+
+class AppEnvironment(env: EnvironmentScope) {
+    val databaseUrl = env.string("DATABASE_URL", "JDBC URL of the database", example = "jdbc:postgresql://localhost/app")
+    val port = env.int("PORT", "Port the server listens on", default = 8080)
+    val signKey = env.secret("SESSION_SIGN_KEY", "Signs the session cookie")
+    val siteUrl = env.optional("SITE_URL", "Public address, for links in emails")
+    val signUps = env.oneOf<SignUps>("SIGN_UPS", "Whether new people can register", default = SignUps.Open)
+}
+
+fun main() {
+    val env = environment(declare = ::AppEnvironment)
+    embeddedServer(Netty, port = env.port) { module(env) }.start(wait = true)
+}
+```
+
+`environment` reads every variable, converts it, and returns your class with typed values. When something is missing or does not fit, the app stops before it does anything else, with all of it in one table:
+
+```text
+The app cannot start: 2 environment variables are missing or wrong.
+
+  DATABASE_URL  missing                         JDBC URL of the database, such as jdbc:postgresql://localhost/app
+  PORT          "eighty" is not a whole number  Port the server listens on
+
+Set them in the environment. .env.example lists every variable the app reads.
+```
+
+| Function | Value |
+|---|---|
+| `string(name, description, default?, example?)` | Text. Required unless it has a default. |
+| `optional(name, description, example?)` | Text or null. |
+| `secret(name, description)`, `optionalSecret(...)` | Text that must not be shown. Its value never appears in the example file or in messages. |
+| `int(name, description, default?, example?)` | A whole number. |
+| `boolean(name, description, default?)` | `true` or `false`. |
+| `oneOf<E>(name, description, default?)` | One of the values of an enum, in any letter case. |
+
+An empty variable counts as not set.
+
+### .env.example
+
+`svelteGenerateTs` writes `.env.example` next to `build.gradle.kts` from the same declaration, and dev mode keeps it current. Each variable is there with its description, whether it is required, and its default or example. Secrets are listed without a value. `svelteVerifyTs`, and so `check`, fails when the file is out of date, so a new variable cannot be added without it showing up in a pull request.
+
+The generating run starts the app without your environment. It therefore does not stop for missing variables: a required one reads as its example, or as empty text. Code that runs at startup, such as connecting to the database, should already be skipped in that run or tolerate that, as it must today for `svelteGenerateTs` to work on a build server.
+
+## Secrets in the frontend build
+
+Everything in the frontend build is sent to browsers. A secret gets in there easily: a server-only variable imported in a component, a key pasted into a config file, a `.env` value Vite was told to expose. Nothing fails, and the key is public from the next deploy on.
+
+`svelteVerifyLeaks` runs after `svelteBuild`, before the build is packed into the JAR, and looks for secret values in the built files. When it finds one, the build fails:
+
+```text
+ktor-svelte found secret values in the frontend build. Everything in that folder is sent to browsers.
+
+  SESSION_SIGN_KEY (declared as a secret)  _app/immutable/chunks/B3kq9.js
+  STRIPE_KEY (.env)                        _app/immutable/nodes/2.Dx1.js
+
+Read such values on the server only. A value that is meant to be public belongs in svelte { buildEnv }, or gets a name that starts with PUBLIC_.
+```
+
+It names the variable and the file, never the value. The values it looks for are:
+
+- the [declared environment variables](#environment-variables) marked as `secret`, with the value they have in the environment of the build
+- every value in `.env`, `.env.local`, `.env.production` and `.env.production.local`, next to `build.gradle.kts` and in the frontend folder
+
+Left out are variables listed in `buildEnv`, names that start with `PUBLIC_` or `VITE_`, values shorter than eight characters, and values that are one plain word, such as `production`. Those would be found in almost any build.
+
+The check can only find a secret whose value it knows. On a build server that does not have the production secrets, it has nothing to compare, which is one more reason to build with the real environment or not at all. To turn it off:
+
+```kotlin
+svelte {
+    verifyLeaks = false
+}
+```
+
 Source: https://nijasc.github.io/ktor-svelte/features/endpoints
 
 # Built-in endpoints
@@ -1584,7 +3330,7 @@ install(Svelte) {
 }
 ```
 
-`GET /_ktor-svelte/status` returns JSON with the bundled build (`present`, `formatVersion`, `files`, `fingerprint`) and the dev proxy (`proxy`, and when active `url` and `reachable`), and how many requests the security guards refused (`refusals`: `crossOrigin`, `bodyTooLarge`, `rateLimit`). It is off by default, never cached, hidden from the OpenAPI document, and answers only requests from this machine with a local `Host`. Everything else gets 403.
+`GET /_ktor-svelte/status` returns JSON with the bundled build (`present`, `formatVersion`, `files`, `fingerprint`) and the dev proxy (`proxy`, and when active `url` and `reachable`), and how many requests the security guards refused (`refusals`: `crossOrigin`, `bodyTooLarge`, `rateLimit`). It is off by default, never cached, hidden from the OpenAPI document, and answers only requests from this machine with a local `Host`. Everything else gets 403, unless you [open it to more callers](#who-may-see-internal-endpoints).
 
 ## Health endpoint
 
@@ -1602,6 +3348,41 @@ install(Svelte) {
 ## API docs
 
 `apiDocs = true` serves Swagger UI at `/api/docs` in development mode only, using the same OpenAPI document as `generateTs`. Change the path with `apiDocsPath`. The page loads its scripts from a public CDN, so it needs internet access.
+
+To have the docs on a deployed app as well, say [who may see them](#who-may-see-internal-endpoints). Without that they stay a development tool.
+
+## Who may see internal endpoints
+
+The status endpoint and the API docs are for you and your tools, not for visitors. By default the status endpoint answers this machine only, and the docs exist in development only. One block opens both to the callers you name, and to nobody else:
+
+```kotlin
+import io.ktor.server.sessions.get
+import io.ktor.server.sessions.sessions
+
+install(Svelte) {
+    statusEndpoint = true
+    apiDocs = true
+    internalAccess {
+        token = env("INTERNAL_TOKEN")
+        networks("10.0.0.0/8", "fd00::/8")
+        allow { call -> call.sessions.get<UserSession>()?.userId == "admin" }
+    }
+}
+```
+
+A request gets in when any one of them lets it in. Requests from this machine always do.
+
+| Setting | Lets in | Good for |
+|---|---|---|
+| `token` | Requests with `Authorization: Bearer <token>`. At least 16 characters, compared in constant time | A monitoring job that reads the status endpoint |
+| `networks(...)` | Clients whose address is in one of the ranges, IPv4 or IPv6 | An office network or a VPN |
+| `allow { call -> ... }` | Whatever your own check accepts, such as a signed-in user with a role | Opening the API docs in a browser, which cannot send a token |
+
+With `internalAccess` set, `apiDocs = true` serves the docs outside development too, behind the same rules. Everyone else gets 403, or 401 when a token is configured and none was sent. The app does not start with a token that is too short or a range it cannot read.
+
+Behind a reverse proxy, every request reaches the app from the proxy's address, which is usually a private one. A network range would then let the whole internet in, so ktor-svelte refuses it: when a request carries `X-Forwarded-For` or `Forwarded` and the app has not told Ktor to trust the proxy, `networks` lets nobody in. Install Ktor's `XForwardedHeaders` or `ForwardedHeaders` plugin, and the range is checked against the client's real address.
+
+The health endpoint and the public build info stay open, since they are made for callers you do not know.
 
 Source: https://nijasc.github.io/ktor-svelte/features/frontend-libraries
 
@@ -1630,10 +3411,13 @@ svelte {
             defaultTheme(DaisyTheme.ShadcnLight)
             prefersDark(DaisyTheme.ShadcnDark)
         }
+        fonts("Inter")
+        charts()
         lucide()
         images()
         toasts()
         routes()
+        components()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -1718,7 +3502,96 @@ On the server they are `AppTheme.ShadcnLight` and `AppTheme.ShadcnDark`, and in 
 
 `customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
 
+You do not have to guess those colors in the build file. With DaisyUI on, the [dev panel](https://nijasc.github.io/ktor-svelte/guide/dev-workflow) has a **Theme colors** section with a color picker for each of the twelve. Changing one recolors the open page at once, so you tune the theme on your real screens. **Copy for Gradle** puts the result on the clipboard as a finished block, named as you typed it:
+
+```kotlin
+customTheme("sunset") {
+    primary = "#ff0044"
+    secondary = "#f5f5f5"
+    base100 = "#fff8e7"
+}
+```
+
+The real block lists all twelve colors, and says `colorScheme = "dark"` when you started from a dark theme. Paste it into `daisyUi { }`, add the name to your themes, and `svelteSync` makes it a theme like any other. The changes on the page are a preview only: **Reset**, or a reload, brings the theme back.
+
 The saved theme is applied by a small inline script. The automatic [Content-Security-Policy](https://nijasc.github.io/ktor-svelte/security#security-headers) allows it by its hash. If you set your own `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
+
+## Fonts
+
+A font from a font CDN is a request to another company on every first visit, a line in the privacy policy, and an exception in the Content-Security-Policy. `fonts` serves the font from your own app instead:
+
+```kotlin
+svelte {
+    libraries {
+        tailwind()
+        fonts("Inter")
+    }
+}
+```
+
+`svelteSync` then does three things:
+
+- It installs the font from [Fontsource](https://fontsource.org), an npm package per font, so the lockfile pins the files like any other dependency.
+- It imports the font into the generated stylesheet and makes it the default: `font-sans` in Tailwind, and so the font of the whole page.
+- It preloads the Latin file on every page, through the generated server hooks, so text does not first appear in a fallback font.
+
+The files end up in the frontend build under hashed names and are served by your app, with the long cache lifetime of every other asset.
+
+```kotlin
+fonts("Inter") {
+    mono = "JetBrains Mono"
+}
+```
+
+`mono` sets the font for code, `font-mono`. Write the names as the fonts are called, with spaces. The font is taken in its variable version, one file for all weights. For a font that has none, say so, and the regular and bold files are used:
+
+```kotlin
+fonts("Roboto") {
+    variable = false
+}
+```
+
+`fonts` needs `tailwind()` or `daisyUi()`, which bring the stylesheet. Whether a font exists, and whether it has a variable version, shows on its Fontsource page. A name that does not exist fails at `svelteSync`, when the package cannot be installed. When you drop or change a font, remove its old `@fontsource` package from `package.json` yourself: the plugin does not know which of them are yours.
+
+## Charts
+
+`charts()` sets up [LayerChart](https://layerchart.com), a chart library for Svelte 5, so that its charts take the colors of your DaisyUI themes, light and dark, without any setup of your own:
+
+```kotlin
+svelte {
+    libraries {
+        daisyUi()
+        charts()
+    }
+}
+```
+
+`svelteSync` installs the package, adds LayerChart's DaisyUI preset to the generated stylesheet, and writes a small helper for series. A chart is then a component in an element with a height:
+
+```svelte
+<script lang="ts">
+    import { BarChart, LineChart } from 'layerchart';
+    import { chartSeries } from '#charts';
+
+    interface Day {
+        day: string;
+        opened: number;
+        closed: number;
+    }
+
+    let { days }: { days: Day[] } = $props();
+
+    const series = chartSeries<Day>({ opened: 'Opened', closed: { label: 'Closed', color: 'success' } });
+</script>
+
+<div class="h-64">
+    <LineChart data={days} x="day" {series} />
+</div>
+```
+
+`chartSeries<Day>` is the typed part. Its keys must be number properties of `Day`, so a renamed field fails `svelteCheck` instead of drawing an empty chart. Each entry is a label, or a label and one of the theme's colors: `primary`, `secondary`, `accent`, `neutral`, `info`, `success`, `warning` and `error`. Without a color, the series take them in that order. The colors are CSS variables, so a chart follows the theme when the visitor switches it.
+
+`chartColors` holds the same colors, for anything else you draw. For what the components can do, see LayerChart's own documentation. `charts()` needs `daisyUi()`.
 
 ## Lucide
 
@@ -1774,6 +3647,8 @@ Files in `frontend/static/` are copied as they are, because nothing in the build
 
 `toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](https://nijasc.github.io/ktor-svelte/features/calling-the-api#show-errors-automatically).
 
+`toasts { reloadPrompt() }` also offers a reload when the server runs a newer build than the page. See [Reload after a deploy](https://nijasc.github.io/ktor-svelte/features/calling-the-api#reload-after-a-deploy).
+
 ## Routes
 
 `routes()` turns every page into a typed constant in TypeScript and Kotlin, for links and redirects that always point to a real page. See [Typed routes](https://nijasc.github.io/ktor-svelte/features/routes).
@@ -1826,6 +3701,421 @@ On the server, `call.svelteLocale` and `call.messages` follow the same rules: th
 
 Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
 
+### Plurals
+
+"1 note" and "2 notes" are one message with two forms, and how many forms there are depends on the language. Write the forms into the message:
+
+```json
+{
+    "notes-count": "{count, plural, =0 {No notes} one {# note} other {# notes}} in {folder}"
+}
+```
+
+`#` stands for the number. The generated functions take the count as a number and pick the form for the current language, in TypeScript and in Kotlin alike:
+
+```ts
+m.notesCount({ count: notes.length, folder: 'Inbox' });
+```
+
+```kotlin
+call.messages.notesCount(notes.size, "Inbox")
+```
+
+- The forms are `zero`, `one`, `two`, `few`, `many` and `other`. A language uses only some of them: English and German `one` and `other`, Russian and Polish `one`, `few`, `many` and `other`, Japanese only `other`. Every plural needs `other`.
+- `=0`, `=1` and so on match one exact number, before the forms of the language. That is how "No notes" is written.
+- A form can hold other placeholders, and another plural.
+- Counts are whole numbers.
+
+`svelteSync` checks the messages: a plural without `other`, a form the language of that file never uses, a form name that does not exist, or a count in one language that is plain text in another all stop it with the key named.
+
+In the browser the choice of form comes from `Intl.PluralRules`. In Kotlin it comes from rules that are generated for the configured languages, checked against the browser's for the languages the plugin knows: the western and northern European ones, the Slavic and Baltic ones, Romanian, Hebrew, Arabic, and those without plural forms such as Japanese, Chinese and Korean. A language outside that list is treated like English in Kotlin.
+
+### Numbers, money and dates
+
+A price on the page and the same price in an email from the server should read the same. With `toLocaleString` in the browser and `NumberFormat` on the JVM they often do not: the two carry different versions of the locale data, and disagree about spaces, month names and where the currency sign goes.
+
+With `i18n` on, both sides get the same five functions, generated from one table for the configured languages:
+
+```ts
+import { formatDate, formatDateTime, formatMoney, formatNumber, formatTime } from '#format';
+
+formatNumber(1234567.891, 2); // 1,234,567.89   or  1.234.567,89
+formatMoney(order.total, 'EUR'); // the euro sign and 1,234.50, in the order the language uses
+formatDate(note.dueOn); // Mar 7, 2026      or  07.03.2026
+formatDateTime(note.createdAt); // Dec 24, 2026, 3:05 PM
+formatTime(note.createdAt);
+```
+
+```kotlin
+val formats = call.formats
+formats.formatMoney(order.total, "EUR")
+formats.formatDate(note.dueOn)
+formats.formatDateTime(note.createdAt, call.timeZone)
+```
+
+What is supported, and nothing else, so the two sides cannot drift apart:
+
+| Function | Input | Output |
+|---|---|---|
+| `formatNumber(value, decimals = 0)` | A number, or decimal text such as a `Decimal` | Grouped in threes, rounded half up to exactly `decimals` places. |
+| `formatMoney(amount, currency)` | As above, and a currency code | The sign and decimal places of the currency for 37 common currencies, the code and two places for others. |
+| `formatDate(value, style)` | An ISO date, or a `Date`. In Kotlin a `LocalDate` | `short` (3/7/26), `medium` (Mar 7, 2026, the default) or `long` (March 7, 2026). |
+| `formatDateTime(value, style)` | An ISO date-time, or a `Date`. In Kotlin an `Instant` and a `ZoneId` | `short` or `medium` date with the time in hours and minutes. |
+| `formatTime(value)` | As above | Hours and minutes, with AM and PM where the language uses them. |
+
+- The language is the visitor's, as for messages. Every function takes a locale as its last argument in TypeScript, and `Formats.forLocale(...)` gives another one in Kotlin.
+- Dates and times are printed in the browser's time zone in TypeScript. In Kotlin you pass the zone, and [`call.timeZone`](https://nijasc.github.io/ktor-svelte/features/calling-the-api#the-visitors-time-zone) is the visitor's.
+- The table covers 64 locales. A region without its own entry uses its language, and a language that is not in the table is formatted like English.
+- Not covered: weekday names, seconds, time zone names, compact numbers such as 1.2K, percent, and digits other than 0 to 9. For those, format on one side only.
+
+`timeAgo` from the same file tells a time as its distance from now, in the visitor's language: "now", "3 minutes ago", "yesterday", "in 2 hours". It is for the browser only and uses the browser's own words, through `Intl.RelativeTimeFormat`:
+
+```ts
+import { timeAgo } from '#format';
+
+timeAgo(note.createdAt);
+```
+
+Text made once goes stale while the page stays open. With `components()`, `<TimeAgo value={note.createdAt} />` keeps itself current: it renders a `<time>` element with the exact date and time as its tooltip, and every instance on the page is refreshed by one shared timer, twice a minute.
+
+The data comes from the JDK's copy of the Unicode locale data and is fixed in each plugin version, so a new JDK or browser does not change what your app prints.
+
+### Messages nobody translated yet
+
+A key has to exist in every language file, or the build fails. The quick way to get past that is to paste the English text into the other files and translate later, and "later" is easy to forget. In development the [dev panel](https://nijasc.github.io/ktor-svelte/guide/dev-workflow) shows a **Not translated** section whenever you look at the app in another language than the default one. It lists every message on the page whose text is the same as in the default language, with its key.
+
+Tick **Outline them on the page** and those texts get a dashed outline where they appear, so you see what a visitor in that language would read in the wrong one. The choice is remembered in your browser.
+
+Some words are the same in two languages on purpose, such as "Name" or "Status" in English and German. They are listed too, which is why the outline is off until you ask for it.
+
+### Messages nothing uses
+
+A missing message fails the build, but one that is no longer used stays in every locale file and keeps being translated. `svelteVerifyMessages` lists them:
+
+```bash
+./gradlew svelteVerifyMessages
+```
+
+```text
+old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'
+```
+
+A message counts as used when its generated function is called anywhere in the frontend or in Kotlin, or when its key appears as a string, because it may then be looked up by name. The task only lists what it finds. Add `--strict` to fail the build instead.
+
+## Components
+
+`components()` generates Svelte components into `src/lib/ktor-svelte/components`, imported as `#components/...`. They are the pieces that exist because of something the plugin already generates: a component here is a few lines of markup over a generated helper, written once. They use DaisyUI's classes when `daisyUi` is on, and plain class names with a minimal style otherwise.
+
+The files belong to the plugin and are rewritten by `svelteSync`. For a different look, write your own component on the same helper. The generated ones are short enough to copy as a start.
+
+The components import from `#api`, so they need `generateTs = true` on the server.
+
+### Field
+
+One form field: its label, the input, an optional hint, and the validation errors.
+
+```svelte
+<script lang="ts">
+    import { NoteInput } from '#api';
+    import Field from '#components/Field.svelte';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate });
+</script>
+
+<Field label="Title" bind:value={form.draft.title} bounds={NoteInput.bounds.title} errors={form.errors.title} hint="Shown in the list." />
+<Field label="Text" multiline rows={4} bind:value={form.draft.text} errors={form.errors.text} />
+```
+
+| Prop | Meaning |
+|---|---|
+| `label` | The text of the `<label>`, tied to the input. |
+| `bind:value` | The value, as with an `<input>`. |
+| `bounds` | The limits from the DTO, such as `NoteInput.bounds.title`. They become `required`, `maxlength` and the like. |
+| `errors` | The messages for this field, from `validate()` or from a 422. |
+| `hint` | A line under the input, announced with it by screen readers. |
+| `multiline` | Renders a `<textarea>`. |
+| `class` | Added to the wrapper. |
+
+Everything else, such as `type`, `autocomplete`, `placeholder` or `id`, goes to the input unchanged. Underneath it is the [`field` action](https://nijasc.github.io/ktor-svelte/features/validation), so errors appear and disappear the same way as with `use:field`.
+
+For a control that is not a plain input, pass it as the `control` snippet. It gets the `id` the label points at and the `options` for `use:field`, and the label, hint and errors stay as they are:
+
+```svelte
+<Field label="Color" errors={form.errors.color}>
+    {#snippet control({ id, options })}
+        <input {id} type="color" bind:value={form.draft.color} use:field={options} />
+    {/snippet}
+</Field>
+```
+
+### DateInput and DateTimeInput
+
+A date from the API is an `IsoDate`, text such as `2026-12-24`, and a field that may be empty is `null`. A plain `<input type="date">` gives `''` for empty and plain text otherwise, so pages convert by hand. `DateInput` binds to the value as it is:
+
+```svelte
+<script lang="ts">
+    import DateInput from '#components/DateInput.svelte';
+    import DateTimeInput from '#components/DateTimeInput.svelte';
+</script>
+
+<DateInput label="Due on" bind:value={form.draft.dueOn} errors={form.errors.dueOn} />
+<DateTimeInput label="Starts at" bind:value={form.draft.startsAt} />
+<DateTimeInput label="Opens at" local bind:value={form.draft.opensAt} />
+```
+
+Both take the props of `Field`, and an empty input is `null`.
+
+`DateTimeInput` shows a moment in the visitor's own time zone and stores it as the UTC text the server expects for a Kotlin `Instant`. With `local`, it is for a Kotlin `LocalDateTime` instead: the wall-clock text goes to the server as typed, with no time zone.
+
+### EnumSelect
+
+A `<select>` over a generated enum object:
+
+```svelte
+<script lang="ts">
+    import { Status } from '#api';
+    import EnumSelect from '#components/EnumSelect.svelte';
+</script>
+
+<EnumSelect label="Status" options={Status} bind:value={form.draft.status} labels={{ TODO: 'To do', DONE: 'Done' }} placeholder="Any" />
+```
+
+It lists every value of the enum, so a value added in Kotlin appears after the next `svelteGenerateTs`. `labels` gives the text to show, as text or as a function for translations, and a value without one shows its name. With `placeholder` there is a first option that stands for `null`. The bound value has the enum's type, so no cast is needed.
+
+### DataTable
+
+A table over any route that returns [`Page<T>`](https://nijasc.github.io/ktor-svelte/recipes/pagination). It loads the pages, and shows a line while it loads, when there is nothing, and when a load failed, with a button to try again.
+
+```svelte
+<script lang="ts">
+    import { api } from '#api';
+    import DataTable from '#components/DataTable.svelte';
+
+    let search = $state('');
+</script>
+
+<input type="search" bind:value={search} aria-label="Search" />
+<DataTable
+    load={api.notes.list}
+    query={{ search, limit: '20' }}
+    key={(note) => note.id}
+    columns={[
+        { key: 'title', label: 'Title' },
+        { key: 'createdAt', label: 'Created', text: (note) => new Date(note.createdAt).toLocaleDateString() },
+        { id: 'size', label: 'Size', text: (note) => `${note.text.length} characters` }
+    ]}
+/>
+```
+
+`load` is the generated function of the route, and the rows have the type it returns. So a column's `key` must be a property of the item, a typo fails `svelteCheck`, and `text` gets the typed item. A column that is not one property has an `id` and a `text` instead.
+
+| Prop | Meaning |
+|---|---|
+| `load` | The generated function of a route that returns `Page<T>`. |
+| `columns` | The headers, and what each cell shows. |
+| `query` | The query parameters besides the cursor. When they change, the table loads again from the start. |
+| `key` | A stable id per row, such as `(note) => note.id`. |
+| `paging` | `'more'` (the default) adds rows with a Load more button. `'pages'` shows one page with Previous and Next. |
+| `first` | A first page that a `load` function already fetched, so the table does not fetch it again. |
+| `caption` | A caption for the table. |
+| `empty`, `loading`, `more`, `previous`, `next`, `retry` | The texts, in English unless given. |
+| `class` | Added to the wrapper. |
+
+For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
+
+```svelte
+<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }, { id: 'open', label: '' }]}>
+    {#snippet row(note)}
+        <td>{note.title}</td>
+        <td><a href={routes.notesId({ id: note.id })}>Open</a></td>
+    {/snippet}
+</DataTable>
+```
+
+After a change elsewhere on the page, `bind:this` the table and call its `reload()`.
+
+The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
+
+### FileDrop
+
+A drop area with a file input for an [upload route](https://nijasc.github.io/ktor-svelte/recipes/uploads). Files can be dropped on it or chosen, and each one is shown while it travels: a preview for images, the name and size, a progress bar, and the reason when it was refused.
+
+```svelte
+<script lang="ts">
+    import { api, uploadRules } from '#api';
+    import FileDrop from '#components/FileDrop.svelte';
+
+    let documents = $state<StoredFile[]>([]);
+</script>
+
+<FileDrop
+    label="Add documents"
+    hint="PDF or images, up to 5 MiB each."
+    multiple
+    rules={uploadRules['documents.create']}
+    upload={(file, options) => api.documents.create({ file }, options)}
+    onuploaded={(stored) => (documents = [...documents, stored])}
+/>
+```
+
+| Prop | Meaning |
+|---|---|
+| `upload` | Sends one file. Pass the route's generated function, and hand it the `options` it is given: they carry the progress. |
+| `label` | The label of the file input. |
+| `rules` | The route's entry in `uploadRules`. Its types become the input's `accept`. |
+| `hint` | A line under the input. |
+| `multiple` | Takes several files. They are sent one after another, each in its own request. |
+| `onuploaded` | Called with the route's answer and the file, after each one that went through. |
+| `problem` | Turns a failed upload into the text to show, for your own wording or language. Without it the server's message is shown. |
+| `uploading` | The start of the progress bar's accessible name, `Uploading` unless given. |
+| `disabled`, `id`, `class` | As on an input. |
+
+The route's rules are checked before a file is sent, as with any call to the generated function, so a file that is too large or of the wrong type is refused at once and nothing is uploaded. A file that went through leaves the list, and one that failed stays with its reason until the next files are chosen.
+
+### ErrorPage
+
+`components()` also writes `src/routes/+error.svelte`, the page SvelteKit shows when a page cannot be shown. It is three lines around `<ErrorPage />`, which shows:
+
+- the status, such as 404
+- the message: the one the server sent in the error body when a call failed, the one you passed to `error(...)`, and otherwise a sentence for 404, 403, 401 or anything else
+- the request ID for a status of 500 and above, so a visitor can quote it and you can find the request in the log
+- a link back to the start page, `home="/"` unless you pass another
+
+A `load` function no longer has to translate a failed call into a page error. Let it throw:
+
+```ts
+export const load: PageLoad = async (event) => {
+    return { note: await apiWith(event).notes.get(event.params.id) };
+};
+```
+
+When the server answers 404 with `{ "message": "That note does not exist." }`, the error page shows 404 and that message. This works through `handleError` in `src/hooks.client.ts`, which `svelteSync` writes. It puts the status, message, request ID and [error code](https://nijasc.github.io/ktor-svelte/features/calling-the-api#error-codes) of a failed call into `page.error`, typed through `App.Error`, so your own components can read `page.error.code` too.
+
+The sentences are English until your messages have their keys. With `i18n` on, add the ones you want translated and run `svelteSync`:
+
+| Key | Default |
+|---|---|
+| `error-not-found` | This page does not exist. |
+| `error-forbidden` | You are not allowed to see this page. |
+| `error-sign-in` | Sign in to see this page. |
+| `error-failed` | Something went wrong. Please try again. |
+| `error-request-id` | Request ID: |
+| `error-home` | Back to the start page |
+
+Your own files win. If `src/routes/+error.svelte` exists and is not the generated one, it is left alone, and you can use `<ErrorPage />` inside it or not. To change the generated one, remove its first line, and it is yours. The same goes for `src/hooks.client.ts` when `toasts()` is off: keep your own and add `export { handleError } from '#lib/ktor-svelte/errors.ts';` to it.
+
+### ThemeToggle and LocaleSwitch
+
+The theme and i18n helpers already know the themes and languages you configured. These two components put them on the page, so a new app has both switches from the start:
+
+```svelte
+<script lang="ts">
+    import LocaleSwitch from '#components/LocaleSwitch.svelte';
+    import ThemeToggle from '#components/ThemeToggle.svelte';
+</script>
+
+```
+
+`ThemeToggle` is generated when `daisyUi` is on. With two themes it is a button that flips between them, with more it is a `<select>`. It applies the theme at once and remembers it, as `setTheme` does.
+
+`LocaleSwitch` is generated when `i18n` is on. It lists each language under its own name, such as English and Deutsch, and switches with `setLocale`.
+
+Both take `label` for the accessible name (`Theme` and `Language` unless given, so pass a translated one), `labels` to name single entries yourself, an object from theme or language to the text to show, and `class` and `id`.
+
+### NavigationProgress
+
+A thin bar at the top of the page while SvelteKit navigates, which includes the time a `load` function waits for the server. Without it, a click on a link to a slow page looks like nothing happened. Put it in the root layout, once:
+
+```svelte
+<script lang="ts">
+    import NavigationProgress from '#components/NavigationProgress.svelte';
+
+    let { children } = $props();
+</script>
+
+{@render children()}
+```
+
+- It appears only when a navigation takes longer than `delay`, 150 ms unless given, so quick ones do not flash.
+- Its color is the theme's primary color with DaisyUI, and the text color otherwise. Set the CSS variable `--ktor-svelte-progress` to choose another.
+- It is announced as a progress bar with the name `label`, `Loading page` unless given.
+- With "reduce motion" set in the visitor's system, it is a still line.
+
+## Modals
+
+A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:
+
+```svelte
+<script lang="ts">
+    import { modal } from '#lib/ktor-svelte/modal.ts';
+
+    const rename = modal<string>();
+    let name = $state('');
+
+    async function askForName() {
+        const chosen = await rename.open();
+        if (chosen) console.log('renamed to', chosen);
+    }
+</script>
+
+<button onclick={askForName}>Rename</button>
+
+<dialog class="modal" use:rename.attach>
+    <div class="modal-box">
+        <input bind:value={name} aria-label="New name" />
+        <button onclick={() => rename.close(name)}>Save</button>
+        <button onclick={() => rename.close()}>Cancel</button>
+    </div>
+</dialog>
+```
+
+`open()` shows the dialog and returns a promise. It resolves with what `close(result)` was given, or with `undefined` when the dialog was closed any other way: `close()` without a value, Escape, or a click beside the box. Pass `modal({ closeOnBackdrop: false })` to keep such clicks from closing it. `isOpen` tells whether it is showing.
+
+The markup is yours, so it works with DaisyUI's `modal` classes, as above, and with a plain `<dialog>`. To only ask a yes or no question before a call, use [`confirmed`](https://nijasc.github.io/ktor-svelte/features/calling-the-api#ask-before-a-call), which brings its own dialog.
+
+## Guide for coding assistants
+
+`svelteSync` also writes `src/lib/ktor-svelte/AGENTS.md`, a short guide for coding assistants such as Claude Code, Cursor or Copilot. It tells them what they otherwise get wrong in a project like this:
+
+- which files are generated and must not be edited, and which Gradle setting or Kotlin route to change instead
+- that the backend is called through the typed client from `#api`, with `apiWith(event)` in `load` functions, never through a hand-written `fetch`
+- the libraries you turned on and how to use them: icons, messages, themes, toasts
+- your pages by their typed route name, when `routes()` is on
+- the Gradle commands to run
+
+It describes your project, not ktor-svelte in general: a project without i18n gets no word about messages. Like every generated file it is kept current by `svelteSync` and checked by `svelteVerifySync`.
+
+Assistants that read nested `AGENTS.md` files find it when they work in the frontend. To make sure, link it from the file your assistant reads at the project root, such as `AGENTS.md` or `CLAUDE.md`:
+
+```md
+Read `frontend/src/lib/ktor-svelte/AGENTS.md` before changing anything.
+```
+
+Projects created by the setup script have that `AGENTS.md` already. ktor-svelte never edits a root `AGENTS.md` or `CLAUDE.md` of yours.
+
+## Lint rules
+
+Next to the generated files, `svelteSync` writes `src/lib/ktor-svelte/eslint.js`, a small ESLint plugin with rules for mistakes that are easy to make in a ktor-svelte app. They show up in the editor while you type:
+
+| Rule | What it flags |
+|---|---|
+| `ktor-svelte/no-string-page-links` | An `href`, `goto` or `redirect` that leads to one of your pages as a string, when [typed routes](https://nijasc.github.io/ktor-svelte/features/routes) are on |
+| `ktor-svelte/fetch-in-load` | An API call inside a `load` function that goes through neither `apiWith(event)` nor `{ fetch }`, which SvelteKit reports at runtime as `window_fetch_in_load` |
+| `ktor-svelte/no-error-body-message` | Reading `error.body.message` from a caught error without narrowing it with `isApiError` first, where [`errorMessage`](https://nijasc.github.io/ktor-svelte/features/calling-the-api) is the safe choice |
+
+A project made by the setup script has them wired in. In an existing project, add two lines to `eslint.config.js`:
+
+```js
+import ktorSvelte from './src/lib/ktor-svelte/eslint.js';
+
+export default [
+    ...ktorSvelte.configs.recommended
+];
+```
+
+All three are warnings. To turn one off or make it an error, set it like any other rule, such as `{ rules: { 'ktor-svelte/fetch-in-load': 'error' } }`. The page list inside the file follows your routes, so the first rule stays current the same way `routes.ts` does. For a one-off check across the whole project, and to rewrite string links automatically, use [`svelteVerifyRoutes`](https://nijasc.github.io/ktor-svelte/features/routes#finding-links-that-are-still-strings).
+
 Source: https://nijasc.github.io/ktor-svelte/features/routes
 
 # Typed routes
@@ -1861,7 +4151,28 @@ A folder is a page when it holds a `+page.svelte`, `+page.ts`, `+page.js` or `+p
 
 The parameters come from SvelteKit's own route types, so a missing or misspelled parameter is a type error. Numbers are accepted too, so an ID needs no `String()`. Since every call goes through `resolve()`, a base path and relative prerender links work as usual, and the same functions work with `goto`.
 
-`routeIds` holds the raw SvelteKit route IDs under the same names, such as `routeIds.notesId` for `/notes/[id]`. Use it to compare with `page.route.id`, or to call `resolve()` yourself.
+`routeIds` holds the raw SvelteKit route IDs under the same names, such as `routeIds.notesId` for `/notes/[id]`. Use it to call `resolve()` yourself.
+
+### Marking the open page in a menu
+
+Every route can tell whether it is the page that is open, so a menu does not compare path strings:
+
+```svelte
+<script lang="ts">
+    import { page } from '$app/state';
+    import { routes } from '#routes';
+</script>
+
+<a href={routes.home()} aria-current={routes.home.ariaCurrent(page)}>Home</a>
+<a href={routes.notes()} aria-current={routes.notes.ariaCurrent(page, { below: true })}>Notes</a>
+<a href={routes.about()} class:font-bold={routes.about.isActive(page)}>About</a>
+```
+
+- `isActive(page)` is `true` on that page. For a page with parameters, such as `routes.notesId`, that is every note.
+- `{ below: true }` also counts every page below it: `routes.notes` is then active on `/notes`, `/notes/4` and `/notes/4/edit`, but not on `/notebooks`. The home page has everything below it, so for `routes.home` the option changes nothing.
+- `ariaCurrent(page)` gives the value for `aria-current`: `page` on the page itself, `true` on a page below it when `below` is set, and nothing otherwise, so the attribute is left out. Style the open link through it, such as `[aria-current]` in CSS or `aria-[current]:font-bold` in Tailwind.
+
+They compare SvelteKit's route ID, not the URL, so a base path, a language prefix, a trailing slash or a query string cannot get in the way, and route groups such as `(app)` are ignored. `routes.notes.id` is the route ID itself.
 
 With [i18n](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#i18n) and `strategy = LocaleStrategy.UrlPrefix`, every route also puts the current language in front, such as `/de/notes/1`, so every language gets prerendered without calling `localizeHref` by hand. With the `Cookie` strategy, or without i18n, it is plain `resolve()`.
 
@@ -1874,7 +4185,7 @@ import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.localizeHref
 
 post("/api/notes") {
-    val note = notes.create(call.receive())
+    val note = store.create(call.receive<Note>())
     call.respondRedirect(call.localizeHref(FrontendRoutes.notesId(note.id.toString())))
 }
 
@@ -1893,9 +4204,21 @@ A route's name is its path in camel case, without groups: `/` is `home`, `/about
 
 `routes.ts` is a generated file like the others: commit it, and a production build fails if it is out of date. While `svelteDev` or `svelteDevAll` runs, adding, moving or deleting a page updates `routes.ts` at once. Under `svelteDevAll` `FrontendRoutes` follows and the app restarts. Otherwise it updates the next time Kotlin compiles.
 
+## Renaming a page
+
+Moving a page folder changes its route name, so every typed call to it stops compiling. `svelteRename` moves the folder and fixes those calls in one step:
+
+```bash
+./gradlew svelteRename --page=notes/[id] --to=memos/[id]
+```
+
+It moves `src/routes/notes/[id]` and every page below it, rewrites `routes.notesId` and `routeIds.notesId` in the frontend and `FrontendRoutes.notesId` in Kotlin to the new names, and then runs `svelteSync`, so `routes.ts` matches again. Both paths are relative to the routes folder, and route groups such as `(app)` are written as they are on disk.
+
+The task stops before it changes anything when a file it would rewrite has uncommitted changes, so the rename stays one clean diff. Add `--force` to rename anyway. When the page's parameters change, such as `[id]` to `[noteId]`, the calls are renamed but their arguments are yours to update, and the compiler names each one. Nothing answers at the old address afterwards, so add a redirect if it was linked from outside the app.
+
 ## Finding links that are still strings
 
-An app that turns typed routes on later still has links such as `href="/notes/{note.id}"`. `svelteVerifyRoutes` reads every `.svelte`, `.ts` and `.js` file under `src` and lists each `href`, `goto` and `redirect` whose path is one of your pages, with the call to write instead:
+An app that turns typed routes on later still has links such as `href="/notes/{note.id}"`. `svelteVerifyRoutes` reads every `.svelte`, `.ts` and `.js` file under `src` and lists each `href`, `goto` and `redirect` whose path is one of your pages, with the call to write instead. It reads the Kotlin files in `src/main/kotlin` too, and lists each `respondRedirect` to a page with its `FrontendRoutes` replacement:
 
 ```bash
 ./gradlew svelteVerifyRoutes
@@ -1904,15 +4227,229 @@ An app that turns typed routes on later still has links such as `href="/notes/{n
 ```text
 src/routes/+page.svelte:12  href="/notes/{note.id}"  ->  routes.notesId({ id: note.id })
 src/lib/NoteForm.svelte:31  goto("/notes/" + created.id)  ->  routes.notesId({ id: created.id })
+src/main/kotlin/notes/Routes.kt:48  respondRedirect("/notes/${note.id}")  ->  FrontendRoutes.notesId(note.id)
 ```
 
-It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. It is not part of `check`. To keep new string links out, add it yourself:
+It fails while it finds any, and it only looks at paths that match a page, so links to your API, to files and to other sites are left alone. When a path is too dynamic to read, the suggestion shows `...` where the value goes. In Kotlin, string templates such as `$id` and `${note.id}` become the arguments, and a value that is not a `String` still needs its `toString()`. Add `--fix` and the task rewrites the links for you and adds the `#routes` import to each file it changes:
+
+```bash
+./gradlew svelteVerifyRoutes --fix
+```
+
+It only rewrites a link when nothing is lost. A link with a query string or a fragment, a path that is too dynamic to read, and a Kotlin redirect with parameters are still listed for you to change by hand, and a file that already has something else called `routes` is left alone. Look at the diff before you commit, and run your formatter afterwards.
+
+The check is not part of `check`. To keep new string links out, add it yourself:
 
 ```kotlin
 tasks.check {
     dependsOn("svelteVerifyRoutes")
 }
 ```
+
+## Finding links that lead nowhere
+
+`svelteVerifyLinks` is the opposite check. It reads the same files, and lists every internal link whose path is not one of your pages, not under your API and not a file in `static`, so a typo in an `href` shows up before a visitor finds it:
+
+```bash
+./gradlew svelteVerifyLinks
+```
+
+```text
+src/routes/+page.svelte:14  href="/abuot"  ->  nothing is served at /abuot
+src/main/kotlin/notes/Routes.kt:52  respondRedirect("/notes/${id}/edit")  ->  nothing is served at /notes/{}/edit
+```
+
+It only lists what it finds. Add `--strict` to fail the build instead, for example in CI.
+
+The check works with or without typed routes. Paths under your API are never reported, because the generated client already makes a call to a missing route a compile error. The API roots come from the generated `openapi.json`, or `/api` when there is none. A link that starts with a value, such as `href="/{section}/overview"`, cannot be judged and is skipped, and with `LocaleStrategy.UrlPrefix` a leading language such as `/de` is accepted.
+
+## Menu, titles and breadcrumbs
+
+A menu is a list of pages with a title and an icon each, kept by hand somewhere far from the pages. Let each page say it about itself instead, in its `+page.ts`:
+
+```ts
+export const _nav = { title: 'Board', icon: 'LayoutDashboard', order: 1 };
+```
+
+| | |
+| --- | --- |
+| `title` | The page's title. With `i18n` on, write the key of a message, such as `'nav-board'`, and the title is translated |
+| `icon` | Optional. With `lucide()` on, the name of an icon |
+| `order` | Optional. Where the page stands in the menu. Pages without it come last, in the order of their paths |
+| `menu` | Optional. `false` keeps the page out of the menu, with its title still known |
+| `description`, `image` | Optional. For [link previews](#link-previews) |
+
+The name starts with an underscore because SvelteKit refuses other exports from a page file. Keep the values plain: text, numbers, `true` and `false`. The plugin reads the file without running it, so a function call or a variable there fails `svelteSync` with the name of the file.
+
+`routes.ts` then has three more things:
+
+```svelte
+<script lang="ts">
+    import { page } from '$app/state';
+    import { breadcrumbs, nav, pageTitle } from '#routes';
+</script>
+
+<svelte:head>
+    <title>{pageTitle(page) ?? 'My app'}</title>
+</svelte:head>
+
+<nav>
+    {#each nav as item (item.name)}
+        <a href={item.to()} aria-current={item.to.ariaCurrent(page)}>{item.title()}</a>
+    {/each}
+</nav>
+
+<ol>
+    {#each breadcrumbs(page) as crumb (crumb.href)}
+        <li><a href={crumb.href} aria-current={crumb.current ? 'page' : undefined}>{crumb.title}</a></li>
+    {/each}
+</ol>
+```
+
+- `nav` lists the pages without parameters, in order. Each item has the typed route as `to`, the `title` as a function so that it follows the language, the `icon`, and the route's `name`.
+- `pageTitle(page)` is the title of the open page, or `undefined` for a page that declared none. It works for pages with parameters too.
+- `breadcrumbs(page)` is the way from the start page to the open one: every page above it that has a title, with a link that carries the open page's parameters.
+
+A menu that depends on who is signed in is a filter over `nav`. With [page guards](https://nijasc.github.io/ktor-svelte/features/auth#page-guards) the rule is already written:
+
+```ts
+const links = $derived(
+    nav.filter((item) => {
+        const guard = matchGuard(pageGuards, item.to());
+        if (!guard) return true;
+        return currentUser.signedIn && (!guard.permission || can(guard.permission));
+    })
+);
+```
+
+## Link previews
+
+When someone pastes a link to your site into a chat, the preview comes from tags in the page's HTML. Add what the preview should say to the same `_nav`:
+
+```ts
+export const _nav = {
+    title: 'home-title',
+    description: 'home-lead',
+    image: 'https://example.com/share/home.png'
+};
+```
+
+| | |
+| --- | --- |
+| `description` | One or two sentences. Like `title`, the key of a message when `i18n` is on |
+| `image` | The preview image. Give its full address: most services do not follow a path. A path that starts with `/` is accepted and written as it is |
+
+Every prerendered page that has a `description` or an `image` then gets these tags in its `<head>`, at build time:
+
+```html
+<meta property="og:type" content="website">
+<meta property="og:title" content="A team board in one JAR">
+<meta name="description" content="This example uses every ktor-svelte feature.">
+<meta property="og:description" content="This example uses every ktor-svelte feature.">
+<meta property="og:image" content="https://example.com/share/home.png">
+<meta name="twitter:card" content="summary_large_image">
+```
+
+They are written by the generated server hooks, so there is nothing to add to a layout. With `LocaleStrategy.UrlPrefix` each language's pages get the tags in that language. With the cookie strategy a page is prerendered once, so its tags are in the default language.
+
+This is for pages that are prerendered. A page with a parameter, such as `/notes/[id]`, is not: the server never renders pages, so such a page sets its own title when it runs, and a link to it previews without these tags.
+
+## A new page
+
+A new page is a folder, two files with the right names, the load's types, and for a page with a parameter two settings that are easy to forget. `svelteAdd` writes them:
+
+```bash
+./gradlew svelteAdd --page=notes/[id]
+```
+
+```text
+ktor-svelte added /notes/[id]:
+  frontend/src/routes/notes/[id]/+page.svelte
+  frontend/src/routes/notes/[id]/+page.ts
+Its load calls api.notes.get, the route that answers at the same path.
+Add paramRoutes("/notes/[id]") to install(Svelte), so the app serves the page for every value.
+The files are yours from here on.
+```
+
+Write the folder as it is under `src/routes`, with groups such as `(app)/settings` if you use them.
+
+The `+page.ts` has a typed load. When the generated client already has a `GET` route at the same path below your API prefix, the load calls it, with the page's parameters in the type the route wants:
+
+```ts
+import { apiWith } from '#api';
+import type { PageLoad } from './$types';
+
+export const prerender = false;
+export const ssr = false;
+
+export const load: PageLoad = async (event) => {
+    return { note: await apiWith(event).notes.get(Number(event.params.id)) };
+};
+```
+
+Without such a route the load returns the page's parameters, and you fill in the rest. The `+page.svelte` shows a title and the loaded data, so the page works before you have designed it. With `routes()` on, `routes.ts` is updated in the same run.
+
+Add `--route` and the task also writes a Kotlin file with a route to start from, at the API path of the page:
+
+```bash
+./gradlew svelteAdd --page=orders/[id] --route
+```
+
+```kotlin
+fun Route.ordersIdRoutes() {
+    get("/api/orders/{id}") {
+        val id = call.parameters["id"].orEmpty()
+        call.respondText("Orders $id")
+    }
+}
+```
+
+The file goes into the package of your main class. Call the function inside `routing { }`, and after the next `svelteGenerateTs` the client has the route.
+
+The task only creates. It refuses when one of its files is already there, it never edits a file of yours, and what it wrote has no generated header: the files are yours.
+
+## Pages for a class
+
+Once the API can list, read, create, change and delete something, the first version of its pages is the same every time: a table, a form, a detail page. `svelteAdd --crud` writes that first version from the generated client:
+
+```bash
+./gradlew svelteAdd --crud=Note
+```
+
+```text
+ktor-svelte added pages for Note, wired to api.notes:
+  frontend/src/routes/notes/+page.ts
+  frontend/src/routes/notes/+page.svelte
+  frontend/src/routes/notes/new/+page.svelte
+  frontend/src/routes/notes/[id]/+page.ts
+  frontend/src/routes/notes/[id]/+page.svelte
+Their texts are in de.json, en.json, in English. Translate them.
+The form leaves out tags, icon: add inputs for them, they are not plain text, numbers or switches.
+Add paramRoutes("/notes/[id]") to install(Svelte), so the app serves the detail page for every id.
+The files are yours from here on.
+```
+
+The task looks for the route that lists the class, such as the `list` of a [resource](https://nijasc.github.io/ktor-svelte/features/typescript#resource-routes), and for the other four routes next to it. What it finds decides what it writes:
+
+| Route in the client | Page |
+| --- | --- |
+| `list` | A table of the class's plain fields, loaded in `+page.ts` |
+| `create` | `new/+page.svelte` with a form, and a link to it from the list |
+| `get` | `[id]/+page.ts` and a detail page, and a link to it from each row |
+| `update` | The form again on the detail page, filled with the item |
+| `delete` | A delete button in each row and on the detail page |
+
+The pages use what the project has:
+
+- The form is a `formState` of the input class, with its `validate` and, per field, its `bounds`, so the browser shows the same rules as the server.
+- With `routes()` on, every link and `goto` is a typed route.
+- With `i18n` on, every text is a message. The keys are added to each locale file in English, and keys that are already there are left alone.
+
+Text, numbers and booleans get an input. Other fields, such as lists and enums, are left out of the form and named in the output, and the draft keeps their default.
+
+`--page=(app)/memos` puts the pages in another folder than the one named after the API path.
+
+As with a single page, the task only creates: it refuses when a file is already there, and what it wrote has no generated header. These are your pages from the first minute, a starting point to redesign and not a layer to configure.
 
 Source: https://nijasc.github.io/ktor-svelte/security
 
@@ -2190,23 +4727,141 @@ fun Application.sessionAuth(users: Users) {
 - The `login` limit allows five attempts per minute and client, on top of the default limit for all API writes.
 - `errorResponse` adds the 401 to the typed errors of every endpoint, because `authenticate` answers it outside your route.
 
-In the frontend, send users to the login page whenever the API says they are signed out:
+Add `loginPage = "/login"` to `install(Svelte)`, and the generated client sends users to the login page whenever the API says they are signed out, with the page they were on. [The login page](https://nijasc.github.io/ktor-svelte/features/auth#the-login-page) has the details. The login form then signs in and goes back:
 
 ```ts
 import { goto } from '$app/navigation';
-import { api, apiConfig, isApiError } from '#api';
-
-apiConfig.onUnauthorized = () => goto('/login');
+import { afterLogin, api, isApiError } from '#api';
 
 try {
-    const user = await api.session.create({ email, password });
+    await api.session.create({ email, password });
+    await goto(afterLogin('/'));
 } catch (error) {
     if (isApiError(error, 'session.create')) message = error.body.message;
     else throw error;
 }
 ```
 
-Put the `onUnauthorized` line in your root `+layout.ts`, so it runs once in the browser.
+## Typed cookies
+
+A cookie that both sides use is three things written twice: its name, what its text means, and its options. Declare it once in Kotlin, name it in `install(Svelte)`, and read and write it with its type:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.clearCookie
+import io.github.nijasc.ktor.svelte.readCookie
+import io.github.nijasc.ktor.svelte.typedCookie
+import io.github.nijasc.ktor.svelte.writeCookie
+import kotlin.time.Duration.Companion.days
+
+enum class Density { Comfortable, Compact }
+
+val DensityCookie = typedCookie<Density>("density", default = Density.Comfortable, maxAge = 90.days)
+
+install(Svelte) {
+    generateTs = true
+    cookies(DensityCookie)
+}
+
+routing {
+    get("/api/density") {
+        val density = call.readCookie(DensityCookie)
+        call.writeCookie(DensityCookie, Density.Compact)
+        call.clearCookie(DensityCookie)
+        call.respond(density.toString())
+    }
+}
+```
+
+In the browser, the generated client has the same cookie under `cookies`, with the same name, type and options:
+
+```ts
+import { cookies } from '#api';
+
+const density = cookies.density.get(); // 'Comfortable' | 'Compact'
+cookies.density.set('Compact');
+cookies.density.clear();
+```
+
+- A cookie holds a `String`, `Int`, `Long`, `Double`, `Boolean` or an enum.
+- A missing cookie, or one whose text does not fit the type, reads as the default, and as null (`undefined` in TypeScript) when there is none. Somebody editing a cookie by hand cannot break a page.
+- The options are `maxAge` (a year unless set, null to end with the browser session), `path`, `sameSite`, `secure` and `httpOnly`. Both sides write the cookie with them.
+- A cookie with `httpOnly = true` is left out of the generated client, because a script cannot read it.
+- The name in TypeScript is the cookie's name in camel case: `board-mine` is `cookies.boardMine`.
+- `get` takes an optional `Cookie` header text, for code that runs where there is no `document`.
+
+Names and values are plain text in the visitor's browser. Do not keep anything in a typed cookie that the visitor must not read or change. For that, use a session.
+
+## Cookie consent
+
+A cookie the site does not need to work, such as one for statistics, may only be set after the visitor agreed. Give such a cookie a category where it is declared:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.consentsTo
+import io.github.nijasc.ktor.svelte.typedCookie
+import io.github.nijasc.ktor.svelte.writeCookie
+
+val VisitsCookie = typedCookie<Int>("visits", default = 0, category = "analytics")
+
+install(Svelte) {
+    generateTs = true
+    cookies(VisitsCookie)
+}
+
+routing {
+    get("/api/visit") {
+        call.writeCookie(VisitsCookie, 1)
+        if (call.consentsTo("analytics")) call.application.log.info("counted")
+        call.respondText("ok")
+    }
+}
+```
+
+From then on, both sides follow the visitor's choice without further code:
+
+- `call.writeCookie` and `cookies.visits.set` do nothing until the visitor has accepted the category.
+- `call.readCookie` and `cookies.visits.get` give the default until then, also when an old cookie is still there.
+- A cookie without a category is needed for the site to work, and is always read and written.
+
+The generated client has the choice as `cookieConsent`, with the categories of all declared cookies:
+
+```ts
+import { cookieConsent } from '#api';
+
+cookieConsent.decided(); // false until the visitor chose
+cookieConsent.allows('analytics');
+cookieConsent.accept(); // everything
+cookieConsent.accept(['analytics']); // only these
+cookieConsent.refuse();
+cookieConsent.reset(); // ask again
+```
+
+Refusing a category, or leaving it out, also removes its cookies from the browser. `cookieConsent` is a Svelte store, so `$cookieConsent.accepted` in a component follows the choice, for a script that should only load after consent.
+
+To ask the visitor, show the banner once, in the root layout:
+
+```svelte
+<script lang="ts">
+    import { onMount } from 'svelte';
+    import { cookieConsent } from '#api';
+
+    onMount(() =>
+        cookieConsent.banner({
+            text: 'We use cookies to count visits.',
+            accept: 'Accept all',
+            refuse: 'Only what is needed',
+            labels: { analytics: 'Statistics' },
+            save: 'Save my choice',
+            link: { href: '/privacy', text: 'Privacy' }
+        })
+    );
+</script>
+```
+
+The banner appears only while the visitor has not chosen. `labels` and `save` are optional: with them, each labelled category gets a checkbox and there is a third button. All text is yours, so it can come from your translations. It is a plain bar at the bottom of the page with the class `ktor-svelte-consent`, and its buttons carry daisyUI's `btn` classes. For your own design, build a component on `cookieConsent` and leave `banner` out. A settings page can call `cookieConsent.reset()` and show the banner again.
+
+On the server, `call.cookieConsent` is the set of accepted categories, or null while the visitor has not chosen, and `call.consentsTo("analytics")` asks for one.
+
+The choice is kept for 180 days in a cookie named `cookie-consent`, which itself needs no consent. This helper keeps the choice and follows it for typed cookies. It cannot know about cookies that other scripts set, and which cookies need consent where you operate is a legal question it does not answer.
 
 Source: https://nijasc.github.io/ktor-svelte/recipes/uploads
 
@@ -2236,6 +4891,91 @@ const stored = await api.files.create(form, {
     onUploadProgress: ({ loaded, total }) => (progress = total ? loaded / total : 0)
 });
 ```
+
+## Rules for both sides
+
+Which files a route takes is usually written twice: once in Kotlin, and again in the page, so the user is told before a 20 MB upload has finished. Declare it once, on the route:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.receiveUploads
+import io.github.nijasc.ktor.svelte.uploadRules
+
+post("/api/avatars") {
+    val stored = call.receiveUploads().map { file -> files.store(file.fileName ?: "upload", file.bytes) }
+    call.respond(HttpStatusCode.Created, stored)
+}.uploadRules(maxSize = 5L * 1024 * 1024, types = listOf("image/*", ".pdf"), maxFiles = 3)
+```
+
+- `uploadRules` describes the body as multipart form data, so no `describe { requestBody { } }` is needed, and it carries the rules into the generated client.
+- `call.receiveUploads()` reads the files and enforces the rules. Each file has `field`, `fileName`, `contentType`, `bytes` and `size`. No file is read beyond its limit.
+- `types` are media types (`application/pdf`), families (`image/*`) or file endings (`.csv`).
+
+A file that breaks a rule is answered with a status and a body like this one, and the route's own code never runs:
+
+| Rule | Status | `code` | `message` |
+|---|---|---|---|
+| `maxSize` | 413 | `upload.tooLarge` | `photo.png is larger than 5 MiB.` |
+| `types` | 415 | `upload.type` | `setup.exe is not an accepted file type.` |
+| `maxFiles` | 400 | `upload.tooMany` | `At most 3 files can be sent at once.` |
+
+The generated function checks the same rules before it sends anything, and fails with the same `ApiError`, so the page handles one error whether the browser or the server noticed:
+
+```ts
+import { api, isUploadError, uploadRules } from '#api';
+
+try {
+    await api.avatars.create(form);
+} catch (error) {
+    if (isUploadError(error)) console.log(error.body.code, error.body.file, error.body.message);
+}
+```
+
+`uploadRules['avatars.create']` holds the rules as data, for an `<input type="file" accept={uploadRules['avatars.create'].types.join(',')}>` or a hint under the field. With `toasts()` on, the message is shown without any code of yours. For your own wording or another language, pass `{ silent: true }` and choose the text by `error.body.code`.
+
+The server checks the type the browser declares and the file name, as the browser does. Neither proves what the bytes are, so treat stored files as untrusted when you serve them.
+
+## A drop zone without the code
+
+With `libraries { components() }`, the generated [`<FileDrop>`](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#filedrop) is the input, the drop area, the previews, the progress bars and the refusals for an upload route, in one component.
+
+## A form with named fields
+
+With `uploadRules`, the generated function takes a `FormData`, and nothing checks the field names in it. When an upload comes with other values, or the field names matter, declare the form:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.receiveForm
+import io.github.nijasc.ktor.svelte.uploadForm
+
+post("/api/documents") {
+    val form = call.receiveForm()
+    val title = form.text("title")
+    val cover = form.file("cover")
+    val pages = form.files("pages")
+    call.respondText("$title: ${cover.fileName} and ${pages.size} pages")
+}.uploadForm(maxSize = 5L * 1024 * 1024, types = listOf("image/*", ".pdf")) {
+    text("title")
+    text("note", required = false)
+    file("cover")
+    files("pages")
+}
+```
+
+The generated function then takes an object with those fields, and builds the form itself:
+
+```ts
+await api.documents.create({ title: 'Report', cover, pages: [first, second] });
+```
+
+```ts
+export const documentsCreate = (body: { title: string; note?: string; cover: File; pages?: File[] }, options?: RequestOptions) => ...
+```
+
+- `file` is one file and required unless you say otherwise, `files` is any number of them, `text` is a text value.
+- `maxSize`, `types` and `maxFiles` are the rules from above, for every file in the form. Both sides check them as before.
+- `call.receiveForm()` gives `text`, `file` and `files` by name, and `textOrNull` and `fileOrNull` for the optional ones.
+- A request with a field the form does not have, without a required one, with a file where text belongs, or with two files for a `file` field, is answered with 400 and a `code` of `upload.field` or `upload.missing`.
+
+On a route without `uploadForm`, `receiveForm()` takes any field, for forms whose fields are not known in advance.
 
 - API bodies are limited to 1 MiB by default. Raise `maxApiBodySize` to the largest upload you accept.
 - `readRemaining()` keeps each file in memory. For large files, copy `part.provider()` to a file or object storage instead.
@@ -2289,7 +5029,17 @@ Source: https://nijasc.github.io/ktor-svelte/recipes/pagination
 
 # Page through long lists
 
-Return `Page<T>` with a `cursor` query parameter, and `pages` reads it one page at a time:
+Declare the route with `getPage`, return a `Page<T>`, and `pages` reads it one page at a time:
+
+```kotlin
+route("/api/users") {
+    getPage<User> { request -> users.page(request.cursor, request.limit) }
+}
+```
+
+`getPage` reads the `cursor` and `limit` query parameters for you. A missing or unreadable `limit` becomes 50, and the limit never leaves the range from 1 to 100. Change both with `getPage<User>(defaultLimit = 20, maxLimit = 200)`. It also describes the route, so the generated client knows the parameters and the `Page<User>` it returns, even without Ktor's compiler plugin.
+
+A paged route that reads more query parameters, such as a filter, is written by hand. `getPage` only does what these lines do:
 
 ```kotlin
 get("/api/users") {
@@ -2308,6 +5058,39 @@ for await (const users of pages(api.users.list, { limit: '100' })) table.push(..
 
 - Use the ID or sort key of the last item as the cursor, not an offset, so rows added while someone pages do not shift the results.
 - Always cap `limit` on the server.
+
+## With Exposed
+
+For apps that use [Exposed](https://www.jetbrains.com/exposed/) with JDBC, two helpers do the usual parts. They are only loaded when you call them, so the library does not bring Exposed with it.
+
+`pageBy` pages a query by a column and returns a `Page`. It adds the condition for the cursor, the order and the limit, and makes the next cursor from the last row:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.pageBy
+import io.github.nijasc.ktor.svelte.toDto
+
+getPage<Note>("/api/notes") { request ->
+    transaction {
+        Notes.selectAll().where { Notes.owner eq userId }.pageBy(Notes.id, request) { it.toDto<Note>() }
+    }
+}
+```
+
+- The column is what the list is ordered by, newest first unless you pass `descending = false`. Use one whose values are unique, such as the id, or rows with equal values can be skipped between pages.
+- It takes a `PageRequest` or a cursor and a limit, for `Int` and `Long` columns. For another type, pass `parse` to turn the cursor text back into a value.
+- Do not order the query yourself. A cursor that the list never gave out is answered with 400.
+
+`toDto` turns a row into a `@Serializable` class by matching property names to column names, `starCount` to `star_count` too. Enums stored as text, nullable columns and properties with defaults work as you would expect. For a property the row does not have, or one that is stored differently, pass the value:
+
+```kotlin
+row.toDto<Note>("createdAt" to Instant.fromEpochMilliseconds(row[Notes.createdAt]), "author" to author)
+```
+
+When a required property has neither a column nor a passed value, the error names it and lists the row's columns. After a join, two tables may have a column of the same name, and the first one selected is used.
+
+## A table without the code
+
+With `libraries { components() }`, the generated [`<DataTable>`](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#datatable) does all of the above for a table: it takes the route's function and a list of columns, and loads, pages and shows the empty and failed states itself.
 
 Source: https://nijasc.github.io/ktor-svelte/recipes/admin-area
 
@@ -2383,6 +5166,7 @@ install(Svelte) {
     apiDocsPath = "/api/docs"
     routing = SvelteRouting.Automatic
     statusEndpoint = false
+    internalAccess { }
     healthEndpoint = false
     originCheck = true
     hideErrorDetails = true
@@ -2390,6 +5174,9 @@ install(Svelte) {
     inlinePublicConfig = true
     buildHeader = true
     requestIds = true
+    accessLog = false
+    publicBuildInfo = false
+    defaultTimeZone = "UTC"
     allowedOrigins()
     maxApiBodySize = 1048576
     maxJsonDepth = 64
@@ -2420,6 +5207,9 @@ install(Svelte) {
         slowApiCall = 500.milliseconds
         panel = true
         browserLogs = true
+        refreshAfterRestart = true
+        errorOverlay = true
+        startupTiming = true
     }
 
     rateLimit {
@@ -2443,9 +5233,10 @@ install(Svelte) {
 | `source` | `SvelteSource.Classpath`, or `SvelteSource.Directory(path)` to serve a build from disk |
 | `generateTs` | Generates TypeScript from your routes in development mode |
 | `generateTsOutput` | Output directory. Defaults to `src/lib/api` in your frontend |
-| `apiDocs` | Serves Swagger UI in development mode. See [API docs](https://nijasc.github.io/ktor-svelte/features/endpoints#api-docs) |
+| `apiDocs` | Serves Swagger UI in development mode, and elsewhere when `internalAccess` is set. See [API docs](https://nijasc.github.io/ktor-svelte/features/endpoints#api-docs) |
 | `apiDocsPath` | Path of the Swagger UI page |
 | `routing` | `Manual` lets you place the frontend with `svelte()`. See [Auth](https://nijasc.github.io/ktor-svelte/features/auth) |
+| `internalAccess { }` | Who may see the status endpoint and the API docs besides this machine: a `token`, `networks(...)` or your own `allow { }` check. See [Who may see internal endpoints](https://nijasc.github.io/ktor-svelte/features/endpoints#who-may-see-internal-endpoints) |
 | `statusEndpoint` | Serves build and proxy details at `/_ktor-svelte/status`, to this machine only. Off by default. See [Status endpoint](https://nijasc.github.io/ktor-svelte/features/endpoints#status-endpoint) |
 | `healthEndpoint` | Serves `/_ktor-svelte/health` for load balancers and orchestrators. Off by default. `healthCheck { ... }` adds your own checks. See [Health endpoint](https://nijasc.github.io/ktor-svelte/features/endpoints#health-endpoint) |
 | `originCheck` | Refuses cross-site requests to API paths for every method except GET, HEAD, OPTIONS and TRACE. See [API request guards](https://nijasc.github.io/ktor-svelte/security#api-request-guards) |
@@ -2455,6 +5246,9 @@ install(Svelte) {
 | `sitemap` | Serves a generated `/sitemap.xml` and `/robots.txt` when the build has none. On by default. See [Sitemap and robots.txt](https://nijasc.github.io/ktor-svelte/features/endpoints#sitemap-and-robots-txt) |
 | `siteUrl` | Public address used in the sitemap, such as `https://example.com`. `null` takes it from the request |
 | `defaultFavicon` | Serves a ktor-svelte favicon while the app has none of its own. On by default. See [Default favicon](https://nijasc.github.io/ktor-svelte/features/endpoints#default-favicon) |
+| `accessLog` | Logs one line per request in production to the `ktor-svelte.access` logger: `method=GET path=/api/notes status=200 ms=12 id=...`. The query string is left out, because it can hold secrets, and requests for build assets under `/_app/` are skipped. Development mode never logs these, since the dev log and the API panel already show requests. Off by default |
+| `publicBuildInfo` | Serves the app's [build info](https://nijasc.github.io/ktor-svelte/guide/deployment#build-info) at `/_ktor-svelte/build.json`, for `loadBuildInfo()` in the browser. Off by default, because it tells every visitor the version and the commit |
+| `defaultTimeZone` | What [`call.timeZone`](https://nijasc.github.io/ktor-svelte/features/calling-the-api#the-visitors-time-zone) returns when a request does not say which zone the visitor is in. `UTC` by default |
 | `requestIds` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors. On by default |
 | `hideErrorDetails` | Answers unhandled exceptions in production without their message. See [API request guards](https://nijasc.github.io/ktor-svelte/security#api-request-guards) |
 | `apiCompression` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. On by default. See [API compression](https://nijasc.github.io/ktor-svelte/features/transport#api-compression) |
@@ -2471,6 +5265,9 @@ install(Svelte) {
 | `dev.mode` | `Auto` follows Ktor's development mode. `Always` and `Never` force it |
 | `dev.allowRemote` | Lets other machines use the dev proxy, and lets `dev.url` point at another machine. Off by default |
 | `dev.slowApiCall` | Logs API calls that take longer than this in development. `null` turns it off |
+| `dev.startupTiming` | Logs what the startup time was spent on in development, with the parts you wrapped in [`startupStep`](https://nijasc.github.io/ktor-svelte/guide/dev-workflow). On by default |
+| `dev.errorOverlay` | Shows the Kotlin exception of a failed API call in the browser, in development. On by default, needs `dev.panel` |
+| `dev.refreshAfterRestart` | After the app restarts in development, open pages rerun their `load` functions, so a Kotlin change shows up without a manual reload. On by default |
 | `dev.browserLogs` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log. On by default |
 | `dev.panel` | Shows a panel of recent API calls, with status, timing and validation errors, on pages proxied from Vite. On by default. See [Dev workflow](https://nijasc.github.io/ktor-svelte/guide/dev-workflow) |
 | `transport` | JSON, XML and compression. See [Transport](https://nijasc.github.io/ktor-svelte/features/transport) |
@@ -2482,6 +5279,19 @@ A route of yours such as `get("/{slug}")` beats the frontend. That is intended, 
 ETags are content hashes from the manifest, so 304 responses are cheap and stay valid across restarts. If you set `adapter({ precompress: true })`, the `.br` and `.gz` files are served based on `Accept-Encoding`. Files the adapter did not compress, such as those from `static/`, are gzipped by `svelteBundle` unless you set `precompress = false`. `.zst` files next to them, for example from a Vite compression plugin, are bundled too and preferred for browsers that accept `zstd`, since they decompress faster.
 
 If the frontend build is missing, the app fails at startup in production with a message explaining what to do. In Ktor development mode it logs a warning instead, and frontend routes return a 503 explaining the problem.
+
+## Path parameters
+
+`call.pathParameter<T>(name)` reads a path parameter in the type you need, so a route does not parse it by hand:
+
+```kotlin
+get("/api/notes/{id}") {
+    val id = call.pathParameter<Int>("id")
+    call.respond(store.create(Note(id, "x")))
+}
+```
+
+It reads `String`, `Int`, `Long`, `UUID` and enums, which match by name in any case. A value that does not fit, such as `/api/notes/abc`, ends the request with Ktor's `NotFoundException`: the address names nothing, so the answer is 404, through your `StatusPages` if you have one. Asking for a parameter the route's path does not have, or for a type it cannot read, is a mistake in the route and fails with a 500 that says so.
 
 Source: https://nijasc.github.io/ktor-svelte/reference/gradle
 
@@ -2502,12 +5312,15 @@ svelte {
     buildEnv = emptySet()
     addRuntimeDependency = true
     includeSourceMaps = false
+    shortTaskNames = true
     precompress = true
     dev {
         port = 5173
         script = "dev"
         debugPort = 5005
         openBrowser = true
+        https = false
+        httpsPort = 8443
     }
 }
 ```
@@ -2522,12 +5335,15 @@ svelte {
 | `buildEnv` | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build |
 | `libraries` | Tailwind, DaisyUI, Lucide, i18n and typed routes. See [Frontend libraries](https://nijasc.github.io/ktor-svelte/features/frontend-libraries) |
 | `addRuntimeDependency` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version |
+| `shortTaskNames` | Registers `dev`, `sync`, `doctor` and `gen` as [short names](#short-task-names) for the tasks used most. On by default |
 | `includeSourceMaps` | Ships `.map` files in the JAR, where anyone can download them. Off by default |
 | `precompress` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10%. On by default |
 | `dev.port` | Port passed to Vite by `svelteDev` |
 | `dev.script` | `package.json` script that starts Vite |
 | `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |
 | `dev.openBrowser` | Opens the app in the default browser once `svelteDevAll` is ready, the first time only. Never in CI or without a display |
+| `dev.https` | Serves the app started by `svelteDevAll` over HTTPS too, with a development certificate from `~/.ktor-svelte/dev-https`. See [HTTPS in development](https://nijasc.github.io/ktor-svelte/guide/dev-workflow#https-in-development) |
+| `dev.httpsPort` | Port of that HTTPS address, on `127.0.0.1` only |
 
 The package manager must already be installed unless you set `bunVersion`. The plugin does not download Node.
 
@@ -2565,6 +5381,58 @@ svelte {
 
 The archive is checked against the release's `SHASUMS256.txt` before it is unpacked into `~/.gradle/ktor-svelte/bun/<version>/`, and every later build reuses it. Every task then uses this Bun, even when another one is on `PATH`, so all machines build with the same version. With `packageManager = AUTO`, Bun becomes the package manager. Bun runs Vite itself, so Node is not needed. It works on Windows, macOS and Linux, including Alpine, on x64 and arm64. Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
 
+## Format both sides
+
+One command formats Kotlin and the frontend, and one checks them:
+
+```bash
+./gradlew format
+```
+
+```bash
+./gradlew formatCheck
+```
+
+`format` runs the frontend's `format` script from `package.json`, and `formatCheck` runs its `lint` script. Projects made by the setup script have both, as `prettier --write .` and `prettier --check . && eslint .`. For Kotlin, they run `ktlintFormat` and `ktlintCheck` when the ktlint Gradle plugin is applied, or `spotlessApply` and `spotlessCheck` with Spotless. Without either, Kotlin is left alone and the task says so. A frontend without the script is skipped with a hint.
+
+If your build already has a task called `format` or `formatCheck`, ktor-svelte does not register its own. The frontend half is always there as `svelteFormat` and `svelteFormatCheck`.
+
+### Check before every commit
+
+`svelteGitHooks` installs a git pre-commit hook in your clone that runs `formatCheck` and `svelteVerifySync`, so an unformatted file or a stale generated file never reaches a commit:
+
+```bash
+./gradlew svelteGitHooks
+```
+
+A commit that fails the check is stopped with the command that fixes it. `git commit --no-verify` skips the hook once, and `./gradlew svelteGitHooks --remove` takes it out again. The hook lives in `.git`, which git does not share, so everyone on the team runs the task once. A pre-commit hook that something else installed is never replaced: the task stops and tells you to call the two tasks from your own hook.
+
+### Generated files without merge conflicts
+
+Two branches that both add a page, an icon or an API route both change the same generated files, and git reports a conflict in a file nobody wrote. The same `svelteGitHooks` run ends that in your clone:
+
+- When both sides of a merge or a rebase changed a generated file, git keeps one side and does not stop.
+- Right after the merge or rebase, `svelteSync` and `svelteGenerateTs` run and write the files as they belong to the merged code. If `git status` then shows changes, commit them.
+
+It covers `src/lib/ktor-svelte` and `src/lib/api`, through a `merge=ktor-svelte` attribute in the `.gitattributes` of those folders. Run `svelteSync` and `svelteGenerateTs` once after upgrading so those files get the attribute. In a clone where nobody ran `svelteGitHooks`, git ignores the attribute and merges those files the way it always did.
+
+A merge that stops for a conflict in one of your own files does not regenerate when you finish it. The pre-commit hook and `check` still notice stale generated files, and `./gradlew svelteSync svelteGenerateTs` fixes them. If a `post-merge` or `post-rewrite` hook from another tool is already there, such as Git LFS, it stays, and the task tells you to run those two tasks yourself after such a merge.
+
+## Short task names
+
+The four tasks you type most have a short name:
+
+| Short | Same as |
+|---|---|
+| `./gradlew dev` | `svelteDevAll` |
+| `./gradlew sync` | `svelteSync` |
+| `./gradlew doctor` | `svelteDoctor` |
+| `./gradlew gen` | `svelteGenerateTs` |
+
+They are the same tasks under another name, so options work as well: `./gradlew doctor --fix`, `./gradlew dev --full-stack-traces`. `dev` and `gen` exist when the long tasks do, which is in a project with the `application` plugin.
+
+A short name that your build or another plugin already uses is left alone, and the long name keeps working. Set `shortTaskNames = false` to register none of them. The docs use the long names, because those always exist.
+
 ## Gradle tasks
 
 | Task | What it does |
@@ -2572,16 +5440,32 @@ The archive is checked against the release's `SHASUMS256.txt` before it is unpac
 | `svelteSync` | Installs configured libraries and writes their generated files |
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
+| `svelteBuildInfo` | Writes the version, the git commit and its time into the build, for [`buildInfo`](https://nijasc.github.io/ktor-svelte/guide/deployment#build-info). Runs before resources are processed |
 | `svelteInit` | Creates a working SvelteKit project in an empty `frontendDir`. Takes `--package-manager=bun` |
 | `svelteInstall`, `svelteBuild`, `svelteBundle` | Install the frontend dependencies from the lockfile, build the frontend, and copy the build into the JAR's resources with its manifest. They run as part of `jar` and `processResources`, so you rarely call them yourself |
-| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix |
+| `svelteVerifyRoutes` | Lists links to pages that are written as strings, with the [typed route](https://nijasc.github.io/ktor-svelte/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
+| `svelteVerifyLinks` | Lists [internal links that lead to no page, no API route and no static file](https://nijasc.github.io/ktor-svelte/features/routes#finding-links-that-lead-nowhere). With `--strict` it fails when it finds one |
+| `svelteVerifyLoads` | Fails if an API call inside a `load` function [uses neither `apiWith(event)` nor `{ fetch }`](https://nijasc.github.io/ktor-svelte/features/calling-the-api#in-load-functions) |
+| `svelteVerifyMessages` | Lists [i18n messages nothing uses](https://nijasc.github.io/ktor-svelte/features/frontend-libraries#messages-nothing-uses). With `--strict` it fails when it finds one |
+| `svelteRename --page=notes/[id] --to=memos/[id]` | [Moves a page](https://nijasc.github.io/ktor-svelte/features/routes#renaming-a-page) and rewrites its typed route calls in the frontend and in Kotlin |
+| `svelteDoctor` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix. With `--fix` it repairs what needs no decision |
 | `svelteConfig` | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores security, performance, operations and developer experience, and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteDevAll` | Runs Vite, the Kotlin compiler and your app, and restarts the app when Kotlin changes |
 | `svelteDev` | Starts Vite |
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
-| `svelteVerifyRoutes` | Lists links to pages that are written as strings, with the [typed route](https://nijasc.github.io/ktor-svelte/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any |
+| `svelteVerifyApiRoutes` | Lists [API routes that nothing in the frontend calls](https://nijasc.github.io/ktor-svelte/features/typescript#routes-nothing-calls). With `--strict` it fails when it finds one |
+| `svelteAdd` | [Creates a page](https://nijasc.github.io/ktor-svelte/features/routes#a-new-page) with a typed load: `svelteAdd --page=notes/[id]`. With `--route` also a Kotlin route to start from. `svelteAdd --crud=Note` writes [list, detail and form pages for a class](https://nijasc.github.io/ktor-svelte/features/routes#pages-for-a-class) |
+| `svelteApiChanges` | Lists [what changed in the API for callers](https://nijasc.github.io/ktor-svelte/features/typescript#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. With `--strict` it fails on a change that can break them |
+| `browserTest` | Yours: a test suite with this name gets [the browser test kit](https://nijasc.github.io/ktor-svelte/guide/browser-tests), the packaged app and the browser from `-Pbrowser` |
+| `svelteRecordTest` | Opens the packaged app in a browser and writes what you do there as a [Kotlin browser test](https://nijasc.github.io/ktor-svelte/guide/browser-tests#record-a-test): `--name=SignIn` |
+| `svelteVerifyA11y` | Packages the app, opens its prerendered pages in a browser in light and dark, and fails on [accessibility problems](https://nijasc.github.io/ktor-svelte/guide/browser-tests#accessibility) that axe finds. Not part of `check` |
+| `svelteSmokeTest` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](https://nijasc.github.io/ktor-svelte/guide/deployment#smoke-test). Not part of `check` |
+| `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](https://nijasc.github.io/ktor-svelte/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
 | `svelteCheck` | Runs your `check` script |
+| `format`, `formatCheck` | [Format, or check the formatting of, Kotlin and the frontend](#format-both-sides) in one go |
+| `svelteFormat`, `svelteFormatCheck` | The frontend half of those: run the `format` and the `lint` script |
+| `svelteGitHooks` | Installs a [pre-commit hook](#check-before-every-commit) that runs `formatCheck` and `svelteVerifySync`, and keeps [generated files out of merge conflicts](#generated-files-without-merge-conflicts). With `--remove` it takes the hook out |
 | `svelteRun --script=lint` | Runs any `package.json` script. Pass arguments with `--args="--fix --quiet"`; quote an argument that contains spaces |
 | `svelteOutdated` | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | Updates frontend dependencies and the lockfile |
@@ -2683,7 +5567,7 @@ Source: https://nijasc.github.io/ktor-svelte/reference/troubleshooting
 
 # Troubleshooting
 
-Find the message you see, then its cause and fix. Run `./gradlew svelteDoctor` first: it checks the frontend setup and lists most problems on this page at once.
+Find the message you see, then its cause and fix. Run `./gradlew svelteDoctor` first: it checks the frontend setup and lists most problems on this page at once. Add `--fix` and it repairs the ones that need no decision from you: a missing `#api` import, a `tsconfig.json` that does not extend `$app/tsconfig`, `$lib` imports left over from SvelteKit 2, and a `node_modules` folder whose packages lost their files, which it deletes so the next build installs it again. It prints each change as `FIXED`, and everything else stays a finding for you.
 
 ## Build
 
@@ -2843,6 +5727,7 @@ What each release was built and tested with, read from the release's tagged sour
 
 | ktor-svelte | Ktor | Kotlin | JVM | Gradle tested | SvelteKit |
 |---|---|---|---|---|---|
+| 1.2.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.1 | 3.x (tested 3.1.1) |
 | 1.1.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 1.0.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.12.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
