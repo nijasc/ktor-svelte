@@ -3793,6 +3793,62 @@ For a big record where only one field was edited, send just the changed fields. 
 - Fields are compared as JSON against the saved values, the same way as [`form.changes`](#what-changed). A field set to `undefined` is sent as `null`, which the server's `Patch<T>` reads as "clear it".
 - Errors, conflicts and the saved state work exactly as with `submit`.
 
+### Forms in several steps
+
+`formWizard` splits one form into steps. Each step is checked against the same `validate()` before you can move on, the progress survives a reload, and the whole object is sent once at the end:
+
+```svelte
+<script lang="ts">
+    import { api, Signup } from '#api';
+    import Field from '#components/Field.svelte';
+    import { formWizard } from '#lib/api/form-state.svelte.ts';
+
+    const wizard = formWizard<Signup>(Signup.empty(), {
+        validate: Signup.validate,
+        steps: [['name', 'email'], ['company', 'role'], ['password']],
+        keep: 'signup'
+    });
+
+    async function finish(event: SubmitEvent) {
+        event.preventDefault();
+        if (!wizard.last) return void wizard.next();
+        await wizard.submit((draft) => api.signups.create(draft));
+    }
+</script>
+
+<p>Step {wizard.step + 1} of {wizard.count}</p>
+<form novalidate onsubmit={finish}>
+    {#if wizard.step === 0}
+        <Field id="name" label="Name" bind:value={wizard.draft.name} errors={wizard.errors.name} />
+        <Field id="email" label="Email" bind:value={wizard.draft.email} errors={wizard.errors.email} />
+    {:else if wizard.step === 1}
+        <Field id="company" label="Company" bind:value={wizard.draft.company} errors={wizard.errors.company} />
+        <Field id="role" label="Role" bind:value={wizard.draft.role} errors={wizard.errors.role} />
+    {:else}
+        <Field id="password" label="Password" type="password" bind:value={wizard.draft.password} errors={wizard.errors.password} />
+    {/if}
+    {#if !wizard.first}<button type="button" onclick={wizard.back}>Back</button>{/if}
+    <button disabled={wizard.submitting}>{wizard.last ? 'Create account' : 'Next'}</button>
+</form>
+```
+
+| Option | What it does |
+| --- | --- |
+| `steps` | The fields of each step, in order. Errors of a nested path such as `address.city` or `lines[2].sku` belong to the step of `address` or `lines` |
+| `keep` | A `sessionStorage` key. The step and the draft are kept there, so a reload or a back button does not lose the progress; it is cleared after a successful submit or a `reset()` |
+| `validate`, `checks`, `focusErrors`, ... | As for [`formState`](#form-state) |
+
+| Name | What it is |
+| --- | --- |
+| `wizard.step`, `count`, `first`, `last` | Where you are |
+| `wizard.reached` | The furthest step reached; `goTo` cannot jump past it |
+| `wizard.fields` | The fields of the current step |
+| `wizard.next()` | Checks the current step's fields only; shows and focuses their errors and returns `false`, or moves on and returns `true` |
+| `wizard.back()`, `wizard.goTo(n)` | Move back, or to any step already reached |
+| `wizard.submit(send)` | Checks everything and sends once. When an earlier step is invalid, or the server answers 422 for one of its fields, it jumps back to the first step with an error |
+
+Everything else of a `formState` (`draft`, `errors`, `dirty`, `changes`, `submitChanges`, `reset`, ...) works on the wizard too. `form.setErrors(errors)` sets the shown errors by hand, on any form.
+
 ### Focus the first error
 
 When a submit fails validation, `formState` waits for the error messages to appear and then moves focus to the first field marked invalid, scrolled to the middle of the screen. Keyboard and screen reader users land right on the problem, and on a long form nobody has to scroll to find it.
@@ -6727,6 +6783,32 @@ strength.missing.map((rule) => rule.requirement);
 - Screen readers hear the meter's value and, once, that the password is strong enough, instead of every keystroke.
 - Use it only for a property with `@Rule.StrongPassword`; for your own rule, write your own list.
 
+## NumberInput
+
+A number field that groups digits and uses the decimal separator of the visitor's language, and never rounds. Bind it to a [`Decimal`](https://nijasc.github.io/ktor-svelte/main/features/typescript#money-and-durations) for money and exact amounts, or to a `number`:
+
+```svelte
+<script lang="ts">
+    import NumberInput from '#components/NumberInput.svelte';
+</script>
+
+<NumberInput label="Price" bind:value={form.draft.price} />
+<NumberInput label="Rate" bind:value={form.draft.rate} fractionDigits={4} />
+<NumberInput label="Seats" bind:value={form.draft.seats} fractionDigits={0} number />
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `value` | | `bind:value`; a `Decimal` string such as `"1234.5"`, or a `number`; `null` while empty |
+| `fractionDigits` | `2` | How many digits after the separator can be typed; `0` for whole numbers, where the separator is not accepted at all |
+| `number` | `false` | Bind a `number` instead of a string; also on by itself when the value already is a number |
+| `locale` | the page's `lang` | Which separators to use |
+| `label`, `bounds`, `errors`, `hint`, `class` | | As for `Field` |
+
+- In German, typing `1234567,8` shows `1.234.567,8` and binds `"1234567.8"`; in English the same amount is `1,234,567.8`.
+- A `Decimal` never goes through a JavaScript number, so `12345678901234567890.1234` keeps every digit. Use `number` only for values that fit a double, such as counts.
+- The keyboard on phones is the decimal one, and the caret stays where you are typing, as in [MaskedInput](#maskedinput), which this component builds on.
+
 ## EnumSelect
 
 A `<select>` over a generated enum object:
@@ -6808,6 +6890,55 @@ A table over any route that returns [`Page<T>`](https://nijasc.github.io/ktor-sv
 | `row` | A snippet that renders the cells of one row, see below |
 | `empty`, `loading`, `more`, `previous`, `next`, `retry` | The texts, in English unless given: "Nothing here yet.", "Loading", "Load more", "Previous", "Next", "Try again" |
 | `class` | Added to the wrapper |
+
+### Choosing columns
+
+With `chooser`, a "Columns" menu above the table lets people hide columns and change their order. With `remember`, the choice is kept in the browser for next time:
+
+```svelte
+<DataTable load={api.tasks.list} columns={columns} chooser remember="admin-tasks" />
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `chooser` | `false` | Shows the menu with a checkbox per column and buttons to move it up or down |
+| `remember` | | A name for this table. The order and the hidden columns are kept in `localStorage` under `ktor-svelte-table:<name>` |
+| `columnsLabel`, `moveUp`, `moveDown` | `Columns`, `Up`, `Down` | The texts of the menu, for other languages |
+
+- The last visible column cannot be hidden.
+- A column you add to `columns` later shows up at the end; one you remove is forgotten.
+- The move buttons say which column they move, such as "Up: Status", for screen readers.
+- A [custom `row`](#cells-with-markup) gets the visible columns as its second argument, `{#snippet row(task, columns)}`, so its cells can follow the choice.
+
+### Selecting rows and acting on them
+
+Give the table `actions`, and every row gets a checkbox. A bar above the table shows how many are chosen and a button per action, which calls your function for each chosen row:
+
+```svelte
+<DataTable
+    load={api.tasks.list}
+    key={(task) => task.id}
+    {columns}
+    actions={[
+        { label: 'Mark as done', run: (task) => api.tasks.status(task.id, { status: 'DONE' }) },
+        { label: 'Delete', run: (task) => api.tasks.delete(task.id), confirm: 'Delete the chosen tasks?' }
+    ]}
+/>
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `actions` | `[]` | `{ label, run, confirm? }` per action; `run` is called once per chosen row, one after the other |
+| `key` | | Needed to keep choices across pages and for "Select every page" |
+| `selectRow` | `Select all on this page: <first column>` | The accessible name of a row's checkbox |
+| `selectPage`, `selectEverything`, `clearSelection` | `Select all on this page`, `Select every page`, `Clear` | Button and checkbox texts |
+| `selectedText`, `workingText`, `doneText` | `2 selected`, `Working: 1 of 2`, `Done: 2 of 2 worked.` | Functions that build the status texts, for other languages |
+
+- The checkbox in the header chooses every row on the page, and shows a mixed state when only some are chosen.
+- "Select every page" loads the remaining pages and chooses everything, so an action can run over the whole list, not only what is visible.
+- While an action runs, the bar counts up and the checkboxes are locked. When it ends, the bar says how many calls worked, the choice is cleared and the table reloads.
+- A failing call does not stop the others; with [toasts](https://nijasc.github.io/ktor-svelte/main/features/components#toasts) on, each failure is shown too.
+- `confirm` asks with the browser's dialog before the action starts.
 
 ### Cells with markup
 
