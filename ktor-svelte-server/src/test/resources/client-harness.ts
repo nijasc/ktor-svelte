@@ -901,4 +901,15 @@ Reflect.deleteProperty(vitalsHost, 'PerformanceObserver');
 Reflect.deleteProperty(vitalsHost, 'document');
 Reflect.deleteProperty(vitalsHost, 'location');
 
+const typedHeaderLog: Record<string, string | null>[] = [];
+apiConfig.retry = undefined;
+apiConfig.fetch = (async (_url: string, init?: RequestInit) => {
+    const sent = new Headers(init?.headers);
+    typedHeaderLog.push({ tenant: sent.get('X-Tenant'), rows: sent.get('X-Rows'), skipped: sent.get('X-Skipped') });
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+await request('GET', '/api/reports', { typedHeaders: { 'X-Tenant': 'acme', 'X-Rows': 50, 'X-Skipped': undefined } });
+await request('GET', '/api/reports', { typedHeaders: { 'X-Tenant': 'acme' }, headers: { 'X-Tenant': 'chosen' } });
+results.typedHeaders = typedHeaderLog;
+
 console.log(JSON.stringify(results));
