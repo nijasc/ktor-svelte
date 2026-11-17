@@ -234,6 +234,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteSync` | Installs configured libraries and writes their generated files. Short name `sync` |
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
+| `svelteEmails` | Renders the components in `src/emails` to email templates and generates `Emails.kt`. Runs before compiling. See [Emails](../features/emails.md) |
 | `svelteBuildInfo` | Writes the version, the git commit and its time into the build, for [`buildInfo`](../guide/monitoring.md#build-info). Runs before resources are processed |
 
 ### Develop

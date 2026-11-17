@@ -22,6 +22,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDeployTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevAllTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteEmailsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteFormatTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateSourcesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGitHooksTask
@@ -47,6 +48,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
+import io.github.nijasc.ktor.svelte.gradle.tasks.hasEmailTemplates
 import io.github.nijasc.ktor.svelte.gradle.tasks.startPlan
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -79,6 +81,7 @@ import java.util.Properties
 import javax.inject.Inject
 
 private const val TASK_GROUP = "svelte"
+private const val DEFAULT_GENERATED_PACKAGE = "io.github.nijasc.ktorsvelte"
 private const val DEFAULT_APP_URL = "http://localhost:8080"
 
 private class KotlinFormatter(
@@ -157,6 +160,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         project.pluginManager.withPlugin("java") {
             wireResources(project, bundle)
             wireGeneratedSources(project, extension, librarySpec)
+            wireEmails(project, extension, install)
             addRuntimeDependency(project, extension)
             warnOnSkippedJar(project, skipFrontend)
         }
@@ -316,7 +320,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                         )
                     },
                 devPort = extension.dev.port.get(),
-                generatedPackage = libraries.generatedPackage.getOrElse("io.github.nijasc.ktorsvelte"),
+                generatedPackage = libraries.generatedPackage.getOrElse(DEFAULT_GENERATED_PACKAGE),
             )
         }
 
@@ -571,6 +575,36 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         }
     }
 
+    private fun wireEmails(
+        project: Project,
+        extension: SvelteExtension,
+        install: TaskProvider<SvelteInstallTask>,
+    ) {
+        val emails =
+            project.tasks.register("svelteEmails", SvelteEmailsTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.description = "Renders the Svelte components in src/emails to email templates and generates Kotlin to fill them in."
+                task.dependsOn(extension.frontendDir.map { if (hasEmailTemplates(it.asFile)) listOf(install) else emptyList() })
+                task.sources.from(
+                    extension.frontendDir.map { dir ->
+                        dir.asFileTree.matching { filter ->
+                            filter.include("src/**", "package.json")
+                            LOCKFILES.forEach { (lockfile, _) -> filter.include(lockfile) }
+                            filter.exclude("src/routes/**", "src/service-worker/**")
+                        }
+                    },
+                )
+                task.generatedPackage.set(extension.libraries.generatedPackage.orElse(DEFAULT_GENERATED_PACKAGE))
+                task.kotlinDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/emails-kotlin"))
+                task.resourcesDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/emails"))
+                task.mustRunAfter("svelteSync")
+            }
+        project.extensions.getByType(SourceSetContainer::class.java).named("main") { main ->
+            main.java.srcDir(emails.flatMap { it.kotlinDirectory })
+            main.resources.srcDir(emails.flatMap { it.resourcesDirectory })
+        }
+    }
+
     private fun registerUtilityTasks(
         project: Project,
         extension: SvelteExtension,
@@ -757,7 +791,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                     .orElse(extension.frontendDir.dir("src/routes")),
             )
             task.typedRoutes.set(extension.libraries.routesEnabled.orElse(false))
-            task.generatedPackage.set(extension.libraries.generatedPackage.orElse("io.github.nijasc.ktorsvelte"))
+            task.generatedPackage.set(extension.libraries.generatedPackage.orElse(DEFAULT_GENERATED_PACKAGE))
             task.workDirectory.set(project.layout.buildDirectory.dir("ktor-svelte/recorded"))
             task.browser.set(project.providers.gradleProperty("browser"))
         }
