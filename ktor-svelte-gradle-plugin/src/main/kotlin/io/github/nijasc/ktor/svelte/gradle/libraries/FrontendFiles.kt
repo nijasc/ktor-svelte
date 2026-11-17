@@ -129,6 +129,28 @@ private const val PLAIN_SUMMARY_STYLE =
         "    .ktor-svelte-error-summary-list {\n        margin: 0;\n        padding-left: 1.25rem;\n    }\n" +
         "</style>\n"
 
+private const val PLAIN_STRENGTH_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-strength {\n        display: grid;\n        gap: 0.25rem;\n    }\n\n" +
+        "    .ktor-svelte-strength-meter {\n        width: 100%;\n    }\n\n" +
+        "    .ktor-svelte-strength-list {\n        margin: 0;\n        padding: 0;\n        list-style: none;\n    }\n\n" +
+        "    .ktor-svelte-strength-missing {\n        opacity: 0.7;\n    }\n" +
+        "</style>\n"
+
+private fun passwordStrength(daisy: Boolean): String =
+    renderTemplate(
+        "components/PasswordStrength.svelte",
+        mapOf(
+            "wrapper" to if (daisy) "grid gap-1 text-sm" else "ktor-svelte-strength",
+            "meter" to if (daisy) "progress progress-success w-full" else "ktor-svelte-strength-meter",
+            "list" to if (daisy) "grid gap-0.5" else "ktor-svelte-strength-list",
+            "met" to if (daisy) "text-success" else "ktor-svelte-strength-met",
+            "missing" to if (daisy) "opacity-70" else "ktor-svelte-strength-missing",
+            "status" to if (daisy) "text-success min-h-5" else "ktor-svelte-strength-status",
+            "style" to if (daisy) "" else PLAIN_STRENGTH_STYLE,
+        ),
+    )
+
 private fun errorSummary(daisy: Boolean): String =
     renderTemplate(
         "components/ErrorSummary.svelte",
@@ -246,6 +268,7 @@ internal fun componentFiles(
             "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
             "$COMPONENTS_DIR/MaskedInput.svelte" to renderTemplate("components/MaskedInput.svelte", input),
             "$COMPONENTS_DIR/ErrorSummary.svelte" to errorSummary(daisy),
+            "$COMPONENTS_DIR/PasswordStrength.svelte" to passwordStrength(daisy),
             "$COMPONENTS_DIR/masks.ts" to renderTemplate("components/masks.ts"),
             "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
             "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
