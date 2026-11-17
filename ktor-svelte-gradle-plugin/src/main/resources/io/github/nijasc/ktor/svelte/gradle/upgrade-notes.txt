@@ -10,5 +10,8 @@
 - Email templates can be Svelte components in {frontend}/src/emails; the build renders them and generates a typed Kotlin function per email.
 - The dev panel gained payload sizes, an environment view with secrets hidden, migration state, memory and threads, clear site data and the slowest routes. Nothing to change.
 - svelteMetrics now also records latency and errors per route template and page.
-- New and opt-in: warmUp(...) calls a few routes before the health endpoint reports up; svelte { nodeVersion = "22.12.0" } pins Node for npm and pnpm; svelte { frontend("admin") { } } serves a second SvelteKit project; svelteDoctor checks the package registry and proxy.
+- New and opt-in: warmUp(...) calls a few routes before the health endpoint reports up; svelte { nodeVersion = "22.12.0" } pins Node for npm and pnpm; svelte { frontend("admin") { } } and install(Svelte) { frontend("/admin") { } } serve a second SvelteKit project, with its own Vite in svelteDevAll and its own typed client; svelteDoctor checks the package registry and proxy.
 - Builds that run the frontend end with a short table of step times. Turn it off with svelte { timingSummary = false }.
+- New tasks: svelteReadme fills a section of your README between <!-- ktor-svelte:start --> and <!-- ktor-svelte:end --> with the commands, addresses and environment variables of the app (it writes nothing without the markers), and svelteRoutesDiagram draws which page calls which API route.
+- Generated files now have a second header line with a link to the docs page that explains them; svelteSync and svelteGenerateTs rewrote them, so expect that one-line change in every generated file.
+- New and opt-in: svelte { naming { pages(NamingStyle.KebabCase) } } with svelteVerifyNaming checks the naming of pages, API routes, DTOs and message keys.
