@@ -155,6 +155,7 @@ A short name that your build or another plugin already uses is left alone, and t
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
 | `svelteVerifyApiRoutes` | Lists [API routes that nothing in the frontend calls](../features/typescript.md#routes-nothing-calls). With `--strict` it fails when it finds one |
 | `svelteApiChanges` | Lists [what changed in the API for callers](../features/typescript.md#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. With `--strict` it fails on a change that can break them |
+| `svelteSmokeTest` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](../guide/deployment.md#smoke-test). Not part of `check` |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](../features/routes.md#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
 | `svelteCheck` | Runs your `check` script |
 | `format`, `formatCheck` | [Format, or check the formatting of, Kotlin and the frontend](#format-both-sides) in one go |
