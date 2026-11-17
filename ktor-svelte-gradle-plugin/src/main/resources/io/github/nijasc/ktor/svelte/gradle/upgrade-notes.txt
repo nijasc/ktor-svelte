@@ -15,3 +15,4 @@
 - New tasks: svelteReadme fills a section of your README between <!-- ktor-svelte:start --> and <!-- ktor-svelte:end --> with the commands, addresses and environment variables of the app (it writes nothing without the markers), and svelteRoutesDiagram draws which page calls which API route.
 - Generated files now have a second header line with a link to the docs page that explains them; svelteSync and svelteGenerateTs rewrote them, so expect that one-line change in every generated file.
 - New and opt-in: svelte { naming { pages(NamingStyle.KebabCase) } } with svelteVerifyNaming checks the naming of pages, API routes, DTOs and message keys.
+- New and opt-in: get("/api/tasks") { }.sparseFields<Task>() lets callers ask for ?fields=id,title, and .includes<Task> { relation<User>("author") { items -> ... } } lets them ask for ?include=author; the generated client narrows its return type to what was asked for.

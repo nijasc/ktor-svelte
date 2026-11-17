@@ -80,7 +80,8 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 151 | Pages-to-routes diagram | #391 |
 | 152 | Doc links in generated code | #395 |
 | 153 | Naming conventions check | #396 |
-| 52 | Installable app (PWA) | #338, #340 |
+| 112 | Sparse fields | #398 |
+| 113 | Included relations | #399 |
 
 ### Next up
 
@@ -211,8 +212,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 112 | Sparse fields | Large | 14 |
-| 113 | Included relations | Large | 14 |
 
 ## Scope
 
