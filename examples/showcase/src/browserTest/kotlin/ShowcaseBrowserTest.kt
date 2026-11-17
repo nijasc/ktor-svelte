@@ -688,6 +688,27 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the header knows who is signed in from one request and forgets them on sign-out`() {
+        val asked = java.util.concurrent.atomic.AtomicInteger()
+        page.onRequest { request -> if (request.url().endsWith("/api/current-user")) asked.incrementAndGet() }
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        assertThat(page.locator("#signed-in-as")).hasText("Ada Lovelace")
+        val afterSignIn = asked.get()
+        assertEquals(true, afterSignIn in 1..2, "asked $afterSignIn times")
+
+        page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName("Settings")).click()
+        assertThat(page).hasURL(Pattern.compile("/settings$"))
+        page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName("Board")).click()
+        assertThat(page).hasURL(BOARD)
+        assertEquals(afterSignIn, asked.get(), "moving between pages asks nothing")
+
+        page.getByRole(AriaRole.BUTTON, Page.GetByRoleOptions().setName("Sign out")).click()
+        assertThat(page).hasURL(LOGIN)
+        assertThat(page.locator("#signed-in-as")).hasCount(0)
+        assertThat(page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName("Sign in"))).isVisible()
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

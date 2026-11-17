@@ -203,6 +203,25 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `the current user endpoint answers for visitors too and follows the session`() {
+        val browser = anonymous()
+        val nobody = browser.send("GET", "/api/current-user")
+        assertEquals(200, nobody.statusCode())
+        assertEquals("""{"user":null}""", nobody.body())
+        assertEquals("no-store", nobody.headers().firstValue("Cache-Control").orElse(""))
+
+        val signedIn = browser.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        assertEquals("changed", signedIn.headers().firstValue("X-Ktor-Svelte-User").orElse(""))
+        val known = browser.send("GET", "/api/current-user").body()
+        assertContains(known, """{"user":{"id":""")
+        assertContains(known, ADMIN_EMAIL)
+        assertFalse(known.contains("password", ignoreCase = true))
+
+        assertEquals("changed", browser.send("DELETE", "/api/session").headers().firstValue("X-Ktor-Svelte-User").orElse(""))
+        assertEquals("""{"user":null}""", browser.send("GET", "/api/current-user").body())
+    }
+
+    @Test
     fun `a forged session cookie is refused`() {
         val response = anonymous().send("GET", "/api/me", null, "Cookie" to "showcase_session=userId%3D%2523i1")
         assertEquals(401, response.statusCode())
