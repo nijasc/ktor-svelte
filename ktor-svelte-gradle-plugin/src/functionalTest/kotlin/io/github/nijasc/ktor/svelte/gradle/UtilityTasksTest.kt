@@ -708,6 +708,72 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `a test suite called browserTest is told which packaged app to start and which browser to use`() {
+        val project = project()
+        project.buildScript(
+            """
+            plugins {
+                java
+                application
+                `jvm-test-suite`
+                id("io.github.nijasc.ktor-svelte")
+            }
+
+            repositories {
+                mavenCentral()
+            }
+
+            svelte {
+                addRuntimeDependency = false
+            }
+
+            application {
+                mainClass = "demo.Main"
+            }
+
+            testing {
+                suites {
+                    register<JvmTestSuite>("browserTest") {
+                        useJUnitJupiter()
+                    }
+                    register<JvmTestSuite>("otherTest") {
+                        useJUnitJupiter()
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+        dir.resolve("src/main/java/demo/Main.java").apply { parentFile.mkdirs() }.writeText(
+            "package demo;\npublic class Main { public static void main(String[] args) {} }\n",
+        )
+        val told =
+            """
+            import org.junit.jupiter.api.Test;
+            public class ToldTest {
+                @Test
+                void told() {
+                    System.out.println("told browser=" + System.getProperty("browser"));
+                    System.out.println("told main=" + System.getProperty("ktorSvelte.test.mainClass"));
+                    System.out.println("told classpath=" + System.getProperty("ktorSvelte.test.classpath"));
+                }
+            }
+            """.trimIndent()
+        listOf("browserTest", "otherTest").forEach { suite ->
+            dir.resolve("src/$suite/java/ToldTest.java").apply { parentFile.mkdirs() }.writeText(told)
+        }
+        val arguments = arrayOf("-Pbrowser=firefox", "-i")
+        val output = project.run("browserTest", *arguments).output
+        assertContains(output, "told browser=firefox")
+        assertContains(output, "told main=demo.Main")
+        assertTrue(
+            Regex("told classpath=.*build[/\\\\]install[/\\\\]sample[/\\\\]lib[/\\\\]\\*").containsMatchIn(output),
+            output.takeLast(2000),
+        )
+        assertContains(output, ":installDist")
+        assertContains(project.run("otherTest", "-i").output, "told main=null")
+    }
+
+    @Test
     fun `svelteVerifyTs exists only with the application plugin`() {
         val project = project()
         assertContains(project.runAndFail("svelteVerifyTs").output, "not found")
