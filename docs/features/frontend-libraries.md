@@ -24,6 +24,7 @@ svelte {
             prefersDark(DaisyTheme.ShadcnDark)
         }
         fonts("Inter")
+        charts()
         lucide()
         images()
         toasts()
@@ -163,6 +164,46 @@ fonts("Roboto") {
 ```
 
 `fonts` needs `tailwind()` or `daisyUi()`, which bring the stylesheet. Whether a font exists, and whether it has a variable version, shows on its Fontsource page. A name that does not exist fails at `svelteSync`, when the package cannot be installed. When you drop or change a font, remove its old `@fontsource` package from `package.json` yourself: the plugin does not know which of them are yours.
+
+## Charts
+
+`charts()` sets up [LayerChart](https://layerchart.com), a chart library for Svelte 5, so that its charts take the colors of your DaisyUI themes, light and dark, without any setup of your own:
+
+```kotlin
+svelte {
+    libraries {
+        daisyUi()
+        charts()
+    }
+}
+```
+
+`svelteSync` installs the package, adds LayerChart's DaisyUI preset to the generated stylesheet, and writes a small helper for series. A chart is then a component in an element with a height:
+
+```svelte no-check
+<script lang="ts">
+    import { BarChart, LineChart } from 'layerchart';
+    import { chartSeries } from '#charts';
+
+    interface Day {
+        day: string;
+        opened: number;
+        closed: number;
+    }
+
+    let { days }: { days: Day[] } = $props();
+
+    const series = chartSeries<Day>({ opened: 'Opened', closed: { label: 'Closed', color: 'success' } });
+</script>
+
+<div class="h-64">
+    <LineChart data={days} x="day" {series} />
+</div>
+```
+
+`chartSeries<Day>` is the typed part. Its keys must be number properties of `Day`, so a renamed field fails `svelteCheck` instead of drawing an empty chart. Each entry is a label, or a label and one of the theme's colors: `primary`, `secondary`, `accent`, `neutral`, `info`, `success`, `warning` and `error`. Without a color, the series take them in that order. The colors are CSS variables, so a chart follows the theme when the visitor switches it.
+
+`chartColors` holds the same colors, for anything else you draw. For what the components can do, see LayerChart's own documentation. `charts()` needs `daisyUi()`.
 
 ## Lucide
 
