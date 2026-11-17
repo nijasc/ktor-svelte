@@ -21,10 +21,12 @@ export interface ChartSeries<T> {
 
 const order = Object.keys(chartColors) as ChartColor[];
 
-export function chartSeries<T>(lines: { [K in NumberKeys<T>]?: string | { label?: string; color?: ChartColor } }): ChartSeries<T>[] {
+export type ChartLine = string | { label?: string; color?: ChartColor };
+
+export function chartSeries<T>(lines: { [K in NumberKeys<T>]?: ChartLine }): ChartSeries<T>[] {
     return (Object.keys(lines) as NumberKeys<T>[]).map((key, index) => {
-        const line = lines[key];
-        const given = typeof line === 'string' ? { label: line } : (line ?? {});
+        const line = (lines as Record<string, ChartLine | undefined>)[key];
+        const given: { label?: string; color?: ChartColor } = typeof line === 'string' ? { label: line } : (line ?? {});
         return { key, label: given.label ?? key, color: chartColors[given.color ?? order[index % order.length]] };
     });
 }
