@@ -7,6 +7,7 @@ Three example apps live in the repository, from the smallest possible app to a f
 | [basic](#basic) | One route, three pages | Seeing the minimum that works |
 | [notes](#notes) | A notes app | Each feature on its own, easy to find |
 | [showcase](#showcase) | A team board with users | Features working together in a real app |
+| [two-frontends](#two-frontends) | A public site and an admin area | [Multiple frontends](./guide/multiple-frontends.md) in one app |
 
 ## Run them
 
@@ -130,3 +131,16 @@ The pictures on the [start page](./index.md) come from `./gradlew -p examples/sh
 ## Your own examples
 
 The [recipes](recipes/index.md) show complete solutions for sessions, uploads, live updates, paging and an admin area that you can copy into your app. [Everything ktor-svelte does](features/index.md) links every feature to its page.
+
+## two-frontends
+
+Two SvelteKit projects in one app: the public site in `frontend/` and an admin area in `admin/`, served under `/admin`.
+
+| Look at | To see |
+|---|---|
+| `src/main/kotlin/twofrontends/Application.kt` | `frontend("/admin")` and `generateTs` with one API route |
+| `build.gradle.kts` | `svelte { frontend("admin") { } }`, and ports you can change with `-PvitePort`, `-PadminVitePort` and `-PdebugPort` |
+| `admin/vite.config.ts` | `paths: { base: '/admin' }` and the admin's own hot reload port |
+| `frontend/src/lib/api/`, `admin/src/lib/api/` | The same generated client in both frontends |
+| `src/browserTest/` | Both frontends in a browser, from the packaged JAR |
+| `src/devBrowserTest/` | `svelteDevAll` with one Vite per frontend |

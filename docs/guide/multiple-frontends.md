@@ -85,6 +85,14 @@ export default defineConfig({
 
 Links inside it go through `resolve()` from `$app/paths`, as SvelteKit asks for any app with a base path. The `hmr` line points hot reload at the frontend's own Vite, on its `devPort`.
 
+- SvelteKit writes asset paths relative to the page, and for the start page of a base path it counts on a slash at the end. So the app answers `/admin` with a redirect to `/admin/`, and the start page loads its files from `/admin/_app/`.
+- A link from one frontend into another, such as from the public site to `/admin`, needs `data-sveltekit-reload`, so the browser loads the other app instead of SvelteKit looking for a route of its own.
+- A prerendered page with such a link makes the prerender crawler visit `/admin` in the wrong app. Let it pass with `prerender: { handleHttpError }` in the main frontend's `sveltekit()` options, as the example does.
+
+## Example
+
+[`examples/two-frontends`](https://github.com/nijasc/ktor-svelte/tree/main/examples/two-frontends) is a public site and an admin area under `/admin`, each with a page that calls the API through its own generated client. Its browser tests open both in the packaged JAR and check where their files come from, the navigation inside each frontend, the links between them and the fallback pages, and a development mode test runs `svelteDevAll` with two Vite servers.
+
 ## Limits
 
 These parts of ktor-svelte know only the main frontend for now:
