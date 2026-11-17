@@ -11,6 +11,7 @@ import io.github.nijasc.ktor.svelte.queryOf
 import io.github.nijasc.ktor.svelte.receiveForm
 import io.github.nijasc.ktor.svelte.requireUser
 import io.github.nijasc.ktor.svelte.respondIfStale
+import io.github.nijasc.ktor.svelte.sparseFields
 import io.github.nijasc.ktor.svelte.toast
 import io.github.nijasc.ktor.svelte.uploadForm
 import io.github.nijasc.ktor.svelte.validate
@@ -72,7 +73,7 @@ fun Route.taskRoutes(
             val filter = TaskFilter(query.search, query.status, query.label, viewer.id.takeIf { query.mine })
             val page: Page<Task> = tasks.page(filter, query.cursor, query.limit)
             call.respond(page)
-        }.queryOf<TaskQuery>()
+        }.queryOf<TaskQuery>().sparseFields<Task>()
 
         post {
             val input = call.receive<TaskInput>()

@@ -17,7 +17,7 @@
 <div id="every-task" class="max-w-3xl">
     <DataTable
         load={api.tasks.list}
-        query={{ limit: 50 }}
+        query={{ limit: 50, fields: ['id', 'title', 'status', 'createdAt', 'creator'] }}
         key={(task) => task.id}
         virtual={{ rowHeight: 40, height: '28rem' }}
         columns={[
