@@ -1,0 +1,1 @@
+sourceset_dependencies = '{":ktor-svelte-test/main":[],":ktor-svelte-gradle-plugin/main":[],":ktor-svelte-server/main":[]}'
