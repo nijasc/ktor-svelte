@@ -360,6 +360,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             devRequests.install(application)
             devRequests.sensitive.install(application)
             devRequests.countSql(application)
+            devRequests.measurePayloads(application)
             onCall { call -> devRequests.started(call) }
             on(ResponseSent) { call -> devRequests.finished(call) }
         }

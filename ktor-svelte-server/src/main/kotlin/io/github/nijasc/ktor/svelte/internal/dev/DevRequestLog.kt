@@ -15,6 +15,7 @@ import io.ktor.server.application.call
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.uri
+import io.ktor.server.response.ApplicationSendPipeline
 import io.ktor.server.response.header
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
@@ -22,6 +23,7 @@ import io.ktor.server.routing.RoutingNode
 import io.ktor.server.routing.RoutingRoot
 import io.ktor.server.routing.get
 import io.ktor.util.AttributeKey
+import io.ktor.util.pipeline.PipelinePhase
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -45,6 +47,7 @@ private val RequestFields = AttributeKey<Map<String, List<String>>>("KtorSvelteD
 private val RequestRoute = AttributeKey<RoutingNode>("KtorSvelteDevRequestRoute")
 private val RequestError = AttributeKey<JsonObject>("KtorSvelteDevRequestError")
 private val RequestListed = AttributeKey<Boolean>("KtorSvelteDevRequestListed")
+private val MeasurePayload = PipelinePhase("KtorSvelteDevMeasurePayload")
 
 internal class DevRequestLog(
     private val resolver: RequestResolver,
@@ -78,6 +81,14 @@ internal class DevRequestLog(
             val sql = RequestSql()
             call.attributes.put(RequestSqlKey, sql)
             withContext(RequestSqlElement(sql)) { proceed() }
+        }
+    }
+
+    fun measurePayloads(application: Application) {
+        application.sendPipeline.insertPhaseAfter(ApplicationSendPipeline.Render, MeasurePayload)
+        application.sendPipeline.intercept(MeasurePayload) { content ->
+            if (!resolver.isApiPath(decodedPathOrRaw(call))) return@intercept
+            payloadSummary(content)?.let { call.attributes.put(RequestPayloadKey, it) }
         }
     }
 
@@ -125,6 +136,7 @@ internal class DevRequestLog(
                     )
                 }
                 call.attributes.getOrNull(RequestError)?.let { put("error", it) }
+                call.attributes.getOrNull(RequestPayloadKey)?.let { put("size", it) }
                 call.attributes
                     .getOrNull(RequestSqlKey)
                     ?.summary()
