@@ -162,5 +162,12 @@
   "saving": "Wird gespeichert...",
   "table-columns": "Spalten",
   "table-move-up": "Nach oben",
-  "table-move-down": "Nach unten"
+  "table-move-down": "Nach unten",
+  "table-select-page": "Auswaehlen",
+  "table-select-everything": "Alle Seiten auswaehlen",
+  "table-clear": "Leeren",
+  "table-selected": "{count} ausgewaehlt",
+  "table-working": "In Arbeit: {done} von {total}",
+  "table-done": "Fertig: {worked} von {total} geklappt.",
+  "table-mark-done": "Als erledigt markieren"
 }

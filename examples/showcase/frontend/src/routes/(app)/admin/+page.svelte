@@ -104,5 +104,13 @@
         columnsLabel={m.tableColumns()}
         moveUp={m.tableMoveUp()}
         moveDown={m.tableMoveDown()}
+        actions={[{ label: m.tableMarkDone(), run: (task) => api.tasks.status(task.id, { status: 'DONE' }) }]}
+        selectRow={(task) => `${m.tableSelectPage()}: ${task.title}`}
+        selectPage={m.tableSelectPage()}
+        selectEverything={m.tableSelectEverything()}
+        clearSelection={m.tableClear()}
+        selectedText={(count) => m.tableSelected({ count })}
+        workingText={(done, total) => m.tableWorking({ done, total })}
+        doneText={(worked, total) => m.tableDone({ worked, total })}
     />
 </div>

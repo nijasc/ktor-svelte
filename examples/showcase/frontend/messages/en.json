@@ -162,5 +162,12 @@
   "saving": "Saving...",
   "table-columns": "Columns",
   "table-move-up": "Up",
-  "table-move-down": "Down"
+  "table-move-down": "Down",
+  "table-select-page": "Select",
+  "table-select-everything": "Select every page",
+  "table-clear": "Clear",
+  "table-selected": "{count} selected",
+  "table-working": "Working: {done} of {total}",
+  "table-done": "Done: {worked} of {total} worked.",
+  "table-mark-done": "Mark as done"
 }
