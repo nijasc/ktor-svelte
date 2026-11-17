@@ -131,10 +131,11 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/InstallableSettings {
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
-public final class io/github/nijasc/ktor/svelte/gradle/KtorSveltePlugin : org/gradle/api/Plugin {
+public abstract class io/github/nijasc/ktor/svelte/gradle/KtorSveltePlugin : org/gradle/api/Plugin {
 	public fun <init> ()V
 	public synthetic fun apply (Ljava/lang/Object;)V
 	public fun apply (Lorg/gradle/api/Project;)V
+	protected abstract fun getBuildEvents ()Lorg/gradle/build/event/BuildEventsListenerRegistry;
 }
 
 public final class io/github/nijasc/ktor/svelte/gradle/LocaleStrategy : java/lang/Enum {
@@ -195,6 +196,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPrecompress ()Lorg/gradle/api/provider/Property;
 	public abstract fun getShortTaskNames ()Lorg/gradle/api/provider/Property;
+	public abstract fun getTimingSummary ()Lorg/gradle/api/provider/Property;
 	public abstract fun getVerifyLeaks ()Lorg/gradle/api/provider/Property;
 	public final fun libraries (Lorg/gradle/api/Action;)V
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
