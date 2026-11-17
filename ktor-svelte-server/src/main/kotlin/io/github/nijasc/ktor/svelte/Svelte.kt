@@ -19,6 +19,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ConfigInjector
 import io.github.nijasc.ktor.svelte.internal.assets.DefaultFavicon
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.PageDataInliner
 import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
@@ -79,6 +80,7 @@ import io.github.nijasc.ktor.svelte.internal.typescript.CurrentUserType
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.GuardSpec
 import io.github.nijasc.ktor.svelte.internal.typescript.PreferencesType
+import io.github.nijasc.ktor.svelte.internal.typescript.generatedOperations
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -166,7 +168,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         }
         val publicConfig = pluginConfig.publicConfigProvider?.let { PublicConfigSource(it, application.developmentMode) }
         val configInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
-        val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector)
+        val pageLoads = pluginConfig.pageLoadsConfig
+        require(pageLoads.inlineTimeout.isPositive()) { "pageLoads: inlineTimeout must be positive, but is ${pageLoads.inlineTimeout}." }
+        val pageData = pageLoads.takeIf { it.inline && it.pages.isNotEmpty() }?.let { PageDataInliner(it.pages.toList(), it.inlineTimeout) }
+        val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector, pageData)
         val internalAccess = InternalAccess(pluginConfig.internalAccessConfig)
         val docsOutsideDevelopment = pluginConfig.apiDocs && !application.developmentMode && internalAccess.isConfigured
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && (application.developmentMode || docsOutsideDevelopment) }
@@ -220,12 +225,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val currentUser = pluginConfig.currentUserSpec
         val currentUserPath =
             currentUser?.let { it.path ?: (pluginConfig.apiPrefixList.firstOrNull() ?: "/api").trimEnd('/') + "/$CURRENT_USER_ROUTE" }
+        val clientExcludedPaths =
+            listOfNotNull(docsPath, currentUserPath, pluginConfig.preferencesSpec?.let { preferencesPathOf(pluginConfig) })
+        pageData?.operationSource = { generatedOperations(application, pluginConfig.apiPrefixList, clientExcludedPaths) }
         installTypeScriptGeneration(
             application,
             pluginConfig.generateTs,
             pluginConfig.generateTsOutput,
             pluginConfig.apiPrefixList,
-            listOfNotNull(docsPath, currentUserPath, pluginConfig.preferencesSpec?.let { preferencesPathOf(pluginConfig) }),
+            clientExcludedPaths,
             pluginConfig.publicConfigSchema,
             pluginConfig.declaredErrorList.toList(),
             pluginConfig.constantHolders.map(::sharedHolder),
@@ -246,6 +254,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     mapOf("theme" to THEME_COOKIE, "locale" to LOCALE_COOKIE),
                 )
             },
+            pluginConfig.pageLoadsConfig.pages
+                .toList(),
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }

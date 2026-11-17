@@ -454,6 +454,29 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a task page opened directly arrives with its data and does not fetch it again`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val id = page.createTask(unique("Inline"))
+        val calls = mutableListOf<String>()
+        page.onRequest { request -> if (request.url().contains("/api/tasks/$id")) calls += request.url() }
+        val html = page.request().get("/tasks/$id")
+        assertTrue(html.text().contains("id=\"ktor-svelte-data\""), "the page carries its data")
+        assertEquals("private, no-store", html.headers()["cache-control"])
+
+        page.navigate("/tasks/$id")
+        assertThat(page.locator("#task-title")).containsText("Inline")
+        assertEquals(emptyList<String>(), calls, "the first load used the data in the page")
+
+        page.reload()
+        assertThat(page.locator("#task-title")).containsText("Inline")
+        page.navigationLink("Board").click()
+        assertThat(page).hasURL(BOARD)
+        page.goBack()
+        assertThat(page.locator("#task-title")).containsText("Inline")
+        assertTrue(calls.isNotEmpty(), "a later navigation in the app loads through the API")
+    }
+
+    @Test
     fun `a task that does not exist shows the error page`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/tasks/999999")

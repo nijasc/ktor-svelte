@@ -1408,6 +1408,18 @@ export function consentStore<C extends string>(
     return store;
 }
 
+export function inlinePageData(pathname: string): Record<string, unknown> | undefined {
+    if (typeof document === 'undefined') return undefined;
+    const element = document.getElementById('ktor-svelte-data');
+    if (!element) return undefined;
+    element.remove();
+    try {
+        const inline = JSON.parse(element.textContent ?? '') as { path?: string; data?: Record<string, unknown> };
+        return inline.path === pathname ? inline.data : undefined;
+    } catch {
+        return undefined;
+    }
+}
 
 apiConfig.loginPage = '/login';
 

@@ -17,6 +17,7 @@ import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.util.cio.readChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
@@ -39,6 +40,7 @@ internal class AssetResponder(
     private val cache: SvelteCacheConfig,
     private val contentSecurityPolicy: PageContentSecurityPolicy? = null,
     private val configInjector: ConfigInjector? = null,
+    private val pageData: PageDataInliner? = null,
 ) {
     private val prepared = ConcurrentHashMap<String, PreparedHeaders>()
 
@@ -54,6 +56,13 @@ internal class AssetResponder(
         val headers = preparedFor(path, entry)
         val eTag = headers.eTags.getValue(encoding)
         val status = if (notFound) HttpStatusCode.NotFound else HttpStatusCode.OK
+        if (pageData != null && headers.isHtml && !notFound && call.request.httpMethod == HttpMethod.Get) {
+            val element = pageData.elementFor(call)
+            if (element != null) {
+                respondWithData(call, path, entry, element, headers.contentType)
+                return
+            }
+        }
 
         call.response.header(HttpHeaders.CacheControl, if (privateResponse) headers.privateCacheControl else headers.cacheControl)
         val contentType = headers.contentType
@@ -106,6 +115,22 @@ internal class AssetResponder(
             store.open(servedPath)
                 ?: error("ktor-svelte manifest lists '$path', but the file could not be opened.")
         call.respond(StreamContent(status, contentType, length, stream))
+    }
+
+    private suspend fun respondWithData(
+        call: ApplicationCall,
+        path: String,
+        entry: ManifestEntry,
+        element: String,
+        contentType: ContentType,
+    ) {
+        val html =
+            configInjector?.pageFor(path, entry)?.plain?.decodeToString()
+                ?: store.open(path)?.use { it.readBytes().decodeToString() }
+                ?: error("ktor-svelte manifest lists '$path', but the file could not be opened.")
+        call.response.header(HttpHeaders.CacheControl, "private, no-store")
+        if (contentSecurityPolicy != null) call.response.header(CONTENT_SECURITY_POLICY_HEADER, contentSecurityPolicy.forPage(path, entry))
+        call.respondBytes(injectIntoHead(html, element).toByteArray(), contentType)
     }
 
     private suspend fun respondInjected(
