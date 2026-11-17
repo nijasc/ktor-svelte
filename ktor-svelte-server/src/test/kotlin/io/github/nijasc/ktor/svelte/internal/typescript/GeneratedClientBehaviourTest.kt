@@ -175,11 +175,13 @@ class GeneratedClientBehaviourTest {
                     """{"theme":"nord","locale":"de","compact":true} | theme=nord locale=de | nord | 2 | 1""",
                 "someone with nothing saved keeps what this device shows, and it is saved | " +
                     """{"theme":"nord","locale":"de","compact":false} | theme=nord locale=de | nord | 5 | 1""",
-                """after a 401 the defaults are back | {"theme":null,"locale":null,"compact":false} | theme=nord locale=de | nord | 5 | 1""",
+                "a theme picked while the saved one was on its way wins | " +
+                    """{"theme":"ktor","locale":"de","compact":false} | theme=ktor locale=de | nord | 6 | 1""",
+                """after a 401 the defaults are back | {"theme":null,"locale":null,"compact":false} | theme=ktor locale=de | nord | 6 | 1""",
             ),
             steps,
         )
-        assertEquals("""{"theme":"nord","locale":"de","compact":false}""", preferences.getValue("lastSaved").jsonPrimitive.content)
+        assertEquals("""{"theme":"ktor","locale":"de","compact":false}""", preferences.getValue("lastSaved").jsonPrimitive.content)
     }
 
     @Test

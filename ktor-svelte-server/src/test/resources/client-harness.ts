@@ -746,6 +746,7 @@ standOn('/board');
 (pageHost.location as { reload: () => void }).reload = () => pageReloads++;
 let settingsKept: Partial<HarnessSettings> | null = null;
 let settingsUser = false;
+let settingsGate: Promise<void> | undefined;
 const settingsPuts: string[] = [];
 apiConfig.retry = undefined;
 apiConfig.onError = undefined;
@@ -759,6 +760,10 @@ apiConfig.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (init?.method === 'PUT') {
         settingsPuts.push(String(init.body));
         settingsKept = JSON.parse(String(init.body)) as HarnessSettings;
+    } else if (settingsGate) {
+        const kept = settingsKept;
+        await settingsGate;
+        return new Response(JSON.stringify({ preferences: kept ?? {}, signedIn: settingsUser }), { headers: { 'content-type': 'application/json' } });
     }
     const answer = { preferences: settingsUser ? (settingsKept ?? {}) : settingsDefaults, signedIn: settingsUser };
     return new Response(JSON.stringify(answer), { headers: { 'content-type': 'application/json' } });
@@ -809,6 +814,17 @@ await request('POST', '/api/session');
 await thirdPage.load();
 await settle();
 settingsStep('someone with nothing saved keeps what this device shows, and it is saved', thirdPage);
+settingsKept = { theme: 'dracula', locale: 'de', compact: false };
+let openSettings = () => {};
+settingsGate = new Promise((resolve) => (openSettings = resolve));
+const fourthPage = openPage();
+const slowSettings = fourthPage.load();
+document.cookie = 'ktor_svelte_theme=ktor';
+openSettings();
+settingsGate = undefined;
+await slowSettings;
+await settle();
+settingsStep('a theme picked while the saved one was on its way wins', fourthPage);
 await request('GET', '/api/secret').catch(() => undefined);
 settingsStep('after a 401 the defaults are back', thirdPage);
 results.preferences = { steps: settingsSteps, lastSaved: settingsPuts[settingsPuts.length - 1] };
