@@ -109,11 +109,12 @@ public abstract class SvelteEmailsTask : SvelteToolTask() {
         scriptDirectory.resolve("tsconfig.json").writeText(RENDER_EMAILS_TSCONFIG)
         val output = File(temporaryDir, "emails.json").apply { delete() }
         val tool = tool()
+        val node = pinnedNode()
         val runtime =
             if (tool.packageManager == PackageManager.Bun) {
                 executable(tool)
             } else {
-                locateExecutable("node")
+                node?.node ?: locateExecutable("node")
                     ?: throw GradleException(
                         "ktor-svelte renders the email templates with Node.js, but node is not on PATH." + DocLink.EMAILS.see(),
                     )
@@ -121,6 +122,7 @@ public abstract class SvelteEmailsTask : SvelteToolTask() {
         runRuntimeQuietly(
             runtime,
             listOf(script.absolutePath, EMAILS_DIR, output.absolutePath) + listOfNotNull(locales.get().joinToString(",").ifEmpty { null }),
+            node?.binDirectory,
         )
         return output.readText()
     }

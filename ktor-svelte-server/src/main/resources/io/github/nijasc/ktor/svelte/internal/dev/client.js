@@ -280,6 +280,314 @@ function routeMap(root) {
     filter.addEventListener('input', draw);
 }
 
+function environmentView(root) {
+    const section = root.querySelector('.environment');
+    const rows = root.querySelector('.environment-rows');
+    const filter = root.querySelector('.environment-filter');
+    const note = root.querySelector('.environment-note');
+    let groups = [];
+
+    function draw() {
+        const wanted = filter.value.trim().toLowerCase();
+        let shown = 0;
+        let all = 0;
+        const lines = [];
+        for (const group of groups) {
+            const matching = group.rows.filter((row) => `${row.name} ${row.value}`.toLowerCase().includes(wanted));
+            all += group.rows.length;
+            shown += matching.length;
+            if (matching.length === 0) continue;
+            const title = document.createElement('div');
+            title.className = 'environment-group';
+            title.textContent = `${group.name} (${matching.length})`;
+            lines.push(title);
+            for (const entry of matching) {
+                const line = document.createElement('div');
+                line.className = entry.hidden ? 'environment-row hidden' : 'environment-row';
+                const name = document.createElement('span');
+                name.textContent = entry.name;
+                const value = document.createElement('span');
+                value.textContent = entry.value;
+                if (entry.hidden) value.title = 'Hidden because the name or the value looks like a secret';
+                line.append(name, value);
+                lines.push(line);
+            }
+        }
+        rows.replaceChildren(...lines);
+        note.textContent = shown === all ? `${all} in all` : `${shown} of ${all}`;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/environment', { headers: { accept: 'application/json' } });
+            groups = (await response.json()).groups;
+            draw();
+        } catch {
+            note.textContent = 'The environment could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    filter.addEventListener('input', draw);
+}
+
+function migrationsView(root) {
+    const section = root.querySelector('.migrations');
+    const rows = root.querySelector('.migrations-rows');
+    const note = root.querySelector('.migrations-note');
+
+    function summary(state) {
+        if (state.tool === null) return 'This app runs no migrations: Flyway is not on its classpath.';
+        if (state.error) return `Flyway could not be asked: ${state.error}`;
+        if (state.note) return state.note;
+        const ran = state.migrations.filter((migration) => migration.applied).length;
+        const parts = [state.current ? `At version ${state.current}, ${ran} ran.` : `${ran} ran.`];
+        if (state.pending > 0) parts.push(`${state.pending} pending, they run at the next start.`);
+        if (state.failed) parts.push('The last one failed.');
+        return parts.join(' ');
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/migrations', { headers: { accept: 'application/json' } });
+            const state = await response.json();
+            note.textContent = summary(state);
+            note.className = state.failed || state.error ? 'migrations-note bad' : state.pending > 0 ? 'migrations-note warn' : 'migrations-note';
+            rows.replaceChildren(
+                ...(state.migrations ?? []).map((migration) => {
+                    const row = document.createElement('div');
+                    row.className = `migrations-row ${migration.failed ? 'bad' : migration.applied ? '' : 'warn'}`.trim();
+                    const version = document.createElement('span');
+                    version.textContent = migration.version ?? 'R';
+                    const description = document.createElement('span');
+                    description.textContent = migration.description;
+                    description.title = migration.script;
+                    const status = document.createElement('span');
+                    status.textContent = migration.state;
+                    const when = document.createElement('span');
+                    when.textContent = migration.installedOn ? new Date(migration.installedOn).toLocaleString() : '';
+                    row.append(version, description, status, when);
+                    return row;
+                })
+            );
+        } catch {
+            note.textContent = 'The migrations could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+}
+
+function megabytes(bytes) {
+    return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
+}
+
+function duration(millis) {
+    const seconds = Math.round(millis / 1000);
+    if (seconds < 120) return `${seconds} s`;
+    const minutes = Math.round(seconds / 60);
+    return minutes < 120 ? `${minutes} min` : `${(minutes / 60).toFixed(1)} h`;
+}
+
+function runtimeView(root) {
+    const section = root.querySelector('.runtime');
+    const rows = root.querySelector('.runtime-rows');
+    const bar = root.querySelector('.runtime-heap');
+    let timer;
+
+    function line(label, value, className = '') {
+        const row = document.createElement('div');
+        row.className = `runtime-row ${className}`.trim();
+        const name = document.createElement('span');
+        name.textContent = label;
+        const text = document.createElement('span');
+        text.textContent = value;
+        row.append(name, text);
+        return row;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/runtime', { headers: { accept: 'application/json' } });
+            const state = await response.json();
+            const heap = state.heap;
+            const limit = heap.max ?? heap.committed;
+            const share = limit > 0 ? heap.used / limit : 0;
+            bar.value = share;
+            bar.title = `${Math.round(share * 100)}% of the heap limit`;
+            const threads = state.threads;
+            const states = Object.entries(threads.states)
+                .map(([name, count]) => `${count} ${name.toLowerCase().replaceAll('_', ' ')}`)
+                .join(', ');
+            rows.replaceChildren(
+                line('heap', `${megabytes(heap.used)} used of ${megabytes(heap.committed)} taken, limit ${heap.max === undefined ? 'none' : megabytes(heap.max)}`, share > 0.85 ? 'bad' : ''),
+                line('non-heap', `${megabytes(state.nonHeap.used)} used`),
+                ...state.collectors.map((collector) => line(`GC ${collector.name}`, `${collector.count} runs, ${collector.ms} ms in all`)),
+                line('threads', `${threads.live} live (${threads.daemon} daemon), peak ${threads.peak}, ${threads.started} started`),
+                line('thread states', states),
+                line('processors', String(state.processors)),
+                line('uptime', duration(state.uptime))
+            );
+        } catch {
+            rows.replaceChildren(line('The memory and threads could not be loaded.', ''));
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        clearInterval(timer);
+        if (!section.open) return;
+        void load();
+        timer = setInterval(() => void load(), 2000);
+    });
+    root.querySelector('.runtime-gc').addEventListener('click', async () => {
+        await plainFetch('/_ktor-svelte/dev/runtime/gc', { method: 'POST', headers: { 'X-Ktor-Svelte-Dev': '1' } }).catch(() => undefined);
+        await load();
+    });
+}
+
+function slowestRoutes(root) {
+    const section = root.querySelector('.slowest');
+    const rows = root.querySelector('.slowest-rows');
+    const note = root.querySelector('.slowest-note');
+
+    function millis(ms) {
+        return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms.toFixed(ms < 10 ? 1 : 0)} ms`;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/slowest', { headers: { accept: 'application/json' } });
+            const ranking = await response.json();
+            note.textContent =
+                ranking.routes === 0
+                    ? 'No API route was called since the app started.'
+                    : `The routes that took the most time in all since the app started, of ${ranking.routes} called.`;
+            rows.replaceChildren(
+                ...ranking.slowest.map((route) => {
+                    const row = document.createElement('div');
+                    row.className = 'slowest-row';
+                    const method = document.createElement('span');
+                    method.textContent = route.method;
+                    const path = document.createElement('span');
+                    path.className = 'path';
+                    path.textContent = route.path;
+                    const total = document.createElement('span');
+                    total.className = 'ms';
+                    total.textContent = millis(route.totalMs);
+                    const about = document.createElement('span');
+                    about.className = 'slowest-about';
+                    const failed = route.failed ? `, ${route.failed} failed` : '';
+                    about.textContent = `${route.calls} calls, ${millis(route.averageMs)} on average, slowest ${millis(route.slowestMs)}${failed}`;
+                    row.append(method, path, total, about);
+                    return row;
+                })
+            );
+        } catch {
+            note.textContent = 'The slowest routes could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    root.querySelector('.slowest-refresh').addEventListener('click', () => void load());
+}
+
+function caughtEmails(root) {
+    const section = root.querySelector('.emails');
+    const rows = root.querySelector('.emails-rows');
+    const note = root.querySelector('.emails-note');
+    const count = root.querySelector('.emails-count');
+    let shown = '';
+
+    function body(email) {
+        if (email.html !== undefined) {
+            const frame = document.createElement('iframe');
+            frame.className = 'emails-html';
+            frame.setAttribute('sandbox', '');
+            frame.title = email.subject;
+            frame.srcdoc = email.html;
+            return frame;
+        }
+        const text = document.createElement('pre');
+        text.className = 'emails-text';
+        text.textContent = email.text ?? '';
+        return text;
+    }
+
+    function draw(emails) {
+        count.textContent = emails.length === 0 ? '' : ` (${emails.length})`;
+        note.textContent = emails.length === 0 ? 'No email was sent since the app started.' : 'Caught in development, not sent.';
+        rows.replaceChildren(
+            ...emails.map((email) => {
+                const item = document.createElement('details');
+                item.className = 'emails-item';
+                const summary = document.createElement('summary');
+                const subject = document.createElement('span');
+                subject.textContent = email.subject;
+                const to = document.createElement('span');
+                to.className = 'emails-to';
+                to.textContent = `to ${email.to.join(', ')}, ${new Date(email.at).toLocaleTimeString()}`;
+                summary.append(subject, to);
+                const headers = document.createElement('div');
+                headers.className = 'emails-headers';
+                headers.textContent = [
+                    email.from ? `From: ${email.from}` : '',
+                    `To: ${email.to.join(', ')}`,
+                    email.cc ? `Cc: ${email.cc.join(', ')}` : '',
+                    email.bcc ? `Bcc: ${email.bcc.join(', ')}` : '',
+                    email.replyTo ? `Reply-To: ${email.replyTo}` : ''
+                ]
+                    .filter(Boolean)
+                    .join('\n');
+                item.append(summary, headers);
+                item.addEventListener('toggle', () => {
+                    if (item.open && item.childElementCount === 2) {
+                        item.append(body(email));
+                        if (email.html !== undefined && email.text !== undefined) {
+                            const plain = document.createElement('details');
+                            const label = document.createElement('summary');
+                            label.textContent = 'Text version';
+                            plain.append(label, body({ text: email.text }));
+                            item.append(plain);
+                        }
+                    }
+                });
+                return item;
+            })
+        );
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/emails', { headers: { accept: 'application/json' } });
+            const emails = await response.json();
+            const key = emails.map((email) => email.id).join(',');
+            if (key !== shown || rows.childElementCount !== emails.length) {
+                shown = key;
+                draw(emails);
+            }
+        } catch {
+            note.textContent = 'The emails could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    root.addEventListener('ktor-svelte-call', () => void load());
+    root.querySelector('.emails-clear').addEventListener('click', async () => {
+        await plainFetch('/_ktor-svelte/dev/emails/clear', { method: 'POST', headers: { 'X-Ktor-Svelte-Dev': '1' } }).catch(() => undefined);
+        shown = '';
+        await load();
+    });
+    void load();
+}
+
 function statusView(root) {
     const section = root.querySelector('.status');
     const rows = root.querySelector('.status-rows');
@@ -690,7 +998,7 @@ const panelStyles = `
 .panel[hidden] { display: none; }
 .head { position: sticky; top: 0; display: flex; justify-content: space-between; padding: 8px 10px; background: #2b2650; font-family: system-ui, sans-serif; }
 .head button { border: 0; background: none; color: #bbb; cursor: pointer; font: inherit; }
-.row { display: grid; grid-template-columns: 52px 1fr 40px 64px auto; gap: 8px; padding: 4px 10px; border-top: 1px solid #2b2650; }
+.row { display: grid; grid-template-columns: 52px 1fr 40px 64px 60px auto; gap: 8px; padding: 4px 10px; border-top: 1px solid #2b2650; }
 .tools { display: flex; gap: 6px; }
 .tools button { padding: 0 4px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
 .tools button:disabled { opacity: .4; cursor: default; }
@@ -698,7 +1006,9 @@ const panelStyles = `
 button.path { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 button.path:hover { text-decoration: underline; }
 .ok { color: #7bd88f; } .warn { color: #f3c969; } .bad { color: #ff7b72; }
-.ms { text-align: right; color: #aaa; }
+.ms, .size { text-align: right; color: #aaa; }
+.size.large { color: #f3c969; }
+.payload { grid-column: 2 / -1; color: #f3c969; }
 .fields { grid-column: 2 / -1; color: #f3c969; white-space: pre-wrap; }
 .sql { grid-column: 2 / -1; color: #aaa; }
 .duplicate { grid-column: 2 / -1; color: #f3c969; white-space: normal; }
@@ -742,6 +1052,53 @@ button.routes-file:hover { text-decoration: underline; }
 .status-row span:last-child { overflow-wrap: anywhere; }
 .status-row.ok span:last-child { color: #7bd88f; }
 .status-row.bad span:last-child { color: #ff7b72; }
+.environment { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.environment summary { padding: 6px 10px; cursor: pointer; }
+.environment-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; }
+.environment-filter { flex: 1; min-width: 0; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
+.environment-note { color: #aaa; }
+.environment-group { padding: 6px 10px 2px; color: #aaa; }
+.environment-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 8px; padding: 1px 10px; font-family: ui-monospace, monospace; }
+.environment-row span { overflow-wrap: anywhere; }
+.environment-row span:first-child { color: #f3c969; }
+.environment-row.hidden span:last-child { color: #aaa; }
+.migrations { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.migrations summary { padding: 6px 10px; cursor: pointer; }
+.migrations-note { margin: 0; padding: 2px 10px 6px; color: #aaa; }
+.migrations-note.warn { color: #f3c969; }
+.migrations-note.bad { color: #ff7b72; }
+.migrations-rows { padding-bottom: 6px; }
+.migrations-row { display: grid; grid-template-columns: 40px 1fr 80px auto; gap: 8px; padding: 1px 10px; }
+.migrations-row span:first-child { font-family: ui-monospace, monospace; }
+.migrations-row span:last-child { color: #aaa; }
+.migrations-row.warn span:nth-child(3) { color: #f3c969; }
+.migrations-row.bad span:nth-child(3) { color: #ff7b72; }
+.runtime { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.runtime summary { padding: 6px 10px; cursor: pointer; }
+.runtime-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; }
+.runtime-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.runtime-heap { flex: 1; height: 8px; }
+.runtime-rows { padding-bottom: 6px; }
+.runtime-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 8px; padding: 2px 10px; }
+.runtime-row span:first-child { color: #aaa; }
+.runtime-row.bad span:last-child { color: #ff7b72; }
+.slowest { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.slowest summary { padding: 6px 10px; cursor: pointer; }
+.slowest-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; color: #aaa; }
+.slowest-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.slowest-rows { padding-bottom: 6px; }
+.slowest-row { display: grid; grid-template-columns: 52px 1fr 64px; gap: 2px 8px; padding: 2px 10px; font-family: ui-monospace, monospace; }
+.slowest-about { grid-column: 2 / -1; color: #aaa; font-family: system-ui, sans-serif; }
+.emails { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.emails > summary { padding: 6px 10px; cursor: pointer; }
+.emails-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; color: #aaa; }
+.emails-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.emails-item { padding: 2px 10px; }
+.emails-item > summary { display: flex; gap: 8px; cursor: pointer; }
+.emails-to { color: #aaa; }
+.emails-headers { padding: 4px 0; color: #aaa; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+.emails-html { width: 100%; height: 320px; border: 0; border-radius: 4px; background: #fff; }
+.emails-text { margin: 0; padding: 6px; border-radius: 4px; background: #15122b; white-space: pre-wrap; font: 12px ui-monospace, monospace; }
 .theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .theme[hidden] { display: none; }
 .theme summary { padding: 6px 10px; cursor: pointer; }
@@ -973,8 +1330,55 @@ function rowTools(entry) {
     return tools;
 }
 
+async function clearSiteData() {
+    const quietly = async (work) => {
+        try {
+            await work();
+        } catch {
+            return;
+        }
+    };
+    await quietly(() => plainFetch('/_ktor-svelte/dev/clear-site-data', { method: 'POST', headers: { 'X-Ktor-Svelte-Dev': '1' } }));
+    await quietly(() => localStorage.clear());
+    await quietly(() => sessionStorage.clear());
+    await quietly(async () => Promise.all((await caches.keys()).map((name) => caches.delete(name))));
+    await quietly(async () => Promise.all((await navigator.serviceWorker.getRegistrations()).map((worker) => worker.unregister())));
+    await quietly(async () =>
+        Promise.all(
+            (await indexedDB.databases()).map(
+                (database) =>
+                    new Promise((resolve) => {
+                        const request = indexedDB.deleteDatabase(database.name);
+                        request.onsuccess = request.onerror = request.onblocked = resolve;
+                    })
+            )
+        )
+    );
+    await quietly(() =>
+        document.cookie.split(';').forEach((cookie) => {
+            const name = cookie.split('=')[0].trim();
+            if (name) document.cookie = `${name}=; Max-Age=0; path=/`;
+        })
+    );
+    location.reload();
+}
+
 function openInEditor(source) {
     return fetch(`/_ktor-svelte/dev/open?file=${encodeURIComponent(source.path)}&line=${source.line}`).catch(() => undefined);
+}
+
+const LARGE_PAYLOAD = 100 * 1024;
+
+function bytesText(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fieldsText(fields) {
+    return (fields ?? [])
+        .map((field) => `${field.name} ${bytesText(field.bytes)}${field.items === undefined ? '' : ` (${field.items} items)`}`)
+        .join(', ');
 }
 
 function statusClass(status) {
@@ -993,7 +1397,8 @@ function startPanel() {
             <div class="head">
                 <strong>API requests</strong>
                 <span><button type="button" class="save" title="Save the calls this page made, with their answers, as fixtures for frontend tests">Save fixtures</button>
-                <button type="button" class="clear">Clear</button></span>
+                <button type="button" class="clear">Clear</button>
+                <button type="button" class="clear-site" title="Clear the cookies, storage, caches and service workers of this app in this browser, then reload">Clear site data</button></span>
             </div>
             <details class="config">
                 <summary>Public config<span class="config-count"></span></summary>
@@ -1021,6 +1426,37 @@ function startPanel() {
             <details class="status">
                 <summary>Status</summary>
                 <div class="status-rows"></div>
+            </details>
+            <details class="environment">
+                <summary>Environment</summary>
+                <div class="environment-tools">
+                    <input type="search" class="environment-filter" placeholder="Filter by name or value" aria-label="Filter the environment" />
+                    <span class="environment-note"></span>
+                </div>
+                <div class="environment-rows"></div>
+            </details>
+            <details class="migrations">
+                <summary>Migrations</summary>
+                <p class="migrations-note">Loading...</p>
+                <div class="migrations-rows"></div>
+            </details>
+            <details class="runtime">
+                <summary>Memory and threads</summary>
+                <div class="runtime-tools">
+                    <meter class="runtime-heap" min="0" max="1" low="0.7" high="0.85" optimum="0" aria-label="Heap in use"></meter>
+                    <button type="button" class="runtime-gc" title="Ask the JVM for a garbage collection, to see what memory is really still in use">Collect garbage</button>
+                </div>
+                <div class="runtime-rows"></div>
+            </details>
+            <details class="slowest">
+                <summary>Slowest routes</summary>
+                <div class="slowest-tools"><button type="button" class="slowest-refresh">Refresh</button><span class="slowest-note"></span></div>
+                <div class="slowest-rows"></div>
+            </details>
+            <details class="emails">
+                <summary>Emails<span class="emails-count"></span></summary>
+                <div class="emails-tools"><button type="button" class="emails-clear">Clear</button><span class="emails-note"></span></div>
+                <div class="emails-rows"></div>
             </details>
             <details class="theme" hidden>
                 <summary>Theme colors</summary>
@@ -1067,7 +1503,8 @@ function startPanel() {
                 [entry.method, ''],
                 [entry.path, 'path'],
                 [String(entry.status), statusClass(entry.status)],
-                [`${entry.ms.toFixed(entry.ms < 10 ? 1 : 0)} ms`, 'ms']
+                [`${entry.ms.toFixed(entry.ms < 10 ? 1 : 0)} ms`, 'ms'],
+                [entry.size ? bytesText(entry.size.bytes) : '', entry.size?.bytes >= LARGE_PAYLOAD ? 'size large' : 'size']
             ];
             for (const [text, className] of cells) {
                 const opens = className === 'path' && entry.source?.path;
@@ -1079,9 +1516,16 @@ function startPanel() {
                     cell.title = `Open ${where} in your editor`;
                     cell.addEventListener('click', () => openInEditor(entry.source));
                 }
+                if (className.startsWith('size') && entry.size?.fields) cell.title = `Largest fields: ${fieldsText(entry.size.fields)}`;
                 row.append(cell);
             }
             row.append(rowTools(entry));
+            if (entry.size?.bytes >= LARGE_PAYLOAD && entry.size.fields) {
+                const payload = document.createElement('span');
+                payload.className = 'payload';
+                payload.textContent = `${bytesText(entry.size.bytes)} answer, largest: ${fieldsText(entry.size.fields)}`;
+                row.append(payload);
+            }
             const twice = seenCalls.get(entry.id)?.duplicate;
             if (twice) {
                 const note = document.createElement('span');
@@ -1124,10 +1568,19 @@ function startPanel() {
         draw();
     });
     root.querySelector('.save').addEventListener('click', () => void saveFixtures());
+    root.querySelector('.clear-site').addEventListener('click', (event) => {
+        event.currentTarget.textContent = 'Clearing...';
+        void clearSiteData();
+    });
     configEditor(root);
     cookieInspector(root);
     routeMap(root);
     statusView(root);
+    caughtEmails(root);
+    slowestRoutes(root);
+    runtimeView(root);
+    migrationsView(root);
+    environmentView(root);
     themeEditor(root);
     accessibilityHints(root);
     untranslatedTexts(root);
@@ -1141,6 +1594,7 @@ function startPanel() {
         if (features.has('errors') && entry.error && seenCalls.has(entry.id)) showServerError(entry);
         entries.push(entry);
         if (entries.length > 100) entries.shift();
+        root.dispatchEvent(new Event('ktor-svelte-call'));
         draw();
     };
     document.body.append(host);

@@ -67,9 +67,35 @@ class SetupDoctorTest {
         isPortFree = { portFree },
         nodeVersion = { node },
         environment = { environment[it] },
+        userHome = null,
+        registryProbe = { RegistryAnswer.Answered(200) },
     ).examine()
 
     private fun List<Finding>.messagesAt(severity: Severity) = filter { it.severity == severity }.map { it.message }
+
+    @Test
+    fun `a pinned Node is reported instead of the installed one, and npm comes with it`() {
+        healthyProject()
+        dir.resolve("bun.lock").delete()
+        dir.resolve("package-lock.json").writeText("{}")
+        val messages =
+            SetupDoctor(
+                dir,
+                PackageManager.Auto,
+                5173,
+                "build",
+                bundle,
+                findExecutable = { null },
+                isPortFree = { true },
+                nodeVersion = { null },
+                pinnedNodeVersion = "22.12.0",
+                environment = { null },
+                userHome = null,
+                registryProbe = { RegistryAnswer.Answered(200) },
+            ).examine().map { it.message }
+        assertTrue("npm comes with the pinned Node 22.12.0" in messages, messages.toString())
+        assertTrue("Node 22.12.0 is pinned, and ktor-svelte downloads it when a task needs it" in messages, messages.toString())
+    }
 
     @Test
     fun `healthy project has no problems`() {

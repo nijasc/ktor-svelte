@@ -27,6 +27,9 @@ public class SvelteConfig internal constructor() {
     internal var paramRouteList: List<String> = emptyList()
         private set
 
+    internal var warmUpPathList: List<String> = emptyList()
+        private set
+
     internal val cacheConfig: SvelteCacheConfig = SvelteCacheConfig()
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
@@ -67,6 +70,7 @@ public class SvelteConfig internal constructor() {
     public var originCheck: Boolean = true
     public var hideErrorDetails: Boolean = true
     public var apiCompression: Boolean = true
+    public var mailer: Mailer? = null
     public var inlinePublicConfig: Boolean = true
     public var buildHeader: Boolean = true
     public var requestIds: Boolean = true
@@ -91,6 +95,11 @@ public class SvelteConfig internal constructor() {
 
     public fun paramRoutes(vararg routes: String) {
         paramRouteList = routes.toList()
+    }
+
+    public fun warmUp(vararg paths: String) {
+        require(paths.all { it.startsWith("/") }) { "warmUp paths start with a slash, such as \"/api/notes\"." }
+        warmUpPathList = paths.toList()
     }
 
     public fun healthCheck(check: suspend () -> Boolean) {
@@ -381,6 +390,7 @@ public class SvelteDevConfig internal constructor() {
     public var refreshAfterRestart: Boolean = true
     public var errorOverlay: Boolean = true
     public var startupTiming: Boolean = true
+    public var catchEmails: Boolean = true
 }
 
 @KtorDsl

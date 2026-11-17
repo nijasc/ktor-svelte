@@ -229,7 +229,7 @@ install(Svelte) {
 }
 ```
 
-Every `healthCheck` must return `true` for the app to be up. Details are on [Built-in endpoints](../features/endpoints.md#health-endpoint).
+Every `healthCheck` must return `true` for the app to be up. Details are on [Built-in endpoints](../features/endpoints.md#health-endpoint). With [`warmUp(...)`](../features/endpoints.md#warm-up-before-ready), it also waits until the app has called a few of its own routes, so the first real visitor does not get the slow first request.
 
 ## Full example
 
