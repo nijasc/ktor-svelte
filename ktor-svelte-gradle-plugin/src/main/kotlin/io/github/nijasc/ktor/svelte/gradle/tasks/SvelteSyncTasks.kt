@@ -3,6 +3,7 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import io.github.nijasc.ktor.svelte.gradle.DocLink
+import io.github.nijasc.ktor.svelte.gradle.libraries.APP_STATIC_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.CLIENT_HOOKS
 import io.github.nijasc.ktor.svelte.gradle.libraries.COMPONENTS_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.ERROR_ROUTE
@@ -11,6 +12,10 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_MARKER
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.PACKAGE_VERSIONS
+import io.github.nijasc.ktor.svelte.gradle.libraries.SERVICE_WORKER
+import io.github.nijasc.ktor.svelte.gradle.libraries.SERVICE_WORKER_DIR
+import io.github.nijasc.ktor.svelte.gradle.libraries.SERVICE_WORKER_TSCONFIG
+import io.github.nijasc.ktor.svelte.gradle.libraries.appIcons
 import io.github.nijasc.ktor.svelte.gradle.libraries.frontendFiles
 import io.github.nijasc.ktor.svelte.gradle.libraries.iconConstant
 import io.github.nijasc.ktor.svelte.gradle.libraries.iconSources
@@ -18,8 +23,10 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.kotlinFiles
 import io.github.nijasc.ktor.svelte.gradle.libraries.readMessages
 import io.github.nijasc.ktor.svelte.gradle.libraries.rootLayout
 import io.github.nijasc.ktor.svelte.gradle.libraries.runtimeProperties
+import io.github.nijasc.ktor.svelte.gradle.libraries.samePixels
 import io.github.nijasc.ktor.svelte.gradle.libraries.scanRoutes
 import io.github.nijasc.ktor.svelte.gradle.libraries.usedIcons
+import io.github.nijasc.ktor.svelte.gradle.libraries.writePng
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
@@ -39,7 +46,8 @@ import java.io.File
 
 private const val ICONS_JSON = "$GENERATED_DIR/icons.json"
 private const val USER_VITE_CONFIG = "vite.user.ts"
-private val OWNED_ONLY_WITH_MARKER = setOf("vite.config.ts", "src/hooks.server.ts", "src/hooks.ts", "src/hooks.client.ts")
+private val OWNED_ONLY_WITH_MARKER =
+    setOf("vite.config.ts", "src/hooks.server.ts", "src/hooks.ts", "src/hooks.client.ts", SERVICE_WORKER, SERVICE_WORKER_TSCONFIG)
 private val KNOWN_PACKAGES = PACKAGE_VERSIONS.keys
 
 internal fun File.isOwnedByPlugin(): Boolean = !isFile || GENERATED_MARKER in readText()
@@ -180,10 +188,18 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
                 }
                 different
             }
-        removeStaleFiles(frontend, all.keys)
+        val appIconFiles = current.installable?.let(::appIcons).orEmpty()
+        val changedIcons =
+            appIconFiles.filter { (path, image) ->
+                val file = frontend.resolve(path)
+                val different = !samePixels(file, image)
+                if (different) writePng(file, image)
+                different
+            }
+        removeStaleFiles(frontend, all.keys + appIconFiles.keys)
         addRootLayout(frontend, current)
         logger.lifecycle(
-            if (changed.isEmpty() && !packagesChanged) {
+            if (changed.isEmpty() && changedIcons.isEmpty() && !packagesChanged) {
                 "ktor-svelte: frontend libraries are in sync."
             } else {
                 "ktor-svelte: updated frontend libraries. Commit package.json, the lockfile and the generated files."
@@ -208,15 +224,23 @@ public abstract class SvelteSyncTask : SvelteLibraryTask() {
         frontend: File,
         keep: Set<String>,
     ) {
-        frontend
-            .resolve(GENERATED_DIR)
-            .walkBottomUp()
-            .filter { it.isFile && it.relativeTo(frontend).invariantSeparatorsPath !in keep }
-            .forEach { it.delete() }
-        listOf("src/hooks.server.ts", "src/hooks.ts", CLIENT_HOOKS, ERROR_ROUTE).filter { it !in keep }.forEach { path ->
-            val file = frontend.resolve(path)
-            if (file.isFile && GENERATED_MARKER in file.readText()) file.delete()
+        listOf(GENERATED_DIR, APP_STATIC_DIR).forEach { dir ->
+            frontend
+                .resolve(dir)
+                .walkBottomUp()
+                .filter { it.isFile && it.relativeTo(frontend).invariantSeparatorsPath !in keep }
+                .forEach { it.delete() }
         }
+        frontend.resolve(APP_STATIC_DIR).takeIf { it.isDirectory && it.list().isNullOrEmpty() }?.delete()
+        listOf("src/hooks.server.ts", "src/hooks.ts", CLIENT_HOOKS, ERROR_ROUTE, SERVICE_WORKER, SERVICE_WORKER_TSCONFIG)
+            .filter {
+                it !in
+                    keep
+            }.forEach { path ->
+                val file = frontend.resolve(path)
+                if (file.isFile && GENERATED_MARKER in file.readText()) file.delete()
+            }
+        frontend.resolve(SERVICE_WORKER_DIR).takeIf { it.isDirectory && it.list().isNullOrEmpty() }?.delete()
     }
 
     private fun addRootLayout(
@@ -251,6 +275,9 @@ public abstract class SvelteVerifySyncTask : SvelteLibraryTask() {
                 val file = frontend.resolve(path)
                 if (path !in problems && (!file.isFile || file.readText() != content)) problems += path
             }
+        }
+        current.installable?.let(::appIcons)?.forEach { (path, image) ->
+            if (!samePixels(frontend.resolve(path), image)) problems += path
         }
         val packageJson = readPackageJson(frontend)
         if (updatedPackageJson(packageJson, current) != packageJson) problems += "package.json"

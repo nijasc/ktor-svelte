@@ -1,9 +1,12 @@
 package io.github.nijasc.ktor.svelte.gradle
 
+import io.github.nijasc.ktor.svelte.gradle.libraries.DEFAULT_APP_COLOR
+import io.github.nijasc.ktor.svelte.gradle.libraries.DEFAULT_APP_DISPLAY
 import io.github.nijasc.ktor.svelte.gradle.libraries.FontSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
+import io.github.nijasc.ktor.svelte.gradle.libraries.installableSpecOf
 import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.GitOutputSource
 import io.github.nijasc.ktor.svelte.gradle.tasks.OPENAPI_FILE
@@ -220,6 +223,12 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("libraries.fonts", libraries.fontSettings.sans.orElse("none"))
             settings.put("libraries.charts", libraries.chartsEnabled.map { it.toString() }.orElse("false"))
             settings.put(
+                "libraries.installable",
+                libraries.installableSettings.enabled
+                    .map { it.toString() }
+                    .orElse("false"),
+            )
+            settings.put(
                 "libraries.i18n",
                 libraries.i18nSettings.enabled
                     .map { it.toString() }
@@ -271,6 +280,18 @@ public class KtorSveltePlugin : Plugin<Project> {
                 fonts =
                     libraries.fontSettings.sans.orNull?.let { sans ->
                         FontSpec(sans, libraries.fontSettings.mono.orNull, libraries.fontSettings.variable.getOrElse(true))
+                    },
+                installable =
+                    libraries.installableSettings.takeIf { it.enabled.getOrElse(false) }?.let { app ->
+                        installableSpecOf(
+                            name = app.name.orNull,
+                            shortName = app.shortName.orNull,
+                            description = app.description.orNull,
+                            themeColor = app.themeColor.getOrElse(DEFAULT_APP_COLOR),
+                            backgroundColor = app.backgroundColor.getOrElse(DEFAULT_APP_COLOR),
+                            display = app.display.getOrElse(DEFAULT_APP_DISPLAY),
+                            icon = app.icon.orNull?.asFile,
+                        )
                     },
                 allIcons = libraries.lucideSettings.allIconsEnabled.getOrElse(false),
                 reloadPrompt = libraries.toastsSettings.reloadPromptEnabled.getOrElse(false),

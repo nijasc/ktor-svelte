@@ -48,6 +48,12 @@ svelte {
         components()
         fonts("Inter")
         charts()
+        installable {
+            name = "ktor-svelte showcase"
+            shortName = "Showcase"
+            themeColor = "#7f52ff"
+            icon = file("app-icon.png")
+        }
         images()
         toasts { reloadPrompt() }
         i18n {

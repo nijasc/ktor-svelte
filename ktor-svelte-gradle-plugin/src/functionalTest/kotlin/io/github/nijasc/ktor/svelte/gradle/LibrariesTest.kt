@@ -228,6 +228,50 @@ class LibrariesTest {
         assertFalse(hooks.exists())
     }
 
+    private fun appIcon(color: Int): File {
+        val image = java.awt.image.BufferedImage(512, 512, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until 512) for (x in 0 until 512) image.setRGB(x, y, color)
+        return dir.resolve("app-icon.png").also { javax.imageio.ImageIO.write(image, "png", it) }
+    }
+
+    @Test
+    fun `installable writes the manifest, the icons and the service worker, and removes them again`() {
+        appIcon(0xFF4F46E5.toInt())
+        val project = project("installable {\n    name = \"Notes\"\n    themeColor = \"#4f46e5\"\n    icon = file(\"app-icon.png\")\n}")
+        project.run("svelteSync")
+        val static = project.frontend.resolve("static/ktor-svelte")
+        assertContains(static.resolve("manifest.webmanifest").readText(), "\"name\": \"Notes\"")
+        assertEquals(
+            512,
+            javax.imageio.ImageIO
+                .read(static.resolve("icon-512.png"))
+                .width,
+        )
+        assertTrue(static.resolve("apple-touch-icon.png").isFile)
+        val worker = project.frontend.resolve("src/service-worker/index.ts")
+        assertContains(worker.readText(), "\$service-worker")
+        assertContains(worker.resolveSibling("tsconfig.json").readText(), "\"extends\": \"\$app/tsconfig/service-worker\"")
+        assertContains(project.frontend.resolve("src/lib/ktor-svelte/server-hooks.ts").readText(), "rel=\"manifest\"")
+        assertEquals(TaskOutcome.SUCCESS, project.run("svelteVerifySync").task(":svelteVerifySync")?.outcome)
+
+        appIcon(0xFF000000.toInt())
+        assertContains(project.runAndFail("svelteVerifySync").output, "static/ktor-svelte/icon-48.png")
+        assertContains(project.run("svelteSync").output, "updated frontend libraries")
+        assertEquals(TaskOutcome.SUCCESS, project.run("svelteVerifySync").task(":svelteVerifySync")?.outcome)
+
+        project.buildScript(build("tailwind()"))
+        project.run("svelteSync")
+        assertFalse(static.exists())
+        assertFalse(worker.exists())
+        assertFalse(worker.parentFile.exists())
+
+        worker.parentFile.mkdirs()
+        worker.writeText("self.addEventListener('fetch', () => {});\n")
+        project.buildScript(build("installable {\n    name = \"Notes\"\n    icon = file(\"app-icon.png\")\n}"))
+        assertContains(project.runAndFail("svelteSync").output, "found your own version")
+        assertEquals("self.addEventListener('fetch', () => {});\n", worker.readText())
+    }
+
     @Test
     fun `your own hooks are never overwritten`() {
         val project = project("i18n { locales(\"en\") }")

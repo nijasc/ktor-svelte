@@ -57,6 +57,7 @@ internal fun frontendFiles(
         }
         if (spec.toasts || spec.components) put(CLIENT_HOOKS, clientHooks(spec))
         if (spec.charts) put(CHARTS_HELPER, HEADER + renderTemplate("charts.ts"))
+        spec.installable?.let { putAll(installableFiles(it, spec.i18n, messages)) }
         if (spec.components) {
             putAll(componentFiles(spec, messages))
             put("$GENERATED_DIR/errors.ts", renderTemplate("errors.ts"))
@@ -443,7 +444,8 @@ private fun serverHooks(
             ?.joinToString("") { "<link rel=\"preload\" as=\"font\" type=\"font/woff2\" href=\"${'$'}{font$it}\" crossorigin>" }
             .orEmpty()
     val shareTags = if (shares) "${'$'}{shareTags(event)}" else ""
-    val headPart = shareTags + preloads + if (cookieScript.isEmpty()) "" else "<script>$cookieScript</script>"
+    val appTags = spec.installable?.let(::installableHeadTags).orEmpty()
+    val headPart = shareTags + appTags + preloads + if (cookieScript.isEmpty()) "" else "<script>$cookieScript</script>"
     val scriptPart = if (headPart.isEmpty()) "" else ".replace('</head>', () => `$headPart</head>`)"
     val htmlPart = if (attributes.isEmpty()) "html" else "html.replace(/<html[^>]*>/, () => `<html $attributes>`)"
     return HEADER + "$imports\n\n" +

@@ -943,4 +943,32 @@ class ShowcaseBrowserTest {
         page.keyboard().press("Enter")
         assertThat(page).hasURL(Pattern.compile(".*#content$"))
     }
+
+    @Test
+    fun `the app can be installed and shows its offline page without a connection`() {
+        val manifest = page.request().get("/ktor-svelte/manifest.webmanifest")
+        assertTrue(manifest.headers().getValue("content-type").startsWith("application/manifest+json"))
+        assertContains(manifest.text(), "\"short_name\": \"Showcase\"")
+        assertEquals(200, page.request().get("/ktor-svelte/icon-maskable-512.png").status())
+
+        page.navigate("/")
+        assertThat(page.locator("link[rel=manifest]")).hasAttribute("href", "/ktor-svelte/manifest.webmanifest")
+        assertThat(page.locator("meta[name=theme-color]")).hasAttribute("content", "#7f52ff")
+        if (session.name != "chromium") return
+
+        assertEquals("activated", page.evaluate(
+            "navigator.serviceWorker.ready.then((registration) => new Promise((done) => { const worker = registration.active; " +
+                "if (worker.state === 'activated') done(worker.state); " +
+                "worker.addEventListener('statechange', () => worker.state === 'activated' && done(worker.state)); }))",
+        ))
+        page.reload()
+        assertTrue(page.evaluate("navigator.serviceWorker.controller !== null") as Boolean)
+        context.setOffline(true)
+        page.navigate("/about")
+        assertThat(page.heading()).hasText("You are offline")
+        assertThat(page.getByRole(AriaRole.BUTTON, Page.GetByRoleOptions().setName("Try again"))).isVisible()
+        context.setOffline(false)
+        assertThat(page.heading()).not().hasText("You are offline")
+        assertThat(page).hasURL(Pattern.compile(".*/about$"))
+    }
 }

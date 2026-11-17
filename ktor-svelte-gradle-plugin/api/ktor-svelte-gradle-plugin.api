@@ -118,6 +118,19 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/I18nSettings {
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/InstallableSettings {
+	public fun <init> ()V
+	public abstract fun getBackgroundColor ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDescription ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDisplay ()Lorg/gradle/api/provider/Property;
+	public abstract fun getEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getIcon ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getShortName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getThemeColor ()Lorg/gradle/api/provider/Property;
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
+}
+
 public final class io/github/nijasc/ktor/svelte/gradle/KtorSveltePlugin : org/gradle/api/Plugin {
 	public fun <init> ()V
 	public synthetic fun apply (Ljava/lang/Object;)V
@@ -202,6 +215,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public abstract fun getGeneratedPackage ()Lorg/gradle/api/provider/Property;
 	public abstract fun getI18nSettings ()Lio/github/nijasc/ktor/svelte/gradle/I18nSettings;
 	public abstract fun getImagesEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getInstallableSettings ()Lio/github/nijasc/ktor/svelte/gradle/InstallableSettings;
 	public abstract fun getLucideEnabled ()Lorg/gradle/api/provider/Property;
 	public abstract fun getLucideSettings ()Lio/github/nijasc/ktor/svelte/gradle/LucideSettings;
 	public abstract fun getOverrides ()Lorg/gradle/api/provider/MapProperty;
@@ -212,6 +226,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public abstract fun getToastsSettings ()Lio/github/nijasc/ktor/svelte/gradle/ToastsSettings;
 	public final fun i18n (Lorg/gradle/api/Action;)V
 	public final fun images ()V
+	public final fun installable (Lorg/gradle/api/Action;)V
 	public final fun lucide ()V
 	public final fun lucide (Lorg/gradle/api/Action;)V
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
@@ -280,6 +295,28 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec : java
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/InstallableSpec : java/io/Serializable {
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBackgroundColor ()Ljava/lang/String;
+	public final fun getDescription ()Ljava/lang/String;
+	public final fun getDisplay ()Ljava/lang/String;
+	public final fun getIconHash ()Ljava/lang/String;
+	public final fun getIconPath ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getShortName ()Ljava/lang/String;
+	public final fun getThemeColor ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : java/io/Serializable {
 	public final fun component1 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec;
 	public final fun component10 ()Z
@@ -287,6 +324,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun component12 ()Z
 	public final fun component13 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/FontSpec;
 	public final fun component14 ()Z
+	public final fun component15 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/InstallableSpec;
 	public final fun component2 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun component3 ()Z
 	public final fun component4 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
@@ -305,6 +343,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun getGeneratedPackage ()Ljava/lang/String;
 	public final fun getI18n ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
 	public final fun getImages ()Z
+	public final fun getInstallable ()Lio/github/nijasc/ktor/svelte/gradle/libraries/InstallableSpec;
 	public final fun getLucide ()Z
 	public final fun getReloadPrompt ()Z
 	public final fun getRoutes ()Z

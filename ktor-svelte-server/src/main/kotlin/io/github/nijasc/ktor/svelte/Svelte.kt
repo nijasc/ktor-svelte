@@ -130,6 +130,7 @@ private const val HEALTH_PATH = "/_ktor-svelte/health"
 private const val DOCS_REFUSED_MESSAGE = "The API docs only answer requests from this machine."
 private const val STATUS_REFUSED_MESSAGE = "The ktor-svelte status endpoint only answers requests from this machine."
 private val VITE_DEV_PATHS = listOf("/@vite/*", "/@fs/*", "/@id/*", "/src/*", "/node_modules/*", "/.svelte-kit/*")
+private val INSTALLABLE_APP_PATHS = listOf("/service-worker.js", "/ktor-svelte/*")
 private val SvelteHandlerKey = AttributeKey<SvelteHandler>("KtorSvelteHandler")
 private val BODY_LIMIT_CONFLICT_MESSAGE =
     "RequestBodyLimit is already installed. Set maxApiBodySize = null in install(Svelte) to keep your own limits." +
@@ -532,7 +533,7 @@ public fun Route.svelte(public: List<String> = emptyList()) {
         catchAll(handler, privateResponses = true)
         return
     }
-    val paths = if (handler.proxiesToVite) public + VITE_DEV_PATHS else public
+    val paths = ((if (handler.proxiesToVite) public + VITE_DEV_PATHS else public) + INSTALLABLE_APP_PATHS).distinct()
     paths.forEach { path ->
         val routePath = if (path.endsWith("/*")) path.removeSuffix("*") + "{svelte-path...}" else path
         route(routePath) { handle { handler.handle(call) } }
