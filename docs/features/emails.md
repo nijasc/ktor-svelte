@@ -69,6 +69,39 @@ Rendering takes a few seconds, but it only runs again when a file in `src` or th
 
 Svelte type-checks the components like every other file, so `svelteCheck` catches a wrong prop on the frontend side, and the Kotlin compiler catches one on the server side.
 
+## Languages
+
+With [i18n](./i18n.md) turned on, each email is rendered once per language, with the same messages as the app. Use `m` in the component like on any page:
+
+```svelte
+<script lang="ts">
+    import { m } from '#i18n';
+
+    let { name, link }: { name: string; link: string } = $props();
+</script>
+
+<svelte:head>
+    <title>{m.emailWelcomeSubject({ name })}</title>
+</svelte:head>
+
+<h1>{m.emailWelcomeTitle({ name })}</h1>
+<a href={link}>{m.emailWelcomeAction()}</a>
+```
+
+`Emails` then takes a language, like the generated `Messages`:
+
+```kotlin no-check
+val email = Emails.forLocale(user.locale).welcome(name = user.name, link = boardLink)
+```
+
+| In Kotlin | What it does |
+|---|---|
+| `Emails.forLocale(locale)` | The emails in that language, or in the default language when it is not one of yours |
+| `Emails.locales`, `Emails.defaultLocale` | The languages from `i18n { }` |
+| `call.emails` | The emails in the language of the current request, like `call.messages` |
+
+Store the language with the person when you send emails later, for example from a background job, because there is no request to take it from then. A placeholder in a message, such as `{name}`, can take a prop. Plural messages cannot count a prop, because the count is not known when the email is rendered: pick the text in Kotlin with `Messages` and pass it as a prop.
+
 ## Good to know
 
 - Props are escaped for HTML in `html`, and filled in as they are in `subject` and `text`. Line breaks in a subject value become spaces.
