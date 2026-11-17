@@ -14,6 +14,10 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class GeneratedClientBehaviourTest {
+    companion object {
+        private var harnessResults: JsonObject? = null
+    }
+
     @TempDir
     lateinit var dir: File
 
@@ -27,7 +31,9 @@ class GeneratedClientBehaviourTest {
             .firstOrNull { it.isFile }
     }
 
-    private fun runHarness(): JsonObject {
+    private fun runHarness(): JsonObject = harnessResults ?: freshHarnessRun().also { harnessResults = it }
+
+    private fun freshHarnessRun(): JsonObject {
         val runtime = bun()
         assumeTrue(runtime != null, "bun is not on PATH, and the generated client is TypeScript")
         dir.resolve("client.ts").writeText(typeScriptTemplate("client.ts"))
@@ -104,14 +110,14 @@ class GeneratedClientBehaviourTest {
         val steps = session.getValue("steps").jsonArray.map { step -> step.jsonArray.joinToString(" | ") { it.jsonPrimitive.content } }
         assertEquals(
             listOf(
-                "before loading | null | null | false | 0",
-                "loaded with 0.4 seconds left | Ada | 0.4 | false | 1",
-                "inside the warning time | Ada | 0.2 | true | 1",
-                "extended | Ada | 5 | false | 2",
-                "another response says less is left | Ada | 0.3 | false | 2",
-                "and a later one says more | Ada | 8 | false | 2",
-                "the time ran out, so the store asked and the server said nobody | null | null | false | 3",
-                "nothing is planned for a visitor | null | null | false | 3",
+                "before loading | null | no end | false | 0",
+                "loaded with three seconds left | Ada | near | false | 1",
+                "inside the warning time | Ada | near | true | 1",
+                "extended | Ada | far | false | 2",
+                "another response says less is left | Ada | near | false | 2",
+                "and a later one says more | Ada | far | false | 2",
+                "the time ran out, so the store asked and the server said nobody | null | no end | false | 3",
+                "nothing is planned for a visitor | null | no end | false | 3",
             ),
             steps,
         )
