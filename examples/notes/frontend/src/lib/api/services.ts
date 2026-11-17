@@ -21,11 +21,11 @@ export const notesGetFeed = (query?: { cursor?: string; limit?: string }, option
     next?: string | null;
 }>('GET', '/api/notes/feed', { ...options, query, operation: 'notes.getFeed' });
 /** @see notes/Routes.kt */
-export const notesGet = (id: string | number, options?: RequestOptions) => request<Note>('GET', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' });
+export const notesGet = (id: number, options?: RequestOptions) => request<Note>('GET', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' });
 /** @see notes/Routes.kt */
-export const notesUpdate = (id: string | number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', `/api/notes/${encodeURIComponent(id)}`, { ...options, body, operation: 'notes.update' });
+export const notesUpdate = (id: number, body: NoteInput, options?: RequestOptions) => request<Note>('PUT', `/api/notes/${encodeURIComponent(id)}`, { ...options, body, operation: 'notes.update' });
 /** @see notes/Routes.kt */
-export const notesDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.delete' });
+export const notesDelete = (id: number, options?: RequestOptions) => request<void>('DELETE', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.delete' });
 /** @see notes/Routes.kt */
 export const notesGetActivity = (id: string | number, options?: RequestOptions) => request<Activity[]>('GET', `/api/notes/${encodeURIComponent(id)}/activity`, { ...options, operation: 'notes.getActivity' });
 /** @see notes/Routes.kt */

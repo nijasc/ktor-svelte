@@ -368,6 +368,39 @@ const lines = (await api.notes.getActivity(id)).map((item) =>
 
 Use `@SerialName` for short type names. Without it, the type name is the fully qualified class name.
 
+## Resource routes
+
+Most APIs have a few things that can be listed, read, created, changed and deleted, and for each of them the same five routes. `resource` registers them with the paths, statuses and names that the generated client expects:
+
+```kotlin no-check
+routing {
+    resource<Note, Int>("/api/notes") {
+        missing<Problem> { Problem("That note does not exist.") }
+        list<NoteQuery> { query -> store.list(query.search, query.tag) }
+        get { id -> store.find(id) }
+        create<NoteInput> { input -> store.create(input) }
+        update<NoteInput> { id, input -> store.update(id, input) }
+        delete { id -> store.delete(id) }
+    }
+}
+```
+
+| Block | Route | Returns | Client |
+| --- | --- | --- | --- |
+| `list { }` | `GET /api/notes` | The list | `api.notes.list()` |
+| `get { id -> }` | `GET /api/notes/{id}` | The item, or `null` for a 404 | `api.notes.get(id)` |
+| `create<Input> { input -> }` | `POST /api/notes` | The new item, sent with a 201 | `api.notes.create(input)` |
+| `update<Input> { id, input -> }` | `PUT /api/notes/{id}` | The changed item, or `null` for a 404 | `api.notes.update(id, input)` |
+| `delete { id -> }` | `DELETE /api/notes/{id}` | `true`, or `false` for a 404. A 204 is sent | `api.notes.delete(id)` |
+
+Each block returns its answer and does not call `respond`. That is what lets the types line up without anything being inferred: `Note` is the type of every answer, the type you name on `create` and `update` is the body, and the second type of `resource` is the type of the id, so `api.notes.get` takes a `number` here. Leave the second type out and the id is a string. An id that is not of that type is a 404.
+
+These are ordinary Ktor routes. Every block is optional, a block that is left out is no route, and `call` is there in each block for anything else you need. Nothing is stored or generated for you: the blocks are your code.
+
+- `list<NoteQuery> { query -> }` reads the query string into a `@Serializable` class, and the client gets the same fields as a typed query.
+- `missing<Problem> { ... }` says what a 404 looks like. It comes first in the block, and the client then knows the type of that error for `get`, `update` and `delete`. Without it a 404 has no body of yours.
+- Other routes of the same thing, such as `POST /api/notes/{id}/archive`, go next to the resource in a normal `route("/api/notes") { }`.
+
 ## Getting exact types
 
 Ktor's compiler plugin reads `call.receive<T>()`, `call.respond()` and `call.queryParameters` for you, so plain routes get full types. Add the Ktor Gradle plugin:

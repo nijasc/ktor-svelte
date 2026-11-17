@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 34 | Resource routes DSL |  |
+| 15 | Page scaffolding task |  |
 
 ### In review
 
@@ -47,6 +47,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 22 | Shared permissions | #306 |
 | 23 | Page guards declared once | #307 |
 | 41 | Synced user preferences | #308 |
+| 34 | Resource routes DSL | #323 |
 
 ### Next up
 
@@ -151,7 +152,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 15 | Page scaffolding task | Medium | 9 |
 | 42 | CRUD scaffold from a DTO | Large | 9 |
 | 16 | Nav metadata from routes | Large | 9 |
 | 77 | Page metadata for sharing | Medium | 9 |
