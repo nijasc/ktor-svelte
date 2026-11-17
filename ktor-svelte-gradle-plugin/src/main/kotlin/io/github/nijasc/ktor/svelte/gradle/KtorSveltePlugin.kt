@@ -192,6 +192,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             settings.put("outputDir", extension.outputDir)
             settings.put("packageManager", extension.packageManager.map { it.name })
             settings.put("bunVersion", extension.bunVersion.orElse("not pinned"))
+            settings.put("nodeVersion", extension.nodeVersion.orElse("not pinned"))
             settings.put("buildScript", extension.buildScript)
             settings.put("buildEnv", extension.buildEnv.map { it.sorted().joinToString(", ").ifEmpty { "none" } })
             settings.put("addRuntimeDependency", extension.addRuntimeDependency.map { it.toString() })
@@ -648,6 +649,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.frontendDir.set(extension.frontendDir)
             task.packageManager.set(extension.packageManager)
             task.bunVersion.set(extension.bunVersion)
+            task.nodeVersion.set(extension.nodeVersion)
             task.devPort.set(extension.dev.port)
             task.outputDir.set(extension.outputDir)
             task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
@@ -944,6 +946,8 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         task.packageManager.set(extension.packageManager)
         task.bunVersion.set(extension.bunVersion)
         task.toolCacheDirectory.set(File(task.project.gradle.gradleUserHomeDir, "ktor-svelte/bun"))
+        task.nodeVersion.set(extension.nodeVersion)
+        task.nodeCacheDirectory.set(File(task.project.gradle.gradleUserHomeDir, "ktor-svelte/node"))
         task.verbose.set(
             task.project.providers
                 .gradleProperty(VERBOSE_PROPERTY)
@@ -1011,6 +1015,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                         source.parameters.frontendDir.set(extension.frontendDir)
                         source.parameters.packageManager.set(extension.packageManager)
                         source.parameters.bunVersion.set(extension.bunVersion)
+                        source.parameters.nodeVersion.set(extension.nodeVersion)
                     }
                 },
             )

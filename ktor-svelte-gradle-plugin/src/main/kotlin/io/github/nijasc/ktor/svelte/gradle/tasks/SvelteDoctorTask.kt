@@ -78,6 +78,7 @@ internal class SetupDoctor(
     private val isPortFree: (Int) -> Boolean = ::portIsFree,
     private val nodeVersion: () -> String? = ::installedNodeVersion,
     private val bunVersion: String? = null,
+    private val pinnedNodeVersion: String? = null,
     private val environment: (String) -> String? = System::getenv,
     private val userHome: File? = System.getProperty("user.home")?.let(::File),
     private val registryProbe: ((NetworkSettings) -> RegistryAnswer)? = ::probeRegistry,
@@ -110,6 +111,10 @@ internal class SetupDoctor(
 
     private fun tool(): Finding {
         if (pinnedBun) return Finding(Severity.OK, "Bun $bunVersion is pinned, and ktor-svelte downloads it when a task needs it")
+        val configured = runCatching { resolveFrontendTool(frontend, packageManager).packageManager }.getOrNull()
+        if (pinnedNodeVersion != null && configured == PackageManager.Npm) {
+            return Finding(Severity.OK, "npm comes with the pinned Node $pinnedNodeVersion")
+        }
         if (packageManager == PackageManager.Auto && LOCKFILES.none { (name, _) -> frontend.resolve(name).isFile }) {
             return Finding(Severity.ERROR, "No lockfile found. Install dependencies once, or set svelte.packageManager.")
         }
@@ -122,6 +127,9 @@ internal class SetupDoctor(
     }
 
     private fun node(): Finding {
+        if (pinnedNodeVersion != null) {
+            return Finding(Severity.OK, "Node $pinnedNodeVersion is pinned, and ktor-svelte downloads it when a task needs it")
+        }
         val version =
             nodeVersion() ?: run {
                 val usesBun = pinnedBun || runCatching { resolveFrontendTool(frontend, packageManager).executableName }.getOrNull() == "bun"
@@ -407,6 +415,10 @@ public abstract class SvelteDoctorTask : DefaultTask() {
     public abstract val bunVersion: Property<String>
 
     @get:Input
+    @get:Optional
+    public abstract val nodeVersion: Property<String>
+
+    @get:Input
     public abstract val devPort: Property<Int>
 
     @get:Input
@@ -433,6 +445,7 @@ public abstract class SvelteDoctorTask : DefaultTask() {
                 outputDir.get(),
                 bundleDirectory.orNull?.asFile,
                 bunVersion = bunVersion.orNull,
+                pinnedNodeVersion = nodeVersion.orNull,
                 registryProbe = if (offline.getOrElse(false)) null else ::probeRegistry,
             )
         val applied = if (fix.getOrElse(false)) doctor.fix() else emptyList()

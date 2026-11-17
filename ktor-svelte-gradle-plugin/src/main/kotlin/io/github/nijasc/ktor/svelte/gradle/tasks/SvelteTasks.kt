@@ -2,6 +2,8 @@ package io.github.nijasc.ktor.svelte.gradle.tasks
 
 import io.github.nijasc.ktor.svelte.gradle.BunDownload
 import io.github.nijasc.ktor.svelte.gradle.FrontendTool
+import io.github.nijasc.ktor.svelte.gradle.NodeDownload
+import io.github.nijasc.ktor.svelte.gradle.NodeInstallation
 import io.github.nijasc.ktor.svelte.gradle.PackageManager
 import io.github.nijasc.ktor.svelte.gradle.locateExecutable
 import io.github.nijasc.ktor.svelte.gradle.requireExecutable
@@ -49,6 +51,13 @@ public abstract class SvelteToolTask : DefaultTask() {
     @get:Internal
     public abstract val toolCacheDirectory: DirectoryProperty
 
+    @get:Input
+    @get:Optional
+    public abstract val nodeVersion: Property<String>
+
+    @get:Internal
+    public abstract val nodeCacheDirectory: DirectoryProperty
+
     @get:Console
     public abstract val verbose: Property<Boolean>
 
@@ -67,15 +76,24 @@ public abstract class SvelteToolTask : DefaultTask() {
         return BunDownload(toolCacheDirectory.get().asFile).executable(pinned)
     }
 
+    internal fun pinnedNode(): NodeInstallation? =
+        nodeVersion.orNull?.let { NodeDownload(nodeCacheDirectory.get().asFile).installation(it) }
+
+    internal fun command(
+        tool: FrontendTool,
+        arguments: List<String>,
+    ): ToolCommand = toolCommand(tool, arguments, pinnedNode()) { executable(tool) }
+
     internal fun runTool(
         tool: FrontendTool,
         arguments: List<String>,
         ignoreExitValue: Boolean = false,
     ) {
-        val executable = executable(tool)
+        val command = command(tool, arguments)
         execOperations.exec { spec ->
             spec.workingDir = frontendDir.get().asFile
-            spec.commandLine(listOf(executable.absolutePath) + arguments)
+            spec.commandLine(command.arguments)
+            command.pathPrefix?.let { spec.environment(prependedPath(spec.environment, it)) }
             spec.isIgnoreExitValue = ignoreExitValue
         }
     }
@@ -85,12 +103,13 @@ public abstract class SvelteToolTask : DefaultTask() {
         arguments: List<String>,
     ) {
         if (verbose.getOrElse(false)) return runTool(tool, arguments)
-        val executable = executable(tool)
+        val command = command(tool, arguments)
         val output = ByteArrayOutputStream()
         val result =
             execOperations.exec { spec ->
                 spec.workingDir = frontendDir.get().asFile
-                spec.commandLine(listOf(executable.absolutePath) + arguments)
+                spec.commandLine(command.arguments)
+                command.pathPrefix?.let { spec.environment(prependedPath(spec.environment, it)) }
                 spec.standardOutput = output
                 spec.errorOutput = output
                 spec.isIgnoreExitValue = true
@@ -106,6 +125,32 @@ public abstract class SvelteToolTask : DefaultTask() {
                 "Its output is printed above. Run with -Psvelte.verbose=true to always see the frontend output.",
         )
     }
+}
+
+internal class ToolCommand(
+    val arguments: List<String>,
+    val pathPrefix: File?,
+)
+
+internal fun toolCommand(
+    tool: FrontendTool,
+    arguments: List<String>,
+    node: NodeInstallation?,
+    executable: () -> File,
+): ToolCommand =
+    if (node != null && tool.packageManager == PackageManager.Npm) {
+        ToolCommand(listOf(node.node.absolutePath, node.npmCli.absolutePath) + arguments, node.binDirectory)
+    } else {
+        ToolCommand(listOf(executable().absolutePath) + arguments, node?.binDirectory)
+    }
+
+internal fun prependedPath(
+    environment: Map<String, *>,
+    directory: File,
+): Map<String, String> {
+    val key = environment.keys.firstOrNull { it.equals("PATH", ignoreCase = true) } ?: "PATH"
+    val current = environment[key]?.toString().orEmpty()
+    return mapOf(key to if (current.isEmpty()) directory.absolutePath else directory.absolutePath + File.pathSeparator + current)
 }
 
 @DisableCachingByDefault(because = "Writes node_modules, which is not worth caching")
@@ -213,9 +258,16 @@ internal abstract class ToolVersionSource : ValueSource<String, ToolVersionSourc
         public val frontendDir: DirectoryProperty
         public val packageManager: Property<PackageManager>
         public val bunVersion: Property<String>
+        public val nodeVersion: Property<String>
     }
 
     override fun obtain(): String =
+        bunOrTool() +
+            parameters.nodeVersion.orNull
+                ?.let { ", node $it (pinned)" }
+                .orEmpty()
+
+    private fun bunOrTool(): String =
         runCatching {
             val pinned = parameters.bunVersion.orNull
             val configured = parameters.packageManager.get()
