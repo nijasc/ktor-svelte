@@ -333,6 +333,55 @@ function environmentView(root) {
     filter.addEventListener('input', draw);
 }
 
+function migrationsView(root) {
+    const section = root.querySelector('.migrations');
+    const rows = root.querySelector('.migrations-rows');
+    const note = root.querySelector('.migrations-note');
+
+    function summary(state) {
+        if (state.tool === null) return 'This app runs no migrations: Flyway is not on its classpath.';
+        if (state.error) return `Flyway could not be asked: ${state.error}`;
+        if (state.note) return state.note;
+        const ran = state.migrations.filter((migration) => migration.applied).length;
+        const parts = [state.current ? `At version ${state.current}, ${ran} ran.` : `${ran} ran.`];
+        if (state.pending > 0) parts.push(`${state.pending} pending, they run at the next start.`);
+        if (state.failed) parts.push('The last one failed.');
+        return parts.join(' ');
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/migrations', { headers: { accept: 'application/json' } });
+            const state = await response.json();
+            note.textContent = summary(state);
+            note.className = state.failed || state.error ? 'migrations-note bad' : state.pending > 0 ? 'migrations-note warn' : 'migrations-note';
+            rows.replaceChildren(
+                ...(state.migrations ?? []).map((migration) => {
+                    const row = document.createElement('div');
+                    row.className = `migrations-row ${migration.failed ? 'bad' : migration.applied ? '' : 'warn'}`.trim();
+                    const version = document.createElement('span');
+                    version.textContent = migration.version ?? 'R';
+                    const description = document.createElement('span');
+                    description.textContent = migration.description;
+                    description.title = migration.script;
+                    const status = document.createElement('span');
+                    status.textContent = migration.state;
+                    const when = document.createElement('span');
+                    when.textContent = migration.installedOn ? new Date(migration.installedOn).toLocaleString() : '';
+                    row.append(version, description, status, when);
+                    return row;
+                })
+            );
+        } catch {
+            note.textContent = 'The migrations could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+}
+
 function statusView(root) {
     const section = root.querySelector('.status');
     const rows = root.querySelector('.status-rows');
@@ -807,6 +856,17 @@ button.routes-file:hover { text-decoration: underline; }
 .environment-row span { overflow-wrap: anywhere; }
 .environment-row span:first-child { color: #f3c969; }
 .environment-row.hidden span:last-child { color: #aaa; }
+.migrations { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.migrations summary { padding: 6px 10px; cursor: pointer; }
+.migrations-note { margin: 0; padding: 2px 10px 6px; color: #aaa; }
+.migrations-note.warn { color: #f3c969; }
+.migrations-note.bad { color: #ff7b72; }
+.migrations-rows { padding-bottom: 6px; }
+.migrations-row { display: grid; grid-template-columns: 40px 1fr 80px auto; gap: 8px; padding: 1px 10px; }
+.migrations-row span:first-child { font-family: ui-monospace, monospace; }
+.migrations-row span:last-child { color: #aaa; }
+.migrations-row.warn span:nth-child(3) { color: #f3c969; }
+.migrations-row.bad span:nth-child(3) { color: #ff7b72; }
 .theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .theme[hidden] { display: none; }
 .theme summary { padding: 6px 10px; cursor: pointer; }
@@ -1109,6 +1169,11 @@ function startPanel() {
                 </div>
                 <div class="environment-rows"></div>
             </details>
+            <details class="migrations">
+                <summary>Migrations</summary>
+                <p class="migrations-note">Loading...</p>
+                <div class="migrations-rows"></div>
+            </details>
             <details class="theme" hidden>
                 <summary>Theme colors</summary>
                 <div class="theme-rows"></div>
@@ -1223,6 +1288,7 @@ function startPanel() {
     cookieInspector(root);
     routeMap(root);
     statusView(root);
+    migrationsView(root);
     environmentView(root);
     themeEditor(root);
     accessibilityHints(root);

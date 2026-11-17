@@ -29,6 +29,7 @@ dependencies {
     compileOnly(libs.exposed.core)
     compileOnly(libs.exposed.jdbc)
     compileOnly(libs.ktor.server.sessions)
+    compileOnly(libs.flyway.core)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.server.netty)
@@ -43,6 +44,7 @@ dependencies {
     testImplementation(libs.logback)
     testImplementation(libs.exposed.jdbc)
     testImplementation(libs.h2)
+    testImplementation(libs.flyway.core)
 }
 
 mavenPublishing {
