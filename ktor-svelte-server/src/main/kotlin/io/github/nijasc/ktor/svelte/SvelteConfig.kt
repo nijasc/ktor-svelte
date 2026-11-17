@@ -10,6 +10,7 @@ import io.ktor.util.reflect.typeInfo
 import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
+import kotlin.reflect.KClass
 import kotlin.reflect.typeOf
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -120,30 +121,34 @@ public class SvelteConfig internal constructor() {
 
     public inline fun <reified T : Any> currentUser(
         path: String? = null,
+        noinline signInMessage: ((ApplicationCall) -> String)? = null,
         noinline find: suspend ApplicationCall.() -> T?,
     ) {
         setCurrentUser(
-            T::class.simpleName ?: "User",
+            T::class,
             KotlinxJsonSchemaInference.buildSchema(typeOf<T>()),
             typeInfo<CurrentUserAnswer<T>>(),
             path,
+            signInMessage,
             find,
         )
     }
 
     @PublishedApi
     internal fun setCurrentUser(
-        typeName: String,
+        type: KClass<*>,
         schema: JsonSchema,
         answerType: TypeInfo,
         path: String?,
+        signInMessage: ((ApplicationCall) -> String)?,
         find: suspend ApplicationCall.() -> Any?,
     ) {
         check(
             currentUserSpec == null,
         ) { "currentUser is already set to ${currentUserSpec?.typeName}. An app has one kind of signed-in user." }
         require(path == null || path.startsWith("/")) { "currentUser: the path must start with a slash, but is '$path'." }
-        currentUserSpec = CurrentUserSpec(typeName, Json.encodeToString(JsonSchema.serializer(), schema), path, answerType, find)
+        currentUserSpec =
+            CurrentUserSpec(type, Json.encodeToString(JsonSchema.serializer(), schema), path, answerType, signInMessage, find)
     }
 
     public fun cookies(vararg cookies: TypedCookie<*>) {

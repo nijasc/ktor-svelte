@@ -11,6 +11,7 @@ internal enum class DocLink(
     COMPATIBILITY("reference/compatibility", null),
     DAISYUI("features/frontend-libraries", "daisyui"),
     DEV_WORKFLOW("guide/dev-workflow", null),
+    CURRENT_USER("features/auth", "the-current-user"),
     GENERATED_TYPESCRIPT("features/typescript", null),
     I18N("features/frontend-libraries", "i18n"),
     KTOR("reference/ktor", null),

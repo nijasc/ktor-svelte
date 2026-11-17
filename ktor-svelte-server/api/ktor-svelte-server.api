@@ -65,6 +65,8 @@ public final class io/github/nijasc/ktor/svelte/CurrentUserAnswer$Companion {
 
 public final class io/github/nijasc/ktor/svelte/CurrentUserKt {
 	public static final fun currentUserChanged (Lio/ktor/server/application/ApplicationCall;)V
+	public static final fun findUser (Lio/ktor/server/application/ApplicationCall;Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun signInRequired ()Ljava/lang/Void;
 }
 
 public final class io/github/nijasc/ktor/svelte/DecimalSerializer : kotlinx/serialization/KSerializer {
@@ -341,7 +343,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setApiDocs (Z)V
 	public final fun setApiDocsPath (Ljava/lang/String;)V
 	public final fun setBuildHeader (Z)V
-	public final fun setCurrentUser (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;Lio/ktor/util/reflect/TypeInfo;Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
+	public final fun setCurrentUser (Lkotlin/reflect/KClass;Lio/ktor/openapi/JsonSchema;Lio/ktor/util/reflect/TypeInfo;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;)V
 	public final fun setDefaultFavicon (Z)V
 	public final fun setDefaultTimeZone (Ljava/lang/String;)V
 	public final fun setErrorCodes (Ljava/lang/Class;Ljava/util/List;Lkotlin/jvm/functions/Function2;)V
