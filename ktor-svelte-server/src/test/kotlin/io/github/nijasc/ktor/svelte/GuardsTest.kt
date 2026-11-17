@@ -138,13 +138,13 @@ class GuardsTest {
                     "export async function signedInUser(url: URL): Promise<CurrentUser> {\n" +
                     "    const user = await currentUser.load();\n" +
                     "    if (!user) redirect(307, loginPath(url));\n" +
+                    "    const guard = matchGuard(pageGuards, url.pathname);\n" +
+                    "    if (guard?.permission && !currentUser.can(guard.permission)) error(403, 'Forbidden');\n" +
                     "    return user;\n" +
                     "}\n\n" +
                     "export async function guardPages(event: { url: URL }): Promise<void> {\n" +
-                    "    const guard = matchGuard(pageGuards, event.url.pathname);\n" +
-                    "    if (!guard || typeof document === 'undefined') return;\n" +
+                    "    if (typeof document === 'undefined' || !matchGuard(pageGuards, event.url.pathname)) return;\n" +
                     "    await signedInUser(event.url);\n" +
-                    "    if (guard.permission && !currentUser.can(guard.permission)) error(403, 'Forbidden');\n" +
                     "}\n",
                 api.resolve("guards.ts").readText(),
             )
@@ -162,7 +162,7 @@ class GuardsTest {
             assertContains(guards, "import type { CurrentUser } from './types.js';\n")
             assertContains(guards, "export const pageGuards: readonly PageGuard<never>[] = [\n    { page: '/board' },\n];\n")
             assertContains(guards, "    if (!user) error(401, 'Unauthorized');\n")
-            assertFalse("guard.permission" in guards)
+            assertFalse("permission" in guards)
         }
 
     @Test

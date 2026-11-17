@@ -282,19 +282,19 @@ internal class TypeScriptGenerator(
             "export async function signedInUser(url: URL): Promise<$CURRENT_USER_TYPE> {\n" +
             "    const user = await $CURRENT_USER_STORE.load();\n" +
             "    if (!user) $turnedAway;\n" +
-            "    return user;\n" +
-            "}\n\n" +
-            "export async function guardPages(event: { url: URL }): Promise<void> {\n" +
-            "    const guard = matchGuard(pageGuards, event.url.pathname);\n" +
-            "    if (!guard || typeof document === 'undefined') return;\n" +
-            "    await signedInUser(event.url);\n" +
             (
                 if (withPermissions) {
-                    "    if (guard.permission && !$CURRENT_USER_STORE.can(guard.permission)) error(403, 'Forbidden');\n"
+                    "    const guard = matchGuard(pageGuards, url.pathname);\n" +
+                        "    if (guard?.permission && !$CURRENT_USER_STORE.can(guard.permission)) error(403, 'Forbidden');\n"
                 } else {
                     ""
                 }
             ) +
+            "    return user;\n" +
+            "}\n\n" +
+            "export async function guardPages(event: { url: URL }): Promise<void> {\n" +
+            "    if (typeof document === 'undefined' || !matchGuard(pageGuards, event.url.pathname)) return;\n" +
+            "    await signedInUser(event.url);\n" +
             "}\n"
     }
 
