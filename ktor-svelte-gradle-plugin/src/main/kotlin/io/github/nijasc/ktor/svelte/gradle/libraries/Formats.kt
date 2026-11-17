@@ -13,8 +13,15 @@ private val allFormats: Map<String, Map<String, Any?>> by lazy {
     val resource =
         KtorSveltePlugin::class.java.getResource("formats/locales.json")
             ?: error("ktor-svelte is missing its format data. The plugin JAR may be damaged.")
-    JsonSlurper().parseText(resource.readText()) as Map<String, Map<String, Any?>>
+    plain(JsonSlurper().parseText(resource.readText())) as Map<String, Map<String, Any?>>
 }
+
+private fun plain(value: Any?): Any? =
+    when (value) {
+        is Map<*, *> -> value.entries.associate { (key, item) -> key.toString() to plain(item) }
+        is List<*> -> value.map(::plain)
+        else -> value
+    }
 
 internal val knownFormatLocales: Set<String> get() = allFormats.keys
 
