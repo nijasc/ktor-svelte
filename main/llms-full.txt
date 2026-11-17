@@ -1573,6 +1573,48 @@ The message is the code's name as a sentence unless you say otherwise. There are
 
 An app has one enum of error codes. A class of your API named `ErrorCode` clashes with the generated type and stops generation.
 
+### Two people, one record
+
+Two people open the same record, both change it, both save. Without a check the second save silently replaces the first. With a version, the second one is told.
+
+Give the record a number that changes on every save, a counter or the time of the last change, send it out with the record and take it back with an update:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.respondIfStale
+
+@Serializable
+data class Note(val id: Int, val title: String, val version: Long)
+
+@Serializable
+data class NoteUpdate(val title: String, val version: Long? = null)
+
+put("/api/notes/{id}") {
+    val update = call.receive<NoteUpdate>()
+    val stored = notes.find(id)
+    if (call.respondIfStale(update.version, stored.version) { stored }) return@put
+    call.respond(notes.save(id, update))
+}
+```
+
+When the version that came in is not the stored one, `respondIfStale` answers 409 with the code `version.conflict` and the record as it is now, and returns true. The block that gives the record only runs then. An update without a version is not checked, so make the field required if every client must send it. The third argument is the message, for your own wording or language.
+
+In the browser, `isVersionConflict` recognises the answer and gives you the other person's record:
+
+```ts
+import { api, isVersionConflict, type Note } from '#api';
+
+try {
+    note = await api.notes.update(note.id, draft, { silent: true });
+} catch (error) {
+    if (!isVersionConflict<Note>(error)) throw error;
+    theirs = error.body.current;
+}
+```
+
+From there the two usual ways out are one line each. To load their version, show `theirs` and start over. To save yours anyway, set `draft.version = theirs.version` and send again.
+
+[`formState`](https://nijasc.github.io/ktor-svelte/main/features/validation) does the bookkeeping: after a conflict, `form.conflict` holds their record, `form.takeTheirs()` resets the form to it, and `form.keepMine()` takes over their version so the next `form.submit` goes through. Pass `takeTheirs` a value when the form's type is not the record's type.
+
 Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
 
 ```kotlin

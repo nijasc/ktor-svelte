@@ -81,6 +81,17 @@ export const errorMessages = {
     failed: 'Something went wrong. Please try again.'
 };
 
+export interface VersionConflict<T = unknown> {
+    message: string;
+    code: 'version.conflict';
+    current: T;
+}
+
+export function isVersionConflict<T = unknown>(error: unknown): error is ApiError<VersionConflict<T>> {
+    if (!(error instanceof ApiError) || error.status !== 409 || typeof error.body !== 'object' || error.body === null) return false;
+    return (error.body as { code?: unknown }).code === 'version.conflict' && 'current' in error.body;
+}
+
 export const codeMessages: Record<string, string | (() => string) | undefined> = {};
 
 export function errorCode(error: unknown): string | undefined {
@@ -845,7 +856,7 @@ export function consentStore<C extends string>(
 }
 
 `,"form-state.svelte.ts":`import { untrack } from 'svelte';
-import { errorMessage, isValidationError, type RequestOptions } from './client.js';
+import { errorMessage, isValidationError, isVersionConflict, type RequestOptions } from './client.js';
 
 export type FieldErrors = Record<string, string[]>;
 
@@ -866,6 +877,9 @@ export interface FormState<T> {
     readonly errors: FieldErrors;
     readonly error: unknown;
     readonly message: string;
+    readonly conflict: unknown;
+    keepMine(): void;
+    takeTheirs(next?: T): void;
     reset(next?: T): void;
     submit<R>(send: (draft: T) => Promise<R>): Promise<R | undefined>;
 }
@@ -878,6 +892,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
     let errors = $state.raw<FieldErrors>({});
     let failure = $state.raw<unknown>(undefined);
     let checked = $state.raw<FieldErrors>({});
+    let conflict = $state.raw<unknown>(undefined);
     let checking = $state(0);
     const dirty = $derived(JSON.stringify(draft) !== baseline);
     const shown = $derived.by(() => {
@@ -934,6 +949,20 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         errors = {};
         checked = {};
         failure = undefined;
+        conflict = undefined;
+    }
+
+    function keepMine() {
+        const theirs = conflict as { version?: unknown } | undefined;
+        if (theirs === undefined) return;
+        (draft as { version?: unknown }).version = theirs.version;
+        conflict = undefined;
+        failure = undefined;
+    }
+
+    function takeTheirs(next?: T) {
+        if (conflict === undefined) return;
+        reset(next ?? (conflict as T));
     }
 
     async function submit<R>(send: (draft: T) => Promise<R>): Promise<R | undefined> {
@@ -941,6 +970,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         const sending = $state.snapshot(draft) as T;
         const invalid = options.validate?.(sending);
         failure = undefined;
+        conflict = undefined;
         if (invalid && Object.keys(invalid).length > 0) {
             errors = invalid;
             return undefined;
@@ -956,6 +986,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         } catch (error) {
             if (isValidationError(error)) errors = error.body.fields ?? {};
             else failure = error;
+            if (isVersionConflict(error)) conflict = error.body.current;
             return undefined;
         } finally {
             submitting = false;
@@ -987,6 +1018,11 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         get message() {
             return failure === undefined ? '' : errorMessage(failure);
         },
+        get conflict() {
+            return conflict;
+        },
+        keepMine,
+        takeTheirs,
         reset,
         submit
     };
