@@ -389,6 +389,44 @@ public final synthetic class io/github/nijasc/ktor/svelte/Sensitive$Impl : io/gi
 	public fun <init> ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/Stamps {
+	public static final field Companion Lio/github/nijasc/ktor/svelte/Stamps$Companion;
+	public fun <init> (Lkotlin/time/Instant;Lkotlin/time/Instant;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Lkotlin/time/Instant;Lkotlin/time/Instant;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkotlin/time/Instant;
+	public final fun component2 ()Lkotlin/time/Instant;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Lkotlin/time/Instant;Lkotlin/time/Instant;Ljava/lang/String;Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/Stamps;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/Stamps;Lkotlin/time/Instant;Lkotlin/time/Instant;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Stamps;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCreatedAt ()Lkotlin/time/Instant;
+	public final fun getCreatedBy ()Ljava/lang/String;
+	public final fun getUpdatedAt ()Lkotlin/time/Instant;
+	public final fun getUpdatedBy ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun touched (Ljava/lang/String;Lkotlin/time/Instant;)Lio/github/nijasc/ktor/svelte/Stamps;
+	public static synthetic fun touched$default (Lio/github/nijasc/ktor/svelte/Stamps;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Stamps;
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Stamps$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/Stamps$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lio/github/nijasc/ktor/svelte/Stamps;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lio/github/nijasc/ktor/svelte/Stamps;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/Stamps$Companion {
+	public final fun created (Ljava/lang/String;Lkotlin/time/Instant;)Lio/github/nijasc/ktor/svelte/Stamps;
+	public static synthetic fun created$default (Lio/github/nijasc/ktor/svelte/Stamps$Companion;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Stamps;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
 public final class io/github/nijasc/ktor/svelte/StartupStepsKt {
 	public static final fun recordStartupStep (Lio/ktor/server/application/Application;Ljava/lang/String;J)V
 	public static final fun startupStep (Lio/ktor/server/application/Application;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
