@@ -26,13 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 82 | Deploy presets |  |
+| 49 | Plurals in messages |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 46 | Secret leak check | #293 |
+| 82 | Deploy presets | #294 |
 
 ### Next up
 
@@ -131,12 +131,12 @@ Features of this plan that are merged:
 | 92 | Exposed helpers | #290 |
 | 72 | Idempotency keys | #291 |
 | 37 | Declared environment variables | #292 |
+| 46 | Secret leak check | #293 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 49 | Plurals in messages | Medium | 7 |
 | 50 | Shared formatting | Medium | 7 |
 | 96 | Relative time | Small | 7 |
 | 59 | Self-hosted fonts | Medium | 7 |
