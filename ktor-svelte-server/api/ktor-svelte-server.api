@@ -311,6 +311,25 @@ public final class io/github/nijasc/ktor/svelte/RateLimitAlgorithm : java/lang/E
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/RateLimitAlgorithm;
 }
 
+public final class io/github/nijasc/ktor/svelte/ResourceScope {
+	public fun <init> (Lio/ktor/server/routing/Route;Lio/github/nijasc/ktor/svelte/ResourceShape;)V
+	public final fun delete (Lkotlin/jvm/functions/Function3;)V
+	public final fun get (Lkotlin/jvm/functions/Function3;)V
+	public final fun getRoute ()Lio/ktor/server/routing/Route;
+	public final fun getShape ()Lio/github/nijasc/ktor/svelte/ResourceShape;
+	public final fun list (Lkotlin/jvm/functions/Function2;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/ResourceShape {
+	public fun <init> (Lkotlin/reflect/KClass;Lio/ktor/openapi/JsonSchema;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;)V
+	public final fun create (Lio/ktor/server/routing/Route;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function3;)V
+	public final fun delete (Lio/ktor/server/routing/Route;Lkotlin/jvm/functions/Function3;)V
+	public final fun get (Lio/ktor/server/routing/Route;Lkotlin/jvm/functions/Function3;)V
+	public final fun list (Lio/ktor/server/routing/Route;Lkotlin/jvm/functions/Function2;)V
+	public final fun listBy (Lio/ktor/server/routing/Route;Lkotlinx/serialization/KSerializer;Lkotlin/jvm/functions/Function3;)V
+	public final fun update (Lio/ktor/server/routing/Route;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function4;)V
+}
+
 public abstract interface annotation class io/github/nijasc/ktor/svelte/Sensitive : java/lang/annotation/Annotation {
 }
 
