@@ -671,6 +671,12 @@ When Kotlin stops compiling, the app keeps running its last good version, and th
 
 An **API** button in the bottom right corner of the page lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. It only exists while ktor-svelte proxies to Vite, so production pages never contain it. Turn it off with `dev { panel = false }`.
 
+The **Status** section shows what the app is running with, in plain rows: the versions of ktor-svelte, Ktor, Kotlin and Java, the version and commit of your own build, whether your health checks pass, whether Vite is reachable, how many requests the security guards refused, and the settings in effect, such as the API prefixes, the body limit and the rate limits. It is what the [status endpoint](https://nijasc.github.io/ktor-svelte/main/features/endpoints#status-endpoint) and the startup log tell you, without `statusEndpoint = true` and without reading JSON. Open it again to refresh it.
+
+The **Cookies** section shows what this browser sends, as the server reads it. Each cookie is listed with its text. A [typed cookie](https://nijasc.github.io/ktor-svelte/main/recipes/sessions#typed-cookies) also shows its type, its options and the value the server reads from it, and it is listed even when the browser has not set it, with the default it reads as. A value that does not fit its type is marked. A cookie that holds a Ktor session shows the session object the server gets from it, with [sensitive fields](https://nijasc.github.io/ktor-svelte/main/features/validation#sensitive-fields) hidden. That includes `HttpOnly` cookies, which the browser's own tools show but scripts cannot read.
+
+**Clear** next to a cookie ends that one, and **Clear all** ends every cookie the browser sent, which signs you out. It is the quick way to see the app as a first-time visitor. The server ends them, so `HttpOnly` cookies go too. A cookie that was set for a path other than `/` and is not a typed cookie cannot be ended this way, because the request does not say which path it belongs to.
+
 The **Routes** section of the panel is a map of the whole app: every page with the Svelte file behind it, and every API route with its method and the Kotlin file and line that answers it. Type into the filter to narrow it down by path, method or file name. A page without parameters is a link that takes you there, a file name opens that file in your editor, and when `apiDocs` is on there is a link to the API docs. It answers "where does this URL come from" without searching the project.
 
 **Save fixtures** in the panel's header downloads the calls this page made, with their answers, as a JSON file that [frontend tests can replay](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#fixtures-for-frontend-tests) without a backend.
@@ -701,7 +707,7 @@ This needs no setup and no code: ktor-svelte registers itself with Exposed when 
 
 When a page asks for the same thing twice, the second call is marked: `asked for twice within 12 ms, from src/routes/+layout.svelte:33 and from src/routes/board/+page.svelte:18`. That happens easily when a layout and a page both load the same data, and it costs a second trip to the server and the database for nothing. The two files tell you where to remove one, or to share the result. Only `GET` calls made within two seconds of each other count, a replay from the panel does not, and the line numbers are those of the code the browser runs, which can be a few lines off your source.
 
-Each call has two buttons. **Replay** sends it again, with the same method, path, headers and body, so you can repeat a call after changing the Kotlin code without clicking through the page again. **curl** copies it as a `curl` command, with its body and its `X-Request-Id`, to paste into a terminal or a bug report. The command carries no cookies, so add your session yourself for a call that needs one. And it carries the body as it was sent, passwords included, so look at it before you share it.
+Each call has two buttons. **Replay** sends it again, with the same method, path, headers and body, so you can repeat a call after changing the Kotlin code without clicking through the page again. **curl** copies it as a `curl` command, with its body and its `X-Request-Id`, to paste into a terminal or a bug report. The command carries no cookies, so add your session yourself for a call that needs one. It carries the body as it was sent, except for fields you marked [`@Sensitive`](https://nijasc.github.io/ktor-svelte/main/features/validation#sensitive-fields), so look at it before you share it.
 
 The buttons work for calls this page made, since that is where the body is known, and for every `GET`. For other calls, such as an upload or one from another tab, they are disabled.
 
@@ -756,6 +762,8 @@ ktor-svelte: slow API call GET /api/notes?search=milk took 812 ms (notes/Routes.
 ```
 
 Change the threshold with `dev { slowApiCall = 200.milliseconds }`, or set it to `null` to turn it off. Production never logs these.
+
+The app that `svelteDevAll` starts runs from a copy of your compiled classes and resources, taken at the moment it starts. So nothing changes underneath a running app: while the compiler rewrites class files, the app keeps answering from what it started with, and then it is restarted once, as a whole. A change in `src/main/resources` restarts it too. Ktor's own auto-reload, which watches the class folders and reloads inside the running process, has nothing to react to and stays out of the way. Without that, a Kotlin change was applied twice, once by each, and requests in between failed.
 
 After every restart, `svelteDevAll` sums it up in one line: which file caused it, how long compiling and starting took, and whether the generated API client is different now:
 
@@ -1257,6 +1265,134 @@ GET /api/notes/export  ->  nothing in the frontend calls api.notes.export
 
 A route counts as called when `api.notes.export`, a client from `apiWith`, the `notes` object or the `notesExport` function is used anywhere outside the generated folders, even when it is only passed along. The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service. Add `--strict` to fail the build instead.
 
+## Shared constants
+
+A page size, a maximum number of labels, a list of plans: values like these are needed on both sides, and when they are typed in twice, one side changes and the other does not. Keep them in a Kotlin object and name it in `install(Svelte)`:
+
+```kotlin
+object Limits {
+    const val PAGE_SIZE = 20
+    const val MAX_LABELS = 5
+    val PLANS = listOf("free", "team")
+    val LABEL = Regex("[a-z0-9-]{1,20}")
+}
+
+install(Svelte) {
+    generateTs = true
+    constants(Limits)
+}
+```
+
+`svelteGenerateTs` writes them to `constants.ts` next to the client, and `#api` exports the object under its Kotlin name:
+
+```ts
+import { Limits } from '#api';
+
+const next = await api.notes.list({ limit: Limits.PAGE_SIZE });
+```
+
+```ts
+export const Limits = {
+    LABEL: '[a-z0-9-]{1,20}',
+    MAX_LABELS: 5,
+    PAGE_SIZE: 20,
+    PLANS: ['free', 'team']
+} as const;
+```
+
+Every public `const val` and `val` of the object is shared, under the name it has in Kotlin. Private and internal ones stay out, so the object can hold more than it shares. The values can be text, numbers, booleans, enums (by name), `Regex` (as its pattern text), and lists, sets and maps of those. Because the object is `as const`, TypeScript knows the exact values: `Limits.PLANS[number]` is `'free' | 'team'`.
+
+A value of another type stops generation with a message that names the property. That includes a `Duration` property, whose type is not visible from outside the object: share `timeout.inWholeMilliseconds` instead.
+
+Like the rest of the client, `constants.ts` is checked by `svelteVerifyTs`, so a changed constant with a stale client fails `check`.
+
+## IDs that cannot be mixed up
+
+A note ID and a user ID are both numbers, so nothing stops code from passing one where the other belongs. In Kotlin a value class prevents that:
+
+```kotlin
+@JvmInline
+@Serializable
+value class NoteId(val value: Long)
+
+@Serializable
+data class Note(val id: NoteId, val authorId: UserId, val title: String)
+```
+
+The generated client keeps the distinction. In JSON the ID is still a plain number, but in TypeScript it is its own type:
+
+```ts
+export type NoteId = number & { readonly [brand]: 'NoteId' };
+
+export interface Note {
+    id: NoteId;
+    authorId: UserId;
+    title: string;
+}
+```
+
+```ts
+import { api, NoteId } from '#api';
+
+const note = await api.notes.get(5);
+await api.notes.delete(note.id);
+await api.users.get(note.id); // fine today: path parameters take any number or text
+const copy: Note = { ...note, authorId: note.id }; // does not compile: NoteId is not UserId
+
+const fromUrl = NoteId(Number(page.params.id));
+```
+
+- Values that come from the server already have the type. To make one from a plain value, such as a route parameter, call the function of the same name: `NoteId(5)`.
+- A branded ID is still a number or text to everything that only reads it: it can be printed, compared and passed to a path parameter.
+- This applies to a value class over `Int`, `Long`, `Double` or `String`, wherever it appears in a DTO: alone, optional, in a list or as the values of a map. Value classes over anything else, or with validation annotations on the property, are generated as their underlying type, as before.
+
+When you turn an existing `Long` field into a value class, or update to this version with value classes already in your DTOs, the frontend stops compiling where it builds such a value from a plain number. Wrap those places in the function, as above.
+
+## Money and durations
+
+Two kinds of value do not survive the trip to JavaScript as plain numbers or text: exact decimals, such as prices, and lengths of time.
+
+```kotlin
+import io.github.nijasc.ktor.svelte.Decimal
+import kotlin.time.Duration
+
+@Serializable
+data class Invoice(val total: Decimal, val payWithin: Duration)
+```
+
+`Decimal` is `java.math.BigDecimal` with a serializer that writes it as text, `"1234.50"`, so no digit is lost on the way. A `kotlin.time.Duration` is written as ISO text, `"PT1H30M"`, as kotlinx.serialization does by default. In the generated client both have their own type and a few helpers:
+
+```ts
+import { Decimal, IsoDuration, type Invoice } from '#api';
+
+declare const invoice: Invoice;
+
+Decimal.add(invoice.total, Decimal.from('0.10')); // exact: 0.1 + 0.2 is 0.3
+Decimal.times(invoice.total, 3);
+Decimal.compare(invoice.total, Decimal.from(100)) > 0;
+Decimal.format(invoice.total, 'de-DE', { style: 'currency', currency: 'EUR' });
+
+IsoDuration.toMillis(invoice.payWithin);
+IsoDuration.fromMillis(90 * 60 * 1000); // 'PT1H30M'
+IsoDuration.format(invoice.payWithin); // '1:30:00'
+```
+
+| Helper | What it does |
+|---|---|
+| `Decimal.from(text or number)` | Makes a `Decimal`, and throws for anything that is not a plain decimal number. |
+| `Decimal.add`, `subtract` | Exact, at the larger number of decimal places of the two. |
+| `Decimal.times(value, count)` | Exact, for a whole `count`, such as a quantity. |
+| `Decimal.compare` | -1, 0 or 1. `1.50` and `1.5` are equal. |
+| `Decimal.format(value, locale?, options?)` | Text for people, through `Intl.NumberFormat`, keeping the decimal places. |
+| `Decimal.toNumber` | A JavaScript number, when exactness no longer matters, such as for a chart. |
+| `IsoDuration.toMillis`, `fromMillis` | To and from milliseconds. |
+| `IsoDuration.add` | The sum of two. |
+| `IsoDuration.format` | A clock text such as `1:30:00`. |
+
+The helpers are only in `types.ts` when the API uses one of the two types. A `BigDecimal` with your own serializer is recognised too, when the serializer writes text and its descriptor is named `BigDecimal` or `java.math.BigDecimal`.
+
+A `Duration` field used to be generated as `string`. It is `IsoDuration` now, so code that assigns plain text to one needs `as IsoDuration`, or better `IsoDuration.fromMillis(...)`.
+
 ## Sealed classes
 
 A sealed class or interface becomes a union of its subtypes, each with a literal `type` field, so TypeScript narrows it in a `switch`. The generated companion also lists the type names and has an exhaustive `match`: leave out a case and the code does not compile.
@@ -1387,6 +1523,55 @@ try {
 ```
 
 To change or translate the three built-in sentences, assign to `errorMessages.network`, `errorMessages.timeout` and `errorMessages.failed` once at startup.
+
+### Error codes
+
+A page that has to tell "this email is taken" from "the last admin cannot leave" should not compare status numbers or message text. Give the errors names, in one enum, and name it in `install(Svelte)`:
+
+```kotlin
+enum class AccountError { EmailTaken, LastAdmin }
+
+install(Svelte) {
+    generateTs = true
+    errorCodes<AccountError>()
+}
+```
+
+A route answers with a code, either directly or by throwing from anywhere below it:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.ApiException
+import io.github.nijasc.ktor.svelte.respondError
+
+post("/api/register") {
+    call.respondError(AccountError.EmailTaken, HttpStatusCode.Conflict)
+}
+
+put("/api/admin/users/{id}/role") {
+    throw ApiException(AccountError.LastAdmin, HttpStatusCode.Conflict)
+}
+```
+
+The answer is `{ "message": "Email taken.", "code": "EmailTaken" }` with the given status, 400 when none is given. The generated client knows the enum as the type `ErrorCode`, so a mistyped or removed code no longer compiles:
+
+```ts
+import { api, ErrorCode, hasErrorCode } from '#api';
+
+try {
+    await api.register.create(form);
+} catch (error) {
+    if (hasErrorCode(error, ErrorCode.EmailTaken)) emailProblem = error.body.message;
+    else throw error;
+}
+```
+
+The message is the code's name as a sentence unless you say otherwise. There are three places to say otherwise, and the first that applies wins:
+
+- One answer: `call.respondError(code, status, message = "...")`, or the `message` of `ApiException`.
+- Every answer, on the server: `errorCodes<AccountError> { call, code -> ... }` returns the text for a code, or null to leave it. It gets the call, so it can translate.
+- In the browser: `setCodeMessages({ EmailTaken: 'That email already has an account.' })` once at startup. `errorMessage`, and so the toasts of `toasts()`, then use this text for the code and ignore what the server sent. A value can be a function, for a translation that depends on the current language.
+
+An app has one enum of error codes. A class of your API named `ErrorCode` clashes with the generated type and stops generation.
 
 Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
 
@@ -1558,7 +1743,7 @@ const page = await api.notes.list({ page: 1 });
 
 The calls go through the real generated client, so the test sees typed results, `ApiError` for a recorded 404 and validation errors for a recorded 422, exactly as the app does. A call is matched by its method and its path with the query. When the same call was recorded more than once, such as a list before and after a create, the answers come back in that order, and the last one repeats. A call that was never recorded fails with a message that names it.
 
-Look through the file before you commit it. It holds the bodies as they were sent and received, which can include a password you typed or data you would not put in the repository. **Clear** in the panel starts a new recording.
+Look through the file before you commit it. It holds the bodies as they were sent and received, which can include data you would not put in the repository. Fields marked [`@Sensitive`](https://nijasc.github.io/ktor-svelte/main/features/validation#sensitive-fields), such as a password, are saved as `***`. **Clear** in the panel starts a new recording.
 
 ## Ask before a call
 
@@ -1604,6 +1789,56 @@ Some errors are left to you, because a toast would be the wrong answer:
 - Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
 
 The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, give one a button with `action: { label: 'Undo', run: restore }`, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
+
+## Toasts from the server
+
+Often the route knows best what to tell the user: that the note was saved, that it was the last free seat, that the export will arrive by mail. Say it there:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.ToastKind
+import io.github.nijasc.ktor.svelte.toast
+
+post("/api/notes") {
+    val note = store.create(call.receive<Note>())
+    call.toast("Note saved", ToastKind.Success)
+    call.respond(HttpStatusCode.Created, note)
+}
+```
+
+With `toasts()` on, the browser shows it when the answer arrives, and no component has to know. The kinds are `Info`, `Success`, `Warning` and `Error`. With [i18n](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#i18n), pass a message in the visitor's language, such as `call.toast(call.messages.noteSaved())`.
+
+The toast travels in a response header, so the body and its type stay what they are, and it works with any status, also with an error or an empty 204. Call `toast` before you respond. A response carries up to five toasts of up to 500 characters each.
+
+The generated client reads the header on answers from your own origin only, so another server cannot put words into your app. Without `toasts()`, set `apiConfig.onToast = (message, kind) => ...` to show them your way, and nothing is shown until you do. Calls made on the server during SSR do not show toasts.
+
+## Navigation from the server
+
+"Create it, then open it" is the same few lines in every form: wait for the answer, read the ID, call `goto`. The route already knows where to go, so let it say so:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.navigateTo
+
+post("/api/notes") {
+    val note = store.create(call.receive<Note>())
+    call.navigateTo("/notes/${note.id}")
+    call.respond(HttpStatusCode.Created, note)
+}
+```
+
+With [typed routes](https://nijasc.github.io/ktor-svelte/main/features/routes) on, write `call.navigateTo(FrontendRoutes.notesId(note.id))`, and a renamed page cannot leave a stale path behind.
+
+After the call succeeded, the browser opens that page with SvelteKit's `goto`, so it is a client-side navigation and not a reload. The code that awaited the call runs first, so it can still use the result. A failed call navigates nowhere.
+
+With `toasts()` on, this is wired up for you. Without it, add one line to your root layout:
+
+```ts
+import { goto } from '$app/navigation';
+import { apiConfig } from '#api';
+
+apiConfig.onNavigate = (path) => void goto(path);
+```
+
+The path has to be one inside your app: `navigateTo` refuses anything that does not start with a single `/`, and the client ignores such a header as well, and reads it on answers from your own origin only. So the header cannot be used to send a visitor to another site.
 
 ## Reload after a deploy
 
@@ -1816,6 +2051,30 @@ On a `List<String>` or a `Map<String, String>` they apply to every item or value
 
 Only JSON request bodies are cleaned up, not query parameters, and the browser does not apply them: `validate()` in the generated TypeScript checks the text as typed. That only matters for a value that is valid after trimming but not before, which the server then accepts.
 
+## Sensitive fields
+
+The development tools show a lot of what travels between browser and server, and some of it should not be shown: a password, a token, an API key. Mark such a field once:
+
+```kotlin
+@Serializable
+data class Login(
+    val email: String,
+    @Sensitive
+    val password: String,
+)
+```
+
+From then on the field's value is replaced by `***` wherever ktor-svelte itself displays or stores it:
+
+- in the `curl` command the [dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) copies
+- in the [fixtures](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#fixtures-for-frontend-tests) it saves, for request and response bodies
+- in browser console output that is forwarded to the dev log
+- in the request list and the slow call log, for a query parameter of that name
+
+It works for requests and for responses, in nested classes too, and by the JSON name of the field, so `@SerialName("api_key")` masks `api_key`.
+
+Two things to know. Masking goes by name: once `password` is marked in one class, every field and query parameter called `password` is masked in those places, in any class. So give a sensitive field a telling name, not `value` or `next`. And it changes nothing about your API: the field is received and returned as before. Keeping a value out of a response is still done by not putting it into the response class.
+
 With `generateTs`, the same annotations end up in OpenAPI and in the generated TypeScript, so a form gets the bounds without asking the server, and `validate()` checks a value in the browser with the same messages the server sends. See [Generated TypeScript](https://nijasc.github.io/ktor-svelte/main/features/typescript#generated-typescript).
 
 For a rule that depends on the route, such as comparing against a database, call `validate { check(...) { ... } }` inside the route. It answers the same way. If you use Ktor's `StatusPages` with a handler for all exceptions, it runs first, so let `ValidationException` through.
@@ -1826,7 +2085,9 @@ For a rule that depends on the route, such as comparing against a database, call
 <input bind:value={draft.title} use:field={{ bounds: NoteInput.bounds.title, errors: errors.title, errorClass: 'text-error' }} />
 ```
 
-The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty.
+The message is a `<p role="alert">` with the class `field-error` unless you pass `errorClass`, and it disappears when the errors are empty. If the input has a hint of its own, pass the hint's id as `describedBy`, and it stays in `aria-describedby` next to the error.
+
+With `libraries { components() }`, the generated [`<Field>`](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#field) wraps this action together with the label and a hint.
 
 ## Form state
 
@@ -1868,6 +2129,48 @@ After a successful submit the sent values are the saved ones, so the form is no 
 `submit` never throws: a failed call ends up in `errors` or `error`. The failure still reaches `apiConfig.onError`, so with [toasts](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#show-errors-automatically) on, the user sees it without any markup of yours.
 
 The helper uses runes, so it is a module of its own and not part of `#api`. The draft should be plain data, the kind that goes into a JSON body. `dirty` compares it as JSON.
+
+## Checks only the server can make
+
+Whether an email address is taken, or a coupon code exists, cannot be decided in the browser. Without help, the visitor learns it after sending the whole form. A check route answers the question for one value:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.fieldCheck
+
+routing {
+    fieldCheck("/api/checks/email") { email ->
+        if (email == "ada@example.com") "That email address already has an account." else null
+    }
+}
+```
+
+The block gets the value and returns what is wrong with it, or null when it is fine. It runs inside the route, so `call` is there for the current user or the language. The route is a `GET` with the value in the query, never cached, and part of the generated client like any other.
+
+`formState` asks it while the visitor types:
+
+```svelte
+<script lang="ts">
+    import { api, field, Registration } from '#api';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<Registration>(Registration.empty(), {
+        validate: Registration.validate,
+        checks: { email: api.checks.getEmail }
+    });
+</script>
+
+<input type="email" bind:value={form.draft.email} use:field={{ errors: form.errors.email }} />
+```
+
+- The call waits until typing has paused for 300 ms (`checkDelay`), and an answer that arrives for an older value is dropped.
+- The answer is part of `form.errors.email`, next to the errors from `validate` and from a 422, so it shows up the same way with no extra markup.
+- While a check says no, `form.submit` does not send. `form.checking` is true while an answer is awaited.
+- An empty value and the value the form started with are not checked. A profile form does not tell its owner that their own email is taken.
+- A check that fails, because the server is unreachable or answers with an error, says nothing. The real answer comes when the form is sent.
+
+A check does not replace the rule in the route that saves: two people can pass the check at the same moment. Keep the rule there and treat the check as the earlier, friendlier message.
+
+A check route also tells anyone who asks whether a value exists. For email addresses that reveals who has an account, so put the route under a [rate limit](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#rate-limits), as you would the sign-in route.
 
 Source: https://nijasc.github.io/ktor-svelte/main/features/transport
 
@@ -2124,6 +2427,7 @@ svelte {
         images()
         toasts()
         routes()
+        components()
         i18n {
             locales("en", "de")
             defaultLocale = "en"
@@ -2351,6 +2655,210 @@ old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'
 ```
 
 A message counts as used when its generated function is called anywhere in the frontend or in Kotlin, or when its key appears as a string, because it may then be looked up by name. The task only lists what it finds. Add `--strict` to fail the build instead.
+
+## Components
+
+`components()` generates Svelte components into `src/lib/ktor-svelte/components`, imported as `#components/...`. They are the pieces that exist because of something the plugin already generates: a component here is a few lines of markup over a generated helper, written once. They use DaisyUI's classes when `daisyUi` is on, and plain class names with a minimal style otherwise.
+
+The files belong to the plugin and are rewritten by `svelteSync`. For a different look, write your own component on the same helper. The generated ones are short enough to copy as a start.
+
+The components import from `#api`, so they need `generateTs = true` on the server.
+
+### Field
+
+One form field: its label, the input, an optional hint, and the validation errors.
+
+```svelte
+<script lang="ts">
+    import { NoteInput } from '#api';
+    import Field from '#components/Field.svelte';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate });
+</script>
+
+<Field label="Title" bind:value={form.draft.title} bounds={NoteInput.bounds.title} errors={form.errors.title} hint="Shown in the list." />
+<Field label="Text" multiline rows={4} bind:value={form.draft.text} errors={form.errors.text} />
+```
+
+| Prop | Meaning |
+|---|---|
+| `label` | The text of the `<label>`, tied to the input. |
+| `bind:value` | The value, as with an `<input>`. |
+| `bounds` | The limits from the DTO, such as `NoteInput.bounds.title`. They become `required`, `maxlength` and the like. |
+| `errors` | The messages for this field, from `validate()` or from a 422. |
+| `hint` | A line under the input, announced with it by screen readers. |
+| `multiline` | Renders a `<textarea>`. |
+| `class` | Added to the wrapper. |
+
+Everything else, such as `type`, `autocomplete`, `placeholder` or `id`, goes to the input unchanged. Underneath it is the [`field` action](https://nijasc.github.io/ktor-svelte/main/features/validation), so errors appear and disappear the same way as with `use:field`.
+
+For a control that is not a plain input, pass it as the `control` snippet. It gets the `id` the label points at and the `options` for `use:field`, and the label, hint and errors stay as they are:
+
+```svelte
+<Field label="Color" errors={form.errors.color}>
+    {#snippet control({ id, options })}
+        <input {id} type="color" bind:value={form.draft.color} use:field={options} />
+    {/snippet}
+</Field>
+```
+
+### DateInput and DateTimeInput
+
+A date from the API is an `IsoDate`, text such as `2026-12-24`, and a field that may be empty is `null`. A plain `<input type="date">` gives `''` for empty and plain text otherwise, so pages convert by hand. `DateInput` binds to the value as it is:
+
+```svelte
+<script lang="ts">
+    import DateInput from '#components/DateInput.svelte';
+    import DateTimeInput from '#components/DateTimeInput.svelte';
+</script>
+
+<DateInput label="Due on" bind:value={form.draft.dueOn} errors={form.errors.dueOn} />
+<DateTimeInput label="Starts at" bind:value={form.draft.startsAt} />
+<DateTimeInput label="Opens at" local bind:value={form.draft.opensAt} />
+```
+
+Both take the props of `Field`, and an empty input is `null`.
+
+`DateTimeInput` shows a moment in the visitor's own time zone and stores it as the UTC text the server expects for a Kotlin `Instant`. With `local`, it is for a Kotlin `LocalDateTime` instead: the wall-clock text goes to the server as typed, with no time zone.
+
+### EnumSelect
+
+A `<select>` over a generated enum object:
+
+```svelte
+<script lang="ts">
+    import { Status } from '#api';
+    import EnumSelect from '#components/EnumSelect.svelte';
+</script>
+
+<EnumSelect label="Status" options={Status} bind:value={form.draft.status} labels={{ TODO: 'To do', DONE: 'Done' }} placeholder="Any" />
+```
+
+It lists every value of the enum, so a value added in Kotlin appears after the next `svelteGenerateTs`. `labels` gives the text to show, as text or as a function for translations, and a value without one shows its name. With `placeholder` there is a first option that stands for `null`. The bound value has the enum's type, so no cast is needed.
+
+### DataTable
+
+A table over any route that returns [`Page<T>`](https://nijasc.github.io/ktor-svelte/main/recipes/pagination). It loads the pages, and shows a line while it loads, when there is nothing, and when a load failed, with a button to try again.
+
+```svelte
+<script lang="ts">
+    import { api } from '#api';
+    import DataTable from '#components/DataTable.svelte';
+
+    let search = $state('');
+</script>
+
+<input type="search" bind:value={search} aria-label="Search" />
+<DataTable
+    load={api.notes.list}
+    query={{ search, limit: '20' }}
+    key={(note) => note.id}
+    columns={[
+        { key: 'title', label: 'Title' },
+        { key: 'createdAt', label: 'Created', text: (note) => new Date(note.createdAt).toLocaleDateString() },
+        { id: 'size', label: 'Size', text: (note) => `${note.text.length} characters` }
+    ]}
+/>
+```
+
+`load` is the generated function of the route, and the rows have the type it returns. So a column's `key` must be a property of the item, a typo fails `svelteCheck`, and `text` gets the typed item. A column that is not one property has an `id` and a `text` instead.
+
+| Prop | Meaning |
+|---|---|
+| `load` | The generated function of a route that returns `Page<T>`. |
+| `columns` | The headers, and what each cell shows. |
+| `query` | The query parameters besides the cursor. When they change, the table loads again from the start. |
+| `key` | A stable id per row, such as `(note) => note.id`. |
+| `paging` | `'more'` (the default) adds rows with a Load more button. `'pages'` shows one page with Previous and Next. |
+| `first` | A first page that a `load` function already fetched, so the table does not fetch it again. |
+| `caption` | A caption for the table. |
+| `empty`, `loading`, `more`, `previous`, `next`, `retry` | The texts, in English unless given. |
+| `class` | Added to the wrapper. |
+
+For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
+
+```svelte
+<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }, { id: 'open', label: '' }]}>
+    {#snippet row(note)}
+        <td>{note.title}</td>
+        <td><a href={routes.notesId({ id: note.id })}>Open</a></td>
+    {/snippet}
+</DataTable>
+```
+
+After a change elsewhere on the page, `bind:this` the table and call its `reload()`.
+
+The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
+
+### ErrorPage
+
+`components()` also writes `src/routes/+error.svelte`, the page SvelteKit shows when a page cannot be shown. It is three lines around `<ErrorPage />`, which shows:
+
+- the status, such as 404
+- the message: the one the server sent in the error body when a call failed, the one you passed to `error(...)`, and otherwise a sentence for 404, 403, 401 or anything else
+- the request ID for a status of 500 and above, so a visitor can quote it and you can find the request in the log
+- a link back to the start page, `home="/"` unless you pass another
+
+A `load` function no longer has to translate a failed call into a page error. Let it throw:
+
+```ts
+export const load: PageLoad = async (event) => {
+    return { note: await apiWith(event).notes.get(event.params.id) };
+};
+```
+
+When the server answers 404 with `{ "message": "That note does not exist." }`, the error page shows 404 and that message. This works through `handleError` in `src/hooks.client.ts`, which `svelteSync` writes. It puts the status, message, request ID and [error code](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#error-codes) of a failed call into `page.error`, typed through `App.Error`, so your own components can read `page.error.code` too.
+
+The sentences are English until your messages have their keys. With `i18n` on, add the ones you want translated and run `svelteSync`:
+
+| Key | Default |
+|---|---|
+| `error-not-found` | This page does not exist. |
+| `error-forbidden` | You are not allowed to see this page. |
+| `error-sign-in` | Sign in to see this page. |
+| `error-failed` | Something went wrong. Please try again. |
+| `error-request-id` | Request ID: |
+| `error-home` | Back to the start page |
+
+Your own files win. If `src/routes/+error.svelte` exists and is not the generated one, it is left alone, and you can use `<ErrorPage />` inside it or not. To change the generated one, remove its first line, and it is yours. The same goes for `src/hooks.client.ts` when `toasts()` is off: keep your own and add `export { handleError } from '#lib/ktor-svelte/errors.ts';` to it.
+
+### ThemeToggle and LocaleSwitch
+
+The theme and i18n helpers already know the themes and languages you configured. These two components put them on the page, so a new app has both switches from the start:
+
+```svelte
+<script lang="ts">
+    import LocaleSwitch from '#components/LocaleSwitch.svelte';
+    import ThemeToggle from '#components/ThemeToggle.svelte';
+</script>
+
+```
+
+`ThemeToggle` is generated when `daisyUi` is on. With two themes it is a button that flips between them, with more it is a `<select>`. It applies the theme at once and remembers it, as `setTheme` does.
+
+`LocaleSwitch` is generated when `i18n` is on. It lists each language under its own name, such as English and Deutsch, and switches with `setLocale`.
+
+Both take `label` for the accessible name (`Theme` and `Language` unless given, so pass a translated one), `labels` to name single entries yourself, an object from theme or language to the text to show, and `class` and `id`.
+
+### NavigationProgress
+
+A thin bar at the top of the page while SvelteKit navigates, which includes the time a `load` function waits for the server. Without it, a click on a link to a slow page looks like nothing happened. Put it in the root layout, once:
+
+```svelte
+<script lang="ts">
+    import NavigationProgress from '#components/NavigationProgress.svelte';
+
+    let { children } = $props();
+</script>
+
+{@render children()}
+```
+
+- It appears only when a navigation takes longer than `delay`, 150 ms unless given, so quick ones do not flash.
+- Its color is the theme's primary color with DaisyUI, and the text color otherwise. Set the CSS variable `--ktor-svelte-progress` to choose another.
+- It is announced as a progress bar with the name `label`, `Loading page` unless given.
+- With "reduce motion" set in the visitor's system, it is a still line.
 
 ## Modals
 
@@ -2867,6 +3375,127 @@ try {
 
 Put the `onUnauthorized` line in your root `+layout.ts`, so it runs once in the browser.
 
+## Typed cookies
+
+A cookie that both sides use is three things written twice: its name, what its text means, and its options. Declare it once in Kotlin, name it in `install(Svelte)`, and read and write it with its type:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.clearCookie
+import io.github.nijasc.ktor.svelte.readCookie
+import io.github.nijasc.ktor.svelte.typedCookie
+import io.github.nijasc.ktor.svelte.writeCookie
+import kotlin.time.Duration.Companion.days
+
+enum class Density { Comfortable, Compact }
+
+val DensityCookie = typedCookie<Density>("density", default = Density.Comfortable, maxAge = 90.days)
+
+install(Svelte) {
+    generateTs = true
+    cookies(DensityCookie)
+}
+
+routing {
+    get("/api/density") {
+        val density = call.readCookie(DensityCookie)
+        call.writeCookie(DensityCookie, Density.Compact)
+        call.clearCookie(DensityCookie)
+        call.respond(density.toString())
+    }
+}
+```
+
+In the browser, the generated client has the same cookie under `cookies`, with the same name, type and options:
+
+```ts
+import { cookies } from '#api';
+
+const density = cookies.density.get(); // 'Comfortable' | 'Compact'
+cookies.density.set('Compact');
+cookies.density.clear();
+```
+
+- A cookie holds a `String`, `Int`, `Long`, `Double`, `Boolean` or an enum.
+- A missing cookie, or one whose text does not fit the type, reads as the default, and as null (`undefined` in TypeScript) when there is none. Somebody editing a cookie by hand cannot break a page.
+- The options are `maxAge` (a year unless set, null to end with the browser session), `path`, `sameSite`, `secure` and `httpOnly`. Both sides write the cookie with them.
+- A cookie with `httpOnly = true` is left out of the generated client, because a script cannot read it.
+- The name in TypeScript is the cookie's name in camel case: `board-mine` is `cookies.boardMine`.
+- `get` takes an optional `Cookie` header text, for code that runs where there is no `document`.
+
+Names and values are plain text in the visitor's browser. Do not keep anything in a typed cookie that the visitor must not read or change. For that, use a session.
+
+## Cookie consent
+
+A cookie the site does not need to work, such as one for statistics, may only be set after the visitor agreed. Give such a cookie a category where it is declared:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.consentsTo
+import io.github.nijasc.ktor.svelte.typedCookie
+import io.github.nijasc.ktor.svelte.writeCookie
+
+val VisitsCookie = typedCookie<Int>("visits", default = 0, category = "analytics")
+
+install(Svelte) {
+    generateTs = true
+    cookies(VisitsCookie)
+}
+
+routing {
+    get("/api/visit") {
+        call.writeCookie(VisitsCookie, 1)
+        if (call.consentsTo("analytics")) call.application.log.info("counted")
+        call.respondText("ok")
+    }
+}
+```
+
+From then on, both sides follow the visitor's choice without further code:
+
+- `call.writeCookie` and `cookies.visits.set` do nothing until the visitor has accepted the category.
+- `call.readCookie` and `cookies.visits.get` give the default until then, also when an old cookie is still there.
+- A cookie without a category is needed for the site to work, and is always read and written.
+
+The generated client has the choice as `cookieConsent`, with the categories of all declared cookies:
+
+```ts
+import { cookieConsent } from '#api';
+
+cookieConsent.decided(); // false until the visitor chose
+cookieConsent.allows('analytics');
+cookieConsent.accept(); // everything
+cookieConsent.accept(['analytics']); // only these
+cookieConsent.refuse();
+cookieConsent.reset(); // ask again
+```
+
+Refusing a category, or leaving it out, also removes its cookies from the browser. `cookieConsent` is a Svelte store, so `$cookieConsent.accepted` in a component follows the choice, for a script that should only load after consent.
+
+To ask the visitor, show the banner once, in the root layout:
+
+```svelte
+<script lang="ts">
+    import { onMount } from 'svelte';
+    import { cookieConsent } from '#api';
+
+    onMount(() =>
+        cookieConsent.banner({
+            text: 'We use cookies to count visits.',
+            accept: 'Accept all',
+            refuse: 'Only what is needed',
+            labels: { analytics: 'Statistics' },
+            save: 'Save my choice',
+            link: { href: '/privacy', text: 'Privacy' }
+        })
+    );
+</script>
+```
+
+The banner appears only while the visitor has not chosen. `labels` and `save` are optional: with them, each labelled category gets a checkbox and there is a third button. All text is yours, so it can come from your translations. It is a plain bar at the bottom of the page with the class `ktor-svelte-consent`, and its buttons carry daisyUI's `btn` classes. For your own design, build a component on `cookieConsent` and leave `banner` out. A settings page can call `cookieConsent.reset()` and show the banner again.
+
+On the server, `call.cookieConsent` is the set of accepted categories, or null while the visitor has not chosen, and `call.consentsTo("analytics")` asks for one.
+
+The choice is kept for 180 days in a cookie named `cookie-consent`, which itself needs no consent. This helper keeps the choice and follows it for typed cookies. It cannot know about cookies that other scripts set, and which cookies need consent where you operate is a legal question it does not answer.
+
 Source: https://nijasc.github.io/ktor-svelte/main/recipes/uploads
 
 # Upload files
@@ -2895,6 +3524,48 @@ const stored = await api.files.create(form, {
     onUploadProgress: ({ loaded, total }) => (progress = total ? loaded / total : 0)
 });
 ```
+
+## Rules for both sides
+
+Which files a route takes is usually written twice: once in Kotlin, and again in the page, so the user is told before a 20 MB upload has finished. Declare it once, on the route:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.receiveUploads
+import io.github.nijasc.ktor.svelte.uploadRules
+
+post("/api/avatars") {
+    val stored = call.receiveUploads().map { file -> files.store(file.fileName ?: "upload", file.bytes) }
+    call.respond(HttpStatusCode.Created, stored)
+}.uploadRules(maxSize = 5L * 1024 * 1024, types = listOf("image/*", ".pdf"), maxFiles = 3)
+```
+
+- `uploadRules` describes the body as multipart form data, so no `describe { requestBody { } }` is needed, and it carries the rules into the generated client.
+- `call.receiveUploads()` reads the files and enforces the rules. Each file has `field`, `fileName`, `contentType`, `bytes` and `size`. No file is read beyond its limit.
+- `types` are media types (`application/pdf`), families (`image/*`) or file endings (`.csv`).
+
+A file that breaks a rule is answered with a status and a body like this one, and the route's own code never runs:
+
+| Rule | Status | `code` | `message` |
+|---|---|---|---|
+| `maxSize` | 413 | `upload.tooLarge` | `photo.png is larger than 5 MiB.` |
+| `types` | 415 | `upload.type` | `setup.exe is not an accepted file type.` |
+| `maxFiles` | 400 | `upload.tooMany` | `At most 3 files can be sent at once.` |
+
+The generated function checks the same rules before it sends anything, and fails with the same `ApiError`, so the page handles one error whether the browser or the server noticed:
+
+```ts
+import { api, isUploadError, uploadRules } from '#api';
+
+try {
+    await api.avatars.create(form);
+} catch (error) {
+    if (isUploadError(error)) console.log(error.body.code, error.body.file, error.body.message);
+}
+```
+
+`uploadRules['avatars.create']` holds the rules as data, for an `<input type="file" accept={uploadRules['avatars.create'].types.join(',')}>` or a hint under the field. With `toasts()` on, the message is shown without any code of yours. For your own wording or another language, pass `{ silent: true }` and choose the text by `error.body.code`.
+
+The server checks the type the browser declares and the file name, as the browser does. Neither proves what the bytes are, so treat stored files as untrusted when you serve them.
 
 - API bodies are limited to 1 MiB by default. Raise `maxApiBodySize` to the largest upload you accept.
 - `readRemaining()` keeps each file in memory. For large files, copy `part.provider()` to a file or object storage instead.
@@ -2977,6 +3648,10 @@ for await (const users of pages(api.users.list, { limit: '100' })) table.push(..
 
 - Use the ID or sort key of the last item as the cursor, not an offset, so rows added while someone pages do not shift the results.
 - Always cap `limit` on the server.
+
+## A table without the code
+
+With `libraries { components() }`, the generated [`<DataTable>`](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#datatable) does all of the above for a table: it takes the route's function and a list of columns, and loads, pages and shows the empty and failed states itself.
 
 Source: https://nijasc.github.io/ktor-svelte/main/recipes/admin-area
 
