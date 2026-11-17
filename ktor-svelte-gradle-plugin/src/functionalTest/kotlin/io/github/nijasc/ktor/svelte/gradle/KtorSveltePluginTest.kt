@@ -53,6 +53,32 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `a secret that ended up in the frontend build stops the jar, and says where without showing it`() {
+        val project = project()
+        dir.resolve(".env.example").writeText("# Signs the session. Required. Secret.\nSESSION_SIGN_KEY=\n")
+        dir.resolve(".env").writeText("STRIPE_KEY=sk_live_1234567890\nPUBLIC_NAME=public-name-123\n")
+        val built = project.frontend.resolve("extra-output.txt")
+        built.writeText("const a='0123456789abcdef',b='public-name-123';")
+        project.environment = mapOf("SESSION_SIGN_KEY" to "0123456789abcdef")
+
+        val failed = project.runAndFail("jar")
+        assertEquals(TaskOutcome.FAILED, failed.task(":svelteVerifySecrets")?.outcome)
+        assertContains(failed.output, "ktor-svelte found secret values in the frontend build.")
+        assertContains(failed.output, "SESSION_SIGN_KEY (declared as a secret)  _app/immutable/extra.js")
+        assertFalse("0123456789abcdef" in failed.output)
+        assertFalse(dir.resolve("build/libs/sample.jar").exists())
+
+        built.writeText("const b='public-name-123';")
+        val passed = project.run("jar")
+        assertEquals(TaskOutcome.SUCCESS, passed.task(":svelteVerifySecrets")?.outcome)
+
+        built.writeText("const c='sk_live_1234567890';")
+        assertContains(project.runAndFail("jar").output, "STRIPE_KEY (.env)  _app/immutable/extra.js")
+        project.buildScript(javaBuild.replace("addRuntimeDependency = false", "addRuntimeDependency = false\n    verifySecrets = false"))
+        assertEquals(TaskOutcome.SKIPPED, project.run("jar").task(":svelteVerifySecrets")?.outcome)
+    }
+
+    @Test
     fun `frontend output is hidden on success and shown on failure`() {
         val project = project()
         assertFalse(project.run("jar").output.contains("fake build output"))

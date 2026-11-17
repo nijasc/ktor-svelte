@@ -12,6 +12,7 @@ internal enum class DocLink(
     DAISYUI("features/frontend-libraries", "daisyui"),
     DEV_WORKFLOW("guide/dev-workflow", "when-a-port-is-still-in-use"),
     FRONTEND_LIBRARIES("features/frontend-libraries", null),
+    SECRETS_IN_THE_BUILD("features/runtime-config", "secrets-in-the-frontend-build"),
     GENERATED_TYPESCRIPT("features/typescript", null),
     GRADLE("reference/gradle", null),
     I18N("features/frontend-libraries", "i18n"),
