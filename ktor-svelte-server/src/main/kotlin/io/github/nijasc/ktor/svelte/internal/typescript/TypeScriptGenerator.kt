@@ -1187,10 +1187,20 @@ internal class TypeScriptGenerator(
                 ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
                 .orEmpty()
         val sparseUnion = sparseNames.joinToString(" | ") { quoted(it) }.ifEmpty { null }
-        val queryParameters = declared.filter { it.stringAt("in") == "query" && !(sparseUnion != null && it.stringAt("name") == "fields") }
+        val include = operation.objectAt(INCLUDE_EXTENSION)
+        val relations = include?.objectAt("relations").orEmpty()
+        val includeUnion = relations.keys.joinToString(" | ") { quoted(it) }.ifEmpty { null }
+        val shaped = sparseUnion != null || includeUnion != null
+        val queryParameters =
+            declared.filter { parameter ->
+                val name = parameter.stringAt("name")
+                parameter.stringAt("in") == "query" &&
+                    !(sparseUnion != null && name == "fields") &&
+                    !(includeUnion != null && name == "include")
+            }
         var queryIndex = -1
         var narrowedQuery = ""
-        if (queryParameters.isNotEmpty() || sparseUnion != null) {
+        if (queryParameters.isNotEmpty() || shaped) {
             val fields =
                 queryParameters.map { parameter ->
                     val required = parameter["required"]?.jsonPrimitive?.contentOrNull == "true"
@@ -1200,8 +1210,13 @@ internal class TypeScriptGenerator(
             val anyRequired = queryParameters.any { it["required"]?.jsonPrimitive?.contentOrNull == "true" }
             val query = "query${if (anyRequired) "" else "?"}"
             queryIndex = signature.size
-            val asked = listOfNotNull(sparseUnion?.let { "fields?: readonly ($it)[]" })
-            val narrowedAsked = listOfNotNull("fields?: readonly F[]".takeIf { sparseUnion != null })
+            val asked =
+                listOfNotNull(sparseUnion?.let { "fields?: readonly ($it)[]" }, includeUnion?.let { "include?: readonly ($it)[]" })
+            val narrowedAsked =
+                listOfNotNull(
+                    "fields?: readonly F[]".takeIf { sparseUnion != null },
+                    "include?: readonly I[]".takeIf { includeUnion != null },
+                )
             signature += "$query: { ${(fields + asked).joinToString("; ")} }"
             narrowedQuery = "$query: { ${(fields + narrowedAsked).joinToString("; ")} }"
         }
@@ -1233,21 +1248,29 @@ internal class TypeScriptGenerator(
             buildList {
                 if (timeout != null) add("timeout: $timeout")
                 add("...options")
-                if (queryParameters.isNotEmpty() || sparseUnion != null) add("query")
+                if (queryParameters.isNotEmpty() || shaped) add("query")
                 if (headerParameters.isNotEmpty()) add("typedHeaders: headers")
                 if (requestBody != null) add("body")
                 if (computed.isNotEmpty()) add("omit: [${computed.joinToString { quoted(it) }}]")
                 if (upload != null) add("upload: $upload")
                 if (formFields != null) add("multipart: true")
             }
-        val sparseType = sparse?.stringAt("type")
+        val itemType = sparse?.stringAt("type") ?: include?.stringAt("type")
         val fullType = responseType(operation, references)
         val streaming = isEventStream(operation)
         val annotation =
-            if (sparseUnion != null && sparseType != null && !streaming && queryIndex >= 0) {
-                val narrowedType = Regex("\\b${Regex.escape(sparseType)}\\b").replace(fullType, "Pick<$sparseType, F>")
+            if (shaped && itemType != null && !streaming && queryIndex >= 0) {
+                val base = if (sparseUnion != null) "Pick<$itemType, F>" else itemType
+                val relationTypes =
+                    relations.entries.joinToString("; ") { (name, schema) ->
+                        "${propertyKey(name)}: ${(schema as? JsonObject)?.let { tsType(it, references) } ?: "unknown"}"
+                    }
+                val item = if (includeUnion != null) "($base & Pick<{ $relationTypes }, I>)" else base
+                val narrowedType = Regex("\\b${Regex.escape(itemType)}\\b").replace(fullType, item)
                 val narrowed = signature.toMutableList().also { it[queryIndex] = narrowedQuery }
-                ": {\n    <F extends $sparseUnion = $sparseUnion>(${narrowed.joinToString()}): Promise<$narrowedType>;\n" +
+                val generics =
+                    listOfNotNull(sparseUnion?.let { "F extends $it = $it" }, includeUnion?.let { "I extends $it = never" }).joinToString()
+                ": {\n    <$generics>(${narrowed.joinToString()}): Promise<$narrowedType>;\n" +
                     "    (${signature.joinToString()}): Promise<$fullType>;\n}"
             } else {
                 ""
@@ -1527,6 +1550,7 @@ private val BRANDED_TYPES = setOf("string", "integer", "number")
 internal const val UPLOAD_EXTENSION = "x-ktor-svelte-upload"
 internal const val TIMEOUT_EXTENSION = "x-ktor-svelte-timeout"
 internal const val FIELDS_EXTENSION = "x-ktor-svelte-fields"
+internal const val INCLUDE_EXTENSION = "x-ktor-svelte-include"
 private const val ERROR_CODE_TYPE = "ErrorCode"
 private val ERROR_CODE_HELPERS =
     """
