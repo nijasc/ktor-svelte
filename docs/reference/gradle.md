@@ -22,6 +22,8 @@ svelte {
         script = "dev"
         debugPort = 5005
         openBrowser = true
+        https = false
+        httpsPort = 8443
     }
 }
 ```
@@ -43,6 +45,8 @@ svelte {
 | `dev.script` | `package.json` script that starts Vite |
 | `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |
 | `dev.openBrowser` | Opens the app in the default browser once `svelteDevAll` is ready, the first time only. Never in CI or without a display |
+| `dev.https` | Serves the app started by `svelteDevAll` over HTTPS too, with a development certificate from `~/.ktor-svelte/dev-https`. See [HTTPS in development](/guide/dev-workflow#https-in-development) |
+| `dev.httpsPort` | Port of that HTTPS address, on `127.0.0.1` only |
 
 The package manager must already be installed unless you set `bunVersion`. The plugin does not download Node.
 
