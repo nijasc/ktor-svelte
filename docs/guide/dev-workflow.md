@@ -195,6 +195,7 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
 | [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
 | [Migrations](#migrations) | Which Flyway migrations ran, which are pending, and whether the last one failed |
+| [Memory and threads](#memory-and-threads) | Heap, garbage collection and threads of the running app, live |
 | [Cookies](#cookie-inspector) | What this browser sends, as the server reads it, with Clear buttons |
 | [Routes](#route-map) | Every page and API route with the file behind it |
 | [Accessibility](#accessibility-check) | An axe check of the page you are looking at |
@@ -298,6 +299,20 @@ A pending or failed migration is usually why a new column "does not exist". The 
 
 - It needs `flyway-core` and Exposed in the app. Without Flyway on the classpath the section says so; ktor-svelte itself does not depend on it.
 - It reads Flyway's default setup: migrations in `src/main/resources/db/migration` and the history in `flyway_schema_history`. With other `locations` or another `table`, the list may not match what your app runs.
+
+### Memory and threads
+
+The **Memory and threads** section shows how the running app is doing, refreshed every two seconds while it is open:
+
+- a bar of the heap in use against the limit, and the heap in numbers: used, taken from the system, and the `-Xmx` limit,
+- memory outside the heap, such as loaded classes,
+- each garbage collector with how often it ran and how long it took in all,
+- the threads: live, daemon, the peak, how many were started since the start, and how many are running, waiting or blocked,
+- the processors the JVM sees, and how long the app has been up.
+
+**Collect garbage** asks the JVM for a full collection. What is still in use afterwards is what the app really holds, so a heap that keeps growing after each collection while you click through a page points to a leak. A thread count that only goes up points to threads or coroutines that never end.
+
+The numbers come from the JVM's standard management beans, so they need no agent and no library.
 
 ### Cookie inspector
 
