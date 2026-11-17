@@ -136,6 +136,7 @@ get("/old-about") {
 - Rest parameters such as `[...path]` keep their slashes.
 - With i18n, `call.localizeHref` adds the visitor's language for `UrlPrefix` and returns the path unchanged for `Cookie`.
 - The same names work with [`call.navigateTo`](./calling-the-api.md#navigation-from-the-server), which opens a page in the browser after an API call.
+- `FrontendRoutes.Patterns` has every page as its pattern, such as `FrontendRoutes.Patterns.notesId` for `"/notes/[id]"`. Use it where Kotlin names a page rather than a link to one, as in [`pageLoad`](./calling-the-api.md#generated-page-loads).
 
 ## Names
 

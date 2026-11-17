@@ -479,6 +479,22 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `inline page data is used once, for its own path only`() {
+        val inline = runHarness().getValue("inlinePageData").jsonObject
+        assertEquals(
+            mapOf(
+                "otherPath" to "null",
+                "afterOtherPath" to "null",
+                "matching" to "{\"task\":{\"id\":5}}",
+                "secondTime" to "null",
+                "broken" to "null",
+                "withoutDocument" to "null",
+            ),
+            inline.mapValues { it.value.toString() },
+        )
+    }
+
+    @Test
     fun `password strength checks the same parts the server checks`() {
         val runtime = bun()
         assumeTrue(runtime != null, "bun is not on PATH")

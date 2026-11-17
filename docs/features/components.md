@@ -294,6 +294,69 @@ On `/admin/tasks` this shows "Home / Admin / All tasks", each part a link except
 - The current page is marked with `aria-current="page"` and is not a link.
 - With DaisyUI it uses the `breadcrumbs` class; without, a small style with `/` between the parts.
 
+## Sidebar
+
+A side menu for a section of your app. On wide screens it can collapse to icons, and remembers that; on small screens it turns into a drawer behind a "Menu" button:
+
+```svelte no-check
+<script lang="ts">
+    import Sidebar from '#components/Sidebar.svelte';
+    import { routes } from '#routes';
+
+    let { children } = $props();
+</script>
+
+<Sidebar
+    items={[
+        { href: routes.admin(), label: 'People', icon: 'Users' },
+        { href: routes.adminTasks(), label: 'All tasks', icon: 'ListChecks' }
+    ]}
+    label="Admin sections"
+>
+    {@render children()}
+</Sidebar>
+```
+
+Put it in the `+layout.svelte` of the section, as above, and every page below gets it.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `items` | required | `{ href, label, icon? }` per link; `icon` is a typed [Lucide](./icons-and-images.md) name when `lucide()` is on |
+| `children` | required | The page content, shown next to the menu |
+| `label` | `Sections` | The accessible name of the `<nav>` |
+| `remember` | `ktor-svelte-sidebar` | The `localStorage` key for the collapsed state; give each sidebar its own |
+| `collapseText`, `expandText`, `menuText` | `Collapse`, `Expand`, `Menu` | Button texts, for other languages |
+
+- Collapsed, the links show only their icons, or the first letter of the label without Lucide. The label stays readable for screen readers and shows as a tooltip.
+- The collapsed state is read after the page has loaded, so the server and the browser render the same first.
+- Below 768 pixels wide, the menu is hidden. The "Menu" button opens it as a drawer over the page; Escape, a click on the backdrop or opening a link closes it.
+- The link to the open page has `aria-current="page"`.
+
+## FocusHeading
+
+After a navigation inside the app, SvelteKit puts the focus back at the top of the document. Keyboard and screen reader users then start from the very beginning on every page. `FocusHeading` moves the focus to the new page's heading instead, so they land where the content starts and hear its name:
+
+```svelte no-check
+<script lang="ts">
+    import FocusHeading from '#components/FocusHeading.svelte';
+
+    let { children } = $props();
+</script>
+
+<FocusHeading />
+{@render children()}
+```
+
+Put it once in your root `+layout.svelte`.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `selector` | `main h1, h1` | Which element gets the focus: the first match on the new page |
+
+- It does nothing on the first page load, and nothing for links to an anchor such as `#comments`, where the browser's own jump is right.
+- The heading gets `tabindex="-1"`, so it can take the focus without becoming a stop in the tab order. The page does not scroll.
+- SvelteKit's own announcer still tells screen readers the new page title.
+
 ## EnumSelect
 
 A `<select>` over a generated enum object:

@@ -429,9 +429,32 @@ internal fun routesObject(
         append("\n")
         if (dynamic.isNotEmpty()) append(KOTLIN_PATH_HELPERS)
         if (usesRest) append(KOTLIN_REST_HELPER)
+        append("\n    public object Patterns {\n")
+        append(
+            routes.joinToString("\n\n") { route ->
+                "        public const val ${kotlinName(route.name)}: String = \"${routePattern(route).replace("$", "\\$")}\""
+            },
+        )
+        append("\n    }\n")
         append("}\n")
     }
 }
+
+internal fun routePattern(route: FrontendRoute): String =
+    "/" +
+        route.segments.joinToString("/") { parts ->
+            parts.joinToString("") { part ->
+                when (part) {
+                    is RoutePart.Text -> part.value
+                    is RoutePart.Param ->
+                        when {
+                            part.rest -> "[...${part.name}]"
+                            part.optional -> "[[${part.name}]]"
+                            else -> "[${part.name}]"
+                        }
+                }
+            }
+        }
 
 internal fun kotlinName(name: String): String = if (name in KOTLIN_KEYWORDS) "`$name`" else name
 

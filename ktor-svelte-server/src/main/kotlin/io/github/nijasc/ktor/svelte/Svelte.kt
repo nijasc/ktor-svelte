@@ -11,6 +11,9 @@ import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
 import io.github.nijasc.ktor.svelte.internal.IdempotencyStore
 import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
+import io.github.nijasc.ktor.svelte.internal.MetricRoute
+import io.github.nijasc.ktor.svelte.internal.MetricStartedAt
+import io.github.nijasc.ktor.svelte.internal.SERVER_ERROR_STATUS
 import io.github.nijasc.ktor.svelte.internal.StartupTiming
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
 import io.github.nijasc.ktor.svelte.internal.WEB_VITALS_PATH
@@ -21,6 +24,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ConfigInjector
 import io.github.nijasc.ktor.svelte.internal.assets.DefaultFavicon
 import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
+import io.github.nijasc.ktor.svelte.internal.assets.PageDataInliner
 import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
@@ -60,6 +64,7 @@ import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.jvmStartIfFirstApplication
 import io.github.nijasc.ktor.svelte.internal.onOwn
+import io.github.nijasc.ktor.svelte.internal.recordRouteMetric
 import io.github.nijasc.ktor.svelte.internal.runtimeVersion
 import io.github.nijasc.ktor.svelte.internal.security.BodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
@@ -88,6 +93,7 @@ import io.github.nijasc.ktor.svelte.internal.typescript.CurrentUserType
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.GuardSpec
 import io.github.nijasc.ktor.svelte.internal.typescript.PreferencesType
+import io.github.nijasc.ktor.svelte.internal.typescript.generatedOperations
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -176,7 +182,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         }
         val publicConfig = pluginConfig.publicConfigProvider?.let { PublicConfigSource(it, application.developmentMode) }
         val configInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(store, it) }
-        val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector)
+        val pageLoads = pluginConfig.pageLoadsConfig
+        require(pageLoads.inlineTimeout.isPositive()) { "pageLoads: inlineTimeout must be positive, but is ${pageLoads.inlineTimeout}." }
+        val pageData = pageLoads.takeIf { it.inline }?.let { PageDataInliner({ application.pageLoadSpecs() }, it.inlineTimeout) }
+        val responder = AssetResponder(store, pluginConfig.cacheConfig, contentSecurityPolicy, configInjector, pageData)
         val internalAccess = InternalAccess(pluginConfig.internalAccessConfig)
         val docsOutsideDevelopment = pluginConfig.apiDocs && !application.developmentMode && internalAccess.isConfigured
         val docsPath = pluginConfig.apiDocsPath.takeIf { pluginConfig.apiDocs && (application.developmentMode || docsOutsideDevelopment) }
@@ -266,12 +275,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val currentUser = pluginConfig.currentUserSpec
         val currentUserPath =
             currentUser?.let { it.path ?: (pluginConfig.apiPrefixList.firstOrNull() ?: "/api").trimEnd('/') + "/$CURRENT_USER_ROUTE" }
+        val clientExcludedPaths =
+            listOfNotNull(docsPath, currentUserPath, pluginConfig.preferencesSpec?.let { preferencesPathOf(pluginConfig) })
+        pageData?.operationSource = { generatedOperations(application, pluginConfig.apiPrefixList, clientExcludedPaths) }
         installTypeScriptGeneration(
             application,
             pluginConfig.generateTs,
             pluginConfig.generateTsOutput,
             pluginConfig.apiPrefixList,
-            listOfNotNull(docsPath, currentUserPath, pluginConfig.preferencesSpec?.let { preferencesPathOf(pluginConfig) }),
+            clientExcludedPaths,
             pluginConfig.publicConfigSchema,
             pluginConfig.declaredErrorList.toList(),
             pluginConfig.constantHolders.map(::sharedHolder),
@@ -292,6 +304,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     mapOf("theme" to THEME_COOKIE, "locale" to LOCALE_COOKIE),
                 )
             },
+            { application.pageLoadSpecs() },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
@@ -417,6 +430,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 metrics.rateLimited.incrementAndGet()
             }
         }
+        application.subscribeWhileRunning(RoutingRoot.RoutingCallStarted, { it.application === application }) { call ->
+            call.attributes.put(MetricRoute, call.route)
+        }
+        onCall { call -> call.attributes.put(MetricStartedAt, System.nanoTime()) }
+        on(ResponseSent) { call -> recordRouteMetric(call, metrics.routeStore, resolver, pluginConfig.paramRouteList) }
 
         if (devRequests != null) {
             devRequests.install(application)
@@ -487,6 +505,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 respondWithoutDetails(call, cause, resolver.isApiPath(decodedPathOrRaw(call)))
             }
             devRequests?.leftUnanswered(call)
+            if (!call.response.isCommitted) {
+                recordRouteMetric(call, metrics.routeStore, resolver, pluginConfig.paramRouteList, answered = SERVER_ERROR_STATUS)
+            }
         }
 
         val automaticRouting = pluginConfig.routing == SvelteRouting.Automatic

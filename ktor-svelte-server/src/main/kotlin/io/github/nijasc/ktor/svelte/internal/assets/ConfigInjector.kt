@@ -37,7 +37,7 @@ internal class ConfigInjector(
         val eTag = "${entry.hash}-c${current.hash}"
         pages[path]?.let { (cachedETag, page) -> if (cachedETag == eTag) return page }
         val html = store.open(path)?.use { it.readBytes().decodeToString() } ?: return null
-        val plain = inject(html, current.element).toByteArray()
+        val plain = injectIntoHead(html, current.element).toByteArray()
         val page = InjectedPage(plain, gzip(plain), eTag)
         pages[path] = eTag to page
         return page
@@ -48,14 +48,14 @@ internal class ConfigInjector(
         rendered?.takeIf { it.json == json }?.let { return it }
         return RenderedConfig(json).also { rendered = it }
     }
+}
 
-    private fun inject(
-        html: String,
-        element: String,
-    ): String {
-        val head = HEAD_TAG.find(html) ?: return element + html
-        return html.substring(0, head.range.last + 1) + element + html.substring(head.range.last + 1)
-    }
+internal fun injectIntoHead(
+    html: String,
+    element: String,
+): String {
+    val head = HEAD_TAG.find(html) ?: return element + html
+    return html.substring(0, head.range.last + 1) + element + html.substring(head.range.last + 1)
 }
 
 internal fun escapeForScript(json: String): String = json.replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
