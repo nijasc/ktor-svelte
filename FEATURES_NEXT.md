@@ -67,6 +67,10 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 146 | Network check in doctor | #375 |
 | 28 | Generated page loads | #377 |
 | 142 | Clear site data | #376 |
+| 143 | Slowest routes of the session | #378 |
+| 144 | Catch outgoing email | #380 |
+| 66 | Inline page data | #381 |
+| 61 | Emails from Svelte components | #379 |
 
 ### Next up
 
@@ -197,15 +201,11 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 66 | Inline page data | Large | 9 |
 | 52 | Installable app (PWA) | Large | 11 |
-| 61 | Emails from Svelte components | Large | 11 |
 | 60 | Multiple frontends | Large | 12 |
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 143 | Slowest routes of the session | Small | 14 |
-| 144 | Catch outgoing email | Medium | 14 |
 | 147 | Pinned Node download | Medium | 14 |
 | 148 | Warm-up before ready | Small | 14 |
 | 149 | Latency and errors per route | Medium | 14 |

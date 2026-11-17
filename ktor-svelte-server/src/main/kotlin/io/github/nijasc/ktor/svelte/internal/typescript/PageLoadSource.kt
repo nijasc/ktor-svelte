@@ -75,21 +75,21 @@ internal fun pageLoadsSource(
                     "        api.${operation.name}(${arguments.joinToString()})"
                 }
             val keys = page.data.map { it.key }
-            val event =
-                if (parameters.isEmpty()) {
-                    "{ fetch: typeof fetch }"
-                } else {
-                    "{ fetch: typeof fetch; params: { ${parameters.joinToString("; ") { "$it: string" }} } }"
-                }
-            "export async function ${pageLoadFunction(page.page)}(event: $event) {\n" +
+            val params = if (parameters.isEmpty()) "" else "; params: { ${parameters.joinToString("; ") { "$it: string" }} }"
+            "export async function ${pageLoadFunction(page.page)}(event: { fetch: typeof fetch; url: URL$params }) {\n" +
                 "    const api = apiWith(event);\n" +
-                "    const [${keys.joinToString()}] = await Promise.all([\n" +
-                calls.joinToString(",\n") + "\n" +
-                "    ]);\n" +
+                "    const load = () =>\n" +
+                "        Promise.all([\n" +
+                calls.joinToString(",\n") { "    $it" } + "\n" +
+                "        ]);\n" +
+                "    const inline = inlinePageData(event.url.pathname);\n" +
+                "    const [${keys.joinToString()}] = inline\n" +
+                "        ? (${keys.joinToString(", ", "[", "]") { "inline.$it" }} as Awaited<ReturnType<typeof load>>)\n" +
+                "        : await load();\n" +
                 "    return { ${keys.joinToString()} };\n" +
                 "}\n"
         }
-    return "import { apiWith } from './services.js';\n\n$functions"
+    return "import { inlinePageData } from './client.js';\nimport { apiWith } from './services.js';\n\n$functions"
 }
 
 internal fun validPageDataKey(key: String): Boolean = IDENTIFIER_START.containsMatchIn(key) && key.all { it.isLetterOrDigit() || it == '_' }

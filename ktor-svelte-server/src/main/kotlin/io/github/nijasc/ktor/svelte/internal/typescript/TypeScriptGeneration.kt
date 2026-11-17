@@ -262,3 +262,16 @@ private fun pageDirectory(
             .orElse(null)
     }
 }
+
+internal fun generatedOperations(
+    application: Application,
+    apiPrefixes: List<String>,
+    excludedPaths: List<String>,
+): List<GeneratedOperation> {
+    val openApiJson =
+        OpenApiDocSource
+            .Routing(schemaInference = BrandedSchemaInference)
+            .read(application, OpenApiDoc(info = OpenApiInfo(title = "API", version = "1.0")))
+            .content
+    return TypeScriptGenerator(apiPrefixes, excludedPaths).also { it.generate(openApiJson) }.operations.toList()
+}
