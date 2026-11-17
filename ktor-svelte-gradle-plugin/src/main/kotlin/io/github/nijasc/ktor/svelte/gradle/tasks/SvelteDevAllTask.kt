@@ -120,6 +120,15 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     public abstract val javaLauncher: Property<JavaLauncher>
 
     @get:Internal
+    public abstract val https: Property<Boolean>
+
+    @get:Internal
+    public abstract val httpsPort: Property<Int>
+
+    @get:Internal
+    public abstract val certificateDirectory: Property<File>
+
+    @get:Internal
     public abstract val compileErrorsFile: RegularFileProperty
 
     @get:Input
@@ -150,7 +159,40 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         val record = DevProcessRecord(compileErrorsFile.get().asFile.resolveSibling("dev-processes"))
         freePorts(record)
         val running = mutableListOf<Process>()
-        val banner = ReadyBanner(port.get())
+        val secure = https.getOrElse(false)
+        val banner = ReadyBanner(port.get(), httpsPort.get().takeIf { secure })
+        var proxy: DevHttpsProxy? = null
+        if (secure) {
+            val keytool =
+                javaLauncher.get().metadata.installationPath.asFile.resolve("bin").listFiles { file ->
+                    file.nameWithoutExtension ==
+                        "keytool"
+                }
+            val owner =
+                System.getProperty("user.name") + "@" +
+                    runCatching {
+                        java.net.InetAddress
+                            .getLocalHost()
+                            .hostName
+                    }.getOrDefault("this computer")
+            val certificate =
+                devCertificate(
+                    certificateDirectory.get(),
+                    keytool?.firstOrNull() ?: throw GradleException("dev { https = true } needs keytool, which this JDK does not have."),
+                    owner,
+                )
+            if (portIsInUse(httpsPort.get())) {
+                throw GradleException(
+                    portInUseMessage(httpsPort.get(), "HTTPS", "httpsPort", portOwner(httpsPort.get())) + DocLink.DEV_WORKFLOW.see(),
+                )
+            }
+            proxy = DevHttpsProxy(certificate, httpsPort.get()) { banner.appPort }
+            if (certificate.created) {
+                logger.lifecycle(
+                    "ktor-svelte: " + trustInstructions(System.getProperty("os.name"), certificate.authority),
+                )
+            }
+        }
         if (openBrowser.get()) banner.onFirstReady = ::openInBrowser
         val stopAll = Thread { running.forEach(::stopProcessTree) }
         Runtime.getRuntime().addShutdownHook(stopAll)
@@ -199,6 +241,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
             Thread.currentThread().interrupt()
         } finally {
             running.forEach(::stopProcessTree)
+            proxy?.close()
             record.clear()
             classpathSnapshots().deleteRecursively()
             Runtime.getRuntime().removeShutdownHook(stopAll)

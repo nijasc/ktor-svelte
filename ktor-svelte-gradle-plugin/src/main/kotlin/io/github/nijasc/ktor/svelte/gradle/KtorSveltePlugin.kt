@@ -193,6 +193,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("dev.script", extension.dev.script)
             settings.put("dev.debugPort", extension.dev.debugPort.map { it.toString() })
             settings.put("dev.openBrowser", extension.dev.openBrowser.map { it.toString() })
+            settings.put("dev.https", extension.dev.https.map { it.toString() })
             settings.put(
                 "libraries.tailwind",
                 libraries.tailwindSettings.enabled
@@ -686,6 +687,9 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.port.set(extension.dev.port)
             task.debugPort.set(extension.dev.debugPort)
             task.openBrowser.set(extension.dev.openBrowser)
+            task.https.set(extension.dev.https)
+            task.httpsPort.set(extension.dev.httpsPort)
+            task.certificateDirectory.set(File(System.getProperty("user.home"), ".ktor-svelte/dev-https"))
             task.mainClass.set(application.mainClass)
             task.appClasspath.from(developmentClasspath(project))
             task.classesDirectories.from(main.map { it.output.classesDirs })
@@ -874,6 +878,8 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.dev.script.convention("dev")
         extension.dev.debugPort.convention(5005)
         extension.dev.openBrowser.convention(true)
+        extension.dev.https.convention(false)
+        extension.dev.httpsPort.convention(DEFAULT_HTTPS_PORT)
         return extension
     }
 
@@ -1094,6 +1100,7 @@ private class FrontendDirArgument(
 internal abstract class FrontendLock : BuildService<BuildServiceParameters.None>
 
 internal const val BROWSER_TEST_SUITE = "browserTest"
+internal const val DEFAULT_HTTPS_PORT = 8443
 internal const val BROWSER_TEST_JAR = "ktorSvelte.test.jar"
 internal const val BROWSER_TEST_CLASSPATH = "ktorSvelte.test.classpath"
 internal const val BROWSER_TEST_MAIN = "ktorSvelte.test.mainClass"

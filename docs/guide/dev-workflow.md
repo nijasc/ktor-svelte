@@ -192,7 +192,42 @@ In development mode the runtime proxies to Vite if it is reachable, otherwise se
 
 The proxy only answers requests from this machine, so your frontend source is not open to everyone on your network, even though Ktor listens on all interfaces. Requests from elsewhere get your built files, or a 403 if there are none. It never forwards cookies or `Authorization` headers. It also refuses to start if `dev.url` points at another machine. To test from your phone or use Vite in another container, set `dev { allowRemote = true }`, and only on a network you trust.
 
-The proxy forwards HTTP only. POST, PUT, PATCH and DELETE requests are forwarded too, with their body, so Vite endpoints and SvelteKit form actions work in dev. Paths under your API prefixes are never proxied, whatever the method. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
+The proxy forwards HTTP only. POST, PUT, PATCH and DELETE requests are forwarded too, with their body, so Vite endpoints and SvelteKit form actions work in dev. Paths under your API prefixes are never proxied, whatever the method. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite, and `protocol: 'ws'` keeps that working on a page served over HTTPS. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
+
+## HTTPS in development
+
+Some things only work on a page served over HTTPS: cookies marked `Secure`, service workers on any host but `localhost`, and sign-in providers that refuse plain HTTP callback URLs. To develop with them, turn HTTPS on:
+
+```kotlin
+svelte {
+    dev {
+        https = true
+        httpsPort = 8443
+    }
+}
+```
+
+`svelteDevAll` then serves the app at `https://localhost:8443` as well as on its usual port, and the ready banner and the browser it opens use the HTTPS address. A small proxy in the Gradle task ends TLS and passes each request on to the app, WebSockets included. Your app keeps listening on plain HTTP, so `application.conf` and `embeddedServer` stay as they are.
+
+The certificate is made on the first run with the JDK's `keytool`: a development certificate authority for your user, and a certificate for `localhost`, `127.0.0.1` and `::1` signed by it. Both live in `~/.ktor-svelte/dev-https`, and every project on your computer shares them. The certificate for `localhost` is renewed after about a year.
+
+Your browser does not trust the authority until you tell it to. The first run prints the command for your system, such as `certutil -addstore -user Root` on Windows. ktor-svelte never runs it for you. Firefox keeps its own list, so import `ca.crt` there under Settings, Certificates, Authorities. Without that step the page still works after you accept the browser's warning, but service workers and some sign-in providers refuse an untrusted certificate.
+
+Anyone who has the files in `~/.ktor-svelte/dev-https` can sign certificates your browser then trusts, so keep that folder to yourself and do not copy it to other machines. When you stop using HTTPS in development, delete the folder and remove the authority from your system's trust store.
+
+In development mode the app treats requests from this proxy as HTTPS: `call.request.origin.scheme` is `https` and the port is the HTTPS port, so redirects, absolute URLs and `Secure` cookies come out right. It only does so for requests from this machine that carry the proxy's mark, and never outside development mode.
+
+Vite's hot reload still talks to Vite over plain `ws` on its own port, which browsers allow from a secure page on `localhost`. Projects from `svelteInit` and the generated `vite.config.ts` set `protocol: 'ws'` for that. A hand-written `vite.config.ts` needs it too:
+
+```ts
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+    plugins: [sveltekit()],
+    server: { hmr: { clientPort: 5173, protocol: 'ws' } }
+});
+```
 
 ## When a port is still in use
 

@@ -27,37 +27,12 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | # | Feature | Pull request |
 |---|---|---|
 | 28 | Generated page loads |  |
-| 105 | HTTPS in development |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 82 | Deploy presets | #294 |
-| 49 | Plurals in messages | #295 |
-| 50 | Shared formatting | #296 |
-| 96 | Relative time | #297 |
-| 59 | Self-hosted fonts | #298 |
-| 108 | Charts preset | #299 |
-| 48 | API change report | #300 |
-| 81 | Production smoke test | #301 |
-| 21 | Typed current user | #302 |
-| 87 | `call.user` in routes | #303 |
-| 24 | Login redirect with return | #304 |
-| 67 | Session expiry warning | #305 |
-| 22 | Shared permissions | #306 |
-| 23 | Page guards declared once | #307 |
-| 41 | Synced user preferences | #308 |
-| 34 | Resource routes DSL | #323 |
-| 15 | Page scaffolding task | #324 |
-| 42 | CRUD scaffold from a DTO | #325 |
-| 16 | Nav metadata from routes | #326 |
-| 77 | Page metadata for sharing | #327 |
-| 29 | Frontend errors in the server log | #328 |
-| 54 | Web vitals in metrics | #329 |
-| 30 | Kotlin browser test kit | #330 |
-| 47 | Accessibility check task | #331 |
-| 107 | Browser test recorder | #332 |
+| 105 | HTTPS in development | #333 |
 
 ### Next up
 
@@ -157,6 +132,31 @@ Features of this plan that are merged:
 | 72 | Idempotency keys | #291 |
 | 37 | Declared environment variables | #292 |
 | 46 | Secret leak check | #293 |
+| 82 | Deploy presets | #294 |
+| 49 | Plurals in messages | #295 |
+| 50 | Shared formatting | #296 |
+| 96 | Relative time | #297 |
+| 59 | Self-hosted fonts | #298 |
+| 108 | Charts preset | #299 |
+| 48 | API change report | #300 |
+| 81 | Production smoke test | #301 |
+| 21 | Typed current user | #302 |
+| 87 | `call.user` in routes | #303 |
+| 24 | Login redirect with return | #304 |
+| 67 | Session expiry warning | #305 |
+| 22 | Shared permissions | #306 |
+| 23 | Page guards declared once | #307 |
+| 41 | Synced user preferences | #308 |
+| 34 | Resource routes DSL | #323 |
+| 15 | Page scaffolding task | #324 |
+| 42 | CRUD scaffold from a DTO | #325 |
+| 16 | Nav metadata from routes | #326 |
+| 77 | Page metadata for sharing | #327 |
+| 29 | Frontend errors in the server log | #328 |
+| 54 | Web vitals in metrics | #329 |
+| 30 | Kotlin browser test kit | #330 |
+| 47 | Accessibility check task | #331 |
+| 107 | Browser test recorder | #332 |
 
 ### Backlog
 

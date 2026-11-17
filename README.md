@@ -127,7 +127,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     plugins: [sveltekit({ adapter: adapter({ fallback: '200.html' }) })],
-    server: { hmr: { clientPort: 5173 } }
+    server: { hmr: { clientPort: 5173, protocol: 'ws' } }
 });
 ```
 
