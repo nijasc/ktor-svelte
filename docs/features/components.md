@@ -478,6 +478,26 @@ With `virtual`, the table sits in a box of its own height, renders only the rows
 - Keep cells to one line, since rows have a fixed height. For text that wraps, use normal paging instead.
 - Rows that can be [chosen](#selecting-rows-and-acting-on-them) and [sorted](#sorting-by-a-click-on-the-header) work the same; sorting in the browser sorts the rows loaded so far.
 
+### Opening a row, with the mouse or the keyboard
+
+Give the table `onopen`, and each row opens with a click or with Enter. The rows become one stop in the tab order, and the arrow keys move between them:
+
+```svelte no-check
+<DataTable load={api.tasks.list} {columns} onopen={(task) => goto(routes.tasksId({ id: task.id }))} />
+```
+
+| Key | What it does |
+| --- | --- |
+| Tab | Reaches the table once, on the last row you were on |
+| Arrow down, Arrow up | The next or the previous row |
+| Home, End | The first or the last loaded row |
+| Page down, Page up | Ten rows on, or a box height with [`virtual`](#long-lists) |
+| Enter | Calls `onopen` with that row |
+
+- Clicks and keys on controls inside a row, such as the [selection](#selecting-rows-and-acting-on-them) checkbox or a link in a custom cell, do their own thing and do not open the row.
+- With `virtual`, moving to a row that is not rendered scrolls to it first.
+- The focused row shows an outline; with DaisyUI it also highlights on hover.
+
 ### Cells with markup
 
 For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
