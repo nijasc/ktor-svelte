@@ -662,6 +662,32 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the board's chart draws one bar per status in the theme's color`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.createTask(unique("Charted"))
+        page.navigate("/board")
+        val chart = page.locator("#status-chart")
+        assertThat(chart.locator("svg").first()).isVisible()
+        assertThat(chart).containsText("To do")
+        assertThat(chart).containsText("Done")
+        val drawn =
+            page.waitForFunction(
+                """() => {
+                    const bars = [...document.querySelectorAll('#status-chart svg rect, #status-chart svg path')]
+                        .filter((bar) => bar.getBoundingClientRect().height > 2 && bar.getBoundingClientRect().width > 8);
+                    const probe = document.createElement('span');
+                    probe.style.color = 'var(--color-primary)';
+                    document.body.append(probe);
+                    const primary = getComputedStyle(probe).color;
+                    probe.remove();
+                    const themed = bars.filter((bar) => getComputedStyle(bar).fill === primary);
+                    return themed.length >= 1 ? themed.length : false;
+                }""",
+            )
+        assertEquals(true, (drawn.jsonValue() as Int) >= 1)
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

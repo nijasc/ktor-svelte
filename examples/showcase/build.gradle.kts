@@ -47,6 +47,7 @@ svelte {
         routes()
         components()
         fonts("Inter")
+        charts()
         images()
         toasts { reloadPrompt() }
         i18n {

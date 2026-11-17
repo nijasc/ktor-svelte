@@ -11,7 +11,8 @@
         "#icon": "./src/lib/ktor-svelte/Icon.svelte",
         "#routes": "./src/lib/ktor-svelte/routes.ts",
         "#components/*": "./src/lib/ktor-svelte/components/*",
-        "#format": "./src/lib/ktor-svelte/format.ts"
+        "#format": "./src/lib/ktor-svelte/format.ts",
+        "#charts": "./src/lib/ktor-svelte/charts.ts"
     },
     "scripts": {
         "dev": "vite dev",
@@ -30,6 +31,7 @@
         "@tailwindcss/vite": "^4.3.4",
         "axe-core": "^4.14.1",
         "daisyui": "^5.7.50",
+        "layerchart": "^2.10.1",
         "svelte": "^5.57.3",
         "svelte-check": "^4.7.8",
         "tailwindcss": "^4.3.4",

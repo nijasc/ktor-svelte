@@ -235,6 +235,7 @@ public abstract class SvelteLibraries {
     public abstract val toastsEnabled: Property<Boolean>
     public abstract val routesEnabled: Property<Boolean>
     public abstract val componentsEnabled: Property<Boolean>
+    public abstract val chartsEnabled: Property<Boolean>
     public abstract val generatedPackage: Property<String>
 
     @get:Nested
@@ -288,6 +289,10 @@ public abstract class SvelteLibraries {
     ) {
         fontSettings.sans.set(sans)
         action.execute(fontSettings)
+    }
+
+    public fun charts() {
+        chartsEnabled.set(true)
     }
 
     public fun components() {

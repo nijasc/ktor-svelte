@@ -27,6 +27,10 @@ They are generated. An edit is overwritten, and `./gradlew check` fails when the
 
 Format them with `formatNumber`, `formatMoney`, `formatDate`, `formatDateTime` and `formatTime` from `#format`, and with `call.formats` in Kotlin. Both print the same text for the visitor's language. Do not call `toLocaleString` or `Intl` for these.
 
+## Charts
+
+Charts are LayerChart components, such as `import { BarChart, LineChart } from 'layerchart'`, inside an element with a height. Build their `series` with `chartSeries` from `#charts`, which checks the keys against the data's type and gives the theme's colors.
+
 ## Components
 
 Ready-made components are in `#components/`. Use them before writing the same markup by hand.

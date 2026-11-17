@@ -12,6 +12,7 @@ internal const val GENERATED_LINT_RULES = "$GENERATED_DIR/eslint.js"
 internal const val CONFIRM_HELPER = "$GENERATED_DIR/confirm.ts"
 internal const val MODAL_HELPER = "$GENERATED_DIR/modal.ts"
 internal const val COMPONENTS_DIR = "$GENERATED_DIR/components"
+internal const val CHARTS_HELPER = "$GENERATED_DIR/charts.ts"
 internal const val CLIENT_HOOKS = "src/hooks.client.ts"
 internal const val ERROR_ROUTE = "src/routes/+error.svelte"
 private const val ERROR_ROUTE_SOURCE =
@@ -50,6 +51,7 @@ internal fun frontendFiles(
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
         }
         if (spec.toasts || spec.components) put(CLIENT_HOOKS, clientHooks(spec))
+        if (spec.charts) put(CHARTS_HELPER, HEADER + renderTemplate("charts.ts"))
         if (spec.components) {
             putAll(componentFiles(spec, messages))
             put("$GENERATED_DIR/errors.ts", renderTemplate("errors.ts"))
@@ -305,6 +307,7 @@ private fun appCss(spec: LibrarySpec): String =
             fonts.mono?.let { append("    --font-mono: '${fonts.cssName(it)}', ui-monospace, monospace;\n") }
             append("}\n")
         }
+        if (spec.charts) append("@import 'layerchart/daisyui-5.css';\n")
         spec.daisy?.let { daisy ->
             val builtIn =
                 daisy.themes.joinToString(", ") { theme ->

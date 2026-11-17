@@ -57,6 +57,16 @@ internal fun assistantGuide(
                     "Do not call `toLocaleString` or `Intl` for these.",
             )
         }
+        if (spec.charts) {
+            appendLine()
+            appendLine("## Charts")
+            appendLine()
+            appendLine(
+                "Charts are LayerChart components, such as `import { BarChart, LineChart } from 'layerchart'`, " +
+                    "inside an element with a height. " +
+                    "Build their `series` with `chartSeries` from `#charts`, which checks the keys against the data's type and gives the theme's colors.",
+            )
+        }
         if (spec.components) {
             appendLine()
             appendLine("## Components")
