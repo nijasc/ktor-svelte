@@ -990,6 +990,14 @@ export default defineConfig({
 
 Links inside it go through `resolve()` from `$app/paths`, as SvelteKit asks for any app with a base path. The `hmr` line points hot reload at the frontend's own Vite, on its `devPort`.
 
+- SvelteKit writes asset paths relative to the page, and for the start page of a base path it counts on a slash at the end. So the app answers `/admin` with a redirect to `/admin/`, and the start page loads its files from `/admin/_app/`.
+- A link from one frontend into another, such as from the public site to `/admin`, needs `data-sveltekit-reload`, so the browser loads the other app instead of SvelteKit looking for a route of its own.
+- A prerendered page with such a link makes the prerender crawler visit `/admin` in the wrong app. Let it pass with `prerender: { handleHttpError }` in the main frontend's `sveltekit()` options, as the example does.
+
+## Example
+
+[`examples/two-frontends`](https://github.com/nijasc/ktor-svelte/tree/main/examples/two-frontends) is a public site and an admin area under `/admin`, each with a page that calls the API through its own generated client. Its browser tests open both in the packaged JAR and check where their files come from, the navigation inside each frontend, the links between them and the fallback pages, and a development mode test runs `svelteDevAll` with two Vite servers.
+
 ## Limits
 
 These parts of ktor-svelte know only the main frontend for now:
@@ -1090,6 +1098,7 @@ Three example apps live in the repository, from the smallest possible app to a f
 | [basic](#basic) | One route, three pages | Seeing the minimum that works |
 | [notes](#notes) | A notes app | Each feature on its own, easy to find |
 | [showcase](#showcase) | A team board with users | Features working together in a real app |
+| [two-frontends](#two-frontends) | A public site and an admin area | [Multiple frontends](https://nijasc.github.io/ktor-svelte/main/guide/multiple-frontends) in one app |
 
 ## Run them
 
@@ -1213,6 +1222,19 @@ The pictures on the [start page](https://nijasc.github.io/ktor-svelte/main/) com
 ## Your own examples
 
 The [recipes](https://nijasc.github.io/ktor-svelte/main/recipes/) show complete solutions for sessions, uploads, live updates, paging and an admin area that you can copy into your app. [Everything ktor-svelte does](https://nijasc.github.io/ktor-svelte/main/features/) links every feature to its page.
+
+## two-frontends
+
+Two SvelteKit projects in one app: the public site in `frontend/` and an admin area in `admin/`, served under `/admin`.
+
+| Look at | To see |
+|---|---|
+| `src/main/kotlin/twofrontends/Application.kt` | `frontend("/admin")` and `generateTs` with one API route |
+| `build.gradle.kts` | `svelte { frontend("admin") { } }`, and ports you can change with `-PvitePort`, `-PadminVitePort` and `-PdebugPort` |
+| `admin/vite.config.ts` | `paths: { base: '/admin' }` and the admin's own hot reload port |
+| `frontend/src/lib/api/`, `admin/src/lib/api/` | The same generated client in both frontends |
+| `src/browserTest/` | Both frontends in a browser, from the packaged JAR |
+| `src/devBrowserTest/` | `svelteDevAll` with one Vite per frontend |
 
 Source: https://nijasc.github.io/ktor-svelte/main/features/
 
