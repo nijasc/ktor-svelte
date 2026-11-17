@@ -29,6 +29,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
 import io.github.nijasc.ktor.svelte.internal.dev.TypedCookiesKey
 import io.github.nijasc.ktor.svelte.internal.dev.browserLogRoute
 import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
+import io.github.nijasc.ktor.svelte.internal.dev.devClearSiteDataRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devCookieRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devEnvironmentRoute
@@ -451,6 +452,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 devEnvironmentRoute(allowRemote, devRequests.sensitive) { application.environment.config }
                 devMigrationsRoute(allowRemote) { application.environment.classLoader }
                 devRuntimeRoute(allowRemote)
+                devClearSiteDataRoute(allowRemote)
                 devRequestRoutes(
                     devRequests,
                     allowRemote,

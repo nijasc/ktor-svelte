@@ -643,6 +643,18 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `clear site data in the dev panel signs out and empties the storage`() {
+        assertTrue(reachBoard(page))
+        page.evaluate("localStorage.setItem('dev-panel-marker', 'kept')")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".clear-site").click()
+        waitFor("the cleared storage", 20) { page.evaluate("localStorage.getItem('dev-panel-marker')") == null }
+        page.navigate("/board")
+        assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
+    }
+
+    @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
