@@ -56,6 +56,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 132 | Skeleton rows | #363 |
 | 133 | Virtual scrolling | #364 |
 | 134 | Keyboard navigation | #365 |
+| 135 | Breadcrumb component | #367 |
 
 ### Next up
 
@@ -193,7 +194,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 135 | Breadcrumb component | Small | 14 |
 | 136 | Collapsible sidebar state | Small | 14 |
 | 137 | Focus after navigation | Small | 14 |
 | 138 | Payload sizes | Small | 14 |
