@@ -587,6 +587,15 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `each API call in the dev panel shows how big its answer was and its largest fields`() {
+        assertTrue(reachBoard(page))
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        assertThat(panel.locator(".row .size").first()).hasText(Pattern.compile("^\\d+(\\.\\d)? (B|KB|MB)$"))
+        assertThat(panel.locator(".row .size[title^='Largest fields: ']").first()).isVisible()
+    }
+
+    @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))

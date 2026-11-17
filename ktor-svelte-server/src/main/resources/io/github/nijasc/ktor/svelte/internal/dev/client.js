@@ -690,7 +690,7 @@ const panelStyles = `
 .panel[hidden] { display: none; }
 .head { position: sticky; top: 0; display: flex; justify-content: space-between; padding: 8px 10px; background: #2b2650; font-family: system-ui, sans-serif; }
 .head button { border: 0; background: none; color: #bbb; cursor: pointer; font: inherit; }
-.row { display: grid; grid-template-columns: 52px 1fr 40px 64px auto; gap: 8px; padding: 4px 10px; border-top: 1px solid #2b2650; }
+.row { display: grid; grid-template-columns: 52px 1fr 40px 64px 60px auto; gap: 8px; padding: 4px 10px; border-top: 1px solid #2b2650; }
 .tools { display: flex; gap: 6px; }
 .tools button { padding: 0 4px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
 .tools button:disabled { opacity: .4; cursor: default; }
@@ -698,7 +698,9 @@ const panelStyles = `
 button.path { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 button.path:hover { text-decoration: underline; }
 .ok { color: #7bd88f; } .warn { color: #f3c969; } .bad { color: #ff7b72; }
-.ms { text-align: right; color: #aaa; }
+.ms, .size { text-align: right; color: #aaa; }
+.size.large { color: #f3c969; }
+.payload { grid-column: 2 / -1; color: #f3c969; }
 .fields { grid-column: 2 / -1; color: #f3c969; white-space: pre-wrap; }
 .sql { grid-column: 2 / -1; color: #aaa; }
 .duplicate { grid-column: 2 / -1; color: #f3c969; white-space: normal; }
@@ -977,6 +979,20 @@ function openInEditor(source) {
     return fetch(`/_ktor-svelte/dev/open?file=${encodeURIComponent(source.path)}&line=${source.line}`).catch(() => undefined);
 }
 
+const LARGE_PAYLOAD = 100 * 1024;
+
+function bytesText(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fieldsText(fields) {
+    return (fields ?? [])
+        .map((field) => `${field.name} ${bytesText(field.bytes)}${field.items === undefined ? '' : ` (${field.items} items)`}`)
+        .join(', ');
+}
+
 function statusClass(status) {
     if (status >= 500) return 'bad';
     if (status >= 400) return 'warn';
@@ -1067,7 +1083,8 @@ function startPanel() {
                 [entry.method, ''],
                 [entry.path, 'path'],
                 [String(entry.status), statusClass(entry.status)],
-                [`${entry.ms.toFixed(entry.ms < 10 ? 1 : 0)} ms`, 'ms']
+                [`${entry.ms.toFixed(entry.ms < 10 ? 1 : 0)} ms`, 'ms'],
+                [entry.size ? bytesText(entry.size.bytes) : '', entry.size?.bytes >= LARGE_PAYLOAD ? 'size large' : 'size']
             ];
             for (const [text, className] of cells) {
                 const opens = className === 'path' && entry.source?.path;
@@ -1079,9 +1096,16 @@ function startPanel() {
                     cell.title = `Open ${where} in your editor`;
                     cell.addEventListener('click', () => openInEditor(entry.source));
                 }
+                if (className.startsWith('size') && entry.size?.fields) cell.title = `Largest fields: ${fieldsText(entry.size.fields)}`;
                 row.append(cell);
             }
             row.append(rowTools(entry));
+            if (entry.size?.bytes >= LARGE_PAYLOAD && entry.size.fields) {
+                const payload = document.createElement('span');
+                payload.className = 'payload';
+                payload.textContent = `${bytesText(entry.size.bytes)} answer, largest: ${fieldsText(entry.size.fields)}`;
+                row.append(payload);
+            }
             const twice = seenCalls.get(entry.id)?.duplicate;
             if (twice) {
                 const note = document.createElement('span');

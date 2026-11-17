@@ -187,7 +187,7 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 
 | Part | What it gives you |
 |---|---|
-| [Request log](#request-log) | The last 100 API calls, with status, timing, validation errors, SQL cost and duplicates |
+| [Request log](#request-log) | The last 100 API calls, with status, timing, size, validation errors, SQL cost and duplicates |
 | [Replay and curl](#replay-and-copy-as-curl) | Send a call again, or copy it as a `curl` command |
 | [Open route in your editor](#open-the-route-in-your-editor) | Click a path to open the Kotlin route that answered it |
 | [Server errors](#server-errors-in-the-browser) | The Kotlin exception of a failed call, as an overlay |
@@ -201,13 +201,21 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 
 ### Request log
 
-The panel lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. **Clear** empties the list.
+The panel lists the last 100 API calls the app answered: method, path, status, how long the server took, how big the answer was, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. **Clear** empties the list.
 
 **Database cost.** When your app uses [Exposed](https://www.jetbrains.com/exposed/), each call also shows what it cost in the database, such as `7 SQL, 12 ms`: the number of statements it ran and the time they took together. When one statement ran five times or more in a single call, the line says so in yellow, with the statement on hover. That is the usual sign of a query inside a loop, the kind that is fast with ten rows and slow with ten thousand.
 
 - No setup and no code: ktor-svelte registers itself with Exposed when both are in the app.
 - Statements count for the call that started them, also when they run on another thread or in a child coroutine.
 - It works with Exposed 1.0 and newer, and only measures while the dev panel is on.
+
+**Payload size.** Each call shows how big its answer was, such as `48.2 KB`, measured before compression, so it is what the server had to build and the browser has to parse. Hover the size to see the three largest fields of a JSON answer:
+
+- A field of the answer counts with the size of its JSON, such as `items 47.9 KB (120 items)`.
+- For a list of objects the fields of all its items add up, such as `items[].description 31.0 KB`, so a field that is small once but repeated in every row stands out.
+- From 100 KB on the size turns yellow and the largest fields are written under the call, since that is usually a list that should be paged or a field the page does not need.
+
+Streamed answers, such as server-sent events, have no size.
 
 **Asked for twice.** When a page asks for the same thing twice, the second call is marked: `asked for twice within 12 ms, from src/routes/+layout.svelte:33 and from src/routes/board/+page.svelte:18`. That happens easily when a layout and a page both load the same data, and it costs a second trip to the server and the database for nothing. The two files tell you where to remove one, or to share the result.
 
