@@ -935,6 +935,16 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the pending writes helper is its own rune module`() {
+        val files = generate()
+        val helper = files.getValue("pending-writes.svelte.ts")
+        assertContains(helper, "import { watchPendingWrites } from './client.js';")
+        assertContains(helper, "export function warnBeforeLeaving(): () => void {")
+        assertContains(files.getValue("client.ts"), "export function watchPendingWrites(")
+        assertContains(files.getValue(".gitattributes"), "pending-writes.svelte.ts text eol=lf linguist-generated")
+    }
+
+    @Test
     fun `the client can retry GET requests`() {
         val client = generate().getValue("client.ts")
         assertContains(client, "    retry?: boolean | RetryConfig;")
