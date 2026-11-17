@@ -621,6 +621,39 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a long table renders only the rows in view and loads more while scrolling`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val asked = java.util.concurrent.CopyOnWriteArrayList<String>()
+        page.route("**/api/tasks?*") { route ->
+            val cursor = Regex("cursor=(\\d+)").find(route.request().url())?.groupValues?.get(1)?.toInt() ?: 0
+            asked += cursor.toString()
+            val items =
+                (cursor until cursor + 50).joinToString(",") { id ->
+                    "{\"id\":${id + 1},\"title\":\"Row ${id + 1}\",\"description\":\"\",\"status\":\"TODO\",\"priority\":\"NORMAL\"," +
+                        "\"labels\":[],\"icon\":\"Circle\",\"creator\":{\"id\":1,\"name\":\"Ada\"},\"createdAt\":\"2026-11-17T10:00:00Z\",\"version\":1}"
+                }
+            val next = if (cursor + 50 < 200) "\"${cursor + 50}\"" else "null"
+            route.fulfill(Route.FulfillOptions().setContentType("application/json").setBody("{\"items\":[$items],\"next\":$next}"))
+        }
+        page.navigate("/admin/tasks")
+        val table = page.locator("#every-task")
+        val rows = table.locator("tbody tr:not([data-spacer])")
+        assertThat(rows.first()).containsText("Row 1")
+        val rendered = rows.count()
+        assertTrue(rendered in 10..30, "rendered $rendered rows")
+        assertThat(table.locator("table")).hasAttribute("aria-rowcount", "51")
+        val box = table.locator("[data-virtual]")
+        repeat(6) {
+            box.evaluate("(box) => { box.scrollTop = box.scrollHeight; box.dispatchEvent(new Event('scroll')); }")
+            page.waitForTimeout(200.0)
+        }
+        page.waitForCondition { asked.size >= 3 }
+        assertThat(table.locator("table")).hasAttribute("aria-rowcount", Pattern.compile("1[0-9][0-9]|20[0-1]"))
+        assertTrue(rows.count() < 40, "still only the rows in view")
+        assertThat(table.getByText("Row 1", com.microsoft.playwright.Locator.GetByTextOptions().setExact(true))).hasCount(0)
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)

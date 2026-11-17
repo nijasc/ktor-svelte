@@ -188,6 +188,7 @@ private fun dataTable(daisy: Boolean): String =
             "pager" to if (daisy) "flex gap-2 py-2" else "ktor-svelte-table-pager",
             "chooser" to if (daisy) "mb-2" else "ktor-svelte-table-chooser",
             "selectCell" to if (daisy) "w-8" else "ktor-svelte-table-select",
+            "scroller" to if (daisy) "rounded-box border border-base-300" else "ktor-svelte-table-scroller",
             "skeleton" to if (daisy) "skeleton block h-4 w-full" else "ktor-svelte-table-skeleton",
             "emptyState" to if (daisy) "grid justify-items-center gap-2 py-6 text-center" else "ktor-svelte-table-empty",
             "sortButton" to if (daisy) "link link-hover font-semibold" else "ktor-svelte-table-sort",

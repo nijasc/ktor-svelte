@@ -2,6 +2,7 @@
     import { api, Role, type Status, type User } from '#api';
     import DataTable from '#components/DataTable.svelte';
     import { m } from '#i18n';
+    import { routes } from '#routes';
     import { formatDateTime } from '#lib/format.ts';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
     import type { PageProps } from './$types';
@@ -84,6 +85,7 @@
 </div>
 
 <h2 class="mb-3 mt-10 text-xl font-semibold">{m.adminTasks()}</h2>
+<p class="mb-2 text-sm"><a id="all-tasks-link" class="link" href={routes.adminTasks()}>{m.adminAllTasks()}</a></p>
 <div id="all-tasks" class="max-w-3xl">
     <label class="input input-sm mb-2">
         <span class="sr-only">{m.adminSearchTasks()}</span>

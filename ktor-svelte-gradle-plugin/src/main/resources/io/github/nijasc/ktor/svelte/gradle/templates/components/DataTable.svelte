@@ -37,6 +37,7 @@
         workingText?: (done: number, total: number) => string;
         doneText?: (worked: number, total: number) => string;
         empty?: string;
+        virtual?: { rowHeight: number; height?: string; overscan?: number };
         skeletonRows?: number;
         noResults?: string;
         filtered?: boolean;
@@ -74,6 +75,7 @@
         workingText = (done: number, total: number) => `Working: ${done} of ${total}`,
         doneText = (worked: number, total: number) => `Done: ${worked} of ${total} worked.`,
         empty = 'Nothing here yet.',
+        virtual,
         skeletonRows = 3,
         noResults = 'Nothing matches this filter.',
         filtered,
@@ -133,6 +135,8 @@
     }
 
     let items = $state.raw<T[]>(untrack(() => first?.items ?? []));
+    let scrollTop = $state(0);
+    let viewport = $state(0);
     const PAGING_KEYS = ['cursor', 'limit'];
     const isFiltered = $derived(
         filtered ??
@@ -165,6 +169,23 @@
         const direction = sorting.descending ? -1 : 1;
         return [...items].sort((left, right) => direction * compare(cellText(left, column), cellText(right, column)));
     });
+
+    const windowed = $derived.by(() => {
+        if (!virtual) return { start: 0, end: rows.length };
+        const extra = virtual.overscan ?? 5;
+        const seen = viewport || virtual.rowHeight * 20;
+        const start = Math.max(0, Math.floor(scrollTop / virtual.rowHeight) - extra);
+        const end = Math.min(rows.length, Math.ceil((scrollTop + seen) / virtual.rowHeight) + extra);
+        return { start, end };
+    });
+    const visible = $derived(rows.slice(windowed.start, windowed.end));
+
+    function scrolled(event: Event & { currentTarget: HTMLElement }) {
+        const box = event.currentTarget;
+        scrollTop = box.scrollTop;
+        viewport = box.clientHeight;
+        if (cursor && !busy && !problem && box.scrollTop + box.clientHeight * 2 >= box.scrollHeight) void fetchPage(cursor, true);
+    }
 
     function ariaSort(column: Column): 'ascending' | 'descending' | undefined {
         if (!column.sort || sorting?.id !== columnId(column)) return undefined;
@@ -370,7 +391,13 @@
             {/if}
         </div>
     {/if}
-    <table class="{{table}}" aria-busy={busy}>
+    <div
+        class={virtual ? '{{scroller}}' : undefined}
+        style={virtual ? `max-height: ${virtual.height ?? '24rem'}; overflow-y: auto;` : undefined}
+        onscroll={virtual ? scrolled : undefined}
+        data-virtual={virtual ? true : undefined}
+    >
+    <table class="{{table}}" aria-busy={busy} aria-rowcount={virtual ? rows.length + 1 : undefined}>
         {#if caption}<caption class="{{caption}}">{caption}</caption>{/if}
         <thead>
             <tr>
@@ -410,8 +437,12 @@
                     </tr>
                 {/each}
             {/if}
-            {#each rows as item, index (key ? key(item) : index)}
-                <tr>
+            {#if virtual && windowed.start > 0}
+                <tr aria-hidden="true" data-spacer><td colspan={shown.length + (selectable ? 1 : 0)} style="height: {windowed.start * virtual.rowHeight}px; padding: 0;"></td></tr>
+            {/if}
+            {#each visible as item, offset (key ? key(item) : windowed.start + offset)}
+                {@const index = windowed.start + offset}
+                <tr aria-rowindex={virtual ? index + 2 : undefined} style={virtual ? `height: ${virtual.rowHeight}px;` : undefined}>
                     {#if selectable}
                         <td class="{{selectCell}}">
                             <input
@@ -432,8 +463,14 @@
                     {/if}
                 </tr>
             {/each}
+            {#if virtual && windowed.end < rows.length}
+                <tr aria-hidden="true" data-spacer>
+                    <td colspan={shown.length + (selectable ? 1 : 0)} style="height: {(rows.length - windowed.end) * virtual.rowHeight}px; padding: 0;"></td>
+                </tr>
+            {/if}
         </tbody>
     </table>
+    </div>
     {#if problem}
         <p class="{{error}}" role="alert">
             {problem}
@@ -447,11 +484,11 @@
             {#if emptyAction && !isFiltered}{@render emptyAction()}{/if}
         </div>
     {/if}
-    {#if paging === 'more'}
+    {#if !virtual && paging === 'more'}
         {#if cursor && !problem}
             <button type="button" class="{{button}}" disabled={busy} onclick={loadMore}>{more}</button>
         {/if}
-    {:else if trail.length > 0 || cursor}
+    {:else if !virtual && (trail.length > 0 || cursor)}
         <div class="{{pager}}">
             <button type="button" class="{{button}}" disabled={busy || trail.length === 0} onclick={back}>{previous}</button>
             <button type="button" class="{{button}}" disabled={busy || !cursor} onclick={forward}>{next}</button>
