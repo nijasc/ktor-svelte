@@ -72,14 +72,20 @@ class PageLoadsTest {
         app {
             startApplication()
             assertEquals(
-                "import { apiWith } from './services.js';\n\n" +
-                    "export async function loadTasksId(event: { fetch: typeof fetch; params: { id: string } }) {\n" +
+                "import { inlinePageData } from './client.js';\n" +
+                    "import { apiWith } from './services.js';\n\n" +
+                    "export async function loadTasksId(event: { fetch: typeof fetch; url: URL; params: { id: string } }) {\n" +
                     "    const api = apiWith(event);\n" +
-                    "    const [task, comments, members] = await Promise.all([\n" +
-                    "        api.tasks.get(event.params.id, { silent: true }),\n" +
-                    "        api.tasks.getComments(event.params.id, { silent: true }),\n" +
-                    "        api.members.list({ silent: true })\n" +
-                    "    ]);\n" +
+                    "    const load = () =>\n" +
+                    "        Promise.all([\n" +
+                    "            api.tasks.get(event.params.id, { silent: true }),\n" +
+                    "            api.tasks.getComments(event.params.id, { silent: true }),\n" +
+                    "            api.members.list({ silent: true })\n" +
+                    "        ]);\n" +
+                    "    const inline = inlinePageData(event.url.pathname);\n" +
+                    "    const [task, comments, members] = inline\n" +
+                    "        ? ([inline.task, inline.comments, inline.members] as Awaited<ReturnType<typeof load>>)\n" +
+                    "        : await load();\n" +
                     "    return { task, comments, members };\n" +
                     "}\n",
                 dir.resolve("src/lib/api/loads.ts").readText(),

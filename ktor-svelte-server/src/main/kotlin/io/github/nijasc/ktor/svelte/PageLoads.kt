@@ -3,9 +3,15 @@ package io.github.nijasc.ktor.svelte
 import io.github.nijasc.ktor.svelte.internal.typescript.PageDataSpec
 import io.github.nijasc.ktor.svelte.internal.typescript.PageLoadSpec
 import io.github.nijasc.ktor.svelte.internal.typescript.validPageDataKey
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 public class SveltePageLoadsConfig internal constructor() {
     internal val pages: MutableList<PageLoadSpec> = mutableListOf()
+
+    public var inline: Boolean = false
+
+    public var inlineTimeout: Duration = 2.seconds
 
     public fun page(
         path: String,
