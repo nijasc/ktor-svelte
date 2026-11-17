@@ -240,6 +240,32 @@ strength.missing.map((rule) => rule.requirement);
 - Screen readers hear the meter's value and, once, that the password is strong enough, instead of every keystroke.
 - Use it only for a property with `@Rule.StrongPassword`; for your own rule, write your own list.
 
+## NumberInput
+
+A number field that groups digits and uses the decimal separator of the visitor's language, and never rounds. Bind it to a [`Decimal`](./typescript.md#money-and-durations) for money and exact amounts, or to a `number`:
+
+```svelte no-check
+<script lang="ts">
+    import NumberInput from '#components/NumberInput.svelte';
+</script>
+
+<NumberInput label="Price" bind:value={form.draft.price} />
+<NumberInput label="Rate" bind:value={form.draft.rate} fractionDigits={4} />
+<NumberInput label="Seats" bind:value={form.draft.seats} fractionDigits={0} number />
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `value` | | `bind:value`; a `Decimal` string such as `"1234.5"`, or a `number`; `null` while empty |
+| `fractionDigits` | `2` | How many digits after the separator can be typed; `0` for whole numbers, where the separator is not accepted at all |
+| `number` | `false` | Bind a `number` instead of a string; also on by itself when the value already is a number |
+| `locale` | the page's `lang` | Which separators to use |
+| `label`, `bounds`, `errors`, `hint`, `class` | | As for `Field` |
+
+- In German, typing `1234567,8` shows `1.234.567,8` and binds `"1234567.8"`; in English the same amount is `1,234,567.8`.
+- A `Decimal` never goes through a JavaScript number, so `12345678901234567890.1234` keeps every digit. Use `number` only for values that fit a double, such as counts.
+- The keyboard on phones is the decimal one, and the caret stays where you are typing, as in [MaskedInput](#maskedinput), which this component builds on.
+
 ## EnumSelect
 
 A `<select>` over a generated enum object:

@@ -1,4 +1,4 @@
-const { maskFor, keptBefore, caretAfter } = await import(process.argv[2]);
+const { maskFor, keptBefore, caretAfter, numberMask } = await import(process.argv[2]);
 
 type Mask = { show(clean: string): string; retype(typed: string): string; clean(typed: string): string; keeps(character: string): boolean };
 
@@ -17,6 +17,8 @@ const results = {
     dateUs: run(maskFor('date', 'en-US'), ['12242026'], ['2026-12-24']),
     moneyDe: run(maskFor('money', 'de-DE'), ['1234567', '1234567,8', '1234,', '1.234,56', '-0012,345', '', ','], ['1234567.8', '-12', 'x']),
     moneyEn: run(maskFor('money', 'en-US'), ['1234567.89', '1,234'], ['1234567.89']),
+    wholeDe: run(numberMask('de-DE', 0), ['1234567', '12,5', '-40'], ['1234567', '-40']),
+    preciseEn: run(numberMask('en-US', 4), ['12345678901234567890.12345'], ['12345678901234567890.1234']),
     caret: {
         keptBeforeCaret: keptBefore('DE89 3704', 6, maskFor('iban').keeps),
         caretAfterFour: caretAfter('DE89 3704 0044', 4, maskFor('iban').keeps),

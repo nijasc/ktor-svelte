@@ -106,7 +106,7 @@ function date(locale?: string): Mask {
 function money(locale?: string, fractionDigits = 2): Mask {
     const decimal = new Intl.NumberFormat(locale).formatToParts(1.5).find((part) => part.type === 'decimal')?.value ?? '.';
     const grouping = new Intl.NumberFormat(locale, { useGrouping: true, maximumFractionDigits: 0 });
-    const keeps = (character: string) => digit(character) || character === decimal || character === '-';
+    const keeps = (character: string) => digit(character) || (fractionDigits > 0 && character === decimal) || character === '-';
     const split = (typed: string) => {
         const kept = onlyKept(typed, keeps);
         const negative = kept.startsWith('-');
@@ -139,6 +139,10 @@ function money(locale?: string, fractionDigits = 2): Mask {
 }
 
 export type MaskName = 'phone' | 'iban' | 'date' | 'money';
+
+export function numberMask(locale?: string, fractionDigits = 2): Mask {
+    return money(locale, Math.max(0, Math.floor(fractionDigits)));
+}
 
 export function maskFor(mask: MaskName | Mask, locale?: string): Mask {
     if (typeof mask !== 'string') return mask;

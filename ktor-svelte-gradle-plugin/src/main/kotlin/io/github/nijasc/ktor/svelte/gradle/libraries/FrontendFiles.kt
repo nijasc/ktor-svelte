@@ -270,6 +270,7 @@ internal fun componentFiles(
             "$COMPONENTS_DIR/ErrorSummary.svelte" to errorSummary(daisy),
             "$COMPONENTS_DIR/PasswordStrength.svelte" to passwordStrength(daisy),
             "$COMPONENTS_DIR/masks.ts" to renderTemplate("components/masks.ts"),
+            "$COMPONENTS_DIR/NumberInput.svelte" to renderTemplate("components/NumberInput.svelte"),
             "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
             "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
             "$COMPONENTS_DIR/FileDrop.svelte" to fileDrop(daisy),
