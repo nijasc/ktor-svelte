@@ -382,6 +382,73 @@ function migrationsView(root) {
     });
 }
 
+function megabytes(bytes) {
+    return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
+}
+
+function duration(millis) {
+    const seconds = Math.round(millis / 1000);
+    if (seconds < 120) return `${seconds} s`;
+    const minutes = Math.round(seconds / 60);
+    return minutes < 120 ? `${minutes} min` : `${(minutes / 60).toFixed(1)} h`;
+}
+
+function runtimeView(root) {
+    const section = root.querySelector('.runtime');
+    const rows = root.querySelector('.runtime-rows');
+    const bar = root.querySelector('.runtime-heap');
+    let timer;
+
+    function line(label, value, className = '') {
+        const row = document.createElement('div');
+        row.className = `runtime-row ${className}`.trim();
+        const name = document.createElement('span');
+        name.textContent = label;
+        const text = document.createElement('span');
+        text.textContent = value;
+        row.append(name, text);
+        return row;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/runtime', { headers: { accept: 'application/json' } });
+            const state = await response.json();
+            const heap = state.heap;
+            const limit = heap.max ?? heap.committed;
+            const share = limit > 0 ? heap.used / limit : 0;
+            bar.value = share;
+            bar.title = `${Math.round(share * 100)}% of the heap limit`;
+            const threads = state.threads;
+            const states = Object.entries(threads.states)
+                .map(([name, count]) => `${count} ${name.toLowerCase().replaceAll('_', ' ')}`)
+                .join(', ');
+            rows.replaceChildren(
+                line('heap', `${megabytes(heap.used)} used of ${megabytes(heap.committed)} taken, limit ${heap.max === undefined ? 'none' : megabytes(heap.max)}`, share > 0.85 ? 'bad' : ''),
+                line('non-heap', `${megabytes(state.nonHeap.used)} used`),
+                ...state.collectors.map((collector) => line(`GC ${collector.name}`, `${collector.count} runs, ${collector.ms} ms in all`)),
+                line('threads', `${threads.live} live (${threads.daemon} daemon), peak ${threads.peak}, ${threads.started} started`),
+                line('thread states', states),
+                line('processors', String(state.processors)),
+                line('uptime', duration(state.uptime))
+            );
+        } catch {
+            rows.replaceChildren(line('The memory and threads could not be loaded.', ''));
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        clearInterval(timer);
+        if (!section.open) return;
+        void load();
+        timer = setInterval(() => void load(), 2000);
+    });
+    root.querySelector('.runtime-gc').addEventListener('click', async () => {
+        await plainFetch('/_ktor-svelte/dev/runtime/gc', { method: 'POST', headers: { 'X-Ktor-Svelte-Dev': '1' } }).catch(() => undefined);
+        await load();
+    });
+}
+
 function statusView(root) {
     const section = root.querySelector('.status');
     const rows = root.querySelector('.status-rows');
@@ -867,6 +934,15 @@ button.routes-file:hover { text-decoration: underline; }
 .migrations-row span:last-child { color: #aaa; }
 .migrations-row.warn span:nth-child(3) { color: #f3c969; }
 .migrations-row.bad span:nth-child(3) { color: #ff7b72; }
+.runtime { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.runtime summary { padding: 6px 10px; cursor: pointer; }
+.runtime-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; }
+.runtime-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.runtime-heap { flex: 1; height: 8px; }
+.runtime-rows { padding-bottom: 6px; }
+.runtime-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 8px; padding: 2px 10px; }
+.runtime-row span:first-child { color: #aaa; }
+.runtime-row.bad span:last-child { color: #ff7b72; }
 .theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .theme[hidden] { display: none; }
 .theme summary { padding: 6px 10px; cursor: pointer; }
@@ -1174,6 +1250,14 @@ function startPanel() {
                 <p class="migrations-note">Loading...</p>
                 <div class="migrations-rows"></div>
             </details>
+            <details class="runtime">
+                <summary>Memory and threads</summary>
+                <div class="runtime-tools">
+                    <meter class="runtime-heap" min="0" max="1" low="0.7" high="0.85" optimum="0" aria-label="Heap in use"></meter>
+                    <button type="button" class="runtime-gc" title="Ask the JVM for a garbage collection, to see what memory is really still in use">Collect garbage</button>
+                </div>
+                <div class="runtime-rows"></div>
+            </details>
             <details class="theme" hidden>
                 <summary>Theme colors</summary>
                 <div class="theme-rows"></div>
@@ -1288,6 +1372,7 @@ function startPanel() {
     cookieInspector(root);
     routeMap(root);
     statusView(root);
+    runtimeView(root);
     migrationsView(root);
     environmentView(root);
     themeEditor(root);
