@@ -142,6 +142,22 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `a build that ran the frontend ends with how long each step took`() {
+        val project = project()
+        val first = project.run("jar", "--configuration-cache")
+        assertContains(first.output, "ktor-svelte build times:")
+        assertTrue(Regex("frontend build +\\d+\\.\\ds").containsMatchIn(first.output), first.output)
+        assertTrue(Regex("bundling +\\d+\\.\\ds").containsMatchIn(first.output), first.output)
+        assertContains(first.output, "  total ")
+
+        assertFalse("ktor-svelte build times:" in project.run("jar", "--configuration-cache").output)
+
+        project.buildScript(javaBuild + "\nsvelte { timingSummary = false }\n")
+        project.frontend.resolve("app.txt").writeText("changed")
+        assertFalse("ktor-svelte build times:" in project.run("jar").output)
+    }
+
+    @Test
     fun `configuration cache is stored and reused`() {
         val project = project()
         val first = project.run("jar", "--configuration-cache")
