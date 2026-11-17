@@ -33,6 +33,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devCookieRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devStatus
+import io.github.nijasc.ktor.svelte.internal.dev.installDevHttps
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.pagesOf
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
@@ -209,6 +210,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
         if (pluginConfig.requestIds) installRequestIds(application)
         installConfigReport(application, pluginConfig)
+        if (application.developmentMode) installDevHttps(application)
         val loginPage = pluginConfig.loginPage
         require(loginPage == null || (isPagePath(loginPage) && '?' !in loginPage && '#' !in loginPage)) {
             "loginPage takes the path of a page in this app, such as \"/login\" or FrontendRoutes.login, but is '$loginPage'."
