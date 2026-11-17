@@ -160,6 +160,8 @@ Within a run, jobs only start when the changes can affect them. `.github/scripts
 
 A pull request that only changes Markdown outside `docs/` runs no build at all. The release pull request, pushes to `main`, and pull requests that change `ci.yml` or the script itself count as changing every area. A new push to a pull request cancels its previous run. When you add a folder that a job depends on, add it to the script.
 
+Every workflow installs the Bun version in `.bun-version`. A fixed version is downloaded directly; without one, `setup-bun` asks the GitHub API for Bun's releases in every job, and a few merges in a row run into the API rate limit. Raise the version in that file when you update Bun.
+
 The `CodeQL` workflow scans the Kotlin, the TypeScript and JavaScript, and the workflows themselves. It runs on the release pull request, weekly so that new queries reach unchanged code, and by hand. Its findings appear under the Security tab.
 
 ## Rules
