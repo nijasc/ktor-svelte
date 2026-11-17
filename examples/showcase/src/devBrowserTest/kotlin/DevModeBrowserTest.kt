@@ -496,6 +496,9 @@ class DevModeBrowserTest {
         } finally {
             restore(about)
         }
+        waitFor("Vite to serve the restored page", 60) { "twice" !in get("/src/routes/about/+page.svelte")?.body().orEmpty() }
+        page.navigate("/about")
+        page.waitForLoadState(LoadState.NETWORKIDLE)
     }
 
     @Test
