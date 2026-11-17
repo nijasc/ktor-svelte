@@ -109,3 +109,4 @@ Store the language with the person when you send emails later, for example from 
 - Rendering uses Bun when the project uses Bun, and Node.js otherwise.
 - The generated code has no dependencies, not even on `ktor-svelte-server`, so you can call it from any code in the app, such as a background job.
 - The function names come from the file names, so renaming a component renames its Kotlin function, and the compiler shows every caller.
+- The [showcase](../examples.md#showcase) has a working example: `frontend/src/emails/Welcome.svelte`, rendered when someone registers and returned to admins by `GET /api/admin/emails/welcome`.

@@ -210,6 +210,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteFrontend : org/g
 	public fun <init> (Ljava/lang/String;)V
 	public abstract fun getBasePath ()Lorg/gradle/api/provider/Property;
 	public abstract fun getBuildScript ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDevPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public fun getName ()Ljava/lang/String;
 	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
@@ -465,6 +466,8 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask
 	public abstract fun getClassesDirectories ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public abstract fun getCompileErrorsFile ()Lorg/gradle/api/file/RegularFileProperty;
 	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFrontendDirectories ()Lorg/gradle/api/provider/MapProperty;
+	public abstract fun getFrontendPorts ()Lorg/gradle/api/provider/MapProperty;
 	public abstract fun getFullStackTraces ()Lorg/gradle/api/provider/Property;
 	public abstract fun getGradleExecutable ()Lorg/gradle/api/provider/Property;
 	public abstract fun getHttps ()Lorg/gradle/api/provider/Property;
@@ -579,6 +582,22 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteOutdatedTa
 	public final fun outdated ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteReadmeTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getAppUrl ()Lorg/gradle/api/provider/Property;
+	public abstract fun getBuildEnv ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getCheck ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDevPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getEnvironmentExample ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getHttps ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHttpsPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getReadmeFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getTaskNames ()Lorg/gradle/api/provider/SetProperty;
+	public abstract fun getTaskPrefix ()Lorg/gradle/api/provider/Property;
+	public final fun write ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRecordTestTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getBrowser ()Lorg/gradle/api/provider/Property;
@@ -607,6 +626,15 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRenameTask
 	public abstract fun getRoutesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getTo ()Lorg/gradle/api/provider/Property;
 	public final fun rename ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRoutesDiagramTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getOutput ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getRoutesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public final fun write ()V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRunConfigurationsTask : org/gradle/api/DefaultTask {
@@ -665,6 +693,26 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask :
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDependenciesTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public final fun update ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpgradeNotesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getFrontendDirectory ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPluginVersion ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getSince ()Lorg/gradle/api/provider/Property;
+	public final fun print ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpgradeTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getBumpOnly ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFollowUpTasks ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getPluginVersion ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectPath ()Lorg/gradle/api/provider/Property;
+	public abstract fun getRootDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getTo ()Lorg/gradle/api/provider/Property;
+	public final fun upgrade ()V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyA11yTask : org/gradle/api/DefaultTask {

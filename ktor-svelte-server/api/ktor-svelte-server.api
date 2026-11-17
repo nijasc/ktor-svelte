@@ -621,12 +621,14 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteFrontendConfig {
+	public final fun getDevUrl ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
 	public final fun getNotFoundPage ()Ljava/lang/String;
 	public final fun getPrefix ()Ljava/lang/String;
 	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
 	public final fun getSpaFallback ()Ljava/lang/String;
 	public final fun paramRoutes ([Ljava/lang/String;)V
+	public final fun setDevUrl (Ljava/lang/String;)V
 	public final fun setNotFoundPage (Ljava/lang/String;)V
 	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
 	public final fun setSpaFallback (Ljava/lang/String;)V

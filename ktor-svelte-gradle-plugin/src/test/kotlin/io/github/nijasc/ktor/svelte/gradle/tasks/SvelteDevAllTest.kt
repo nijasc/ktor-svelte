@@ -13,6 +13,19 @@ class SvelteDevAllTest {
     lateinit var dir: File
 
     @Test
+    fun `the app learns where the Vite and the folder of each other frontend are`() {
+        assertEquals(
+            listOf(
+                "-Dktor.svelte.devUrl.admin=http://localhost:5174",
+                "-Dktor.svelte.frontendDir.admin=/work/admin",
+                "-Dktor.svelte.devUrl.admin-reports=http://localhost:5175",
+            ),
+            frontendArguments(mapOf("admin" to "/work/admin"), mapOf("admin-reports" to 5175, "admin" to 5174)),
+        )
+        assertEquals(emptyList(), frontendArguments(emptyMap(), emptyMap()))
+    }
+
+    @Test
     fun `a change restarts only after it has settled`() {
         val detector = ChangeDetector(initial = 1, settleMillis = 1000)
         assertFalse(detector.hasSettledChange(1, now = 0))

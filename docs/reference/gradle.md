@@ -54,7 +54,7 @@ svelte {
 | `precompress` | `true` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10% |
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](../features/runtime-config.md#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
-| `frontend(name) { }` | none | Another SvelteKit project served under its own path prefix, with `frontendDir`, `outputDir`, `buildScript` and `basePath`. See [Multiple frontends](../guide/multiple-frontends.md) |
+| `frontend(name) { }` | none | Another SvelteKit project served under its own path prefix, with `frontendDir`, `outputDir`, `buildScript`, `basePath` and `devPort`. See [Multiple frontends](../guide/multiple-frontends.md) |
 
 The package manager must already be installed unless you set `bunVersion`, or `nodeVersion` with npm.
 
@@ -250,7 +250,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteBuild` | Builds the frontend with `buildScript` |
 | `svelteVerifyLeaks` | Fails when a secret value from the environment or a `.env` file is in the frontend build. Runs after `svelteBuild` while `verifyLeaks` is on. See [Secrets in the frontend build](../features/runtime-config.md#secrets-in-the-frontend-build) |
 | `svelteBundle` | Copies the build into the JAR's resources with its manifest, and precompresses files |
-| `svelteInstallAdmin`, `svelteBuildAdmin`, `svelteBundleAdmin` | The same for each [other frontend](../guide/multiple-frontends.md), named after it |
+| `svelteInstallAdmin`, `svelteBuildAdmin`, `svelteBundleAdmin` | The same for each [other frontend](../guide/multiple-frontends.md), named after it. `svelteDevAdmin` starts its Vite |
 | `svelteSync` | Installs configured libraries and writes their generated files. Short name `sync` |
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
@@ -279,6 +279,8 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteVerifyA11y` (app) | `--path`, `-Pbrowser` | Packages the app, opens its prerendered pages in a browser in light and dark, and fails on [accessibility problems](../guide/browser-tests.md#accessibility) that axe finds. Not part of `check` |
 | `svelteSmokeTest` (app) | `--path`, `--skip`, `--start-seconds` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](../guide/deployment.md#smoke-test). Not part of `check` |
 | `svelteDoctor` | `--fix` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, that `NODE_EXTRA_CA_CERTS` points to a file, and that the package registry is reachable with the proxy and certificate settings that apply, and says what to fix. Gradle's `--offline` skips the registry. `--fix` repairs what needs no decision. Short name `doctor` |
+| `svelteReadme` | `--check` | Writes the [commands, addresses and environment variables](../guide/checks-and-tooling.md#sveltereadme) of the app between two markers in `README.md`. `--check` fails when that section is out of date |
+| `svelteRoutesDiagram` | `--output` | Writes a [Mermaid diagram of which page calls which API route](../features/typescript.md#which-page-calls-which-route) to `build/ktor-svelte/pages-to-routes.md`, or to the file given with `--output` |
 | `svelteConfig` | | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores the setup and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteCheck` | | Runs the frontend's `check` script |
 
@@ -313,6 +315,8 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteRun` | `--script`, `--args` | Runs any `package.json` script: `svelteRun --script=lint --args="--fix --quiet"`. Quote an argument that contains spaces |
 | `svelteOutdated` | | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | | Updates frontend dependencies and the lockfile |
+| `svelteUpgrade` | `--to`, `--bump-only` | Upgrades ktor-svelte itself. See [Upgrade ktor-svelte](../guide/checks-and-tooling.md#svelteupgrade) |
+| `svelteUpgradeNotes` | `--since` | Prints the upgrade notes since a version that apply to this project |
 | `svelteClean` | | Deletes `node_modules`, `.svelte-kit` and the build output |
 | `deepClean` | | Runs `clean`, then also deletes the project's `.gradle` and `.kotlin` directories, `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept. Files a running Gradle daemon or IDE still holds, which happens on Windows, are skipped with a warning |
 
