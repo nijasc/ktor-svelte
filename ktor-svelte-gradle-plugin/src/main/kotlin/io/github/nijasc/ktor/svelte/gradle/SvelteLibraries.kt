@@ -196,6 +196,17 @@ public abstract class LucideSettings {
     ): Nothing = throw unknownSetting(LucideSettings::class.java, "lucide", name)
 }
 
+public abstract class FontSettings {
+    public abstract val sans: Property<String>
+    public abstract val mono: Property<String>
+    public abstract val variable: Property<Boolean>
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(FontSettings::class.java, "fonts", name)
+}
+
 public abstract class ToastsSettings {
     public abstract val reloadPromptEnabled: Property<Boolean>
 
@@ -242,6 +253,9 @@ public abstract class SvelteLibraries {
     public abstract val toastsSettings: ToastsSettings
 
     @get:Nested
+    public abstract val fontSettings: FontSettings
+
+    @get:Nested
     public abstract val routesSettings: RoutesSettings
 
     public abstract val overrides: MapProperty<String, String>
@@ -266,6 +280,14 @@ public abstract class SvelteLibraries {
     public fun toasts(action: Action<ToastsSettings>) {
         toastsEnabled.set(true)
         action.execute(toastsSettings)
+    }
+
+    public fun fonts(
+        sans: String,
+        action: Action<FontSettings> = Action { },
+    ) {
+        fontSettings.sans.set(sans)
+        action.execute(fontSettings)
     }
 
     public fun components() {

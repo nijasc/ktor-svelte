@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle
 
+import io.github.nijasc.ktor.svelte.gradle.libraries.FontSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
@@ -205,6 +206,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             )
             settings.put("libraries.routes", libraries.routesEnabled.map { it.toString() }.orElse("false"))
             settings.put("libraries.components", libraries.componentsEnabled.map { it.toString() }.orElse("false"))
+            settings.put("libraries.fonts", libraries.fontSettings.sans.orElse("none"))
             settings.put(
                 "libraries.i18n",
                 libraries.i18nSettings.enabled
@@ -253,6 +255,10 @@ public class KtorSveltePlugin : Plugin<Project> {
                 toasts = libraries.toastsEnabled.getOrElse(false),
                 routes = libraries.routesEnabled.getOrElse(false),
                 components = libraries.componentsEnabled.getOrElse(false),
+                fonts =
+                    libraries.fontSettings.sans.orNull?.let { sans ->
+                        FontSpec(sans, libraries.fontSettings.mono.orNull, libraries.fontSettings.variable.getOrElse(true))
+                    },
                 allIcons = libraries.lucideSettings.allIconsEnabled.getOrElse(false),
                 reloadPrompt = libraries.toastsSettings.reloadPromptEnabled.getOrElse(false),
                 i18n =

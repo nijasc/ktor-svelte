@@ -298,6 +298,13 @@ private fun appCss(spec: LibrarySpec): String =
         append("@import 'tailwindcss';\n")
         if (spec.tailwind?.typography == true) append("@plugin '@tailwindcss/typography';\n")
         if (spec.tailwind?.forms == true) append("@plugin '@tailwindcss/forms';\n")
+        spec.fonts?.let { fonts ->
+            fonts.families.flatMap(fonts::stylesheets).forEach { append("@import '$it';\n") }
+            append("@theme {\n")
+            append("    --font-sans: '${fonts.cssName(fonts.sans)}', ui-sans-serif, system-ui, sans-serif;\n")
+            fonts.mono?.let { append("    --font-mono: '${fonts.cssName(it)}', ui-monospace, monospace;\n") }
+            append("}\n")
+        }
         spec.daisy?.let { daisy ->
             val builtIn =
                 daisy.themes.joinToString(", ") { theme ->
@@ -410,17 +417,27 @@ private fun serverHooks(spec: LibrarySpec): String {
                 add("var l=document.cookie.match(/(?:^|; )$LOCALE_COOKIE=([^;]+)/);if(l)document.documentElement.lang=l[1];")
             }
         }.joinToString("")
+    val fonts = spec.fonts
     val imports =
         buildList {
             add("import type { Handle } from '@sveltejs/kit/hooks';")
             if (i18n != null) add("import { defaultLocale, getLocale, locales } from './i18n.js';")
+            fonts?.families?.forEachIndexed { index, family -> add("import font$index from '${fonts.preloadFile(family)}?url';") }
         }.joinToString("\n")
-    val scriptPart = if (cookieScript.isEmpty()) "" else ".replace('</head>', () => `<script>$cookieScript</script></head>`)"
+    val preloads =
+        fonts
+            ?.families
+            ?.indices
+            ?.joinToString("") { "<link rel=\"preload\" as=\"font\" type=\"font/woff2\" href=\"${'$'}{font$it}\" crossorigin>" }
+            .orEmpty()
+    val headPart = preloads + if (cookieScript.isEmpty()) "" else "<script>$cookieScript</script>"
+    val scriptPart = if (headPart.isEmpty()) "" else ".replace('</head>', () => `$headPart</head>`)"
+    val htmlPart = if (attributes.isEmpty()) "html" else "html.replace(/<html[^>]*>/, () => `<html $attributes>`)"
     return HEADER + "$imports\n\n" +
         "export const ktorSvelteHandle: Handle = ({ event, resolve }) => {\n$localeSetup" +
         "    return resolve(event, {\n" +
         "        transformPageChunk: ({ html }) =>\n" +
-        "            html.replace(/<html[^>]*>/, () => `<html $attributes>`)$scriptPart\n" +
+        "            $htmlPart$scriptPart\n" +
         "    });\n};\n"
 }
 
