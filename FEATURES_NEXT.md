@@ -59,6 +59,12 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 135 | Breadcrumb component | #367 |
 | 136 | Collapsible sidebar state | #368 |
 | 137 | Focus after navigation | #369 |
+| 138 | Payload sizes | #370 |
+| 139 | Config and environment view | #371 |
+| 140 | Migration state | #373 |
+| 141 | Memory and threads | #374 |
+| 145 | Timing summary | #372 |
+| 146 | Network check in doctor | #375 |
 
 ### Next up
 
@@ -196,15 +202,9 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 138 | Payload sizes | Small | 14 |
-| 139 | Config and environment view | Small | 14 |
-| 140 | Migration state | Small | 14 |
-| 141 | Memory and threads | Small | 14 |
 | 142 | Clear site data | Small | 14 |
 | 143 | Slowest routes of the session | Small | 14 |
 | 144 | Catch outgoing email | Medium | 14 |
-| 145 | Timing summary | Small | 14 |
-| 146 | Network check in doctor | Medium | 14 |
 | 147 | Pinned Node download | Medium | 14 |
 | 148 | Warm-up before ready | Small | 14 |
 | 149 | Latency and errors per route | Medium | 14 |
