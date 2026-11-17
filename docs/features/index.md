@@ -120,6 +120,7 @@ Pages, links, styling and components, turned on in Gradle and typed on both side
 | [Images](./icons-and-images.md#images) | `<enhanced:img>` with AVIF and WebP in several widths | Gradle |
 | [Charts](./charts.md) | LayerChart in your theme colors, with typed series | Gradle, Generated client |
 | [Installable app](./installable-app.md) | A web manifest, icons, a service worker and an offline page | Gradle, Ktor plugin |
+| [Emails](./emails.md) | Svelte components rendered to HTML and text emails at build time, with a typed Kotlin function per email | Gradle |
 
 ### Languages
 
