@@ -193,6 +193,7 @@ The dev loop, the dev panel and the tools around them.
 | [Debugging](../guide/dev-workflow.md) | Run configurations to debug Kotlin and the frontend, in one click | Gradle |
 | [Live templates](../guide/checks-and-tooling.md#sveltelivetemplates) | `ksget`, `ksapi` and more for IntelliJ and WebStorm | Gradle |
 | [Checks and tooling](../guide/checks-and-tooling.md) | Every verify task, what it catches and when it runs | Gradle |
+| [Naming rules](../guide/checks-and-tooling.md#svelteverifynaming) | `svelteVerifyNaming` checks pages, API routes, DTOs and message keys against the rules you set | Gradle |
 | [svelteDoctor](../guide/checks-and-tooling.md#sveltedoctor) | Checks the setup and fixes what it can with `--fix` | Gradle |
 | [svelteConfig](../guide/checks-and-tooling.md#svelteconfig) | Every setting on both sides, scored with suggestions | Gradle |
 | [Format both sides](../guide/checks-and-tooling.md#format-and-formatcheck) | `format` and `formatCheck` for Kotlin and the frontend | Gradle |
