@@ -41,8 +41,9 @@ internal fun frontendFiles(
             put("$GENERATED_DIR/i18n.ts", i18nSource(spec.i18n, messages))
             put(FORMAT_HELPER, formatSource(spec.i18n))
         }
-        if (spec.usesHooks) {
-            put("$GENERATED_DIR/server-hooks.ts", serverHooks(spec))
+        val shares = spec.routes && sharesPages(routes)
+        if (spec.usesHooks || shares) {
+            put("$GENERATED_DIR/server-hooks.ts", serverHooks(spec, shares))
             put("src/hooks.server.ts", HOOKS_SERVER)
         }
         if (spec.i18n?.strategy == LocaleStrategy.UrlPrefix) put("src/hooks.ts", universalHooks(spec.i18n))
@@ -399,7 +400,10 @@ private fun i18nSource(
         )
 }
 
-private fun serverHooks(spec: LibrarySpec): String {
+private fun serverHooks(
+    spec: LibrarySpec,
+    shares: Boolean = false,
+): String {
     val i18n = spec.i18n
     val daisy = spec.daisy
     val localeSetup =
@@ -429,6 +433,7 @@ private fun serverHooks(spec: LibrarySpec): String {
         buildList {
             add("import type { Handle } from '@sveltejs/kit/hooks';")
             if (i18n != null) add("import { defaultLocale, getLocale, locales } from './i18n.js';")
+            if (shares) add("import { shareTags } from './routes.js';")
             fonts?.families?.forEachIndexed { index, family -> add("import font$index from '${fonts.preloadFile(family)}?url';") }
         }.joinToString("\n")
     val preloads =
@@ -437,7 +442,8 @@ private fun serverHooks(spec: LibrarySpec): String {
             ?.indices
             ?.joinToString("") { "<link rel=\"preload\" as=\"font\" type=\"font/woff2\" href=\"${'$'}{font$it}\" crossorigin>" }
             .orEmpty()
-    val headPart = preloads + if (cookieScript.isEmpty()) "" else "<script>$cookieScript</script>"
+    val shareTags = if (shares) "${'$'}{shareTags(event)}" else ""
+    val headPart = shareTags + preloads + if (cookieScript.isEmpty()) "" else "<script>$cookieScript</script>"
     val scriptPart = if (headPart.isEmpty()) "" else ".replace('</head>', () => `$headPart</head>`)"
     val htmlPart = if (attributes.isEmpty()) "html" else "html.replace(/<html[^>]*>/, () => `<html $attributes>`)"
     return HEADER + "$imports\n\n" +

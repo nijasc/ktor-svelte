@@ -22,7 +22,13 @@ internal data class NavMeta(
     val icon: String? = null,
     val order: Int = DEFAULT_NAV_ORDER,
     val menu: Boolean = true,
-)
+    val description: String? = null,
+    val image: String? = null,
+) {
+    val shared: Boolean get() = description != null || image != null
+}
+
+internal fun sharesPages(routes: List<FrontendRoute>?): Boolean = routes.orEmpty().any { it.nav?.shared == true }
 
 internal const val DEFAULT_NAV_ORDER = 100
 private val NAV_EXPORT = Regex("""export\s+const\s+_nav\s*=\s*\{([^}]*)}""")
@@ -48,7 +54,7 @@ internal fun navMeta(
     val found = NAV_PROPERTY.findAll(body).associate { it.groupValues[1] to it.groupValues[2] }
     val rest = NAV_PROPERTY.replace(body, "").trim()
     if (rest.isNotEmpty()) wrong("has a part that cannot be read here: $rest")
-    val unknown = found.keys - setOf("title", "icon", "order", "menu")
+    val unknown = found.keys - setOf("title", "icon", "order", "menu", "description", "image")
     if (unknown.isNotEmpty()) wrong("has no setting called ${unknown.joinToString()}")
 
     fun text(name: String): String? =
@@ -59,7 +65,11 @@ internal fun navMeta(
     val title = text("title")?.takeIf { it.isNotBlank() } ?: wrong("needs a title")
     val order = found["order"]?.let { it.toIntOrNull() ?: wrong("needs a whole number for order") } ?: DEFAULT_NAV_ORDER
     val menu = found["menu"]?.let { it.toBooleanStrictOrNull() ?: wrong("needs true or false for menu") } ?: true
-    return NavMeta(title, text("icon"), order, menu)
+    val image = text("image")
+    if (image != null && !image.startsWith("/") && !image.startsWith("https://") && !image.startsWith("http://")) {
+        wrong("needs an address for image, such as '/share/board.png' or one that starts with https://")
+    }
+    return NavMeta(title, text("icon"), order, menu, text("description"), image)
 }
 
 internal data class FrontendRoute(
@@ -206,8 +216,19 @@ private fun navSource(
     val described = routes.filter { it.nav != null }
     if (described.isEmpty()) return ""
 
-    fun title(nav: NavMeta): String = if (nav.title in messageKeys) "() => m.${propertyName(nav.title)}()" else "() => ${quoted(nav.title)}"
-    val pages = described.joinToString(",\n") { "    { id: ${quoted(it.id)}, title: ${title(it.nav!!)} }" }
+    fun words(text: String): String = if (text in messageKeys) "() => m.${propertyName(text)}()" else "() => ${quoted(text)}"
+
+    fun title(nav: NavMeta): String = words(nav.title)
+    val shares = sharesPages(routes)
+    val pages =
+        described.joinToString(",\n") { route ->
+            val nav = route.nav!!
+            val more =
+                listOfNotNull(nav.description?.let { "description: ${words(it)}" }, nav.image?.let { "image: ${quoted(it)}" })
+            "    { ${(listOf("id: ${quoted(route.id)}", "title: ${title(nav)}") + more).joinToString()} }"
+        }
+    val sharing = if (shares) " description?: () => string; image?: string" else ""
+    val shape = "{ id: string; title: () => string;$sharing }"
     val menu =
         described
             .filter { it.nav!!.menu && it.params.isEmpty() }
@@ -217,8 +238,8 @@ private fun navSource(
                 val icon = nav.icon?.let { "${quoted(it)} as const" } ?: "undefined"
                 "    { name: ${quoted(route.name)} as const, to: routes.${route.name}, title: ${title(nav)}, icon: $icon }"
             }
-    return "\nconst pageTitles: { id: string; title: () => string }[] = [\n$pages\n];\n" +
-        "\nexport const nav = [${if (menu.isEmpty()) "" else "\n$menu\n"}];\n" + NAV_HELPERS
+    return "\nconst pageTitles: $shape[] = [\n$pages\n];\n" +
+        "\nexport const nav = [${if (menu.isEmpty()) "" else "\n$menu\n"}];\n" + NAV_HELPERS + (if (shares) SHARE_HELPERS else "")
 }
 
 private val NAV_HELPERS =
@@ -254,6 +275,29 @@ private val NAV_HELPERS =
     |
     """.trimMargin()
 
+private val SHARE_HELPERS =
+    """
+    |
+    |function inAttribute(text: string): string {
+    |    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    |}
+    |
+    |export function shareTags(page: CurrentPage): string {
+    |    const known = pageTitles.find((candidate) => candidate.id === page.route.id);
+    |    if (!known || (!known.description && !known.image)) return '';
+    |    const tags = ['<meta property="og:type" content="website">', `<meta property="og:title" content="${'$'}{inAttribute(known.title())}">`];
+    |    if (known.description) {
+    |        const description = inAttribute(known.description());
+    |        tags.push(`<meta name="description" content="${'$'}{description}">`, `<meta property="og:description" content="${'$'}{description}">`);
+    |    }
+    |    if (known.image) {
+    |        tags.push(`<meta property="og:image" content="${'$'}{inAttribute(known.image)}">`, '<meta name="twitter:card" content="summary_large_image">');
+    |    }
+    |    return tags.join('');
+    |}
+    |
+    """.trimMargin()
+
 internal fun routesSource(
     routes: List<FrontendRoute>,
     i18n: I18nSpec?,
@@ -266,7 +310,7 @@ internal fun routesSource(
         append("// $GENERATED_MARKER\n")
         append("import { resolve } from '\$app/paths';\n")
         append("import type { RouteId, RouteParams } from '\$app/types';\n")
-        val translated = routes.any { it.nav?.title in messageKeys }
+        val translated = routes.any { it.nav?.title in messageKeys || it.nav?.description in messageKeys }
         val fromI18n = listOfNotNull("getLocale".takeIf { localized }, "m".takeIf { translated })
         if (fromI18n.isNotEmpty()) append("import { ${fromI18n.joinToString()} } from './i18n.js';\n")
         append("\nexport const routeIds = {\n$ids\n} as const;\n\n")
