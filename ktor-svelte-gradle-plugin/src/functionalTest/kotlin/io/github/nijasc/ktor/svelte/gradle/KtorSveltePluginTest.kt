@@ -44,7 +44,10 @@ class KtorSveltePluginTest {
         )
         project.frontend.resolve("src/emails").mkdirs()
         project.frontend.resolve("src/emails/Welcome.svelte").writeText("<h1>Welcome</h1>")
-        val gradleHome = dir.resolve("gradle-home")
+        val gradleHome =
+            java.nio.file.Files
+                .createTempDirectory("ktor-svelte-gradle-home")
+                .toFile()
         val home = gradleHome.resolve("ktor-svelte/node/22.12.0/linux-x64")
         val bin = home.resolve("bin").apply { mkdirs() }
         home.resolve(".complete").writeText("22.12.0")
@@ -62,9 +65,13 @@ class KtorSveltePluginTest {
             setExecutable(true)
         }
 
-        for (verbose in listOf(false, true)) {
-            val result = project.run("svelteEmails", "--rerun-tasks", "-g", gradleHome.absolutePath, "-Psvelte.verbose=$verbose")
-            assertEquals(TaskOutcome.SUCCESS, result.task(":svelteEmails")?.outcome)
+        try {
+            for (verbose in listOf(false, true)) {
+                val result = project.run("svelteEmails", "--rerun-tasks", "-g", gradleHome.absolutePath, "-Psvelte.verbose=$verbose")
+                assertEquals(TaskOutcome.SUCCESS, result.task(":svelteEmails")?.outcome)
+            }
+        } finally {
+            gradleHome.deleteRecursively()
         }
         val paths = project.frontend.resolve("node-paths.txt").readLines()
         assertEquals(2, paths.size)
