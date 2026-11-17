@@ -571,6 +571,22 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `the welcome email is rendered from its Svelte component in the visitor's language with the values escaped`() {
+        val english = admin.send("GET", "/api/admin/emails/welcome")
+        assertEquals(200, english.statusCode())
+        assertContains(english.body(), """"subject":"Welcome to the board, Ada Lovelace"""")
+        assertContains(english.body(), "Open the board (http://localhost:${app.port}/board)")
+        assertContains(english.body(), "background: #7f52ff")
+
+        val name = "%3Cb%3ETom%20%26%20Jerry%3C%2Fb%3E"
+        val german = admin.send("GET", "/api/admin/emails/welcome?name=$name", null, "Accept-Language" to "de")
+        assertContains(german.body(), """"subject":"Willkommen auf dem Board, <b>Tom & Jerry</b>"""")
+        assertContains(german.body(), "Hallo &lt;b&gt;Tom &amp; Jerry&lt;/b&gt;")
+        assertContains(german.body(), "<html lang=\\\"de\\\">")
+        assertEquals(403, member.send("GET", "/api/admin/emails/welcome").statusCode())
+    }
+
+    @Test
     fun `only admins reach the admin area and the last admin stays`() {
         val refused = member.send("GET", "/api/admin/users")
         assertEquals(403, refused.statusCode())
