@@ -3398,6 +3398,36 @@ data class Product(
 
 The messages for these bounds are English and are the same in the browser and on the server. For another language, or friendlier wording than `Must match ^[a-z]+$.`, write the rule yourself with `check` and your own text.
 
+## Ready-made rules
+
+For the values every app checks, use a preset instead of writing a pattern. Each one has a friendly message, and the server and the browser use the same pattern and the same text:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.Rule
+
+@Serializable
+data class AccountInput(
+    @Rule.Email val email: String,
+    @Rule.StrongPassword val password: String,
+    @Rule.WebAddress val homepage: String? = null,
+    @Rule.Phone val phone: String? = null,
+    @Rule.Slug val handle: String,
+)
+```
+
+| Annotation | Accepts | Message |
+| --- | --- | --- |
+| `@Rule.Email` | `name@example.com`: something, `@`, a domain with a dot, no spaces | `Must be an email address, such as name@example.com.` |
+| `@Rule.WebAddress` | `http://` or `https://`, a host with a dot, no spaces | `Must be a web address that starts with http:// or https://.` |
+| `@Rule.Phone` | 6 to 20 digits, spaces and `+ ( ) . / -`, such as `+49 30 1234567` or `(030) 123-45` | `Must be a phone number, such as +49 30 1234567.` |
+| `@Rule.Slug` | lowercase letters and digits with single dashes, such as `hello-world-2` | `Must be lowercase letters and digits, with single dashes between words.` |
+| `@Rule.StrongPassword` | at least 10 characters with a lowercase letter, an uppercase letter and a digit | `Must have at least 10 characters, a lowercase letter, an uppercase letter and a digit.` |
+
+- A preset checks a value that is there. Combine it with `@JsonSchema.MinLength(1)` to also refuse an empty text, and make the property nullable to allow leaving it out.
+- In the OpenAPI document each preset is the property's `format` (`email`, `uri`, `phone`, `slug`, `strong-password`); that is how the generated `validate()` knows which check to run.
+- The patterns are deliberately loose. An email that passes can still bounce; confirm addresses by sending a mail.
+- For your own wording or another language, write the rule with `check` in [`Validated.rules()`](#rules-on-the-class) instead.
+
 ## Rules on the class
 
 Anything the annotations cannot say, such as a rule over two fields, goes into `Validated.rules()`:
