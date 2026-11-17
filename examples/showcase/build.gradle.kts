@@ -46,6 +46,7 @@ svelte {
         lucide()
         routes()
         components()
+        fonts("Inter")
         images()
         toasts { reloadPrompt() }
         i18n {
