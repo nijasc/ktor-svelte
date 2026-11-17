@@ -626,6 +626,23 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel shows heap, garbage collection and threads of the app`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".runtime summary").click()
+        val rows = panel.locator(".runtime-row")
+
+        fun row(label: String) = rows.filter(Locator.FilterOptions().setHasText(Pattern.compile("^$label"))).first()
+        assertThat(row("heap")).containsText(Pattern.compile("\\d+ MB used of \\d+ MB taken"))
+        assertThat(row("threads")).containsText(Pattern.compile("\\d+ live"))
+        assertThat(row("GC ")).containsText("runs")
+        panel.locator(".runtime-gc").click()
+        assertThat(row("GC ")).containsText("runs")
+    }
+
+    @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
