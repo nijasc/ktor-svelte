@@ -128,6 +128,7 @@ export default defineConfig({
                     { text: 'Project structure', link: '/guide/project-structure' },
                     { text: 'Dev workflow', link: '/guide/dev-workflow' },
                     { text: 'Deployment', link: '/guide/deployment' },
+                    { text: 'Browser tests', link: '/guide/browser-tests' },
                     { text: 'Examples', link: '/examples' }
                 ]
             },

@@ -1,0 +1,117 @@
+# Browser tests
+
+Tests that drive a real browser against the packaged app, written in Kotlin.
+
+A unit test cannot tell you that the login page still logs someone in. A browser test can, and with ktor-svelte both halves of the app are in one build, so the test can be Kotlin too: it starts the JAR you ship, opens a browser, and uses your typed routes and your own classes.
+
+## Set up
+
+Add a test suite called `browserTest`:
+
+```kotlin no-check
+plugins {
+    `jvm-test-suite`
+}
+
+testing {
+    suites {
+        register<JvmTestSuite>("browserTest") {
+            useJUnitJupiter()
+            dependencies {
+                implementation(project())
+            }
+        }
+    }
+}
+```
+
+The name is what the ktor-svelte plugin looks for. For that suite it:
+
+- adds `io.github.nijasc:ktor-svelte-test`, which brings [Playwright](https://playwright.dev/java/),
+- packages the app before the tests, with `buildFatJar` or `shadowJar` when the project has them and `installDist` otherwise,
+- tells the tests where the packaged app is,
+- passes the browser on: `./gradlew browserTest -Pbrowser=firefox`. Chromium unless you say so, and `webkit` is the third.
+
+`implementation(project())` gives the tests your typed routes and your classes. Tests go in `src/browserTest/kotlin`.
+
+## A test
+
+```kotlin no-check
+import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
+import io.github.nijasc.ktor.svelte.test.BrowserTest
+import io.github.nijasc.ktor.svelte.test.problems
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class NotesBrowserTest : BrowserTest() {
+    @Test
+    fun `a new note shows up in the list`() {
+        val problems = page.problems()
+        val note: Note = api.post("/api/notes", NoteInput(title = "Written by a test"))
+
+        page.navigate(FrontendRoutes.notes)
+        assertThat(page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName(note.title))).isVisible()
+        assertEquals(emptyList(), problems)
+    }
+}
+```
+
+`BrowserTest` gives every test:
+
+| | |
+| --- | --- |
+| `page` | A fresh Playwright page in its own browser context, so tests do not share cookies. Paths are relative to the app |
+| `context` | That context, and `newContext()` for a second visitor in the same test |
+| `api` | The app's API, called from that context: with its cookies, so as whoever the page is signed in as |
+| `app` | The running app, with its `url` and its `log` file |
+
+The app is started once and shared by all tests of the run. It is started the way production starts it, without the development flag, on a free port.
+
+## The API with your own classes
+
+`api` sends and reads JSON with kotlinx.serialization, so a request body and an answer are your classes:
+
+```kotlin no-check
+val user: User = api.post("/api/session", Login("ada@example.com", "secret"))
+val notes: List<Note> = api.get("/api/notes")
+val changed: Note = api.put("/api/notes/${note.id}", NoteInput(title = "Renamed"))
+api.delete("/api/notes/${note.id}")
+```
+
+An answer of 400 or above fails the test with the status and the body. To check a refusal, catch it or ask for the status alone:
+
+```kotlin no-check
+val refused = assertFailsWith<ApiFailure> { api.get<List<Note>>("/api/notes") }
+assertEquals(401, refused.status)
+assertEquals(403, api.status("DELETE", "/api/admin/users/1"))
+```
+
+Because `api` shares the page's cookies, signing in through `api` signs the page in, which is much faster than filling in the login form in every test.
+
+## What the app needs
+
+The app runs with the environment of the build. Override `environment` for what the tests should set, such as a fresh database:
+
+```kotlin no-check
+class NotesBrowserTest : BrowserTest() {
+    override val environment = mapOf("DATABASE_URL" to "jdbc:h2:mem:tests", "ADMIN_PASSWORD" to "secret")
+}
+```
+
+Test classes with the same environment share one app. A class with another environment gets its own.
+
+`page.problems()` collects what went wrong while the test ran: errors in the console, uncaught exceptions and answers of 500 and above. Assert that it is empty at the end of a test, and a broken page fails even when the thing you looked at happened to work.
+
+## Browsers
+
+Playwright downloads the browser the first time it is used. A fresh Linux machine, such as a CI runner, also lacks system packages that a browser needs. Playwright's own command line installs both, and it is on the suite's classpath, so a small task runs it:
+
+```kotlin no-check
+tasks.register<JavaExec>("installBrowsers") {
+    classpath = sourceSets["browserTest"].runtimeClasspath
+    mainClass = "com.microsoft.playwright.CLI"
+    args("install", "--with-deps", providers.gradleProperty("browser").orElse("chromium").get())
+}
+```
+
+The port goes to the app as the `PORT` variable and as `-port`, as with the [smoke test](deployment.md#smoke-test), so the app has to read one of them.
