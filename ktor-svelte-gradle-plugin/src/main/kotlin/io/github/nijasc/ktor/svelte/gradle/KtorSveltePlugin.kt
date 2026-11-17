@@ -10,6 +10,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteCheckTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteConfigTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDeployTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevAllTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
@@ -35,6 +36,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
+import io.github.nijasc.ktor.svelte.gradle.tasks.startPlan
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -114,6 +116,15 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.onlyIf("svelte.verifyLeaks is on and the frontend is built") { !skipFrontend && enabled.get() }
             }
         bundle.configure { it.dependsOn(verifyLeaks) }
+        project.tasks.register("svelteDeploy", SvelteDeployTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Writes the deploy configuration for a host from this project's settings. Railway so far."
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.projectName.set(project.name)
+            val plan = project.provider { startPlan(project.name, project.tasks.names) }
+            task.buildCommand.set(plan.map { it.build })
+            task.startCommand.set(plan.map { it.start })
+        }
         registerDev(project, extension, install)
         registerUtilityTasks(project, extension, install)
         registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
