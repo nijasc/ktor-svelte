@@ -10,7 +10,10 @@ import kotlin.test.assertNull
 class UnknownSettingTest {
     @Test
     fun `setting names come from the public getters and methods`() {
-        assertEquals(listOf("debugPort", "openBrowser", "port", "script"), settingNames(SvelteDevSettings::class.java))
+        assertEquals(
+            listOf("debugPort", "https", "httpsPort", "openBrowser", "port", "script"),
+            settingNames(SvelteDevSettings::class.java),
+        )
         assertEquals(true, "libraries" in settingNames(SvelteExtension::class.java))
     }
 
