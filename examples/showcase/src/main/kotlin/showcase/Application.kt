@@ -19,6 +19,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.routing.routing
 import io.ktor.server.sessions.get
 import io.ktor.server.sessions.sessions
+import io.ktor.server.sessions.set
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.runBlocking
@@ -43,6 +44,8 @@ private val PUBLIC_PATHS =
 
 enum class SignUps { Open, Closed }
 
+private const val WEEK_SECONDS = 7 * 24 * 60 * 60
+
 class ShowcaseEnvironment(
     env: EnvironmentScope,
 ) {
@@ -53,6 +56,7 @@ class ShowcaseEnvironment(
     val insecureCookies = env.boolean("SHOWCASE_INSECURE_COOKIES", "Sends the session cookie over plain HTTP too", default = false)
     val siteUrl = env.optional("SHOWCASE_SITE_URL", "Public address of the site, for the sitemap", example = "https://showcase.example.com")
     val appName = env.string("APP_NAME", "Name shown in the header", default = "ktor-svelte showcase")
+    val sessionSeconds = env.int("SHOWCASE_SESSION_SECONDS", "How long someone stays signed in, in seconds", default = WEEK_SECONDS)
     val sessionSignKey = env.optionalSecret("SESSION_SIGN_KEY", "Hex key that signs the session cookie. Without it, sessions end with each restart")
 }
 
@@ -73,7 +77,8 @@ fun Application.module() {
     val loginAttempts = env.loginAttempts
     startupStep("Demo data") { runBlocking { seedDemoData(users, tasks, log) } }
 
-    configureAuth(users, secureCookies = !developmentMode && !env.insecureCookies, signKey = env.sessionSignKey)
+    val sessionLength = SessionLength(env.sessionSeconds.toLong())
+    configureAuth(users, secureCookies = !developmentMode && !env.insecureCookies, signKey = env.sessionSignKey, length = sessionLength)
 
     install(Svelte) {
         routing = SvelteRouting.Manual
@@ -84,8 +89,12 @@ fun Application.module() {
         constants(BoardLimits)
         idempotency()
         cookies(OnlyMineCookie)
-        currentUser<User>(signInMessage = { it.messages.problemSignIn() }) {
-            sessions.get<UserSession>()?.let { users.findActive(it.userId) }
+        currentUser<User>(
+            signInMessage = { it.messages.problemSignIn() },
+            sessionEnds = { sessions.get<UserSession>()?.ends },
+            extendSession = { sessions.get<UserSession>()?.let { sessions.set(sessionLength.start(it.userId)) } },
+        ) {
+            sessions.get<UserSession>()?.takeIf { it.current }?.let { users.findActive(it.userId) }
         }
         errorCodes<AccountError> { call, code ->
             when (code) {
@@ -117,7 +126,7 @@ fun Application.module() {
 
     routing {
         publicRoutes()
-        sessionRoutes(users, registrationOpen)
+        sessionRoutes(users, registrationOpen, sessionLength)
         adminRoutes(users)
         authenticate(SESSION_AUTH) {
             taskRoutes(tasks, users)

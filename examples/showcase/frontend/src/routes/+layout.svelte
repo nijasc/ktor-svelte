@@ -57,6 +57,14 @@
     {/if}
 </header>
 
+{#if currentUser.sessionEnding}
+    <div id="session-ending" class="alert alert-warning mx-auto mt-4 max-w-4xl" role="status">
+        <Icon name="Clock" size={18} />
+        <span>{m.sessionEnding()}</span>
+        <button class="btn btn-sm" type="button" onclick={() => currentUser.extend()}>{m.sessionExtend()}</button>
+    </div>
+{/if}
+
 <main id="content" class="mx-auto my-8 max-w-4xl px-4" tabindex="-1">
     {@render children()}
 </main>
