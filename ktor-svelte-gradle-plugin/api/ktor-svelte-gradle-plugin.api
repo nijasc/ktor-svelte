@@ -503,6 +503,24 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteOutdatedTa
 	public final fun outdated ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRecordTestTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getBrowser ()Lorg/gradle/api/provider/Property;
+	protected abstract fun getExecOperations ()Lorg/gradle/process/ExecOperations;
+	public abstract fun getGeneratedPackage ()Lorg/gradle/api/provider/Property;
+	public abstract fun getJarFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getJavaLauncher ()Lorg/gradle/api/provider/Property;
+	public abstract fun getLibDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getMainClass ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getRoutesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getRunnerClasspath ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	public abstract fun getTestName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getTypedRoutes ()Lorg/gradle/api/provider/Property;
+	public abstract fun getWorkDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public final fun record ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteRenameTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getForce ()Lorg/gradle/api/provider/Property;

@@ -27,7 +27,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | # | Feature | Pull request |
 |---|---|---|
 | 28 | Generated page loads |  |
-| 107 | Browser test recorder |  |
+| 105 | HTTPS in development |  |
 
 ### In review
 
@@ -57,6 +57,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 54 | Web vitals in metrics | #329 |
 | 30 | Kotlin browser test kit | #330 |
 | 47 | Accessibility check task | #331 |
+| 107 | Browser test recorder | #332 |
 
 ### Next up
 
@@ -162,7 +163,6 @@ Features of this plan that are merged:
 | # | Feature | Size | Group |
 |---|---|---|---|
 | 66 | Inline page data | Large | 9 |
-| 105 | HTTPS in development | Medium | 11 |
 | 52 | Installable app (PWA) | Large | 11 |
 | 61 | Emails from Svelte components | Large | 11 |
 | 60 | Multiple frontends | Large | 12 |

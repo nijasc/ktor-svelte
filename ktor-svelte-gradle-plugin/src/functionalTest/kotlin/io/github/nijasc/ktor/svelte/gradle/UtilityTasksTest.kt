@@ -782,6 +782,27 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteRecordTest wants a name and never replaces a test`() {
+        val project = project()
+        project.buildScript(applicationBuild)
+        dir
+            .resolve("src/main/java/Main.java")
+            .apply {
+                parentFile.mkdirs()
+            }.writeText("public class Main { public static void main(String[] a) {} }")
+        assertContains(
+            project.runAndFail("svelteRecordTest").output,
+            "Give the test a name that can be a class: svelteRecordTest --name=SignIn",
+        )
+        assertContains(project.runAndFail("svelteRecordTest", "--name=sign-in").output, "Give the test a name that can be a class")
+        dir.resolve("src/browserTest/kotlin/SignInBrowserTest.kt").apply { parentFile.mkdirs() }.writeText("class SignInBrowserTest")
+        assertContains(
+            project.runAndFail("svelteRecordTest", "--name=SignIn").output,
+            "svelteRecordTest does not overwrite: src/browserTest/kotlin/SignInBrowserTest.kt is already there.",
+        )
+    }
+
+    @Test
     fun `svelteVerifyTs exists only with the application plugin`() {
         val project = project()
         assertContains(project.runAndFail("svelteVerifyTs").output, "not found")
