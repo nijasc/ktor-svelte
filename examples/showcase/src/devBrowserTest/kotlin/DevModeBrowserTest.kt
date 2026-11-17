@@ -650,7 +650,9 @@ class DevModeBrowserTest {
         panel.locator(".toggle").click()
         panel.locator(".clear-site").click()
         waitFor("the cleared storage", 20) { page.evaluate("localStorage.getItem('dev-panel-marker')") == null }
-        page.navigate("/board")
+        waitFor("the login page after a visit to the board", 20) {
+            runCatching { page.navigate("/board") }.isSuccess && page.url().contains("/login")
+        }
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
     }
 
