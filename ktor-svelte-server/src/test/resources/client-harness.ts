@@ -9,6 +9,8 @@ import {
     fixtureFetch,
     typedCookie,
     userStore,
+    preferenceStore,
+    type PreferenceStore,
     matchGuard,
     type PageGuard,
     loginPath,
@@ -714,7 +716,105 @@ try {
     withoutLoginPage = (error as Error).message;
 }
 results.login = { redirects: loginRedirects, paths: loginPaths, returns, withoutLoginPage };
-if (hadLocation) Reflect.deleteProperty(pageHost, 'location');
-else Reflect.deleteProperty(pageHost, 'location');
+interface HarnessSettings {
+    theme: string | null;
+    locale: string | null;
+    compact: boolean;
+}
+const settingsDefaults: HarnessSettings = { theme: null, locale: null, compact: false };
+const browserJar = new Map<string, string>();
+const settingsHost = globalThis as unknown as { document?: unknown; localStorage?: unknown };
+const pageRoot = { dataset: {} as Record<string, string> };
+settingsHost.document = {
+    documentElement: pageRoot,
+    get cookie() {
+        return [...browserJar].map(([name, value]) => `${name}=${value}`).join('; ');
+    },
+    set cookie(text: string) {
+        const pair = text.split('; ')[0];
+        browserJar.set(pair.slice(0, pair.indexOf('=')), pair.slice(pair.indexOf('=') + 1));
+    }
+};
+const browserStorage = new Map<string, string>();
+settingsHost.localStorage = {
+    getItem: (key: string) => browserStorage.get(key) ?? null,
+    setItem: (key: string, value: string) => void browserStorage.set(key, value),
+    removeItem: (key: string) => void browserStorage.delete(key)
+};
+let pageReloads = 0;
+standOn('/board');
+(pageHost.location as { reload: () => void }).reload = () => pageReloads++;
+let settingsKept: Partial<HarnessSettings> | null = null;
+let settingsUser = false;
+const settingsPuts: string[] = [];
+apiConfig.retry = undefined;
+apiConfig.onError = undefined;
+apiConfig.onUnauthorized = undefined;
+apiConfig.loginPage = undefined;
+apiConfig.baseUrl = '';
+apiConfig.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const address = String(input);
+    if (address.endsWith('/api/secret')) return new Response('{}', { status: 401 });
+    if (address.endsWith('/api/session')) return new Response(null, { status: 204, headers: { 'x-ktor-svelte-user': 'changed' } });
+    if (init?.method === 'PUT') {
+        settingsPuts.push(String(init.body));
+        settingsKept = JSON.parse(String(init.body)) as HarnessSettings;
+    }
+    const answer = { preferences: settingsUser ? (settingsKept ?? {}) : settingsDefaults, signedIn: settingsUser };
+    return new Response(JSON.stringify(answer), { headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+const settle = () => new Promise((resolve) => realTimeout(resolve, 20));
+const openPage = () =>
+    preferenceStore<HarnessSettings>(
+        '/api/preferences',
+        { value: settingsDefaults, ready: false },
+        settingsDefaults,
+        { theme: 'ktor_svelte_theme', locale: 'ktor_svelte_locale' }
+    );
+const settingsSteps: unknown[] = [];
+const settingsStep = (what: string, store: PreferenceStore<HarnessSettings>) =>
+    settingsSteps.push([
+        what,
+        JSON.stringify(store.value),
+        [...browserJar].map(([name, value]) => `${name.replace('ktor_svelte_', '')}=${value}`).join(' '),
+        pageRoot.dataset.theme ?? null,
+        settingsPuts.length,
+        pageReloads
+    ]);
+const firstPage = openPage();
+await firstPage.load();
+settingsStep('a visitor has the defaults', firstPage);
+await firstPage.set({ compact: true, theme: 'nord' });
+settingsStep('a visitor changes things on this device only', firstPage);
+settingsUser = true;
+settingsKept = { theme: 'dracula', locale: 'de', compact: false };
+await request('POST', '/api/session');
+await firstPage.load();
+await settle();
+settingsStep('signing in on a new device brings the saved theme and language', firstPage);
+document.cookie = 'ktor_svelte_theme=light';
+const secondPage = openPage();
+await secondPage.load();
+await settle();
+settingsStep('a theme picked on this device since then is saved', secondPage);
+await secondPage.set({ compact: true });
+settingsStep('a change is shown at once and saved', secondPage);
+settingsKept = { theme: 'nord', locale: 'de', compact: true };
+const thirdPage = openPage();
+await thirdPage.load();
+await settle();
+settingsStep('a theme picked on another device arrives here', thirdPage);
+settingsKept = null;
+await request('POST', '/api/session');
+await thirdPage.load();
+await settle();
+settingsStep('someone with nothing saved keeps what this device shows, and it is saved', thirdPage);
+await request('GET', '/api/secret').catch(() => undefined);
+settingsStep('after a 401 the defaults are back', thirdPage);
+results.preferences = { steps: settingsSteps, lastSaved: settingsPuts[settingsPuts.length - 1] };
+apiConfig.fetch = undefined;
+Reflect.deleteProperty(settingsHost, 'document');
+Reflect.deleteProperty(settingsHost, 'localStorage');
+Reflect.deleteProperty(pageHost, 'location');
 
 console.log(JSON.stringify(results));

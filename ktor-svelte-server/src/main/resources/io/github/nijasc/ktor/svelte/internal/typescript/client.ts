@@ -264,7 +264,7 @@ function sendWithProgress(onProgress: (progress: UploadProgress) => void): typeo
         });
 }
 
-const userWatchers: { gone: () => void; changed: () => void; ends: (seconds: number) => void }[] = [];
+const userWatchers: { gone: () => void; changed: () => void; ends?: (seconds: number) => void }[] = [];
 
 function isSameOrigin(url: string): boolean {
     if (typeof location === 'undefined') return !/^[a-z][a-z0-9+.-]*:/i.test(url);
@@ -483,7 +483,7 @@ async function checked(response: Response, url: string, operation: string | unde
         if (response.status === 401) for (const watcher of userWatchers) watcher.gone();
         else if (response.headers.get('x-ktor-svelte-user') === 'changed') for (const watcher of userWatchers) watcher.changed();
         const left = response.headers.get('x-ktor-svelte-session');
-        if (left !== null && response.ok && Number.isFinite(Number(left))) for (const watcher of userWatchers) watcher.ends(Number(left));
+        if (left !== null && response.ok && Number.isFinite(Number(left))) for (const watcher of userWatchers) watcher.ends?.(Number(left));
     }
     if (response.status === 401) {
         if (apiConfig.onUnauthorized) apiConfig.onUnauthorized(response);
@@ -738,6 +738,164 @@ export function userStore<T, P extends string = string>(path: string, state: Use
         reload: () => ask(),
         set: settle,
         clear: () => settle(null)
+    };
+}
+
+export interface PreferenceState<T> {
+    value: T;
+    ready: boolean;
+}
+
+export interface PreferenceStore<T> {
+    readonly value: T;
+    readonly ready: boolean;
+    load(): Promise<T>;
+    set(change: Partial<T>): Promise<void>;
+}
+
+interface PreferenceAnswer<T> {
+    preferences: T;
+    signedIn: boolean;
+}
+
+const cookieWord = /^[A-Za-z0-9_.-]+$/;
+
+export function preferenceStore<T extends object>(
+    path: string,
+    state: PreferenceState<T>,
+    defaults: T,
+    cookies: Partial<Record<keyof T & string, string>> = {}
+): PreferenceStore<T> {
+    const bound = Object.entries(cookies) as [keyof T & string, string][];
+    const memory = `ktor-svelte-preferences:${path}`;
+    let pending: Promise<T> | undefined;
+    let signedIn = false;
+    let turn = 0;
+    let saving: Promise<void> = Promise.resolve();
+    const remembered = (): Record<string, string | undefined> => {
+        try {
+            return JSON.parse(localStorage.getItem(memory) ?? '{}') as Record<string, string | undefined>;
+        } catch {
+            return {};
+        }
+    };
+    const remember = (values: Record<string, string | undefined> | undefined) => {
+        try {
+            if (values) localStorage.setItem(memory, JSON.stringify(values));
+            else localStorage.removeItem(memory);
+        } catch {
+            return;
+        }
+    };
+    const cookieOf = (name: string): string | undefined =>
+        typeof document === 'undefined' ? undefined : document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]+)`))?.[1];
+    const show = (field: string, cookie: string, value: string): boolean => {
+        if (cookieOf(cookie) === value) return false;
+        document.cookie = `${cookie}=${value}; path=/; max-age=31536000; samesite=lax`;
+        if (field === 'theme') document.documentElement.dataset.theme = value;
+        return field !== 'theme';
+    };
+    const send = (): Promise<void> => {
+        const body = state.value;
+        saving = saving.catch(() => undefined).then(() => request<unknown>('PUT', path, { body }).then(() => undefined));
+        return saving;
+    };
+    const reconcile = (stored: T): T => {
+        if (typeof document === 'undefined' || !signedIn || bound.length === 0) return stored;
+        const last = remembered();
+        const mine: Record<string, string> = {};
+        let reload = false;
+        for (const [field, cookie] of bound) {
+            const here = cookieOf(cookie);
+            const there = (stored as Record<string, unknown>)[field];
+            const known = typeof there === 'string' && cookieWord.test(there) ? there : undefined;
+            const changedHere = here !== undefined && here !== known && (known === undefined || (field in last && here !== last[field]));
+            if (changedHere) mine[field] = here;
+            else if (known !== undefined && show(field, cookie, known)) reload = true;
+            last[field] = changedHere ? here : (known ?? here);
+        }
+        remember(last);
+        if (reload) setTimeout(() => location.reload(), 0);
+        if (Object.keys(mine).length === 0) return stored;
+        const merged = { ...stored, ...mine } as T;
+        state.value = merged;
+        void send().catch(() => undefined);
+        return merged;
+    };
+    const ask = (): Promise<T> => {
+        const mine = ++turn;
+        const asked: Promise<T> = request<PreferenceAnswer<T>>('GET', path, { silent: true }).then(
+            (answer) => {
+                if (mine !== turn) return pending ?? state.value;
+                signedIn = answer?.signedIn === true;
+                state.value = { ...defaults, ...(answer?.preferences ?? {}) };
+                state.ready = true;
+                return reconcile(state.value);
+            },
+            () => {
+                if (mine !== turn) return pending ?? state.value;
+                pending = undefined;
+                state.ready = true;
+                return state.value;
+            }
+        );
+        pending = asked;
+        return asked;
+    };
+    const load = (): Promise<T> => {
+        if (typeof document === 'undefined' && !apiConfig.fetch) return Promise.resolve(state.value);
+        return pending ?? ask();
+    };
+    userWatchers.push({
+        gone: () => {
+            turn++;
+            signedIn = false;
+            pending = undefined;
+            remember(undefined);
+            state.value = { ...defaults };
+        },
+        changed: () => {
+            remember(undefined);
+            if (pending) void ask();
+        }
+    });
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined' && bound.length > 0) {
+        new MutationObserver(() => {
+            if (!signedIn || !state.ready) return;
+            const moved: Record<string, string> = {};
+            for (const [field, cookie] of bound) {
+                const here = cookieOf(cookie);
+                if (here !== undefined && here !== (state.value as Record<string, unknown>)[field]) moved[field] = here;
+            }
+            if (Object.keys(moved).length === 0) return;
+            state.value = { ...state.value, ...moved } as T;
+            remember({ ...remembered(), ...moved });
+            void send().catch(() => undefined);
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'lang'] });
+    }
+    return {
+        get value() {
+            if (!pending && typeof document !== 'undefined') void load();
+            return state.value;
+        },
+        get ready() {
+            return state.ready;
+        },
+        load,
+        set: (change) => {
+            state.value = { ...state.value, ...change };
+            if (typeof document !== 'undefined') {
+                const last = remembered();
+                for (const [field, cookie] of bound) {
+                    const next = (change as Record<string, unknown>)[field];
+                    if (typeof next !== 'string' || !cookieWord.test(next)) continue;
+                    show(field, cookie, next);
+                    last[field] = next;
+                }
+                if (signedIn) remember(last);
+            }
+            return signedIn ? send() : Promise.resolve();
+        }
     };
 }
 

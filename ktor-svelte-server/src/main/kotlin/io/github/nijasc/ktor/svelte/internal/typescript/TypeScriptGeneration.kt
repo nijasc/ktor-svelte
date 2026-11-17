@@ -108,6 +108,7 @@ internal fun installTypeScriptGeneration(
     loginPage: String? = null,
     permissions: List<String> = emptyList(),
     guards: List<GuardSpec> = emptyList(),
+    preferences: PreferencesType? = null,
 ) {
     val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
     val generateOnly = verifyReport != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
@@ -140,6 +141,7 @@ internal fun installTypeScriptGeneration(
             loginPage,
             permissions,
             guards,
+            preferences,
         )
 
     application.onOwn(ApplicationStarted) {

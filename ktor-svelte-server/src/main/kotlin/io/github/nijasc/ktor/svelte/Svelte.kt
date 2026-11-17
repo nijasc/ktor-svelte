@@ -74,6 +74,7 @@ import io.github.nijasc.ktor.svelte.internal.subscribeWhileRunning
 import io.github.nijasc.ktor.svelte.internal.typescript.CurrentUserType
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.GuardSpec
+import io.github.nijasc.ktor.svelte.internal.typescript.PreferencesType
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -217,7 +218,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.generateTs,
             pluginConfig.generateTsOutput,
             pluginConfig.apiPrefixList,
-            listOfNotNull(docsPath, currentUserPath),
+            listOfNotNull(docsPath, currentUserPath, pluginConfig.preferencesSpec?.let { preferencesPathOf(pluginConfig) }),
             pluginConfig.publicConfigSchema,
             pluginConfig.declaredErrorList.toList(),
             pluginConfig.constantHolders.map(::sharedHolder),
@@ -227,6 +228,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             loginPage,
             pluginConfig.permissionSet?.names.orEmpty(),
             pluginConfig.guardsConfig.rules.map { GuardSpec(it.page, it.permission?.name) },
+            pluginConfig.preferencesSpec?.let {
+                PreferencesType(
+                    it.typeName,
+                    it.schema,
+                    preferencesPathOf(pluginConfig),
+                    it.defaultsJson,
+                    mapOf("theme" to THEME_COOKIE, "locale" to LOCALE_COOKIE),
+                )
+            },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
@@ -239,6 +249,17 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 "permissions takes a ${permissions.userType.simpleName}, but currentUser is declared as ${currentUser.typeName}."
             }
             application.attributes.put(PermissionsKey, permissions)
+        }
+        val preferences = pluginConfig.preferencesSpec
+        val preferencesPath =
+            preferences?.let { it.path ?: (pluginConfig.apiPrefixList.firstOrNull() ?: "/api").trimEnd('/') + "/$PREFERENCES_ROUTE" }
+        if (preferences != null) {
+            checkNotNull(currentUser) {
+                "preferences are kept per user, so it needs the user: add currentUser<${preferences.userType.simpleName}> { ... }."
+            }
+            check(preferences.userType.java.isAssignableFrom(currentUser.type.java)) {
+                "preferences takes a ${preferences.userType.simpleName}, but currentUser is declared as ${currentUser.typeName}."
+            }
         }
         val guards = pluginConfig.guardsConfig.rules.toList()
         if (guards.isNotEmpty()) {
@@ -398,6 +419,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 catchAll(handler)
             }
             if (currentUser != null && currentUserPath != null) currentUserRoute(currentUserPath, currentUser)
+            if (preferences != null && preferencesPath != null) preferencesRoutes(preferencesPath, preferences)
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
             if (devRequests != null && devProxy != null) {
@@ -566,3 +588,6 @@ private fun createStore(
         SvelteSource.Classpath -> ClasspathAssetStore(application.environment.classLoader)
         is SvelteSource.Directory -> DirectoryAssetStore(source.path, rescanOnEveryRead = application.developmentMode)
     }
+
+private fun preferencesPathOf(config: SvelteConfig): String =
+    config.preferencesSpec?.path ?: ((config.apiPrefixList.firstOrNull() ?: "/api").trimEnd('/') + "/$PREFERENCES_ROUTE")
