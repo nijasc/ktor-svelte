@@ -367,6 +367,36 @@ With `chooser`, a "Columns" menu above the table lets people hide columns and ch
 - The move buttons say which column they move, such as "Up: Status", for screen readers.
 - A [custom `row`](#cells-with-markup) gets the visible columns as its second argument, `{#snippet row(task, columns)}`, so its cells can follow the choice.
 
+### Selecting rows and acting on them
+
+Give the table `actions`, and every row gets a checkbox. A bar above the table shows how many are chosen and a button per action, which calls your function for each chosen row:
+
+```svelte no-check
+<DataTable
+    load={api.tasks.list}
+    key={(task) => task.id}
+    {columns}
+    actions={[
+        { label: 'Mark as done', run: (task) => api.tasks.status(task.id, { status: 'DONE' }) },
+        { label: 'Delete', run: (task) => api.tasks.delete(task.id), confirm: 'Delete the chosen tasks?' }
+    ]}
+/>
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `actions` | `[]` | `{ label, run, confirm? }` per action; `run` is called once per chosen row, one after the other |
+| `key` | | Needed to keep choices across pages and for "Select every page" |
+| `selectRow` | `Select all on this page: <first column>` | The accessible name of a row's checkbox |
+| `selectPage`, `selectEverything`, `clearSelection` | `Select all on this page`, `Select every page`, `Clear` | Button and checkbox texts |
+| `selectedText`, `workingText`, `doneText` | `2 selected`, `Working: 1 of 2`, `Done: 2 of 2 worked.` | Functions that build the status texts, for other languages |
+
+- The checkbox in the header chooses every row on the page, and shows a mixed state when only some are chosen.
+- "Select every page" loads the remaining pages and chooses everything, so an action can run over the whole list, not only what is visible.
+- While an action runs, the bar counts up and the checkboxes are locked. When it ends, the bar says how many calls worked, the choice is cleared and the table reloads.
+- A failing call does not stop the others; with [toasts](./components.md#toasts) on, each failure is shown too.
+- `confirm` asks with the browser's dialog before the action starts.
+
 ### Cells with markup
 
 For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
