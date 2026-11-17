@@ -57,3 +57,8 @@ public final class io/github/nijasc/ktor/svelte/test/TestApp$Companion {
 	public static synthetic fun start$default (Lio/github/nijasc/ktor/svelte/test/TestApp$Companion;Ljava/util/Map;ILjava/lang/String;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/test/TestApp;
 }
 
+public final class io/github/nijasc/ktor/svelte/test/TestRecorder {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/test/TestRecorder;
+	public static final fun main ([Ljava/lang/String;)V
+}
+
