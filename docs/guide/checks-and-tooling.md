@@ -224,7 +224,7 @@ ktor-svelte: the production build answered 2 pages, 1 asset, 2 API routes correc
 
 ### svelteDoctor
 
-**Catches:** a frontend setup that cannot work: the adapter, the adapter output against `svelte.outputDir`, the bundled manifest, `#api`, `tsconfig.json`, the SvelteKit version, Node, the package manager and port, packages that lost their files, and whether `NODE_EXTRA_CA_CERTS` points to a file.
+**Catches:** a frontend setup that cannot work: the adapter, the adapter output against `svelte.outputDir`, the bundled manifest, `#api`, `tsconfig.json`, the SvelteKit version, Node, the package manager and port, packages that lost their files, whether `NODE_EXTRA_CA_CERTS` points to a file, and whether the package registry is reachable.
 
 ```bash
 ./gradlew svelteDoctor
@@ -237,8 +237,20 @@ OK    adapter-static writes to build, matching svelte.outputDir
 OK    SvelteKit 3
 ERROR src/routes/+page.svelte imports $lib. SvelteKit 3 uses #lib.
 WARN  Node 20.10.0 is too old for Vite. Use Node 20.19, 22.12 or newer.
+OK    Network: registry https://registry.npmjs.org/ (default), proxy http://proxy.corp:8080 (HTTPS_PROXY), no extra certificates
+WARN  Registry https://registry.npmjs.org/ is not reachable: its certificate is not trusted, which happens when a company proxy inspects HTTPS. Set NODE_EXTRA_CA_CERTS to your company's root certificate (a PEM file), and add it to Java's trust store for Gradle.
 ktor-svelte: svelteDoctor --fix can fix 1 of these.
 ```
+
+**Network:** a first install that hangs or fails behind a company proxy is hard to read from the package manager's output. The doctor shows which registry, proxy and certificate settings apply and where each comes from, then asks the registry once:
+
+| Setting | Read from, first match wins |
+|---|---|
+| Registry | `npm_config_registry`, `registry` in `frontend/.npmrc`, `registry` in `frontend/bunfig.toml`, `registry` in `~/.npmrc`, else `https://registry.npmjs.org/` |
+| Proxy | `npm_config_https_proxy`, `https-proxy` in `.npmrc`, `HTTPS_PROXY`, `proxy` in `.npmrc`, `npm_config_proxy`, `HTTP_PROXY`. `NO_PROXY` and `noproxy` take the registry out of it |
+| Certificates | `NODE_EXTRA_CA_CERTS`, and `npm_config_cafile` or `cafile` in `.npmrc` |
+
+When the registry does not answer, it says what to set: `HTTPS_PROXY` when there is no proxy, the proxy's source when there is one, `NODE_EXTRA_CA_CERTS` when a proxy replaces the registry's certificate, a token when the registry answers 401, and credentials when the proxy answers 407. `strict-ssl=false` gets a warning, because it turns off certificate checks for every download. Passwords in proxy addresses are shown as `***`. The check uses Java's network stack, so a certificate Node trusts through `NODE_EXTRA_CA_CERTS` can still fail here; the message then says so. Network findings are warnings, and `./gradlew svelteDoctor --offline` skips the request.
 
 **Fix it for you:** `--fix` repairs what needs no decision from you: a missing `#api` import, a `tsconfig.json` that does not extend `$app/tsconfig`, `$lib` imports left over from SvelteKit 2, and a `node_modules` folder whose packages lost their files, which it deletes so the next build installs it again. Each change is printed as `FIXED`.
 
