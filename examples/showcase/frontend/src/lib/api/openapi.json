@@ -959,6 +959,52 @@
                         "attachments",
                         "version"
                     ]
+                },
+                "x-ktor-svelte-include": {
+                    "type": "Task",
+                    "relations": {
+                        "lastComment": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "title": "showcase.Comment",
+                            "required": [
+                                "id",
+                                "author",
+                                "body",
+                                "createdAt"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "author": {
+                                    "type": "object",
+                                    "title": "showcase.UserRef",
+                                    "required": [
+                                        "id",
+                                        "name"
+                                    ],
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "body": {
+                                    "type": "string"
+                                },
+                                "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
