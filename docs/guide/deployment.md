@@ -195,6 +195,46 @@ install(Svelte) {
 
 The lines go to the logger `ktor-svelte.frontend` at `WARN`, so your logging setup decides where they end up. In development the browser's console already reaches the dev log, and this works there too.
 
+## Page timings
+
+Your API's slow calls show in the server's log. A slow page does not: its time is spent in the browser. `webVitals` has browsers report it:
+
+```kotlin
+install(Svelte) {
+    webVitals()
+}
+```
+
+One page load in ten then measures the usual five timings and sends them once, when the page is left:
+
+| Name | What it measures | Good up to | Poor above |
+| --- | --- | --- | --- |
+| `TTFB` | Time until the first byte of the page arrived | 800 ms | 1800 ms |
+| `FCP` | Time until something was painted | 1800 ms | 3000 ms |
+| `LCP` | Time until the largest element was painted | 2500 ms | 4000 ms |
+| `INP` | The slowest reaction to a click or a key | 200 ms | 500 ms |
+| `CLS` | How much the layout moved while loading | 0.1 | 0.25 |
+
+The app adds them to its metrics, per page:
+
+```kotlin no-check
+application.svelteMetrics.webVitals.forEach { vital ->
+    println("${vital.page} ${vital.name}: ${vital.count} loads, average ${vital.average}, ${vital.poor} poor")
+}
+```
+
+Each entry has the `page`, the `name`, a `count`, the `average`, and how many loads were `good`, `needsImprovement` and `poor`. Hand them to your metrics system from there. The [status endpoint](../features/endpoints.md#status-endpoint) lists them too, under `webVitals`.
+
+Pages are grouped by route and not by address: `/notes/my-first-note` counts for `/notes/[slug]` when that is one of your `paramRoutes`, and a segment that is a number or an id becomes `[id]`. At most 100 pages are kept, and the rest are counted together.
+
+Like error reporting, this is off by default, because it adds an endpoint anyone can post to:
+
+- `sampleRate` is the share of page loads that report, `0.1` unless you set it.
+- One client address may send ten reports a minute, or `perClientPerMinute`.
+- A report may be 2 KB, only the five names are accepted, and only values that a real page could have.
+
+The timings are measured with the browser's own `PerformanceObserver`, with no extra package. They are close to what the `web-vitals` library reports, not identical: `INP` here is the slowest interaction of the page load. The numbers are kept in memory and start again when the app restarts.
+
 ## Build info
 
 Every build knows what it is. The Gradle plugin writes the project's `version`, the git commit and the time of that commit into the JAR, and the app reads them without any setup:
