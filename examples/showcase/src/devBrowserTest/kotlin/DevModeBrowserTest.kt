@@ -588,7 +588,7 @@ class DevModeBrowserTest {
 
     @Test
     fun `each API call in the dev panel shows how big its answer was and its largest fields`() {
-        assertTrue(reachBoard(page))
+        waitFor("the board", 60) { reachBoard(page) }
         val panel = page.locator("[data-ktor-svelte-panel]")
         panel.locator(".toggle").click()
         assertThat(panel.locator(".row .size").first()).hasText(Pattern.compile("^\\d+(\\.\\d)? (B|KB|MB)$"))
@@ -644,19 +644,21 @@ class DevModeBrowserTest {
 
     @Test
     fun `clear site data in the dev panel signs out and empties the storage`() {
-        assertTrue(reachBoard(page))
+        waitFor("the board", 60) { reachBoard(page) }
         page.evaluate("localStorage.setItem('dev-panel-marker', 'kept')")
         val panel = page.locator("[data-ktor-svelte-panel]")
         panel.locator(".toggle").click()
         panel.locator(".clear-site").click()
         waitFor("the cleared storage", 20) { page.evaluate("localStorage.getItem('dev-panel-marker')") == null }
-        page.navigate("/board")
+        waitFor("the login page after a visit to the board", 20) {
+            runCatching { page.navigate("/board") }.isSuccess && page.url().contains("/login")
+        }
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
     }
 
     @Test
     fun `the dev panel ranks the routes that took the most time`() {
-        assertTrue(reachBoard(page))
+        waitFor("the board", 60) { reachBoard(page) }
         val panel = page.locator("[data-ktor-svelte-panel]")
         panel.locator(".toggle").click()
         panel.locator(".slowest summary").click()
