@@ -267,6 +267,14 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `a browser can report page timings, and only timings`() {
+        val visitor = anonymous()
+        assertEquals(204, visitor.send("POST", "/_ktor-svelte/vitals", """{"page":"/tasks/12","metrics":{"LCP":1300,"CLS":0.01}}""").statusCode())
+        assertEquals(400, visitor.send("POST", "/_ktor-svelte/vitals", """{"page":"/board","metrics":{"Mined":1}}""").statusCode())
+        assertEquals(400, visitor.send("POST", "/_ktor-svelte/vitals", """{"page":"<script>","metrics":{"LCP":1}}""").statusCode())
+    }
+
+    @Test
     fun `a forged session cookie is refused`() {
         val response = anonymous().send("GET", "/api/me", null, "Cookie" to "showcase_session=userId%3D%2523i1")
         assertEquals(401, response.statusCode())
