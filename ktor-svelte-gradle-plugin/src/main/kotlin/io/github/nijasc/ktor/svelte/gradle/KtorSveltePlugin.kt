@@ -375,9 +375,10 @@ public class KtorSveltePlugin : Plugin<Project> {
         project.tasks.register("svelteAdd", SvelteAddTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description =
-                "Creates a page with a typed load: svelteAdd --page=notes/[id]. Add --route for a Kotlin route to start from."
+                "Creates a page with a typed load, svelteAdd --page=notes/[id], or the pages for a class: svelteAdd --crud=Note"
             task.frontendDir.set(extension.frontendDir)
             task.routesDirectory.set(routes)
+            task.messagesDirectory.set(messages)
             task.projectDirectory.set(project.layout.projectDirectory)
             project.plugins.withId("application") {
                 task.mainClass.set(project.extensions.getByType(JavaApplication::class.java).mainClass)

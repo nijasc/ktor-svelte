@@ -196,3 +196,46 @@ fun Route.ordersIdRoutes() {
 The file goes into the package of your main class. Call the function inside `routing { }`, and after the next `svelteGenerateTs` the client has the route.
 
 The task only creates. It refuses when one of its files is already there, it never edits a file of yours, and what it wrote has no generated header: the files are yours.
+
+## Pages for a class
+
+Once the API can list, read, create, change and delete something, the first version of its pages is the same every time: a table, a form, a detail page. `svelteAdd --crud` writes that first version from the generated client:
+
+```bash
+./gradlew svelteAdd --crud=Note
+```
+
+```text
+ktor-svelte added pages for Note, wired to api.notes:
+  frontend/src/routes/notes/+page.ts
+  frontend/src/routes/notes/+page.svelte
+  frontend/src/routes/notes/new/+page.svelte
+  frontend/src/routes/notes/[id]/+page.ts
+  frontend/src/routes/notes/[id]/+page.svelte
+Their texts are in de.json, en.json, in English. Translate them.
+The form leaves out tags, icon: add inputs for them, they are not plain text, numbers or switches.
+Add paramRoutes("/notes/[id]") to install(Svelte), so the app serves the detail page for every id.
+The files are yours from here on.
+```
+
+The task looks for the route that lists the class, such as the `list` of a [resource](typescript.md#resource-routes), and for the other four routes next to it. What it finds decides what it writes:
+
+| Route in the client | Page |
+| --- | --- |
+| `list` | A table of the class's plain fields, loaded in `+page.ts` |
+| `create` | `new/+page.svelte` with a form, and a link to it from the list |
+| `get` | `[id]/+page.ts` and a detail page, and a link to it from each row |
+| `update` | The form again on the detail page, filled with the item |
+| `delete` | A delete button in each row and on the detail page |
+
+The pages use what the project has:
+
+- The form is a `formState` of the input class, with its `validate` and, per field, its `bounds`, so the browser shows the same rules as the server.
+- With `routes()` on, every link and `goto` is a typed route.
+- With `i18n` on, every text is a message. The keys are added to each locale file in English, and keys that are already there are left alone.
+
+Text, numbers and booleans get an input. Other fields, such as lists and enums, are left out of the form and named in the output, and the draft keeps their default.
+
+`--page=(app)/memos` puts the pages in another folder than the one named after the API path.
+
+As with a single page, the task only creates: it refuses when a file is already there, and what it wrote has no generated header. These are your pages from the first minute, a starting point to redesign and not a layer to configure.

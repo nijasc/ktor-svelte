@@ -167,10 +167,76 @@ public abstract class SvelteAddTask : DefaultTask() {
     @get:Option(option = "route", description = "Also writes a Kotlin file with a matching API route to start from")
     public abstract val route: Property<Boolean>
 
+    @get:Internal
+    public abstract val messagesDirectory: DirectoryProperty
+
+    @get:Input
+    @get:Optional
+    @get:Option(option = "crud", description = "A class of the API, such as Note: creates list, detail and form pages for its routes")
+    public abstract val crud: Property<String>
+
+    private fun addCrud(
+        type: String,
+        folder: String?,
+    ) {
+        val project = projectDirectory.get().asFile
+        val frontend = frontendDir.get().asFile
+        val api = frontend.resolve("src/lib/api")
+        val services = api.resolve("services.ts").takeIf(File::isFile)?.readText()
+        val types = api.resolve("types.ts").takeIf(File::isFile)?.readText()
+        if (services == null || types == null) {
+            throw GradleException("svelteAdd --crud reads the generated client, and there is none yet. Run svelteGenerateTs first.")
+        }
+        val generated = frontend.resolve("src/lib/ktor-svelte")
+        val locales =
+            messagesDirectory.orNull
+                ?.asFile
+                ?.listFiles { file -> file.extension == "json" }
+                ?.sortedBy { it.name }
+                .orEmpty()
+        val translated = generated.resolve("i18n.ts").isFile && locales.isNotEmpty()
+        val plan = crudPlan(type, services, types, folder?.also { PagePath(it) }, generated.resolve("routes.ts").isFile, translated)
+        val routes = routesDirectory.get().asFile
+        val files = crudFiles(plan).mapKeys { routes.resolve(it.key) }
+        val taken = files.keys.filter(File::exists)
+        if (taken.isNotEmpty()) {
+            throw GradleException(
+                "svelteAdd does not overwrite: ${taken.joinToString { it.relativeTo(project).invariantSeparatorsPath }} " +
+                    "${if (taken.size == 1) "is" else "are"} already there.",
+            )
+        }
+        files.forEach { (file, content) ->
+            file.parentFile.mkdirs()
+            file.writeText(content)
+        }
+        if (translated) locales.forEach { file -> file.writeText(withMessages(file.readText(), plan.texts)) }
+        val steps =
+            listOfNotNull(
+                "ktor-svelte added pages for ${plan.type}, wired to api.${plan.group}:",
+                files.keys.joinToString("\n") { "  ${it.relativeTo(project).invariantSeparatorsPath}" },
+                "Their texts are in ${locales.joinToString { it.name }}, in English. Translate them.".takeIf { translated },
+                plan.skippedFields.takeIf { it.isNotEmpty() }?.let { skipped ->
+                    "The form leaves out ${skipped.joinToString {
+                        it.name
+                    }}: add inputs for them, they are not plain text, numbers or switches."
+                },
+                "Add paramRoutes(\"/${plan.folder.split(
+                    '/',
+                ).filterNot { it.startsWith("(") }.joinToString("/")}/[id]\") to install(Svelte), " +
+                    "so the app serves the detail page for every id.".takeIf { plan.has("get") }.orEmpty(),
+                "The files are yours from here on.",
+            )
+        logger.lifecycle(steps.joinToString("\n"))
+    }
+
     @TaskAction
     public fun add() {
         val asked = page.orNull?.trim('/', ' ')?.takeIf { it.isNotEmpty() }
-        if (asked == null) throw GradleException("Say what to add: svelteAdd --page=notes/[id]" + DocLink.ROUTES.see())
+        val type = crud.orNull?.trim()?.takeIf { it.isNotEmpty() }
+        if (type != null) return addCrud(type, asked)
+        if (asked == null) {
+            throw GradleException("Say what to add: svelteAdd --page=notes/[id], or svelteAdd --crud=Note" + DocLink.ROUTES.see())
+        }
         val path = PagePath(asked)
         val project = projectDirectory.get().asFile
         val frontend = frontendDir.get().asFile

@@ -674,6 +674,40 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteAdd --crud writes the pages for a class of the generated client, once`() {
+        val project = project()
+        assertContains(project.runAndFail("svelteAdd", "--crud=Note").output, "there is none yet. Run svelteGenerateTs first.")
+
+        val api = project.frontend.resolve("src/lib/api").apply { mkdirs() }
+        val list = "request<Note[]>('GET', '/api/notes', { ...options, operation: 'notes.list' });"
+        val get = "request<Note>('GET', `/api/notes/\${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' });"
+        api.resolve("services.ts").writeText(
+            "export const notesList = (options?: RequestOptions) => $list\n" +
+                "export const notesGet = (id: string, options?: RequestOptions) => $get\n",
+        )
+        api.resolve("types.ts").writeText("export interface Note {\n    id: string;\n    title: string;\n}\n")
+
+        val output = project.run("svelteAdd", "--crud=Note").output
+        assertContains(output, "ktor-svelte added pages for Note, wired to api.notes:")
+        assertContains(output, "  frontend/src/routes/notes/[id]/+page.svelte")
+        assertContains(output, "Add paramRoutes(\"/notes/[id]\") to install(Svelte)")
+        val page = project.frontend.resolve("src/routes/notes/+page.svelte").readText()
+        assertContains(page, "<h1 class=\"mb-4 text-3xl font-bold\">Notes</h1>")
+        assertContains(page, "href=\"/notes/{note.id}\"")
+        assertFalse(project.frontend.resolve("src/routes/notes/new").exists())
+
+        assertContains(
+            project.runAndFail("svelteAdd", "--crud=Note").output,
+            "svelteAdd does not overwrite: frontend/src/routes/notes/+page.ts",
+        )
+        assertContains(project.runAndFail("svelteAdd", "--crud=Order").output, "The generated client has no route that lists Order.")
+        assertContains(
+            project.run("svelteAdd", "--crud=Note", "--page=(app)/memos").output,
+            "  frontend/src/routes/(app)/memos/+page.svelte",
+        )
+    }
+
+    @Test
     fun `svelteVerifyTs exists only with the application plugin`() {
         val project = project()
         assertContains(project.runAndFail("svelteVerifyTs").output, "not found")
