@@ -576,17 +576,17 @@ To fetch one page at a time on demand, such as behind a "Load more" button, call
 A list that shows three columns does not need the other twenty fields of each row. Let the route answer with only the fields the page asks for:
 
 ```kotlin
-get("/api/notes") {
-    call.respond(store.all())
+get("/api/notes/feed") {
+    call.respond(store.page(call.queryParameters["cursor"], limit = 20))
 }.sparseFields<Note>()
 ```
 
 The page names the fields, and the type of the answer narrows to exactly those:
 
 ```ts no-check
-const notes = await api.notes.list({ fields: ['id', 'title'] });
-notes[0].title;
-notes[0].body;
+const feed = await api.notes.getFeed({ fields: ['id', 'title'] });
+feed.items[0].title;
+feed.items[0].body;
 ```
 
 The first line compiles; the second does not, since `body` was not asked for and is not in the answer. Without `fields`, the call returns every field, as before.
