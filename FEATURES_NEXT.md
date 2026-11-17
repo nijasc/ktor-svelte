@@ -26,13 +26,13 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 46 | Secret leak check |  |
+| 82 | Deploy presets |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
-| 37 | Declared environment variables | #292 |
+| 46 | Secret leak check | #293 |
 
 ### Next up
 
@@ -130,12 +130,12 @@ Features of this plan that are merged:
 | 86 | Query parameters as a data class | #289 |
 | 92 | Exposed helpers | #290 |
 | 72 | Idempotency keys | #291 |
+| 37 | Declared environment variables | #292 |
 
 ### Backlog
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 82 | Deploy presets | Medium | 6 |
 | 49 | Plurals in messages | Medium | 7 |
 | 50 | Shared formatting | Medium | 7 |
 | 96 | Relative time | Small | 7 |
