@@ -172,5 +172,6 @@
   "table-mark-done": "Als erledigt markieren",
   "table-no-results": "Keine Aufgabe passt zu dieser Suche.",
   "admin-search-tasks": "Aufgaben suchen",
-  "admin-all-tasks": "Alle Aufgaben"
+  "admin-all-tasks": "Alle Aufgaben",
+  "nav-breadcrumb": "Navigationspfad"
 }

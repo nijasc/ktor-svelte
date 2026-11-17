@@ -1,9 +1,9 @@
 <script lang="ts">
     import { api, type Status } from '#api';
+    import Breadcrumbs from '#components/Breadcrumbs.svelte';
     import DataTable from '#components/DataTable.svelte';
     import { m } from '#i18n';
     import { formatDateTime } from '#lib/format.ts';
-    import { routes } from '#routes';
 
     const statusLabels: Record<Status, () => string> = { TODO: m.statusTodo, DOING: m.statusDoing, DONE: m.statusDone };
 </script>
@@ -12,7 +12,7 @@
     <title>{m.adminAllTasks()} - {m.appTitle()}</title>
 </svelte:head>
 
-<p class="mb-2 text-sm"><a class="link" href={routes.admin()}>{m.navAdmin()}</a></p>
+<Breadcrumbs class="mb-2" current={m.adminAllTasks()} label={m.navBreadcrumb()} />
 <h1 class="mb-6 text-3xl font-bold">{m.adminAllTasks()}</h1>
 <div id="every-task" class="max-w-3xl">
     <DataTable

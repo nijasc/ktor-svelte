@@ -676,6 +676,18 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the breadcrumb trail leads from the start page through the admin area to the open page`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/admin/tasks")
+        val trail = page.getByRole(AriaRole.NAVIGATION, Page.GetByRoleOptions().setName("Breadcrumb"))
+        assertThat(trail.getByRole(AriaRole.LINK)).hasCount(2)
+        assertThat(trail.getByRole(AriaRole.LINK).last()).hasText("Admin")
+        assertThat(trail.locator("[aria-current=page]")).hasText("All tasks")
+        trail.getByRole(AriaRole.LINK, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Admin")).click()
+        assertThat(page).hasURL(Pattern.compile(".*/admin$"))
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)

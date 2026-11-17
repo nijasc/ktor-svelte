@@ -172,5 +172,6 @@
   "table-mark-done": "Mark as done",
   "table-no-results": "Nothing matches this search.",
   "admin-search-tasks": "Search tasks",
-  "admin-all-tasks": "All tasks"
+  "admin-all-tasks": "All tasks",
+  "nav-breadcrumb": "Breadcrumb"
 }
