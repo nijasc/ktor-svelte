@@ -1,0 +1,50 @@
+public final class io/github/nijasc/ktor/svelte/test/ApiFailure : java/lang/AssertionError {
+	public fun <init> (ILjava/lang/String;Ljava/lang/String;)V
+	public final fun getBody ()Ljava/lang/String;
+	public final fun getStatus ()I
+}
+
+public abstract class io/github/nijasc/ktor/svelte/test/BrowserTest {
+	public fun <init> ()V
+	public final fun closePage ()V
+	public final fun getApi ()Lio/github/nijasc/ktor/svelte/test/TestApi;
+	public final fun getApp ()Lio/github/nijasc/ktor/svelte/test/TestApp;
+	public final fun getContext ()Lcom/microsoft/playwright/BrowserContext;
+	protected fun getEnvironment ()Ljava/util/Map;
+	protected fun getLocale ()Ljava/lang/String;
+	public final fun getPage ()Lcom/microsoft/playwright/Page;
+	public final fun newContext ()Lcom/microsoft/playwright/BrowserContext;
+	public final fun openPage ()V
+}
+
+public final class io/github/nijasc/ktor/svelte/test/TestApi {
+	public fun <init> (Lcom/microsoft/playwright/BrowserContext;Ljava/lang/String;)V
+	public final fun delete (Ljava/lang/String;)V
+	public final fun getContext ()Lcom/microsoft/playwright/BrowserContext;
+	public final fun getJson ()Lkotlinx/serialization/json/Json;
+	public final fun getOrigin ()Ljava/lang/String;
+	public final fun read (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/KSerializer;)Ljava/lang/Object;
+	public final fun send (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/microsoft/playwright/APIResponse;
+	public final fun status (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I
+	public static synthetic fun status$default (Lio/github/nijasc/ktor/svelte/test/TestApi;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)I
+}
+
+public final class io/github/nijasc/ktor/svelte/test/TestApiKt {
+	public static final fun problems (Lcom/microsoft/playwright/Page;)Ljava/util/List;
+}
+
+public final class io/github/nijasc/ktor/svelte/test/TestApp : java/lang/AutoCloseable {
+	public static final field Companion Lio/github/nijasc/ktor/svelte/test/TestApp$Companion;
+	public synthetic fun <init> (Ljava/lang/String;Ljava/io/File;Ljava/lang/Process;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public final fun getLog ()Ljava/io/File;
+	public final fun getUrl ()Ljava/lang/String;
+}
+
+public final class io/github/nijasc/ktor/svelte/test/TestApp$Companion {
+	public final fun shared (Ljava/util/Map;)Lio/github/nijasc/ktor/svelte/test/TestApp;
+	public static synthetic fun shared$default (Lio/github/nijasc/ktor/svelte/test/TestApp$Companion;Ljava/util/Map;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/test/TestApp;
+	public final fun start (Ljava/util/Map;ILjava/lang/String;)Lio/github/nijasc/ktor/svelte/test/TestApp;
+	public static synthetic fun start$default (Lio/github/nijasc/ktor/svelte/test/TestApp$Companion;Ljava/util/Map;ILjava/lang/String;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/test/TestApp;
+}
+

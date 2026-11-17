@@ -45,7 +45,7 @@ class ShowcaseServer(
     init {
         val java = File(System.getProperty("java.home"), "bin/java").path
         process =
-            ProcessBuilder(java, "-jar", System.getProperty("example.jar"))
+            ProcessBuilder(java, "-jar", System.getProperty("ktorSvelte.test.jar") ?: System.getProperty("example.jar"))
                 .apply {
                     environment()["PORT"] = port.toString()
                     environment()["APP_NAME"] = appName

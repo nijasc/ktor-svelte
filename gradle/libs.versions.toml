@@ -44,6 +44,7 @@ micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "mic
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }

@@ -21,3 +21,4 @@ rootProject.name = "ktor-svelte"
 include("ktor-svelte-server")
 include("ktor-svelte-gradle-plugin")
 include("ktor-svelte-catalog")
+include("ktor-svelte-test")

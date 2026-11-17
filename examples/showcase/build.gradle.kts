@@ -116,21 +116,9 @@ testing {
         register<JvmTestSuite>("browserTest") {
             useJUnitJupiter(libs.versions.junit)
             dependencies {
+                implementation(project())
                 implementation(libs.kotlin.test.junit5)
-                implementation(libs.playwright)
                 implementation(libs.axe.playwright)
-            }
-            targets.configureEach {
-                testTask.configure {
-                    val exampleJar = tasks.named<Jar>("shadowJar").flatMap { it.archiveFile }
-                    val browser = providers.gradleProperty("browser").orElse("chromium")
-                    inputs.file(exampleJar).withPathSensitivity(PathSensitivity.NONE)
-                    inputs.property("browser", browser)
-                    systemProperty("browser", browser.get())
-                    jvmArgumentProviders.add(
-                        CommandLineArgumentProvider { listOf("-Dexample.jar=${exampleJar.get().asFile.path}") },
-                    )
-                }
             }
         }
         register<JvmTestSuite>("devBrowserTest") {
