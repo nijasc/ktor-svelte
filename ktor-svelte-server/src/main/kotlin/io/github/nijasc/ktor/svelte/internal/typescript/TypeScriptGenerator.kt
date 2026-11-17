@@ -249,9 +249,10 @@ internal class TypeScriptGenerator(
     }
 
     private fun currentUserSource(user: CurrentUserType): String =
-        "import { userStore } from './client.js';\n" +
+        "import { userStore, type UserState } from './client.js';\n" +
             "import type { $CURRENT_USER_TYPE } from './types.js';\n\n" +
-            "const state = \$state<{ user: $CURRENT_USER_TYPE | null; ready: boolean }>({ user: null, ready: false });\n\n" +
+            "const state = \$state<UserState<$CURRENT_USER_TYPE>>(" +
+            "{ user: null, ready: false, sessionEnds: null, sessionEnding: false });\n\n" +
             "export const $CURRENT_USER_STORE = userStore<$CURRENT_USER_TYPE>('${user.path}', state);\n"
 
     private fun isApiPath(path: String): Boolean =

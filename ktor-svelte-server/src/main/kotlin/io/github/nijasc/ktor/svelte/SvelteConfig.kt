@@ -10,6 +10,7 @@ import io.ktor.util.reflect.typeInfo
 import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
+import java.time.Instant
 import kotlin.reflect.KClass
 import kotlin.reflect.typeOf
 import kotlin.time.Duration
@@ -123,6 +124,8 @@ public class SvelteConfig internal constructor() {
     public inline fun <reified T : Any> currentUser(
         path: String? = null,
         noinline signInMessage: ((ApplicationCall) -> String)? = null,
+        noinline sessionEnds: (suspend ApplicationCall.() -> Instant?)? = null,
+        noinline extendSession: (suspend ApplicationCall.() -> Unit)? = null,
         noinline find: suspend ApplicationCall.() -> T?,
     ) {
         setCurrentUser(
@@ -131,6 +134,8 @@ public class SvelteConfig internal constructor() {
             typeInfo<CurrentUserAnswer<T>>(),
             path,
             signInMessage,
+            sessionEnds,
+            extendSession,
             find,
         )
     }
@@ -142,6 +147,8 @@ public class SvelteConfig internal constructor() {
         answerType: TypeInfo,
         path: String?,
         signInMessage: ((ApplicationCall) -> String)?,
+        sessionEnds: (suspend ApplicationCall.() -> Instant?)?,
+        extendSession: (suspend ApplicationCall.() -> Unit)?,
         find: suspend ApplicationCall.() -> Any?,
     ) {
         check(
@@ -149,7 +156,16 @@ public class SvelteConfig internal constructor() {
         ) { "currentUser is already set to ${currentUserSpec?.typeName}. An app has one kind of signed-in user." }
         require(path == null || path.startsWith("/")) { "currentUser: the path must start with a slash, but is '$path'." }
         currentUserSpec =
-            CurrentUserSpec(type, Json.encodeToString(JsonSchema.serializer(), schema), path, answerType, signInMessage, find)
+            CurrentUserSpec(
+                type,
+                Json.encodeToString(JsonSchema.serializer(), schema),
+                path,
+                answerType,
+                signInMessage,
+                sessionEnds,
+                extendSession,
+                find,
+            )
     }
 
     public fun cookies(vararg cookies: TypedCookie<*>) {

@@ -121,6 +121,44 @@ currentUser<User>(signInMessage = { call -> call.messages.signInFirst() }) {
 
 To have the 401 in the generated types of your routes, declare it once with `errorResponse<YourError>(HttpStatusCode.Unauthorized)`.
 
+### When the session ends
+
+A session that ends while someone fills in a long form costs them the form. The server knows when that will be, so say it, next to how the user is found:
+
+```kotlin no-check
+currentUser<User>(
+    sessionEnds = { sessions.get<UserSession>()?.ends },
+    extendSession = { sessions.get<UserSession>()?.let { sessions.set(it.copy(ends = Instant.now().plusSeconds(1800))) } },
+) {
+    sessions.get<UserSession>()?.let { users.find(it.userId) }
+}
+```
+
+`sessionEnds` returns the `Instant` the session ends at, or `null` when it has no end. ktor-svelte does not own your session, so the end is whatever your session says: a field in the session cookie as here, a row in a table, or the expiry of a token. `extendSession` is optional and does whatever makes your session last longer.
+
+The store then knows three more things:
+
+| | |
+| --- | --- |
+| `currentUser.sessionEnds` | The `Date` the session ends at, or `null` |
+| `currentUser.sessionEnding` | `true` in the last two minutes. Reactive, so a warning is an `{#if}` |
+| `currentUser.extend()` | Runs `extendSession` on the server and takes the new end |
+
+```svelte no-check
+{#if currentUser.sessionEnding}
+    <div class="alert alert-warning" role="status">
+        You will be signed out soon.
+        <button type="button" onclick={() => currentUser.extend()}>Stay signed in</button>
+    </div>
+{/if}
+```
+
+Set `apiConfig.sessionWarning` to another number of milliseconds to warn earlier or later.
+
+The end stays right without extra requests. The answer of the current user endpoint carries it, and so does every API response, in a header, so a session that grows with each request is known to last longer after each one. The server sends the time that is left and not a clock time, so a wrong clock on the visitor's computer does not matter.
+
+When the time is up, the store asks the server once. If the session is really over, `currentUser.user` becomes `null` and the page shows it at that moment, not at the next click.
+
 ## The login page
 
 Someone opens a link to a page that needs a session, or their session ends while they fill in a form. Both should end the same way: at the login page, and after signing in, back where they were. Say where the login page is:

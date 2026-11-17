@@ -24,6 +24,7 @@ export interface ApiConfig {
     fetch?: typeof fetch;
     onUnauthorized?: (response: Response) => void;
     loginPage?: string;
+    sessionWarning?: number;
     dedupeGets?: boolean;
     idempotencyKeys?: boolean;
     timeout?: number;
@@ -263,7 +264,7 @@ function sendWithProgress(onProgress: (progress: UploadProgress) => void): typeo
         });
 }
 
-const userWatchers: { gone: () => void; changed: () => void }[] = [];
+const userWatchers: { gone: () => void; changed: () => void; ends: (seconds: number) => void }[] = [];
 
 function isSameOrigin(url: string): boolean {
     if (typeof location === 'undefined') return !/^[a-z][a-z0-9+.-]*:/i.test(url);
@@ -481,6 +482,8 @@ async function checked(response: Response, url: string, operation: string | unde
     if (isSameOrigin(url)) {
         if (response.status === 401) for (const watcher of userWatchers) watcher.gone();
         else if (response.headers.get('x-ktor-svelte-user') === 'changed') for (const watcher of userWatchers) watcher.changed();
+        const left = response.headers.get('x-ktor-svelte-session');
+        if (left !== null && response.ok && Number.isFinite(Number(left))) for (const watcher of userWatchers) watcher.ends(Number(left));
     }
     if (response.status === 401) {
         if (apiConfig.onUnauthorized) apiConfig.onUnauthorized(response);
@@ -613,12 +616,24 @@ export async function* stream<T>(method: string, path: string, options: Internal
 export interface UserState<T> {
     user: T | null;
     ready: boolean;
+    sessionEnds?: number | null;
+    sessionEnding?: boolean;
 }
+
+interface UserAnswer<T> {
+    user?: T | null;
+    sessionSeconds?: number | null;
+}
+
+const LONGEST_TIMER = 2_000_000_000;
 
 export interface UserStore<T> {
     readonly user: T | null;
     readonly ready: boolean;
     readonly signedIn: boolean;
+    readonly sessionEnds: Date | null;
+    readonly sessionEnding: boolean;
+    extend(): Promise<T | null>;
     load(): Promise<T | null>;
     reload(): Promise<T | null>;
     set(user: T | null): void;
@@ -628,19 +643,48 @@ export interface UserStore<T> {
 export function userStore<T>(path: string, state: UserState<T>): UserStore<T> {
     let pending: Promise<T | null> | undefined;
     let turn = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const plan = (ends: number | null) => {
+        if (timer !== undefined) clearTimeout(timer);
+        timer = undefined;
+        state.sessionEnds = ends;
+        if (ends === null) {
+            state.sessionEnding = false;
+            return;
+        }
+        const left = ends - Date.now();
+        const warning = apiConfig.sessionWarning ?? 120_000;
+        state.sessionEnding = left <= warning;
+        const wait = left > warning ? left - warning : Math.max(left, 0) + 50;
+        timer = setTimeout(
+            () => {
+                timer = undefined;
+                if (state.sessionEnds !== ends) return;
+                if (Date.now() < ends) return plan(ends);
+                state.sessionEnding = false;
+                state.sessionEnds = null;
+                void ask();
+            },
+            Math.min(wait, LONGEST_TIMER)
+        );
+    };
+    const endsFor = (answer: UserAnswer<T> | undefined): number | null =>
+        answer?.user && typeof answer.sessionSeconds === 'number' ? Date.now() + answer.sessionSeconds * 1000 : null;
     const settle = (user: T | null) => {
         turn++;
         state.user = user;
         state.ready = true;
+        if (user === null) plan(null);
         pending = Promise.resolve(user);
     };
-    const ask = (): Promise<T | null> => {
+    const ask = (method = 'GET', at = path): Promise<T | null> => {
         const mine = ++turn;
-        const asked: Promise<T | null> = request<{ user?: T | null }>('GET', path, { silent: true }).then(
+        const asked: Promise<T | null> = request<UserAnswer<T>>(method, at, { silent: true }).then(
             (answer) => {
                 if (mine !== turn) return pending ?? null;
                 state.user = answer?.user ?? null;
                 state.ready = true;
+                plan(endsFor(answer));
                 return state.user;
             },
             () => {
@@ -657,6 +701,9 @@ export function userStore<T>(path: string, state: UserState<T>): UserStore<T> {
         gone: () => settle(null),
         changed: () => {
             if (pending) void ask();
+        },
+        ends: (seconds) => {
+            if (state.user !== null) plan(Date.now() + seconds * 1000);
         }
     });
     return {
@@ -669,11 +716,18 @@ export function userStore<T>(path: string, state: UserState<T>): UserStore<T> {
         get signedIn() {
             return state.user !== null;
         },
+        get sessionEnds() {
+            return typeof state.sessionEnds === 'number' ? new Date(state.sessionEnds) : null;
+        },
+        get sessionEnding() {
+            return state.sessionEnding === true;
+        },
+        extend: () => ask('POST', `${path}/extend`),
         load: () => {
             if (typeof document === 'undefined' && !apiConfig.fetch) return Promise.resolve(null);
             return pending ?? ask();
         },
-        reload: ask,
+        reload: () => ask(),
         set: settle,
         clear: () => settle(null)
     };

@@ -2060,6 +2060,7 @@ export const icons: Partial<Record<LucideIconName, () => Promise<{ default: Comp
     CalendarDays: () => import('@lucide/svelte/icons/calendar-days'),
     Check: () => import('@lucide/svelte/icons/check'),
     CircleUser: () => import('@lucide/svelte/icons/circle-user'),
+    Clock: () => import('@lucide/svelte/icons/clock'),
     Database: () => import('@lucide/svelte/icons/database'),
     FileText: () => import('@lucide/svelte/icons/file-text'),
     Flame: () => import('@lucide/svelte/icons/flame'),

@@ -37,23 +37,34 @@ import io.ktor.server.sessions.sessions
 import io.ktor.server.sessions.set
 import io.ktor.util.hex
 import java.security.SecureRandom
+import java.time.Instant
 import kotlinx.serialization.Serializable
 
 const val SESSION_AUTH = "session"
 const val LOGIN_LIMIT = "login"
 private const val SESSION_COOKIE = "showcase_session"
-private const val SESSION_SECONDS = 7L * 24L * 60L * 60L
 private const val SIGN_KEY_BYTES = 32
 
 @Serializable
 data class UserSession(
     val userId: Int,
-)
+    val endsAt: Long = 0,
+) {
+    val ends: Instant get() = Instant.ofEpochSecond(endsAt)
+    val current: Boolean get() = Instant.now().isBefore(ends)
+}
+
+class SessionLength(
+    val seconds: Long,
+) {
+    fun start(userId: Int): UserSession = UserSession(userId, Instant.now().epochSecond + seconds)
+}
 
 fun Application.configureAuth(
     users: UserStore,
     secureCookies: Boolean,
     signKey: String?,
+    length: SessionLength,
 ) {
     val signKey = signKey?.let(::hex) ?: temporarySignKey()
     install(Sessions) {
@@ -61,14 +72,14 @@ fun Application.configureAuth(
             cookie.path = "/"
             cookie.httpOnly = true
             cookie.secure = secureCookies
-            cookie.maxAgeInSeconds = SESSION_SECONDS
+            cookie.maxAgeInSeconds = length.seconds
             cookie.extensions["SameSite"] = "Lax"
             transform(SessionTransportTransformerMessageAuthentication(signKey))
         }
     }
     install(Authentication) {
         session<UserSession>(SESSION_AUTH) {
-            validate { session -> users.findActive(session.userId)?.let { session } }
+            validate { session -> session.takeIf { it.current && users.findActive(it.userId) != null } }
             challenge {
                 if (call.request.path().startsWith("/api/")) {
                     call.respond(HttpStatusCode.Unauthorized, Problem(call.messages.problemSignIn()))
@@ -88,6 +99,7 @@ private fun Application.temporarySignKey(): ByteArray {
 fun Route.sessionRoutes(
     users: UserStore,
     registrationOpen: Boolean,
+    length: SessionLength,
 ) {
     rateLimit(RateLimitName(LOGIN_LIMIT)) {
         fieldCheck("/api/checks/email") { email -> call.messages.problemEmailTaken().takeIf { users.isTaken(email) } }
@@ -95,7 +107,7 @@ fun Route.sessionRoutes(
             val login = call.receive<Login>()
             val user: User? = users.check(login.email, login.password)
             if (user == null) return@post call.respond(HttpStatusCode.Unauthorized, Problem(call.messages.problemWrongLogin()))
-            call.sessions.set(UserSession(user.id))
+            call.sessions.set(length.start(user.id))
             call.currentUserChanged()
             call.respond(user)
         }
@@ -105,7 +117,7 @@ fun Route.sessionRoutes(
             val registration = call.receive<Registration>()
             val user: User? = users.create(registration.email, registration.name, registration.password, Role.MEMBER)
             if (user == null) return@post call.respondError(AccountError.EmailTaken, HttpStatusCode.Conflict)
-            call.sessions.set(UserSession(user.id))
+            call.sessions.set(length.start(user.id))
             call.currentUserChanged()
             call.respond(HttpStatusCode.Created, user)
         }

@@ -155,5 +155,7 @@
   "error-forbidden": "Du darfst diese Seite nicht sehen.",
   "error-sign-in": "Melde dich an, um diese Seite zu sehen.",
   "error-request-id": "Anfrage-ID:",
-  "error-home": "Zur Startseite"
+  "error-home": "Zur Startseite",
+  "session-ending": "Du wirst bald abgemeldet.",
+  "session-extend": "Angemeldet bleiben"
 }

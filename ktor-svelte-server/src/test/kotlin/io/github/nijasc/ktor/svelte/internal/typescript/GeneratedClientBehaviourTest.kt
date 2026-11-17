@@ -14,6 +14,10 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class GeneratedClientBehaviourTest {
+    companion object {
+        private var harnessResults: JsonObject? = null
+    }
+
     @TempDir
     lateinit var dir: File
 
@@ -27,7 +31,9 @@ class GeneratedClientBehaviourTest {
             .firstOrNull { it.isFile }
     }
 
-    private fun runHarness(): JsonObject {
+    private fun runHarness(): JsonObject = harnessResults ?: freshHarnessRun().also { harnessResults = it }
+
+    private fun freshHarnessRun(): JsonObject {
         val runtime = bun()
         assumeTrue(runtime != null, "bun is not on PATH, and the generated client is TypeScript")
         dir.resolve("client.ts").writeText(typeScriptTemplate("client.ts"))
@@ -96,6 +102,29 @@ class GeneratedClientBehaviourTest {
         )
         assertEquals(listOf("/tasks/4?tab=files", "/board", "/board", "/board", "/settings", "/tasks/4?tab=files"), texts(login, "returns"))
         assertContains(login.getValue("withoutLoginPage").jsonPrimitive.content, "install(Svelte) { loginPage = \"/login\" }")
+    }
+
+    @Test
+    fun `the user store knows when the session ends, warns before, extends it and notices the end`() {
+        val session = runHarness().getValue("session").jsonObject
+        val steps = session.getValue("steps").jsonArray.map { step -> step.jsonArray.joinToString(" | ") { it.jsonPrimitive.content } }
+        assertEquals(
+            listOf(
+                "before loading | null | no end | false | 0",
+                "loaded with three seconds left | Ada | near | false | 1",
+                "inside the warning time | Ada | near | true | 1",
+                "extended | Ada | far | false | 2",
+                "another response says less is left | Ada | near | false | 2",
+                "and a later one says more | Ada | far | false | 2",
+                "the time ran out, so the store asked and the server said nobody | null | no end | false | 3",
+                "nothing is planned for a visitor | null | no end | false | 3",
+            ),
+            steps,
+        )
+        assertEquals(
+            listOf("GET /api/current-user", "POST /api/current-user/extend", "GET /api/current-user"),
+            session.getValue("calls").jsonArray.map { it.jsonPrimitive.content },
+        )
     }
 
     @Test
