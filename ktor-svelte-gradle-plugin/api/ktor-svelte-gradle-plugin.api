@@ -210,6 +210,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteFrontend : org/g
 	public fun <init> (Ljava/lang/String;)V
 	public abstract fun getBasePath ()Lorg/gradle/api/provider/Property;
 	public abstract fun getBuildScript ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDevPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public fun getName ()Ljava/lang/String;
 	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
@@ -465,6 +466,8 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask
 	public abstract fun getClassesDirectories ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public abstract fun getCompileErrorsFile ()Lorg/gradle/api/file/RegularFileProperty;
 	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFrontendDirectories ()Lorg/gradle/api/provider/MapProperty;
+	public abstract fun getFrontendPorts ()Lorg/gradle/api/provider/MapProperty;
 	public abstract fun getFullStackTraces ()Lorg/gradle/api/provider/Property;
 	public abstract fun getGradleExecutable ()Lorg/gradle/api/provider/Property;
 	public abstract fun getHttps ()Lorg/gradle/api/provider/Property;

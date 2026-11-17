@@ -25,6 +25,7 @@ public abstract class SvelteFrontend
         public abstract val outputDir: Property<String>
         public abstract val buildScript: Property<String>
         public abstract val basePath: Property<String>
+        public abstract val devPort: Property<Int>
 
         public fun propertyMissing(
             name: String,
@@ -40,3 +41,5 @@ internal fun frontendTaskSuffix(name: String): String =
     }
 
 internal fun frontendResourceRoot(name: String): String = "ktor-svelte/frontends/$name"
+
+internal fun serverFrontendName(basePath: String): String = basePath.trim('/').replace('/', '-')
