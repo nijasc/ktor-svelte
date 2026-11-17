@@ -20,6 +20,7 @@ svelte {
     addRuntimeDependency = true
     includeSourceMaps = false
     shortTaskNames = true
+    timingSummary = true
     precompress = true
     verifyLeaks = true
     dev {
@@ -33,7 +34,7 @@ svelte {
 }
 ```
 
-`bunVersion` is unset by default, and `libraries { }` is empty.
+`bunVersion` and `nodeVersion` are unset by default, and `libraries { }` is empty.
 
 ## Settings
 
@@ -43,17 +44,19 @@ svelte {
 | `outputDir` | `"build"` | Adapter output, a folder inside `frontendDir` given relative to it. Must match the adapter's `pages` option |
 | `packageManager` | `PackageManager.Auto` | `Auto`, `Bun`, `Pnpm`, `Npm` or `Yarn`. `Auto` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
 | `bunVersion` | unset | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. See [Pin Bun](#pin-bun) |
+| `nodeVersion` | unset | An exact Node version, such as `"22.12.0"`, that ktor-svelte downloads and puts first on `PATH` for every frontend task, with npm from that Node. For npm and pnpm teams. See [Pin Node](#pin-node) |
 | `buildScript` | `"build"` | `package.json` script that builds the frontend |
 | `buildEnv` | empty | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build. Also counted as public by `svelteVerifyLeaks` |
 | `addRuntimeDependency` | `true` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version, and `ktor-svelte-test` to a `browserTest` suite |
 | `includeSourceMaps` | `false` | Ships `.map` files in the JAR, where anyone can download them |
 | `shortTaskNames` | `true` | Registers `dev`, `sync`, `doctor` and `gen` as [short names](#short-task-names) for the tasks used most |
+| `timingSummary` | `true` | Ends a build that ran the frontend with a short table of how long each step took. See [Build times](#build-times) |
 | `precompress` | `true` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10% |
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](../features/runtime-config.md#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
 | `frontend(name) { }` | none | Another SvelteKit project served under its own path prefix, with `frontendDir`, `outputDir`, `buildScript` and `basePath`. See [Multiple frontends](../guide/multiple-frontends.md) |
 
-The package manager must already be installed unless you set `bunVersion`. The plugin does not download Node.
+The package manager must already be installed unless you set `bunVersion`, or `nodeVersion` with npm.
 
 ### dev { }
 
@@ -147,6 +150,40 @@ svelte {
 - It works on Windows, macOS and Linux, including Alpine, on x64 and arm64.
 - Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
 
+## Pin Node
+
+Teams whose lockfile is npm's or pnpm's need Node, and every laptop and CI image has its own. Set `nodeVersion` and the plugin downloads that exact Node from nodejs.org the first time a task needs it:
+
+```kotlin
+svelte {
+    nodeVersion = "22.12.0"
+}
+```
+
+- It follows the rules of the pinned Bun: the archive is checked against the release's `SHASUMS256.txt` before it is unpacked into `~/.gradle/ktor-svelte/node/<version>/`, and every later build reuses it.
+- Every frontend task runs with that Node first on `PATH`, so Vite and every script use it. npm comes with it: with `package-lock.json`, the plugin runs the npm of that Node and needs none installed.
+- pnpm and Yarn are still taken from `PATH`, and run on the pinned Node.
+- `svelteDoctor` reports the pinned Node instead of the installed one, and the build cache counts the version, so a new Node builds the frontend again.
+- It works on Windows, macOS and Linux, on x64 and arm64. Node publishes no build for Alpine: install it with `apk` there.
+- Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
+
+## Build times
+
+A build that installed or built the frontend ends with how long each step took, so you can see where a slow build spends its time:
+
+```text
+ktor-svelte build times:
+  install          0.2s  up to date
+  frontend build  12.4s
+  bundling         0.3s
+  Kotlin compile   4.1s  from cache
+  total           17.0s
+```
+
+- It lists the steps of this project that were part of the build: `svelteInstall`, `svelteBuild`, `svelteBundle` and `compileKotlin`. A step that did no work says why: `up to date`, `from cache`, `skipped` or `failed`.
+- A build where no frontend step ran, such as a second `./gradlew build` with nothing changed, prints nothing.
+- It works with the configuration cache. Turn it off with `svelte { timingSummary = false }`.
+
 ## Format both sides
 
 One command formats Kotlin and the frontend, and one checks them:
@@ -217,6 +254,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteSync` | Installs configured libraries and writes their generated files. Short name `sync` |
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |
+| `svelteEmails` | Renders the components in `src/emails` to email templates and generates `Emails.kt`. Runs before compiling. See [Emails](../features/emails.md) |
 | `svelteBuildInfo` | Writes the version, the git commit and its time into the build, for [`buildInfo`](../guide/monitoring.md#build-info). Runs before resources are processed |
 
 ### Develop
@@ -240,7 +278,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteApiChanges` | `--against`, `--strict` | Lists [what changed in the API for callers](../features/typescript.md#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. `--strict` fails on a change that can break them |
 | `svelteVerifyA11y` (app) | `--path`, `-Pbrowser` | Packages the app, opens its prerendered pages in a browser in light and dark, and fails on [accessibility problems](../guide/browser-tests.md#accessibility) that axe finds. Not part of `check` |
 | `svelteSmokeTest` (app) | `--path`, `--skip`, `--start-seconds` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](../guide/deployment.md#smoke-test). Not part of `check` |
-| `svelteDoctor` | `--fix` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix. `--fix` repairs what needs no decision. Short name `doctor` |
+| `svelteDoctor` | `--fix` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, that `NODE_EXTRA_CA_CERTS` points to a file, and that the package registry is reachable with the proxy and certificate settings that apply, and says what to fix. Gradle's `--offline` skips the registry. `--fix` repairs what needs no decision. Short name `doctor` |
 | `svelteConfig` | | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores the setup and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteCheck` | | Runs the frontend's `check` script |
 

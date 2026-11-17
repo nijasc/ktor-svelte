@@ -17,6 +17,7 @@ internal enum class DocLink(
     SECRETS_IN_THE_BUILD("features/runtime-config", "secrets-in-the-frontend-build"),
     GENERATED_TYPESCRIPT("features/typescript", null),
     GRADLE("reference/gradle", null),
+    EMAILS("features/emails", null),
     I18N("features/frontend-libraries", "i18n"),
     ROUTES("features/routes", null),
     MULTIPLE_FRONTENDS("guide/multiple-frontends", null),

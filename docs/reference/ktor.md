@@ -24,9 +24,11 @@ install(Svelte) {
     statusEndpoint = false
     internalAccess { }
     healthEndpoint = false
+    warmUp()
     originCheck = true
     hideErrorDetails = true
     apiCompression = true
+    mailer = null
     inlinePublicConfig = true
     buildHeader = true
     requestIds = true
@@ -66,6 +68,7 @@ install(Svelte) {
         refreshAfterRestart = true
         errorOverlay = true
         startupTiming = true
+        catchEmails = true
     }
 
     rateLimit {
@@ -209,6 +212,7 @@ See [API request guards](../security.md#api-request-guards).
 |---|---|---|
 | `apiCompression` | `true` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. See [API compression](../features/transport.md#api-compression) |
 | `transport { }` | nothing installed | JSON, XML and compression: `json { }`, `xml()`, `negotiation { }`, `compression { }`. See [Transport](../features/transport.md) |
+| `mailer` | `null` | The `Mailer` that sends `application.mailer` emails outside development. See [Emails](../guide/dev-workflow.md#emails) |
 | `buildHeader` | `true` | Sends the frontend build fingerprint on API responses as `X-Ktor-Svelte-Build`, so the client can notice a deploy |
 | `requestIds` | `true` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors |
 
@@ -219,6 +223,7 @@ See [Built-in endpoints](../features/endpoints.md).
 | Setting | Default | What it does |
 |---|---|---|
 | `healthEndpoint` | `false` | Serves `/_ktor-svelte/health` for load balancers and orchestrators. See [Health endpoint](../features/endpoints.md#health-endpoint) |
+| `warmUp(...)` | none | Paths the app calls on itself once the port is open, before the health endpoint reports it up. See [Warm-up before ready](../features/endpoints.md#warm-up-before-ready) |
 | `healthCheck { }` | none | Adds a check of your own. Every check must return `true` for the app to be up |
 | `statusEndpoint` | `false` | Serves build and proxy details at `/_ktor-svelte/status`, to this machine only. See [Status endpoint](../features/endpoints.md#status-endpoint) |
 | `internalAccess { }` | this machine only | Who may see the status endpoint and the API docs besides this machine: a `token`, `networks(...)` or your own `allow { }` check. See [Who may see internal endpoints](../features/endpoints.md#who-may-see-internal-endpoints) |
@@ -248,6 +253,7 @@ See [Dev workflow](../guide/dev-workflow.md).
 | `dev.browserLogs` | `true` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log |
 | `dev.refreshAfterRestart` | `true` | After the app restarts in development, open pages rerun their `load` functions, so a Kotlin change shows up without a manual reload |
 | `dev.errorOverlay` | `true` | Shows the Kotlin exception of a failed API call in the browser, in development. Needs `dev.panel` |
+| `dev.catchEmails` | `true` | In development, `application.mailer` keeps emails for the [dev panel](../guide/dev-workflow.md#emails) instead of sending them |
 | `dev.startupTiming` | `true` | Logs what the startup time was spent on in development, with the parts you wrapped in [`startupStep`](../guide/dev-workflow.md#startup-timing) |
 
 ## Route.svelte()
@@ -287,6 +293,7 @@ Besides the settings, the plugin gives your routes these helpers:
 | `getPage<T>(path) { }` | A paged `GET` route with `cursor` and `limit` | [Page through long lists](../recipes/pagination.md) |
 | `resource<T, ID>(path) { }` | The routes of one class, declared in one block | [Resource routes](../features/typescript.md#resource-routes) |
 | `application.buildInfo` | Version, commit and commit time of the build | [Build info](../guide/monitoring.md#build-info) |
+| `application.mailer.send(Email(...))` | Sends an email through `mailer`, or catches it for the dev panel in development | [Emails](../guide/dev-workflow.md#emails) |
 | `application.svelteMetrics` | Refusal counters and web vitals | [Monitoring](../guide/monitoring.md) |
 | `startupStep(name) { }` | Names a part of startup for the dev startup log | [Startup timing](../guide/dev-workflow.md#startup-timing) |
 

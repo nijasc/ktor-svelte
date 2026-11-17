@@ -7,6 +7,7 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.installableSpecOf
+import io.github.nijasc.ktor.svelte.gradle.tasks.BuildTimings
 import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.GitOutputSource
 import io.github.nijasc.ktor.svelte.gradle.tasks.OPENAPI_FILE
@@ -21,6 +22,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDeployTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevAllTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteEmailsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteFormatTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateSourcesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGitHooksTask
@@ -46,6 +48,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
+import io.github.nijasc.ktor.svelte.gradle.tasks.hasEmailTemplates
 import io.github.nijasc.ktor.svelte.gradle.tasks.startPlan
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -67,6 +70,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.build.event.BuildEventsListenerRegistry
 import org.gradle.jvm.tasks.Jar
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.plugins.ide.idea.model.IdeaModel
@@ -74,8 +78,10 @@ import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.testing.base.TestingExtension
 import java.io.File
 import java.util.Properties
+import javax.inject.Inject
 
 private const val TASK_GROUP = "svelte"
+private const val DEFAULT_GENERATED_PACKAGE = "io.github.nijasc.ktorsvelte"
 private const val DEFAULT_APP_URL = "http://localhost:8080"
 
 private class KotlinFormatter(
@@ -107,7 +113,10 @@ private const val VERIFY_TS_PROPERTY = "svelte.verifyTs"
 private const val SKIP_WARNING =
     "ktor-svelte: building a JAR with the frontend build skipped. The JAR may hold a stale frontend, or none."
 
-public class KtorSveltePlugin : Plugin<Project> {
+public abstract class KtorSveltePlugin : Plugin<Project> {
+    @get:Inject
+    protected abstract val buildEvents: BuildEventsListenerRegistry
+
     override fun apply(project: Project) {
         val extension = createExtension(project)
         val devMode = booleanProperty(project, DEV_PROPERTY)
@@ -145,12 +154,14 @@ public class KtorSveltePlugin : Plugin<Project> {
         registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
         configureClean(project, extension)
         serializeFrontendTasks(project)
+        reportBuildTimes(project, extension)
         val config = registerConfigReport(project, extension)
 
         excludeFrontendOutputFromIde(project, extension)
         project.pluginManager.withPlugin("java") {
             wireResources(project, bundle)
             wireGeneratedSources(project, extension, librarySpec)
+            wireEmails(project, extension, install, librarySpec)
             addRuntimeDependency(project, extension)
             warnOnSkippedJar(project, skipFrontend)
         }
@@ -186,6 +197,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("outputDir", extension.outputDir)
             settings.put("packageManager", extension.packageManager.map { it.name })
             settings.put("bunVersion", extension.bunVersion.orElse("not pinned"))
+            settings.put("nodeVersion", extension.nodeVersion.orElse("not pinned"))
             settings.put("buildScript", extension.buildScript)
             settings.put("buildEnv", extension.buildEnv.map { it.sorted().joinToString(", ").ifEmpty { "none" } })
             settings.put("addRuntimeDependency", extension.addRuntimeDependency.map { it.toString() })
@@ -193,6 +205,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("precompress", extension.precompress.map { it.toString() })
             settings.put("verifyLeaks", extension.verifyLeaks.map { it.toString() })
             settings.put("shortTaskNames", extension.shortTaskNames.map { it.toString() })
+            settings.put("timingSummary", extension.timingSummary.map { it.toString() })
             settings.put("dev.port", extension.dev.port.map { it.toString() })
             settings.put("dev.script", extension.dev.script)
             settings.put("dev.debugPort", extension.dev.debugPort.map { it.toString() })
@@ -309,7 +322,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                         )
                     },
                 devPort = extension.dev.port.get(),
-                generatedPackage = libraries.generatedPackage.getOrElse("io.github.nijasc.ktorsvelte"),
+                generatedPackage = libraries.generatedPackage.getOrElse(DEFAULT_GENERATED_PACKAGE),
             )
         }
 
@@ -564,6 +577,40 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
     }
 
+    private fun wireEmails(
+        project: Project,
+        extension: SvelteExtension,
+        install: TaskProvider<SvelteInstallTask>,
+        librarySpec: Provider<LibrarySpec>,
+    ) {
+        val emails =
+            project.tasks.register("svelteEmails", SvelteEmailsTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.description = "Renders the Svelte components in src/emails to email templates and generates Kotlin to fill them in."
+                task.dependsOn(extension.frontendDir.map { if (hasEmailTemplates(it.asFile)) listOf(install) else emptyList() })
+                task.sources.from(
+                    extension.frontendDir.map { dir ->
+                        dir.asFileTree.matching { filter ->
+                            filter.include("src/**", "package.json")
+                            LOCKFILES.forEach { (lockfile, _) -> filter.include(lockfile) }
+                            filter.exclude("src/routes/**", "src/service-worker/**")
+                        }
+                    },
+                )
+                task.generatedPackage.set(extension.libraries.generatedPackage.orElse(DEFAULT_GENERATED_PACKAGE))
+                task.locales.set(librarySpec.map { it.i18n?.locales.orEmpty() })
+                task.defaultLocale.set(librarySpec.map { it.i18n?.defaultLocale ?: "" }.filter { it.isNotEmpty() })
+                task.hasRuntimeDependency.set(extension.addRuntimeDependency)
+                task.kotlinDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/emails-kotlin"))
+                task.resourcesDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/emails"))
+                task.mustRunAfter("svelteSync")
+            }
+        project.extensions.getByType(SourceSetContainer::class.java).named("main") { main ->
+            main.java.srcDir(emails.flatMap { it.kotlinDirectory })
+            main.resources.srcDir(emails.flatMap { it.resourcesDirectory })
+        }
+    }
+
     private fun registerUtilityTasks(
         project: Project,
         extension: SvelteExtension,
@@ -641,9 +688,11 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.frontendDir.set(extension.frontendDir)
             task.packageManager.set(extension.packageManager)
             task.bunVersion.set(extension.bunVersion)
+            task.nodeVersion.set(extension.nodeVersion)
             task.devPort.set(extension.dev.port)
             task.outputDir.set(extension.outputDir)
             task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
+            task.offline.set(project.gradle.startParameter.isOffline)
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
         project.tasks.register("svelteLiveTemplates", SvelteLiveTemplatesTask::class.java) { task ->
@@ -749,7 +798,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                     .orElse(extension.frontendDir.dir("src/routes")),
             )
             task.typedRoutes.set(extension.libraries.routesEnabled.orElse(false))
-            task.generatedPackage.set(extension.libraries.generatedPackage.orElse("io.github.nijasc.ktorsvelte"))
+            task.generatedPackage.set(extension.libraries.generatedPackage.orElse(DEFAULT_GENERATED_PACKAGE))
             task.workDirectory.set(project.layout.buildDirectory.dir("ktor-svelte/recorded"))
             task.browser.set(project.providers.gradleProperty("browser"))
         }
@@ -880,6 +929,18 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
     }
 
+    private fun reportBuildTimes(
+        project: Project,
+        extension: SvelteExtension,
+    ) {
+        val timings =
+            project.gradle.sharedServices.registerIfAbsent("ktorSvelteBuildTimes${project.path}", BuildTimings::class.java) { spec ->
+                spec.parameters.projectPath.set(project.path)
+                spec.parameters.enabled.set(extension.timingSummary)
+            }
+        buildEvents.onTaskCompletion(timings)
+    }
+
     private fun gradleExecutablePath(gradleHome: File?): String {
         val name = if (isWindowsHost()) "gradle.bat" else "gradle"
         return gradleHome?.resolve("bin/$name")?.path ?: name
@@ -896,6 +957,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.precompress.convention(true)
         extension.verifyLeaks.convention(true)
         extension.shortTaskNames.convention(true)
+        extension.timingSummary.convention(true)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
         extension.dev.debugPort.convention(5005)
@@ -923,6 +985,8 @@ public class KtorSveltePlugin : Plugin<Project> {
         task.packageManager.set(extension.packageManager)
         task.bunVersion.set(extension.bunVersion)
         task.toolCacheDirectory.set(File(task.project.gradle.gradleUserHomeDir, "ktor-svelte/bun"))
+        task.nodeVersion.set(extension.nodeVersion)
+        task.nodeCacheDirectory.set(File(task.project.gradle.gradleUserHomeDir, "ktor-svelte/node"))
         task.verbose.set(
             task.project.providers
                 .gradleProperty(VERBOSE_PROPERTY)
@@ -990,6 +1054,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                         source.parameters.frontendDir.set(extension.frontendDir)
                         source.parameters.packageManager.set(extension.packageManager)
                         source.parameters.bunVersion.set(extension.bunVersion)
+                        source.parameters.nodeVersion.set(extension.nodeVersion)
                     }
                 },
             )
