@@ -194,6 +194,7 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 | [Save fixtures](#save-fixtures) | The calls of this page as JSON for frontend tests |
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
 | [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
+| [Migrations](#migrations) | Which Flyway migrations ran, which are pending, and whether the last one failed |
 | [Cookies](#cookie-inspector) | What this browser sends, as the server reads it, with Clear buttons |
 | [Routes](#route-map) | Every page and API route with the file behind it |
 | [Accessibility](#accessibility-check) | An axe check of the page you are looking at |
@@ -284,6 +285,19 @@ Secrets are hidden as `***`:
 - the password inside a URL, such as `postgres://app:***@db/app`, and `password=` or `token=` parameters in a connection string.
 
 The hiding goes by names, so a secret in a variable with a plain name, such as `DB=...`, is shown. Like the rest of the panel, it only answers this machine unless `allowRemote` is on.
+
+### Migrations
+
+The **Migrations** section shows the state of the database schema, when your app runs [Flyway](https://documentation.red-gate.com/flyway) migrations with Exposed:
+
+- every migration with its version, description, state and when it ran,
+- how many are pending, which happens when you added a migration file and the app has not run it yet,
+- whether the last one that ran failed, in red.
+
+A pending or failed migration is usually why a new column "does not exist". The section asks Flyway each time you open it, through the database your app connected with `Database.connect`, and changes nothing.
+
+- It needs `flyway-core` and Exposed in the app. Without Flyway on the classpath the section says so; ktor-svelte itself does not depend on it.
+- It reads Flyway's default setup: migrations in `src/main/resources/db/migration` and the history in `flyway_schema_history`. With other `locations` or another `table`, the list may not match what your app runs.
 
 ### Cookie inspector
 

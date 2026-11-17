@@ -613,6 +613,19 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel shows which Flyway migrations ran`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".migrations summary").click()
+        assertThat(panel.locator(".migrations-note")).hasText("At version 2, 2 ran.")
+        assertThat(panel.locator(".migrations-row")).hasCount(2)
+        assertThat(panel.locator(".migrations-row").first()).containsText("create tables")
+        assertThat(panel.locator(".migrations-row").first()).containsText("Success")
+    }
+
+    @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
