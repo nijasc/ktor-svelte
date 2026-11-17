@@ -1,6 +1,8 @@
 import { ApiError, request, codeMessages, errorCode, type RequestOptions } from './client.js';
-import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, ErrorCode, FieldCheckAnswer, Greeting, Login, LucideIcon, PasswordChange, Priority, Problem, ProfileInput, PublicConfig, Registration, RoleChange, Status, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
+import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, EmailPreview, ErrorCode, FieldCheckAnswer, Greeting, Login, LucideIcon, PasswordChange, Priority, Problem, ProfileInput, PublicConfig, Registration, RoleChange, Status, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
 
+/** @see showcase/Auth.kt */
+export const adminGetEmailsWelcome = (query?: { name?: string }, options?: RequestOptions) => request<EmailPreview>('GET', '/api/admin/emails/welcome', { ...options, query, operation: 'admin.getEmailsWelcome' });
 /** @see showcase/Auth.kt */
 export const adminGetUsers = (options?: RequestOptions) => request<User[]>('GET', '/api/admin/users', { ...options, operation: 'admin.getUsers' });
 /** @see showcase/Auth.kt */
@@ -9,6 +11,8 @@ export const adminPutUsersActive = (id: string | number, body: ActiveChange, opt
 export const adminPutUsersRole = (id: string | number, body: RoleChange, options?: RequestOptions) => request<User>('PUT', `/api/admin/users/${encodeURIComponent(id)}/role`, { ...options, body, operation: 'admin.putUsersRole' });
 
 export const admin = {
+    /** @see showcase/Auth.kt */
+    getEmailsWelcome: adminGetEmailsWelcome,
     /** @see showcase/Auth.kt */
     getUsers: adminGetUsers,
     /** @see showcase/Auth.kt */
@@ -175,6 +179,7 @@ export const users = {
 };
 
 export interface ApiErrors {
+    'admin.getEmailsWelcome': Problem;
     'admin.getUsers': Problem;
     'admin.putUsersActive': Problem;
     'admin.putUsersRole': Problem;
@@ -205,6 +210,7 @@ export interface ApiErrors {
 }
 
 const errorStatuses: Record<string, number[]> = {
+    'admin.getEmailsWelcome': [401, 403],
     'admin.getUsers': [401, 403],
     'admin.putUsersActive': [401, 403, 404],
     'admin.putUsersRole': [401, 403, 404],

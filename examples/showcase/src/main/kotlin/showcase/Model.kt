@@ -288,6 +288,13 @@ data class Greeting(
 )
 
 @Serializable
+data class EmailPreview(
+    val subject: String,
+    val html: String,
+    val text: String,
+)
+
+@Serializable
 data class Problem(
     val message: String,
 )

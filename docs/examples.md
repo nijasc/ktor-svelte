@@ -106,6 +106,7 @@ The data lives in `examples/showcase/build/showcase-data`, so `./gradlew -p exam
 | `frontend/src/routes/(app)/tasks/[id]/+page.svelte` | Uploads with a progress bar, comments, `Activity.match` and a confirm dialog |
 | `frontend/src/lib/components/TaskForm.svelte` | One form for creating and editing, with `use:field` and errors from the browser and the server |
 | `frontend/messages/` | English and German texts that the pages and the API errors share |
+| `frontend/src/emails/Welcome.svelte` | A welcome email in English and German with a shared layout, rendered on registration and shown to admins at `/api/admin/emails/welcome` |
 | `src/e2eTest/kotlin/ShowcaseAppTest.kt` | Sessions, roles, uploads, paging and rate limits tested against the production JAR |
 | `src/browserTest/kotlin/ShowcaseBrowserTest.kt` | The same JAR driven by Playwright in Chromium, Firefox and WebKit, with accessibility checks |
 | `src/devBrowserTest/kotlin/DevModeBrowserTest.kt` | `svelteDevAll` with a browser: hot reload, a restart after a Kotlin change, and browser errors in the dev log |
