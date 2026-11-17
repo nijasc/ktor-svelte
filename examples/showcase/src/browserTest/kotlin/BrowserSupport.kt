@@ -89,8 +89,21 @@ class BrowserSession(
             else -> playwright.chromium()
         }.launch()
 
-    fun newContext(): BrowserContext =
-        browser.newContext(Browser.NewContextOptions().setBaseURL(server.url).setLocale("en-US")).also { context ->
+    fun newContext(serviceWorkers: Boolean = false): BrowserContext =
+        browser
+            .newContext(
+                Browser
+                    .NewContextOptions()
+                    .setBaseURL(server.url)
+                    .setLocale("en-US")
+                    .setServiceWorkers(
+                        if (serviceWorkers) {
+                            com.microsoft.playwright.options.ServiceWorkerPolicy.ALLOW
+                        } else {
+                            com.microsoft.playwright.options.ServiceWorkerPolicy.BLOCK
+                        },
+                    ),
+            ).also { context ->
             context.addCookies(listOf(Cookie("cookie-consent", "preferences").setUrl(server.url)))
         }
 

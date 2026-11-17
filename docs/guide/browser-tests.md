@@ -224,6 +224,16 @@ While you build a page, the [dev panel](./dev-workflow.md#accessibility-check) r
 A machine finds about a third of what makes a page hard to use. A clean run means the easy mistakes are gone, not that the page is accessible.
 :::
 
+## Service workers
+
+Tests start with service workers blocked. A page that a service worker controls can send its requests past `page.route` and `context.route` in WebKit, so requests a test stubs would reach the app instead. To test the worker of an [installable app](../features/frontend-libraries.md#installable-app), such as its offline page, allow them in that test class:
+
+```kotlin no-check
+class OfflineBrowserTest : BrowserTest() {
+    override val serviceWorkers = true
+}
+```
+
 ## Browsers
 
 | Browser | How to pick it |
