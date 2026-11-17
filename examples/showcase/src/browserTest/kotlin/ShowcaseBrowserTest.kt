@@ -459,7 +459,8 @@ class ShowcaseBrowserTest {
 
     @Test
     fun `language and theme are remembered and reach the server`() {
-        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.register(unique("Polyglot"))
+        assertThat(page).hasURL(BOARD)
         page.getByLabel("Language").selectOption("de")
         assertThat(page.navigationLink("Neue Aufgabe")).isVisible()
         assertThat(page.locator("html")).hasAttribute("lang", "de")
@@ -770,6 +771,36 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `preferences are kept for the person and follow them to another browser`() {
+        val name = unique("Prefers")
+        page.register(name)
+        assertThat(page).hasURL(BOARD)
+        val list = page.locator("#tasks")
+        assertThat(list).hasAttribute("data-compact", "false")
+
+        val saved = page.waitForResponse({ it.url().endsWith("/api/preferences") && it.request().method() == "PUT" }) {
+            page.getByLabel("Compact list").check()
+        }
+        assertEquals(200, saved.status())
+        assertThat(list).hasAttribute("data-compact", "true")
+        page.waitForResponse({ it.url().endsWith("/api/preferences") && it.request().method() == "PUT" }) {
+            page.getByLabel("Theme").selectOption("dracula")
+        }
+        page.reload()
+        assertThat(list).hasAttribute("data-compact", "true")
+
+        session.newContext().use { elsewhere ->
+            val other = elsewhere.newPage()
+            other.navigate("/login")
+            assertThat(other.locator("html")).hasAttribute("data-theme", "shadcn-light")
+            other.signIn(name.replace(' ', '.').lowercase() + "@example.com", "registered-password")
+            assertThat(other.locator("#tasks")).hasAttribute("data-compact", "true")
+            assertThat(other.locator("html")).hasAttribute("data-theme", "dracula")
+            assertThat(other.getByLabel("Compact list")).isChecked()
+        }
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")
@@ -847,6 +878,8 @@ class ShowcaseBrowserTest {
     private fun checkPagesBehindLogin(theme: String) {
         useTheme(theme)
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.getByLabel("Theme").selectOption(theme)
+        assertThat(page.locator("html")).hasAttribute("data-theme", theme)
         val id = page.createTask(unique("Accessible"))
         listOf("/board", "/tasks/new", "/tasks/$id", "/settings", "/admin", "/tasks/999999").forEach { path ->
             page.navigate(path)
