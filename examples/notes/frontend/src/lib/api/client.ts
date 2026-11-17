@@ -795,12 +795,17 @@ export function preferenceStore<T extends object>(
         if (field === 'theme') document.documentElement.dataset.theme = value;
         return field !== 'theme';
     };
-    const send = (): Promise<void> => {
+    const send = (shown: Record<string, string> = {}): Promise<void> => {
         const body = state.value;
-        saving = saving.catch(() => undefined).then(() => request<unknown>('PUT', path, { body }).then(() => undefined));
+        saving = saving
+            .catch(() => undefined)
+            .then(() => request<unknown>('PUT', path, { body }))
+            .then(() => {
+                if (Object.keys(shown).length > 0) remember({ ...remembered(), ...shown });
+            });
         return saving;
     };
-    const reconcile = (stored: T): T => {
+    const reconcile = (stored: T, before: Record<string, string | undefined>): T => {
         if (typeof document === 'undefined' || !signedIn || bound.length === 0) return stored;
         const last = remembered();
         const mine: Record<string, string> = {};
@@ -809,28 +814,31 @@ export function preferenceStore<T extends object>(
             const here = cookieOf(cookie);
             const there = (stored as Record<string, unknown>)[field];
             const known = typeof there === 'string' && cookieWord.test(there) ? there : undefined;
-            const changedHere = here !== undefined && here !== known && (known === undefined || (field in last && here !== last[field]));
+            const picked = (field in last && here !== last[field]) || here !== before[field];
+            const changedHere = here !== undefined && here !== known && (known === undefined || picked);
             if (changedHere) mine[field] = here;
             else if (known !== undefined && show(field, cookie, known)) reload = true;
-            last[field] = changedHere ? here : (known ?? here);
+            if (!changedHere) last[field] = known ?? here;
         }
         remember(last);
         if (reload) setTimeout(() => location.reload(), 0);
         if (Object.keys(mine).length === 0) return stored;
         const merged = { ...stored, ...mine } as T;
         state.value = merged;
-        void send().catch(() => undefined);
+        void send(mine).catch(() => undefined);
         return merged;
     };
     const ask = (): Promise<T> => {
         const mine = ++turn;
+        const before: Record<string, string | undefined> = {};
+        for (const [field, cookie] of bound) before[field] = cookieOf(cookie);
         const asked: Promise<T> = request<PreferenceAnswer<T>>('GET', path, { silent: true }).then(
             (answer) => {
                 if (mine !== turn) return pending ?? state.value;
                 signedIn = answer?.signedIn === true;
                 state.value = { ...defaults, ...(answer?.preferences ?? {}) };
                 state.ready = true;
-                return reconcile(state.value);
+                return reconcile(state.value, before);
             },
             () => {
                 if (mine !== turn) return pending ?? state.value;
@@ -869,8 +877,7 @@ export function preferenceStore<T extends object>(
             }
             if (Object.keys(moved).length === 0) return;
             state.value = { ...state.value, ...moved } as T;
-            remember({ ...remembered(), ...moved });
-            void send().catch(() => undefined);
+            void send(moved).catch(() => undefined);
         }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'lang'] });
     }
     return {
@@ -884,17 +891,16 @@ export function preferenceStore<T extends object>(
         load,
         set: (change) => {
             state.value = { ...state.value, ...change };
+            const shown: Record<string, string> = {};
             if (typeof document !== 'undefined') {
-                const last = remembered();
                 for (const [field, cookie] of bound) {
                     const next = (change as Record<string, unknown>)[field];
                     if (typeof next !== 'string' || !cookieWord.test(next)) continue;
                     show(field, cookie, next);
-                    last[field] = next;
+                    shown[field] = next;
                 }
-                if (signedIn) remember(last);
             }
-            return signedIn ? send() : Promise.resolve();
+            return signedIn ? send(shown) : Promise.resolve();
         }
     };
 }
