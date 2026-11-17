@@ -2956,6 +2956,16 @@ What is supported, and nothing else, so the two sides cannot drift apart:
 - The table covers 64 locales. A region without its own entry uses its language, and a language that is not in the table is formatted like English.
 - Not covered: weekday names, seconds, time zone names, compact numbers such as 1.2K, percent, and digits other than 0 to 9. For those, format on one side only.
 
+`timeAgo` from the same file tells a time as its distance from now, in the visitor's language: "now", "3 minutes ago", "yesterday", "in 2 hours". It is for the browser only and uses the browser's own words, through `Intl.RelativeTimeFormat`:
+
+```ts
+import { timeAgo } from '#format';
+
+timeAgo(note.createdAt);
+```
+
+Text made once goes stale while the page stays open. With `components()`, `<TimeAgo value={note.createdAt} />` keeps itself current: it renders a `<time>` element with the exact date and time as its tooltip, and every instance on the page is refreshed by one shared timer, twice a minute.
+
 The data comes from the JDK's copy of the Unicode locale data and is fixed in each plugin version, so a new JDK or browser does not change what your app prints.
 
 ### Messages nobody translated yet
