@@ -109,9 +109,11 @@ Most pages show the first page and load more on request:
 Counting every row is often the slowest part of a list, so a page only carries a total when the client asks for it with `?total=true`. `page.total { }` runs your count only then:
 
 ```kotlin
-getPage<Note>("/api/notes/all") { page ->
-    val rows = store.page(page.cursor, page.limit)
-    Page(rows.items, rows.next, total = page.total { store.count().toLong() })
+routing {
+    getPage<Note>("/api/notes/all") { page ->
+        val rows = store.page(page.cursor, page.limit)
+        Page(rows.items, rows.next, total = page.total { store.count().toLong() })
+    }
 }
 ```
 
