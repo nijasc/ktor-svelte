@@ -179,6 +179,7 @@ class ShowcaseBrowserTest {
 
         page.getByLabel("Search tasks").fill(token)
         assertThat(tasks).hasCount(5)
+        assertThat(page.locator("#shown")).hasText("5 tasks shown")
         assertThat(page.locator("#tasks")).containsText("$token 6")
         page.button("Load more").click()
         assertThat(tasks).hasCount(6)
@@ -186,6 +187,7 @@ class ShowcaseBrowserTest {
 
         page.getByLabel("Search tasks").fill("$token 4")
         assertThat(tasks).hasCount(1)
+        assertThat(page.locator("#shown")).hasText("1 task shown")
         page.locator("#tasks").getByRole(AriaRole.BUTTON).filter(com.microsoft.playwright.Locator.FilterOptions().setHasText("Start")).click()
         assertThat(tasks.first()).containsText("In progress")
 

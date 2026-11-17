@@ -26,13 +26,14 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 49 | Plurals in messages |  |
+| 50 | Shared formatting |  |
 
 ### In review
 
 | # | Feature | Pull request |
 |---|---|---|
 | 82 | Deploy presets | #294 |
+| 49 | Plurals in messages | #295 |
 
 ### Next up
 
@@ -137,7 +138,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 50 | Shared formatting | Medium | 7 |
 | 96 | Relative time | Small | 7 |
 | 59 | Self-hosted fonts | Medium | 7 |
 | 108 | Charts preset | Medium | 7 |

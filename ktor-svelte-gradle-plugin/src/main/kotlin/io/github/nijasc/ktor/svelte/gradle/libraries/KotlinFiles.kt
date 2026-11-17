@@ -84,7 +84,7 @@ private fun messagesClass(
 ): String {
     val functions =
         catalog.keys.joinToString("\n\n") { key ->
-            messageFunction(key, catalog.placeholders(key))
+            messageFunction(key, catalog.placeholders(key), catalog.counts(key))
         }
     val tables =
         catalog.locales.entries.joinToString(",\n") { (locale, messages) ->
@@ -104,15 +104,21 @@ private fun messagesClass(
                 "defaultLocale" to kotlinString(i18n.defaultLocale),
                 "tables" to tables,
             ),
-        )
+        ) + if (catalog.usesPlurals) kotlinPluralSupport(i18n.locales) else ""
 }
 
 private fun messageFunction(
     key: String,
     placeholders: List<String>,
+    counts: Set<String>,
 ): String {
     val name = propertyName(key)
     val lookup = "getValue(${kotlinString(key)})"
+    if (counts.isNotEmpty()) {
+        val parameters = placeholders.joinToString("") { "        $it: ${if (it in counts) "Int" else "String"},\n" }
+        val values = placeholders.joinToString { "${kotlinString(it)} to $it" }
+        return "    public fun $name(\n$parameters    ): String = formatMessage(table.$lookup, mapOf($values), locale)"
+    }
     val replacements = placeholders.map { ".replace(${kotlinString("{$it}")}, $it)" }
     if (placeholders.size < 2) {
         val parameters = placeholders.joinToString { "$it: String" }
