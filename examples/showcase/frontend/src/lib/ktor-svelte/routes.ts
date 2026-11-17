@@ -71,12 +71,13 @@ export const routes = {
     register: link(routeIds.register)
 };
 
-const pageTitles: { id: string; title: () => string }[] = [
+const pageTitles: { id: string; title: () => string; description?: () => string; image?: string }[] = [
+    { id: '/', title: () => m.homeTitle(), description: () => m.homeLead(), image: 'https://nijasc.github.io/ktor-svelte/logo.svg' },
     { id: '/(app)/admin', title: () => m.navAdmin() },
     { id: '/(app)/board', title: () => m.navBoard() },
     { id: '/(app)/settings', title: () => m.navSettings() },
     { id: '/(app)/tasks/new', title: () => m.navNewTask() },
-    { id: '/about', title: () => m.navAbout() }
+    { id: '/about', title: () => m.navAbout(), description: () => m.aboutLead() }
 ];
 
 export const nav = [
@@ -113,4 +114,22 @@ export function breadcrumbs(page: OpenPage): Crumb[] {
             href: (route(known.id as RouteId) as (params?: object) => string)(page.params),
             current: path === here
         }));
+}
+
+function inAttribute(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export function shareTags(page: CurrentPage): string {
+    const known = pageTitles.find((candidate) => candidate.id === page.route.id);
+    if (!known || (!known.description && !known.image)) return '';
+    const tags = ['<meta property="og:type" content="website">', `<meta property="og:title" content="${inAttribute(known.title())}">`];
+    if (known.description) {
+        const description = inAttribute(known.description());
+        tags.push(`<meta name="description" content="${description}">`, `<meta property="og:description" content="${description}">`);
+    }
+    if (known.image) {
+        tags.push(`<meta property="og:image" content="${inAttribute(known.image)}">`, '<meta name="twitter:card" content="summary_large_image">');
+    }
+    return tags.join('');
 }
