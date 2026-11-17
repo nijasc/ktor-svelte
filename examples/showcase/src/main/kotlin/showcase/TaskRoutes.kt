@@ -1,5 +1,6 @@
 package showcase
 
+import io.github.nijasc.ktor.svelte.pageLoad
 import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.Patch
 import io.github.nijasc.ktor.svelte.ToastKind
@@ -58,7 +59,8 @@ fun Route.taskRoutes(
         call.respond(stats)
     }
 
-    get("/api/members") {
+    val membersRoute =
+        get("/api/members") {
         val members: List<UserRef> = users.all().filter { it.active }.map { UserRef(it.id, it.name) }
         call.respond(members)
     }
@@ -82,8 +84,9 @@ fun Route.taskRoutes(
         }
 
         route("/{id}") {
-            get {
-                val task: Task? = tasks.find(call.id())
+            val taskRoute =
+                get {
+                    val task: Task? = tasks.find(call.id())
                 if (task == null) call.respondMissingTask() else call.respond(task)
             }
 
@@ -124,13 +127,15 @@ fun Route.taskRoutes(
                 if (task == null) call.respondMissingTask() else call.respond(task)
             }
 
-            get("/activity") {
+            val activityRoute =
+                get("/activity") {
                 val task = tasks.find(call.id()) ?: return@get call.respondMissingTask()
                 val activity: List<Activity> = tasks.activity(task)
                 call.respond(activity)
             }
 
-            get("/comments") {
+            val commentsRoute =
+                get("/comments") {
                 val task = tasks.find(call.id()) ?: return@get call.respondMissingTask()
                 val comments: List<Comment> = tasks.comments(task.id)
                 call.respond(comments)
@@ -143,7 +148,8 @@ fun Route.taskRoutes(
                 call.respond(HttpStatusCode.Created, comment)
             }
 
-            get("/attachments") {
+            val attachmentsRoute =
+                get("/attachments") {
                 val task = tasks.find(call.id()) ?: return@get call.respondMissingTask()
                 val attachments: List<Attachment> = tasks.attachments(task.id)
                 call.respond(attachments)
@@ -159,6 +165,14 @@ fun Route.taskRoutes(
             }.uploadForm(maxSize = MAX_UPLOAD_BYTES, types = (INLINE_TYPES + DOWNLOAD_TYPES).toList()) { file("file") }.describe {
                 summary = "Uploads files to a task."
                 description = "Send the files as multipart form data. Images, PDF, text, CSV and ZIP files up to 5 MiB are accepted."
+            }
+
+            pageLoad(FrontendRoutes.Patterns.tasksId) {
+                data("task", taskRoute)
+                data("comments", commentsRoute)
+                data("attachments", attachmentsRoute)
+                data("activity", activityRoute)
+                data("members", membersRoute)
             }
         }
     }
