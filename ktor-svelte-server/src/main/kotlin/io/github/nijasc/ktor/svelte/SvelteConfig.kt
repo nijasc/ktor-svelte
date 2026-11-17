@@ -39,6 +39,7 @@ public class SvelteConfig internal constructor() {
     internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
     internal val guardsConfig: SvelteGuardsConfig = SvelteGuardsConfig()
     internal val frontendErrorsConfig: SvelteFrontendErrorsConfig = SvelteFrontendErrorsConfig()
+    internal val webVitalsConfig: SvelteWebVitalsConfig = SvelteWebVitalsConfig()
     internal val typedCookies: MutableList<TypedCookie<*>> = mutableListOf()
     internal var errorCodeSet: ErrorCodeSet? = null
         private set
@@ -259,6 +260,17 @@ public class SvelteConfig internal constructor() {
         }
     }
 
+    public fun webVitals(configure: SvelteWebVitalsConfig.() -> Unit = {}) {
+        webVitalsConfig.enabled = true
+        webVitalsConfig.configure()
+        require(webVitalsConfig.sampleRate > 0.0 && webVitalsConfig.sampleRate <= 1.0) {
+            "webVitals: sampleRate is the share of page loads that report, above 0 and at most 1, but is ${webVitalsConfig.sampleRate}."
+        }
+        require(webVitalsConfig.perClientPerMinute >= 1) {
+            "webVitals: perClientPerMinute must be at least 1, but is ${webVitalsConfig.perClientPerMinute}."
+        }
+    }
+
     public fun guards(configure: SvelteGuardsConfig.() -> Unit) {
         guardsConfig.configure()
     }
@@ -336,6 +348,13 @@ public class SvelteConfig internal constructor() {
 }
 
 internal const val MAX_ERROR_REPORT_BYTES = 64 * 1024
+
+@KtorDsl
+public class SvelteWebVitalsConfig internal constructor() {
+    internal var enabled: Boolean = false
+    public var sampleRate: Double = 0.1
+    public var perClientPerMinute: Int = 10
+}
 
 @KtorDsl
 public class SvelteFrontendErrorsConfig internal constructor() {

@@ -109,6 +109,7 @@ internal fun installTypeScriptGeneration(
     permissions: List<String> = emptyList(),
     guards: List<GuardSpec> = emptyList(),
     errorReportPath: String? = null,
+    vitalsCall: String? = null,
     preferences: PreferencesType? = null,
 ) {
     val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
@@ -144,6 +145,7 @@ internal fun installTypeScriptGeneration(
             guards,
             preferences,
             errorReportPath,
+            vitalsCall,
         )
 
     application.onOwn(ApplicationStarted) {

@@ -206,6 +206,24 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `page timings are collected for a sample of page loads and sent once when the page is left`() {
+        val vitals = runHarness().getValue("vitals").jsonObject
+        assertEquals("0", vitals.getValue("skippedBySampling").jsonPrimitive.content)
+        assertEquals(
+            listOf("navigation", "paint", "largest-contentful-paint", "layout-shift", "event"),
+            vitals.getValue("watched").jsonArray.map { it.jsonPrimitive.content },
+        )
+        assertEquals("0", vitals.getValue("beaconsBeforeAnyTiming").jsonPrimitive.content)
+        assertEquals(
+            listOf(
+                "/_ktor-svelte/vitals {\"page\":\"/board\",\"metrics\":" +
+                    "{\"TTFB\":120.4,\"FCP\":410.26,\"LCP\":1500.124,\"CLS\":0.07,\"INP\":240}}",
+            ),
+            vitals.getValue("beacons").jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
+
+    @Test
     fun `GET requests are retried with backoff only when asked to`() {
         val results = runHarness()
 

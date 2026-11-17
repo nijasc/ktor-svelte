@@ -10,6 +10,7 @@ import {
     typedCookie,
     userStore,
     reportErrors,
+    reportVitals,
     preferenceStore,
     type PreferenceStore,
     matchGuard,
@@ -853,5 +854,51 @@ for (let count = 0; count < 20; count++) errorHost.__ktorSvelteReportError?.(new
 results.errorReports = { sent: errorReports.length, first: errorReports[0], second: errorReports[1], third: errorReports[2] };
 apiConfig.fetch = undefined;
 Reflect.deleteProperty(errorHost, 'location');
+
+type VitalsEntry = Record<string, unknown>;
+const vitalsHost = globalThis as unknown as Record<string, unknown>;
+const vitalFeeds = new Map<string, (list: { getEntries(): VitalsEntry[] }) => void>();
+const vitalListeners = new Map<string, () => void>();
+const beacons: string[] = [];
+const keptListener = vitalsHost.addEventListener;
+vitalsHost.location = { pathname: '/board', href: 'https://app.example/board', origin: 'https://app.example' };
+vitalsHost.PerformanceObserver = class {
+    constructor(private readonly seen: (list: { getEntries(): VitalsEntry[] }) => void) {}
+    observe(options: { type: string }) {
+        if (options.type === 'unsupported') throw new Error('unsupported');
+        vitalFeeds.set(options.type, this.seen);
+    }
+};
+vitalsHost.addEventListener = (name: string, listener: () => void) => void vitalListeners.set(name, listener);
+vitalsHost.document = { visibilityState: 'visible' };
+const keptNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: { sendBeacon: (url: string, body: string) => (beacons.push(`${url} ${body}`), true) }
+});
+const feed = (type: string, ...entries: VitalsEntry[]) => vitalFeeds.get(type)?.({ getEntries: () => entries });
+const keptRandom = Math.random;
+Math.random = () => 0.9;
+reportVitals('/_ktor-svelte/vitals', 0.5);
+const skippedBySampling = vitalFeeds.size;
+Math.random = () => 0.1;
+reportVitals('/_ktor-svelte/vitals', 0.5);
+Math.random = keptRandom;
+vitalListeners.get('pagehide')?.();
+const beaconsBeforeAnyTiming = beacons.length;
+feed('navigation', { responseStart: 120.4 });
+feed('paint', { name: 'first-paint', startTime: 300 }, { name: 'first-contentful-paint', startTime: 410.26 });
+feed('largest-contentful-paint', { startTime: 900 }, { startTime: 1500.1239 });
+feed('layout-shift', { value: 0.05 }, { value: 0.5, hadRecentInput: true }, { value: 0.02 });
+feed('event', { duration: 80, interactionId: 1 }, { duration: 900, interactionId: 0 }, { duration: 240, interactionId: 2 });
+(vitalsHost.document as { visibilityState: string }).visibilityState = 'hidden';
+vitalListeners.get('visibilitychange')?.();
+vitalListeners.get('pagehide')?.();
+results.vitals = { skippedBySampling, watched: [...vitalFeeds.keys()], beaconsBeforeAnyTiming, beacons };
+vitalsHost.addEventListener = keptListener;
+if (keptNavigator) Object.defineProperty(globalThis, 'navigator', keptNavigator);
+Reflect.deleteProperty(vitalsHost, 'PerformanceObserver');
+Reflect.deleteProperty(vitalsHost, 'document');
+Reflect.deleteProperty(vitalsHost, 'location');
 
 console.log(JSON.stringify(results));
