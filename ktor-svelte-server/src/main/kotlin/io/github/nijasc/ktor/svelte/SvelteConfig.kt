@@ -5,6 +5,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.KotlinxJsonSchemaInference
 import io.ktor.server.application.ApplicationCall
+import io.ktor.util.reflect.TypeInfo
+import io.ktor.util.reflect.typeInfo
 import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -35,6 +37,8 @@ public class SvelteConfig internal constructor() {
     internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
     internal val typedCookies: MutableList<TypedCookie<*>> = mutableListOf()
     internal var errorCodeSet: ErrorCodeSet? = null
+        private set
+    internal var currentUserSpec: CurrentUserSpec? = null
         private set
     internal var publicConfigProvider: (() -> String)? = null
         private set
@@ -112,6 +116,34 @@ public class SvelteConfig internal constructor() {
             errorCodeSet == null,
         ) { "errorCodes is already set to ${errorCodeSet?.type?.simpleName}. An app has one enum of error codes." }
         errorCodeSet = ErrorCodeSet(type, names, message)
+    }
+
+    public inline fun <reified T : Any> currentUser(
+        path: String? = null,
+        noinline find: suspend ApplicationCall.() -> T?,
+    ) {
+        setCurrentUser(
+            T::class.simpleName ?: "User",
+            KotlinxJsonSchemaInference.buildSchema(typeOf<T>()),
+            typeInfo<CurrentUserAnswer<T>>(),
+            path,
+            find,
+        )
+    }
+
+    @PublishedApi
+    internal fun setCurrentUser(
+        typeName: String,
+        schema: JsonSchema,
+        answerType: TypeInfo,
+        path: String?,
+        find: suspend ApplicationCall.() -> Any?,
+    ) {
+        check(
+            currentUserSpec == null,
+        ) { "currentUser is already set to ${currentUserSpec?.typeName}. An app has one kind of signed-in user." }
+        require(path == null || path.startsWith("/")) { "currentUser: the path must start with a slash, but is '$path'." }
+        currentUserSpec = CurrentUserSpec(typeName, Json.encodeToString(JsonSchema.serializer(), schema), path, answerType, find)
     }
 
     public fun cookies(vararg cookies: TypedCookie<*>) {

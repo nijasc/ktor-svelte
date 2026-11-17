@@ -1,5 +1,6 @@
 package showcase
 
+import io.github.nijasc.ktor.svelte.currentUserChanged
 import io.github.nijasc.ktor.svelte.fieldCheck
 import io.github.nijasc.ktor.svelte.respondError
 import io.github.nijasc.ktorsvelte.FrontendRoutes
@@ -34,8 +35,8 @@ import io.ktor.server.sessions.cookie
 import io.ktor.server.sessions.sessions
 import io.ktor.server.sessions.set
 import io.ktor.util.hex
-import kotlinx.serialization.Serializable
 import java.security.SecureRandom
+import kotlinx.serialization.Serializable
 
 const val SESSION_AUTH = "session"
 const val LOGIN_LIMIT = "login"
@@ -97,6 +98,7 @@ fun Route.sessionRoutes(
             val user: User? = users.check(login.email, login.password)
             if (user == null) return@post call.respond(HttpStatusCode.Unauthorized, Problem(call.messages.problemWrongLogin()))
             call.sessions.set(UserSession(user.id))
+            call.currentUserChanged()
             call.respond(user)
         }
 
@@ -106,12 +108,14 @@ fun Route.sessionRoutes(
             val user: User? = users.create(registration.email, registration.name, registration.password, Role.MEMBER)
             if (user == null) return@post call.respondError(AccountError.EmailTaken, HttpStatusCode.Conflict)
             call.sessions.set(UserSession(user.id))
+            call.currentUserChanged()
             call.respond(HttpStatusCode.Created, user)
         }
     }
 
     delete("/api/session") {
         call.sessions.clear<UserSession>()
+        call.currentUserChanged()
         call.respond(HttpStatusCode.NoContent)
     }
 
@@ -125,7 +129,9 @@ fun Route.sessionRoutes(
             put {
                 val input = call.receive<ProfileInput>()
                 val user: User? = users.rename(call.currentUser(users).id, input.name)
-                if (user == null) call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser())) else call.respond(user)
+                if (user == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
+                call.currentUserChanged()
+                call.respond(user)
             }
 
             put("/password") {

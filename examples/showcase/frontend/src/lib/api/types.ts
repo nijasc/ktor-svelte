@@ -507,6 +507,8 @@ export const PublicConfig = {
     },
 };
 
+export type CurrentUser = User;
+
 function addError(errors: Record<string, string[]>, field: string, message: string): void {
     (errors[field] ??= []).push(message);
 }

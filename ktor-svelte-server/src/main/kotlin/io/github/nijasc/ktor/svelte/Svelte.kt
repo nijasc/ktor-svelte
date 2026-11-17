@@ -71,6 +71,7 @@ import io.github.nijasc.ktor.svelte.internal.shadowedPages
 import io.github.nijasc.ktor.svelte.internal.startupLine
 import io.github.nijasc.ktor.svelte.internal.startupSteps
 import io.github.nijasc.ktor.svelte.internal.subscribeWhileRunning
+import io.github.nijasc.ktor.svelte.internal.typescript.CurrentUserType
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
@@ -202,17 +203,21 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (pluginConfig.apiCompression) installApiCompression(application, resolver)
         if (pluginConfig.requestIds) installRequestIds(application)
         installConfigReport(application, pluginConfig)
+        val currentUser = pluginConfig.currentUserSpec
+        val currentUserPath =
+            currentUser?.let { it.path ?: (pluginConfig.apiPrefixList.firstOrNull() ?: "/api").trimEnd('/') + "/$CURRENT_USER_ROUTE" }
         installTypeScriptGeneration(
             application,
             pluginConfig.generateTs,
             pluginConfig.generateTsOutput,
             pluginConfig.apiPrefixList,
-            listOfNotNull(docsPath),
+            listOfNotNull(docsPath, currentUserPath),
             pluginConfig.publicConfigSchema,
             pluginConfig.declaredErrorList.toList(),
             pluginConfig.constantHolders.map(::sharedHolder),
             pluginConfig.errorCodeSet?.names.orEmpty(),
             pluginConfig.typedCookies.map { it.spec() },
+            currentUser?.let { CurrentUserType(it.typeName, it.schema, currentUserPath.orEmpty()) },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         application.attributes.put(TypedCookiesKey, pluginConfig.typedCookies.toList())
@@ -344,6 +349,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (automaticRouting) {
                 catchAll(handler)
             }
+            if (currentUser != null && currentUserPath != null) currentUserRoute(currentUserPath, currentUser)
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)
             if (devRequests != null && devProxy != null) {

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import { cookieConsent, loadPublicConfig, Role } from '#api';
+    import { cookieConsent, currentUser, loadPublicConfig, Role } from '#api';
     import LocaleSwitch from '#components/LocaleSwitch.svelte';
     import NavigationProgress from '#components/NavigationProgress.svelte';
     import ThemeToggle from '#components/ThemeToggle.svelte';
@@ -9,18 +9,18 @@
     import '#lib/ktor-svelte/app.css';
     import { m } from '#i18n';
     import { routes } from '#routes';
-    import { loadSession, session, signOut } from '#lib/session.svelte.ts';
+    import { signOut } from '#lib/session.svelte.ts';
 
     let { children } = $props();
 
     let appName = $state(m.appTitle());
 
     const links = $derived(
-        session.user
+        currentUser.user
             ? [
                   { to: routes.board, label: m.navBoard(), icon: 'LayoutDashboard' as const },
                   { to: routes.tasksNew, label: m.navNewTask(), icon: 'Plus' as const },
-                  ...(session.user.role === Role.ADMIN ? [{ to: routes.admin, label: m.navAdmin(), icon: 'ShieldCheck' as const }] : []),
+                  ...(currentUser.user.role === Role.ADMIN ? [{ to: routes.admin, label: m.navAdmin(), icon: 'ShieldCheck' as const }] : []),
                   { to: routes.settings, label: m.navSettings(), icon: 'Settings' as const }
               ]
             : [{ to: routes.about, label: m.navAbout(), icon: 'Info' as const }]
@@ -28,7 +28,7 @@
 
     onMount(async () => {
         cookieConsent.banner({ text: m.consentText(), accept: m.consentAccept(), refuse: m.consentRefuse() });
-        if (!session.ready) void loadSession();
+        void currentUser.load();
         const configured = (await loadPublicConfig()).appName;
         if (configured) appName = configured;
     });
@@ -49,10 +49,10 @@
     </nav>
     <ThemeToggle id="theme" class="w-36" label={m.settingsTheme()} />
     <LocaleSwitch id="locale" class="w-28" label={m.settingsLanguage()} />
-    {#if session.user}
-        <span id="signed-in-as" class="hidden text-sm sm:inline">{session.user.name}</span>
+    {#if currentUser.user}
+        <span id="signed-in-as" class="hidden text-sm sm:inline">{currentUser.user.name}</span>
         <button class="btn btn-outline btn-sm" type="button" onclick={signOut}><Icon name="LogOut" size={16} /> {m.navSignOut()}</button>
-    {:else if session.ready}
+    {:else if currentUser.ready}
         <a class="btn btn-primary btn-sm" href={routes.login()}><Icon name="LogIn" size={16} /> {m.navSignIn()}</a>
     {/if}
 </header>

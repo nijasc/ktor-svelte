@@ -16,6 +16,8 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.routing.routing
+import io.ktor.server.sessions.get
+import io.ktor.server.sessions.sessions
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.runBlocking
@@ -81,6 +83,7 @@ fun Application.module() {
         constants(BoardLimits)
         idempotency()
         cookies(OnlyMineCookie)
+        currentUser<User> { sessions.get<UserSession>()?.let { users.findActive(it.userId) } }
         errorCodes<AccountError> { call, code ->
             when (code) {
                 AccountError.EmailTaken -> call.messages.problemEmailTaken()

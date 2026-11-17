@@ -4,7 +4,6 @@
     import Icon from '#icon';
     import { m } from '#i18n';
     import { routes } from '#routes';
-    import { session } from '#lib/session.svelte.ts';
 
     let draft = $state(Login.empty());
     let message = $state('');
@@ -15,8 +14,7 @@
         busy = true;
         message = '';
         try {
-            session.user = await api.session.create(draft);
-            session.ready = true;
+            await api.session.create(draft);
             await goto(routes.board());
         } catch (error) {
             if (isApiError(error, 'session.create')) message = error.body.message;

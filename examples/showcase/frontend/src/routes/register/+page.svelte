@@ -7,7 +7,6 @@
     import { m } from '#i18n';
     import { routes } from '#routes';
     import { formState } from '#lib/api/form-state.svelte.ts';
-    import { session } from '#lib/session.svelte.ts';
 
     const form = formState<Registration>(Registration.empty(), {
         validate: Registration.validate,
@@ -23,8 +22,6 @@
         event.preventDefault();
         const user = await form.submit((draft) => api.users.create(draft));
         if (!user) return;
-        session.user = user;
-        session.ready = true;
         await goto(routes.board());
     }
 </script>
