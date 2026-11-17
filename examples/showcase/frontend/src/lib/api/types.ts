@@ -509,6 +509,36 @@ export const PublicConfig = {
 
 export type CurrentUser = User;
 
+export interface UserPreferences {
+    theme?: string | null;
+    locale?: string | null;
+    compactBoard?: boolean;
+}
+
+export const UserPreferences = {
+    empty: (): UserPreferences => ({
+        theme: null,
+        locale: null,
+        compactBoard: false,
+    }),
+    bounds: {
+        theme: { maxlength: 64 },
+        locale: { maxlength: 16 },
+    },
+    validate: (value: UserPreferences): Record<string, string[]> => {
+        const errors: Record<string, string[]> = {};
+        if (typeof value.theme === 'string') {
+            const length = [...value.theme].length;
+            if (length > 64) addError(errors, 'theme', 'Must be at most 64 characters.');
+        }
+        if (typeof value.locale === 'string') {
+            const length = [...value.locale].length;
+            if (length > 16) addError(errors, 'locale', 'Must be at most 16 characters.');
+        }
+        return errors;
+    },
+};
+
 function addError(errors: Record<string, string[]>, field: string, message: string): void {
     (errors[field] ??= []).push(message);
 }

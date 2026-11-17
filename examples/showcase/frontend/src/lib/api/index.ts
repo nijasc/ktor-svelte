@@ -6,3 +6,4 @@ export * from './constants.js';
 export * from './cookies.js';
 export * from './current-user.svelte.js';
 export * from './guards.js';
+export * from './preferences.svelte.js';
