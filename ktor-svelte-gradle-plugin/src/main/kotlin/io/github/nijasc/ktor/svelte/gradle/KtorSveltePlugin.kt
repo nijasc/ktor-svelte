@@ -33,6 +33,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteReadmeTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRecordTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRenameTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRoutesDiagramTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSmokeTestTask
@@ -406,6 +407,13 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.group = TASK_GROUP
             task.description = "Lists API routes that nothing in the frontend calls. Add --strict to fail on them."
             task.frontendDir.set(extension.frontendDir)
+        }
+        project.tasks.register("svelteRoutesDiagram", SvelteRoutesDiagramTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Writes a Mermaid diagram of which page calls which API route. Add --output=docs/routes.md to pick the file."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.projectDirectory.set(project.layout.projectDirectory)
         }
         project.tasks.register("svelteVerifyLoads", SvelteVerifyLoadsTask::class.java) { task ->
             task.group = TASK_GROUP
