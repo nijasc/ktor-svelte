@@ -13,4 +13,5 @@ allprojects {
 dependencies {
     dokka(project(":ktor-svelte-server"))
     dokka(project(":ktor-svelte-gradle-plugin"))
+    dokka(project(":ktor-svelte-test"))
 }

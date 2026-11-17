@@ -13,6 +13,7 @@ catalog {
         version("serialization", libs.versions.serialization.get())
 
         library("ktor-svelte-server", "io.github.nijasc", "ktor-svelte-server").versionRef("ktor-svelte")
+        library("ktor-svelte-test", "io.github.nijasc", "ktor-svelte-test").versionRef("ktor-svelte")
         library("ktor-bom", "io.ktor", "ktor-bom").versionRef("ktor")
         listOf(
             "ktor-server-core",
