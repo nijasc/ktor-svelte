@@ -143,6 +143,64 @@ It only lists what it finds. Add `--strict` to fail the build instead, for examp
 
 The check works with or without typed routes. Paths under your API are never reported, because the generated client already makes a call to a missing route a compile error. The API roots come from the generated `openapi.json`, or `/api` when there is none. A link that starts with a value, such as `href="/{section}/overview"`, cannot be judged and is skipped, and with `LocaleStrategy.UrlPrefix` a leading language such as `/de` is accepted.
 
+## Menu, titles and breadcrumbs
+
+A menu is a list of pages with a title and an icon each, kept by hand somewhere far from the pages. Let each page say it about itself instead, in its `+page.ts`:
+
+```ts no-check
+export const _nav = { title: 'Board', icon: 'LayoutDashboard', order: 1 };
+```
+
+| | |
+| --- | --- |
+| `title` | The page's title. With `i18n` on, write the key of a message, such as `'nav-board'`, and the title is translated |
+| `icon` | Optional. With `lucide()` on, the name of an icon |
+| `order` | Optional. Where the page stands in the menu. Pages without it come last, in the order of their paths |
+| `menu` | Optional. `false` keeps the page out of the menu, with its title still known |
+
+The name starts with an underscore because SvelteKit refuses other exports from a page file. Keep the values plain: text, numbers, `true` and `false`. The plugin reads the file without running it, so a function call or a variable there fails `svelteSync` with the name of the file.
+
+`routes.ts` then has three more things:
+
+```svelte no-check
+<script lang="ts">
+    import { page } from '$app/state';
+    import { breadcrumbs, nav, pageTitle } from '#routes';
+</script>
+
+<svelte:head>
+    <title>{pageTitle(page) ?? 'My app'}</title>
+</svelte:head>
+
+<nav>
+    {#each nav as item (item.name)}
+        <a href={item.to()} aria-current={item.to.ariaCurrent(page)}>{item.title()}</a>
+    {/each}
+</nav>
+
+<ol>
+    {#each breadcrumbs(page) as crumb (crumb.href)}
+        <li><a href={crumb.href} aria-current={crumb.current ? 'page' : undefined}>{crumb.title}</a></li>
+    {/each}
+</ol>
+```
+
+- `nav` lists the pages without parameters, in order. Each item has the typed route as `to`, the `title` as a function so that it follows the language, the `icon`, and the route's `name`.
+- `pageTitle(page)` is the title of the open page, or `undefined` for a page that declared none. It works for pages with parameters too.
+- `breadcrumbs(page)` is the way from the start page to the open one: every page above it that has a title, with a link that carries the open page's parameters.
+
+A menu that depends on who is signed in is a filter over `nav`. With [page guards](auth.md#page-guards) the rule is already written:
+
+```ts no-check
+const links = $derived(
+    nav.filter((item) => {
+        const guard = matchGuard(pageGuards, item.to());
+        if (!guard) return true;
+        return currentUser.signedIn && (!guard.permission || can(guard.permission));
+    })
+);
+```
+
 ## A new page
 
 A new page is a folder, two files with the right names, the load's types, and for a page with a parameter two settings that are easy to forget. `svelteAdd` writes them:
