@@ -7,7 +7,7 @@ import { defineConfig } from 'vite';
 
 const config = defineConfig({
     plugins: [tailwindcss(), enhancedImages(), sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true }) })],
-    server: { hmr: { clientPort: 5173 } }
+    server: { hmr: { clientPort: 5173, protocol: 'ws' } }
 });
 
 export default config;

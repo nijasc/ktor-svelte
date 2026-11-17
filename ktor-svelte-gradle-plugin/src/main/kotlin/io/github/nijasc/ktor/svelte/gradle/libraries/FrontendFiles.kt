@@ -294,7 +294,7 @@ private fun viteConfig(
         }
     val config =
         "defineConfig({\n    plugins: [${plugins.joinToString(", ")}],\n" +
-            "    server: { hmr: { clientPort: ${spec.devPort} } }\n})"
+            "    server: { hmr: { clientPort: ${spec.devPort}, protocol: 'ws' } }\n})"
     val export = if (hasUserViteConfig) "mergeConfig(config, userConfig)" else "config"
     return HEADER + imports.joinToString("\n") + "\n\nconst config = $config;\n\nexport default $export;\n"
 }
