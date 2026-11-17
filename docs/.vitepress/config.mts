@@ -100,7 +100,7 @@ export default defineConfig({
         logo: '/logo.svg',
         search: { provider: 'local' },
         nav: [
-            { text: 'Get started', link: '/guide/getting-started', activeMatch: '/guide/(introduction|getting-started|configurator|tutorial|existing-project|project-structure|comparison)' },
+            { text: 'Get started', link: '/guide/getting-started', activeMatch: '/guide/(introduction|getting-started|configurator|tutorial|existing-project|project-structure|multiple-frontends|comparison)' },
             { text: 'Everything it does', link: '/features/', activeMatch: '/features/' },
             { text: 'Recipes', link: '/recipes/', activeMatch: '/recipes/' },
             { text: 'Reference', link: '/reference/ktor', activeMatch: '/reference/' },
@@ -125,6 +125,7 @@ export default defineConfig({
                     { text: 'Tutorial: a notes app', link: '/guide/tutorial' },
                     { text: 'Add to an existing project', link: '/guide/existing-project' },
                     { text: 'Project structure', link: '/guide/project-structure' },
+                    { text: 'Multiple frontends', link: '/guide/multiple-frontends' },
                     { text: 'Compared with other setups', link: '/guide/comparison' },
                     { text: 'Examples', link: '/examples' }
                 ]
@@ -155,7 +156,8 @@ export default defineConfig({
                     { text: 'Charts', link: '/features/charts' },
                     { text: 'Languages (i18n)', link: '/features/i18n' },
                     { text: 'Components', link: '/features/components' },
-                    { text: 'Installable app', link: '/features/installable-app' }
+                    { text: 'Installable app', link: '/features/installable-app' },
+                    { text: 'Emails', link: '/features/emails' }
                 ]
             },
             {

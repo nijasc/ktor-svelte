@@ -103,7 +103,30 @@ public abstract class SvelteToolTask : DefaultTask() {
         arguments: List<String>,
     ) {
         if (verbose.getOrElse(false)) return runTool(tool, arguments)
-        val command = command(tool, arguments)
+        runQuietly(command(tool, arguments), (listOf(tool.executableName) + arguments).joinToString(" "))
+    }
+
+    internal fun runRuntimeQuietly(
+        runtime: File,
+        arguments: List<String>,
+        pathPrefix: File?,
+    ) {
+        val command = ToolCommand(listOf(runtime.absolutePath) + arguments, pathPrefix)
+        if (verbose.getOrElse(false)) {
+            execOperations.exec { spec ->
+                spec.workingDir = frontendDir.get().asFile
+                spec.commandLine(command.arguments)
+                command.pathPrefix?.let { spec.environment(prependedPath(spec.environment, it)) }
+            }
+            return
+        }
+        runQuietly(command, (listOf(runtime.nameWithoutExtension) + arguments).joinToString(" "))
+    }
+
+    private fun runQuietly(
+        command: ToolCommand,
+        label: String,
+    ) {
         val output = ByteArrayOutputStream()
         val result =
             execOperations.exec { spec ->
@@ -121,7 +144,7 @@ public abstract class SvelteToolTask : DefaultTask() {
         }
         if (text.isNotEmpty()) logger.error(text)
         throw GradleException(
-            "ktor-svelte: '${(listOf(tool.executableName) + arguments).joinToString(" ")}' failed with exit code ${result.exitValue}. " +
+            "ktor-svelte: '$label' failed with exit code ${result.exitValue}. " +
                 "Its output is printed above. Run with -Psvelte.verbose=true to always see the frontend output.",
         )
     }

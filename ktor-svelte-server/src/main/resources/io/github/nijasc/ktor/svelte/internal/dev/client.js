@@ -497,6 +497,97 @@ function slowestRoutes(root) {
     root.querySelector('.slowest-refresh').addEventListener('click', () => void load());
 }
 
+function caughtEmails(root) {
+    const section = root.querySelector('.emails');
+    const rows = root.querySelector('.emails-rows');
+    const note = root.querySelector('.emails-note');
+    const count = root.querySelector('.emails-count');
+    let shown = '';
+
+    function body(email) {
+        if (email.html !== undefined) {
+            const frame = document.createElement('iframe');
+            frame.className = 'emails-html';
+            frame.setAttribute('sandbox', '');
+            frame.title = email.subject;
+            frame.srcdoc = email.html;
+            return frame;
+        }
+        const text = document.createElement('pre');
+        text.className = 'emails-text';
+        text.textContent = email.text ?? '';
+        return text;
+    }
+
+    function draw(emails) {
+        count.textContent = emails.length === 0 ? '' : ` (${emails.length})`;
+        note.textContent = emails.length === 0 ? 'No email was sent since the app started.' : 'Caught in development, not sent.';
+        rows.replaceChildren(
+            ...emails.map((email) => {
+                const item = document.createElement('details');
+                item.className = 'emails-item';
+                const summary = document.createElement('summary');
+                const subject = document.createElement('span');
+                subject.textContent = email.subject;
+                const to = document.createElement('span');
+                to.className = 'emails-to';
+                to.textContent = `to ${email.to.join(', ')}, ${new Date(email.at).toLocaleTimeString()}`;
+                summary.append(subject, to);
+                const headers = document.createElement('div');
+                headers.className = 'emails-headers';
+                headers.textContent = [
+                    email.from ? `From: ${email.from}` : '',
+                    `To: ${email.to.join(', ')}`,
+                    email.cc ? `Cc: ${email.cc.join(', ')}` : '',
+                    email.bcc ? `Bcc: ${email.bcc.join(', ')}` : '',
+                    email.replyTo ? `Reply-To: ${email.replyTo}` : ''
+                ]
+                    .filter(Boolean)
+                    .join('\n');
+                item.append(summary, headers);
+                item.addEventListener('toggle', () => {
+                    if (item.open && item.childElementCount === 2) {
+                        item.append(body(email));
+                        if (email.html !== undefined && email.text !== undefined) {
+                            const plain = document.createElement('details');
+                            const label = document.createElement('summary');
+                            label.textContent = 'Text version';
+                            plain.append(label, body({ text: email.text }));
+                            item.append(plain);
+                        }
+                    }
+                });
+                return item;
+            })
+        );
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/emails', { headers: { accept: 'application/json' } });
+            const emails = await response.json();
+            const key = emails.map((email) => email.id).join(',');
+            if (key !== shown || rows.childElementCount !== emails.length) {
+                shown = key;
+                draw(emails);
+            }
+        } catch {
+            note.textContent = 'The emails could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    root.addEventListener('ktor-svelte-call', () => void load());
+    root.querySelector('.emails-clear').addEventListener('click', async () => {
+        await plainFetch('/_ktor-svelte/dev/emails/clear', { method: 'POST', headers: { 'X-Ktor-Svelte-Dev': '1' } }).catch(() => undefined);
+        shown = '';
+        await load();
+    });
+    void load();
+}
+
 function statusView(root) {
     const section = root.querySelector('.status');
     const rows = root.querySelector('.status-rows');
@@ -998,6 +1089,16 @@ button.routes-file:hover { text-decoration: underline; }
 .slowest-rows { padding-bottom: 6px; }
 .slowest-row { display: grid; grid-template-columns: 52px 1fr 64px; gap: 2px 8px; padding: 2px 10px; font-family: ui-monospace, monospace; }
 .slowest-about { grid-column: 2 / -1; color: #aaa; font-family: system-ui, sans-serif; }
+.emails { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.emails > summary { padding: 6px 10px; cursor: pointer; }
+.emails-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; color: #aaa; }
+.emails-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.emails-item { padding: 2px 10px; }
+.emails-item > summary { display: flex; gap: 8px; cursor: pointer; }
+.emails-to { color: #aaa; }
+.emails-headers { padding: 4px 0; color: #aaa; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+.emails-html { width: 100%; height: 320px; border: 0; border-radius: 4px; background: #fff; }
+.emails-text { margin: 0; padding: 6px; border-radius: 4px; background: #15122b; white-space: pre-wrap; font: 12px ui-monospace, monospace; }
 .theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .theme[hidden] { display: none; }
 .theme summary { padding: 6px 10px; cursor: pointer; }
@@ -1352,6 +1453,11 @@ function startPanel() {
                 <div class="slowest-tools"><button type="button" class="slowest-refresh">Refresh</button><span class="slowest-note"></span></div>
                 <div class="slowest-rows"></div>
             </details>
+            <details class="emails">
+                <summary>Emails<span class="emails-count"></span></summary>
+                <div class="emails-tools"><button type="button" class="emails-clear">Clear</button><span class="emails-note"></span></div>
+                <div class="emails-rows"></div>
+            </details>
             <details class="theme" hidden>
                 <summary>Theme colors</summary>
                 <div class="theme-rows"></div>
@@ -1470,6 +1576,7 @@ function startPanel() {
     cookieInspector(root);
     routeMap(root);
     statusView(root);
+    caughtEmails(root);
     slowestRoutes(root);
     runtimeView(root);
     migrationsView(root);
@@ -1487,6 +1594,7 @@ function startPanel() {
         if (features.has('errors') && entry.error && seenCalls.has(entry.id)) showServerError(entry);
         entries.push(entry);
         if (entries.length > 100) entries.shift();
+        root.dispatchEvent(new Event('ktor-svelte-call'));
         draw();
     };
     document.body.append(host);
