@@ -71,7 +71,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 144 | Catch outgoing email | #380 |
 | 66 | Inline page data | #381, #388 |
 | 61 | Emails from Svelte components | #379, #385, #389 |
-| 60 | Multiple frontends | #384, #386 |
+| 60 | Multiple frontends | #384, #386, #393, #394 |
 | 147 | Pinned Node download | #382 |
 | 148 | Warm-up before ready | #383 |
 | 149 | Latency and errors per route | #387 |
