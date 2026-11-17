@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle
 
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.zip.ZipFile
@@ -371,6 +372,167 @@ class LibrariesTest {
         val project = project("tailwind()")
         project.run("svelteSync", "--configuration-cache")
         assertContains(project.run("svelteSync", "--configuration-cache").output, "Configuration cache entry reused")
+    }
+
+    @Test
+    fun `Kotlin and TypeScript print the same text for numbers, money and dates`() {
+        val bun =
+            System
+                .getenv("PATH")
+                .orEmpty()
+                .split(File.pathSeparator)
+                .flatMap { folder -> listOf("bun.exe", "bun").map { File(folder, it) } }
+                .firstOrNull { it.isFile }
+        assumeTrue(bun != null, "bun is not on PATH")
+        val locales =
+            listOf(
+                "en",
+                "en-GB",
+                "de",
+                "de-CH",
+                "fr",
+                "es",
+                "it",
+                "nl",
+                "pt-BR",
+                "sv",
+                "pl",
+                "cs",
+                "ru",
+                "uk",
+                "tr",
+                "ja",
+                "zh",
+                "ko",
+                "ar",
+                "he",
+                "hi",
+            )
+        val project = TestProject(dir)
+        project.buildScript(
+            """
+            plugins {
+                kotlin("jvm") version "${System.getProperty("ktorSvelte.kotlinVersion")}"
+                id("io.github.nijasc.ktor-svelte")
+            }
+
+            repositories {
+                mavenCentral()
+            }
+
+            svelte {
+                addRuntimeDependency = false
+                libraries {
+                    i18n { locales(${locales.joinToString { "\"$it\"" }}) }
+                }
+            }
+
+            tasks.register<JavaExec>("printFormats") {
+                classpath = sourceSets["main"].runtimeClasspath
+                mainClass.set("PrintKt")
+                args(layout.buildDirectory.file("formats.txt").get().asFile.path)
+            }
+            """.trimIndent(),
+        )
+        val directory = project.frontend.resolve("messages").apply { mkdirs() }
+        locales.forEach { directory.resolve("$it.json").writeText("{\"hello\":\"Hi\"}") }
+        project.run("svelteSync")
+
+        val source = dir.resolve("src/main/kotlin/Print.kt")
+        source.parentFile.mkdirs()
+        source.writeText(
+            """
+            import io.github.nijasc.ktorsvelte.DateStyle
+            import io.github.nijasc.ktorsvelte.Formats
+            import java.io.File
+            import java.math.BigDecimal
+            import java.time.Instant
+            import java.time.LocalDate
+            import java.time.ZoneOffset
+
+            fun main(arguments: Array<String>) {
+                val moments = listOf(Instant.parse("2026-12-24T15:05:00Z"), Instant.parse("2026-01-02T00:07:00Z"), Instant.parse("2026-07-09T12:00:00Z"))
+                val lines =
+                    listOf(${locales.joinToString { "\"$it\"" }}).flatMap { locale ->
+                        val formats = Formats.forLocale(locale)
+                        listOf(
+                            formats.formatNumber(1234567.891, 2),
+                            formats.formatNumber(-1234.5, 1),
+                            formats.formatNumber(-0.004, 2),
+                            formats.formatNumber(1.005, 2),
+                            formats.formatNumber(2.5, 0),
+                            formats.formatNumber(999999, 0),
+                            formats.formatNumber(BigDecimal("1234567890123456789.995"), 2),
+                            formats.formatMoney(1234.5, "EUR"),
+                            formats.formatMoney(BigDecimal("-0.5"), "USD"),
+                            formats.formatMoney(1234.5, "JPY"),
+                            formats.formatMoney(99, "CHF"),
+                            formats.formatMoney(5, "XTS"),
+                            formats.formatDate(LocalDate.of(2026, 3, 7), DateStyle.Short),
+                            formats.formatDate(LocalDate.of(2026, 3, 7), DateStyle.Medium),
+                            formats.formatDate(LocalDate.of(2026, 11, 30), DateStyle.Long),
+                        ) +
+                            moments.flatMap {
+                                listOf(
+                                    formats.formatDateTime(it, ZoneOffset.UTC, DateStyle.Short),
+                                    formats.formatDateTime(it, ZoneOffset.UTC),
+                                    formats.formatTime(it, ZoneOffset.UTC),
+                                )
+                            }
+                    }
+                File(arguments[0]).writeText(lines.joinToString("\n"))
+            }
+            """.trimIndent(),
+        )
+        project.run("printFormats", "-Psvelte.skip=true")
+        val fromKotlin = dir.resolve("build/formats.txt").readLines()
+
+        val script = project.frontend.resolve("print.ts")
+        script.writeText(
+            """
+            import { formatDate, formatDateTime, formatMoney, formatNumber, formatTime } from './src/lib/ktor-svelte/format.ts';
+            const moments = ['2026-12-24T15:05:00Z', '2026-01-02T00:07:00Z', '2026-07-09T12:00:00Z'];
+            const lines = [];
+            for (const locale of ${locales.joinToString(prefix = "[", postfix = "]") { "'$it'" }}) {
+                lines.push(
+                    formatNumber(1234567.891, 2, locale),
+                    formatNumber(-1234.5, 1, locale),
+                    formatNumber(-0.004, 2, locale),
+                    formatNumber(1.005, 2, locale),
+                    formatNumber(2.5, 0, locale),
+                    formatNumber(999999, 0, locale),
+                    formatNumber('1234567890123456789.995', 2, locale),
+                    formatMoney(1234.5, 'EUR', locale),
+                    formatMoney('-0.5', 'USD', locale),
+                    formatMoney(1234.5, 'JPY', locale),
+                    formatMoney(99, 'CHF', locale),
+                    formatMoney(5, 'XTS', locale),
+                    formatDate('2026-03-07', 'short', locale),
+                    formatDate('2026-03-07', 'medium', locale),
+                    formatDate('2026-11-30', 'long', locale),
+                );
+                for (const moment of moments) {
+                    lines.push(formatDateTime(moment, 'short', locale), formatDateTime(moment, 'medium', locale), formatTime(moment, locale));
+                }
+            }
+            await Bun.write('formats.txt', lines.join('\n'));
+            """.trimIndent(),
+        )
+        val process =
+            ProcessBuilder(bun!!.path, script.path)
+                .directory(project.frontend)
+                .apply { environment()["TZ"] = "UTC" }
+                .redirectErrorStream(true)
+                .start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertEquals(true, process.waitFor(60, java.util.concurrent.TimeUnit.SECONDS), output)
+        assertEquals(0, process.exitValue(), output)
+        val fromTypeScript = project.frontend.resolve("formats.txt").readLines()
+
+        assertEquals(locales.size * 24, fromKotlin.size)
+        assertEquals(fromKotlin, fromTypeScript)
+        assertContains(fromKotlin, "1.234.567,89")
+        assertContains(fromKotlin, "24.12.2026, 15:05")
     }
 
     @Test

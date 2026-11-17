@@ -34,7 +34,10 @@ internal fun kotlinFiles(
     buildMap {
         if (spec.lucide) put("LucideIcon.kt", lucideEnum(spec.generatedPackage, iconConstants))
         if (spec.daisy != null) put("AppTheme.kt", themeEnum(spec.generatedPackage, spec.daisy))
-        if (spec.i18n != null && messages != null) put("Messages.kt", messagesClass(spec, messages))
+        if (spec.i18n != null && messages != null) {
+            put("Messages.kt", messagesClass(spec, messages))
+            put("Formats.kt", formatsClass(spec.generatedPackage, spec.i18n))
+        }
         if (spec.routes && routes != null) put("FrontendRoutes.kt", routesObject(spec.generatedPackage, routes))
         if (hasRuntimeDependency && (spec.daisy != null || spec.i18n != null)) {
             put("CallExtensions.kt", callExtensions(spec))
@@ -148,7 +151,10 @@ private fun callExtensions(spec: LibrarySpec): String =
         if (spec.i18n != null) append("import io.github.nijasc.ktor.svelte.svelteLocale\n")
         if (spec.daisy != null) append("import io.github.nijasc.ktor.svelte.svelteTheme\n")
         append("import io.ktor.server.application.ApplicationCall\n\n")
-        if (spec.i18n != null) append("public val ApplicationCall.messages: Messages get() = Messages.forLocale(svelteLocale)\n")
+        if (spec.i18n != null) {
+            append("public val ApplicationCall.messages: Messages get() = Messages.forLocale(svelteLocale)\n")
+            append("public val ApplicationCall.formats: Formats get() = Formats.forLocale(svelteLocale)\n")
+        }
         if (spec.daisy != null) {
             append("public val ApplicationCall.theme: AppTheme get() = AppTheme.fromCssName(svelteTheme) ?: AppTheme.default\n")
         }
