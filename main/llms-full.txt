@@ -6197,6 +6197,7 @@ val german = Messages.forLocale("de").appTitle()
 | `call.svelteLocale` | The visitor's locale as text, from `io.github.nijasc.ktor.svelte` |
 | `call.localizeHref(path)` | Like `localizeHref`, for redirects from Ktor |
 | `call.formats` | [Formats](#numbers-money-and-dates) in the visitor's language |
+| `call.emails` | [Emails](https://nijasc.github.io/ktor-svelte/main/features/emails#languages) in the visitor's language, when the app has email components |
 
 Messages make server errors readable in the visitor's language:
 
@@ -7847,6 +7848,39 @@ Rendering takes a few seconds, but it only runs again when a file in `src` or th
 - Tailwind classes do not reach emails. Use a `<style>` block or `style` attributes, with plain colors rather than CSS variables, which most mail programs ignore.
 
 Svelte type-checks the components like every other file, so `svelteCheck` catches a wrong prop on the frontend side, and the Kotlin compiler catches one on the server side.
+
+## Languages
+
+With [i18n](https://nijasc.github.io/ktor-svelte/main/features/i18n) turned on, each email is rendered once per language, with the same messages as the app. Use `m` in the component like on any page:
+
+```svelte
+<script lang="ts">
+    import { m } from '#i18n';
+
+    let { name, link }: { name: string; link: string } = $props();
+</script>
+
+<svelte:head>
+    <title>{m.emailWelcomeSubject({ name })}</title>
+</svelte:head>
+
+<h1>{m.emailWelcomeTitle({ name })}</h1>
+<a href={link}>{m.emailWelcomeAction()}</a>
+```
+
+`Emails` then takes a language, like the generated `Messages`:
+
+```kotlin
+val email = Emails.forLocale(user.locale).welcome(name = user.name, link = boardLink)
+```
+
+| In Kotlin | What it does |
+|---|---|
+| `Emails.forLocale(locale)` | The emails in that language, or in the default language when it is not one of yours |
+| `Emails.locales`, `Emails.defaultLocale` | The languages from `i18n { }` |
+| `call.emails` | The emails in the language of the current request, like `call.messages` |
+
+Store the language with the person when you send emails later, for example from a background job, because there is no request to take it from then. A placeholder in a message, such as `{name}`, can take a prop. Plural messages cannot count a prop, because the count is not known when the email is rendered: pick the text in Kotlin with `Messages` and pass it as a prop.
 
 ## Good to know
 
