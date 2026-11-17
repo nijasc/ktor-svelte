@@ -77,6 +77,7 @@ internal fun configReport(config: SvelteConfig): JsonObject =
             put("refreshAfterRestart", config.devConfig.refreshAfterRestart)
             put("errorOverlay", config.devConfig.errorOverlay)
             put("startupTiming", config.devConfig.startupTiming)
+            put("catchEmails", config.devConfig.catchEmails)
         }
         putJsonObject("transport") {
             put("formats", strings(config.transportConfig.formatNames.ifEmpty { listOf("json") }))

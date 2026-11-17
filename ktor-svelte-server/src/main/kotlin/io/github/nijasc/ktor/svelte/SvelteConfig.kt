@@ -67,6 +67,7 @@ public class SvelteConfig internal constructor() {
     public var originCheck: Boolean = true
     public var hideErrorDetails: Boolean = true
     public var apiCompression: Boolean = true
+    public var mailer: Mailer? = null
     public var inlinePublicConfig: Boolean = true
     public var buildHeader: Boolean = true
     public var requestIds: Boolean = true
@@ -381,6 +382,7 @@ public class SvelteDevConfig internal constructor() {
     public var refreshAfterRestart: Boolean = true
     public var errorOverlay: Boolean = true
     public var startupTiming: Boolean = true
+    public var catchEmails: Boolean = true
 }
 
 @KtorDsl
