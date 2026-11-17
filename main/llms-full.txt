@@ -6990,6 +6990,37 @@ An empty table is either a fresh start or a filter that matches nothing, and peo
 
 The block carries `data-empty="none"` or `data-empty="filtered"`, handy for tests and styles.
 
+### Placeholder rows while loading
+
+While the first page loads, the table shows a few grey rows shaped like its columns instead of an empty box, so the page does not jump when the data arrives. Later loads keep the rows you already see.
+
+```svelte
+<DataTable load={api.tasks.list} {columns} skeletonRows={5} />
+```
+
+- `skeletonRows` sets how many, `3` by default, and `0` turns them off.
+- The rows are `aria-hidden`; screen readers still hear the `loading` text.
+- With DaisyUI they use its `skeleton` class; without, a small pulsing bar of their own. Each carries `data-skeleton`.
+
+### Long lists
+
+With `virtual`, the table sits in a box of its own height, renders only the rows in view, and loads the next page when you scroll near the end. Thousands of rows stay as quick as twenty:
+
+```svelte
+<DataTable load={api.tasks.list} query={{ limit: 50 }} key={(task) => task.id} {columns} virtual={{ rowHeight: 40, height: '28rem' }} />
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `rowHeight` | required | The height of one row in pixels; every row gets exactly this height |
+| `height` | `24rem` | The height of the scrolling box, any CSS length |
+| `overscan` | `5` | Rows rendered above and below the visible ones, so fast scrolling does not show gaps |
+
+- The paging buttons go away; scrolling is the paging.
+- The table keeps `aria-rowcount` with the number of loaded rows, and each row its `aria-rowindex`, so screen readers still know where they are.
+- Keep cells to one line, since rows have a fixed height. For text that wraps, use normal paging instead.
+- Rows that can be [chosen](#selecting-rows-and-acting-on-them) and [sorted](#sorting-by-a-click-on-the-header) work the same; sorting in the browser sorts the rows loaded so far.
+
 ### Cells with markup
 
 For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
