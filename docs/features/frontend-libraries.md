@@ -234,6 +234,35 @@ On the server, `call.svelteLocale` and `call.messages` follow the same rules: th
 
 Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
 
+### Plurals
+
+"1 note" and "2 notes" are one message with two forms, and how many forms there are depends on the language. Write the forms into the message:
+
+```json
+{
+    "notes-count": "{count, plural, =0 {No notes} one {# note} other {# notes}} in {folder}"
+}
+```
+
+`#` stands for the number. The generated functions take the count as a number and pick the form for the current language, in TypeScript and in Kotlin alike:
+
+```ts no-check
+m.notesCount({ count: notes.length, folder: 'Inbox' });
+```
+
+```kotlin no-check
+call.messages.notesCount(notes.size, "Inbox")
+```
+
+- The forms are `zero`, `one`, `two`, `few`, `many` and `other`. A language uses only some of them: English and German `one` and `other`, Russian and Polish `one`, `few`, `many` and `other`, Japanese only `other`. Every plural needs `other`.
+- `=0`, `=1` and so on match one exact number, before the forms of the language. That is how "No notes" is written.
+- A form can hold other placeholders, and another plural.
+- Counts are whole numbers.
+
+`svelteSync` checks the messages: a plural without `other`, a form the language of that file never uses, a form name that does not exist, or a count in one language that is plain text in another all stop it with the key named.
+
+In the browser the choice of form comes from `Intl.PluralRules`. In Kotlin it comes from rules that are generated for the configured languages, checked against the browser's for the languages the plugin knows: the western and northern European ones, the Slavic and Baltic ones, Romanian, Hebrew, Arabic, and those without plural forms such as Japanese, Chinese and Korean. A language outside that list is treated like English in Kotlin.
+
 ### Messages nobody translated yet
 
 A key has to exist in every language file, or the build fails. The quick way to get past that is to paste the English text into the other files and translate later, and "later" is easy to forget. In development the [dev panel](../guide/dev-workflow.md) shows a **Not translated** section whenever you look at the app in another language than the default one. It lists every message on the page whose text is the same as in the default language, with its key.
