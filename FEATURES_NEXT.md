@@ -42,6 +42,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 118 | Owner checks | #348 |
 | 119 | Pending writes indicator | #349 |
 | 120 | Input masks | #350 |
+| 121 | Focus the first error | #351 |
 
 ### Next up
 
@@ -179,7 +180,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 121 | Focus the first error | Small | 14 |
 | 122 | Changed-field markers | Small | 14 |
 | 123 | Send only what changed | Small | 14 |
 | 124 | Autocomplete hints from names | Small | 14 |
