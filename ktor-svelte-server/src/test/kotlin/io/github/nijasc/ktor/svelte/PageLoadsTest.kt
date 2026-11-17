@@ -110,7 +110,11 @@ class PageLoadsTest {
         taskPage.writeText("export const load = () => ({});\n")
         app { startApplication() }
         assertEquals("export const load = () => ({});\n", taskPage.readText())
-        assertContains(dir.resolve("src/lib/api/loads.ts").readText(), "export async function loadTasksId(", message = "it can still call the load")
+        assertContains(
+            dir.resolve("src/lib/api/loads.ts").readText(),
+            "export async function loadTasksId(",
+            message = "it can still call the load",
+        )
     }
 
     @Test
