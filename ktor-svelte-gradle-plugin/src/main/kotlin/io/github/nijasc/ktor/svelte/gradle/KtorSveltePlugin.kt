@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
 import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.GitOutputSource
+import io.github.nijasc.ktor.svelte.gradle.tasks.OPENAPI_FILE
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteApiChangesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildInfoTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
@@ -26,6 +27,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRenameTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSmokeTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
@@ -55,6 +57,7 @@ import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.jvm.toolchain.JavaToolchainService
@@ -673,6 +676,25 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.gradleExecutable.set(gradleExecutablePath(gradleHome))
             task.javaLauncher.set(toolchains.launcherFor(toolchain))
             task.compileErrorsFile.set(project.layout.buildDirectory.file("ktor-svelte/compile-errors.json"))
+        }
+        project.tasks.register("svelteSmokeTest", SvelteSmokeTestTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Packages the app, starts it in production mode and fails unless its pages and API routes are answered."
+            val names = project.tasks.names
+            if ("shadowJar" in names) {
+                task.dependsOn(if ("buildFatJar" in names) "buildFatJar" else "shadowJar")
+                task.jarFile.set(project.tasks.named("shadowJar", Jar::class.java).flatMap { it.archiveFile })
+            } else {
+                val installed = project.tasks.named("installDist", Sync::class.java)
+                task.dependsOn(installed)
+                task.libDirectory.fileProvider(installed.map { it.destinationDir.resolve("lib") })
+            }
+            task.mainClass.set(application.mainClass)
+            task.javaLauncher.set(toolchains.launcherFor(toolchain))
+            task.buildOutput.set(extension.frontendDir.dir(extension.outputDir))
+            task.openApiFile.set(extension.frontendDir.file(OPENAPI_FILE))
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.logFile.set(project.layout.buildDirectory.file("ktor-svelte/smoke-test.log"))
         }
     }
 
