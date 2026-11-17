@@ -801,6 +801,21 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `an error nobody caught is reported to the app`() {
+        page.navigate("/about")
+        assertThat(page.heading()).isVisible()
+        val report =
+            page.waitForRequest({ it.url().endsWith("/_ktor-svelte/errors") }) {
+                page.evaluate("setTimeout(() => { throw new Error('thrown by the browser test'); }, 0)")
+            }
+        assertEquals("POST", report.method())
+        assertContains(report.postData().orEmpty(), "\"message\":\"Error: thrown by the browser test\"")
+        assertContains(report.postData().orEmpty(), "\"page\":\"/about\"")
+        val status = report.response()?.status()
+        assertEquals(true, status == 204 || status == 429, "answered $status")
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

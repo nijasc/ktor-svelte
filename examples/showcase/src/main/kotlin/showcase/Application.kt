@@ -88,6 +88,7 @@ fun Application.module() {
         healthCheck { database.isReachable() }
         constants(BoardLimits)
         idempotency()
+        frontendErrors()
         cookies(OnlyMineCookie)
         currentUser<User>(
             signInMessage = { it.messages.problemSignIn() },

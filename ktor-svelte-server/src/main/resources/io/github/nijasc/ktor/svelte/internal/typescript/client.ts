@@ -741,6 +741,41 @@ export function userStore<T, P extends string = string>(path: string, state: Use
     };
 }
 
+const reportedErrors = new Set<string>();
+
+function sendErrorReport(path: string, error: unknown): void {
+    if (typeof location === 'undefined' || reportedErrors.size >= 10) return;
+    if (error instanceof ApiError && error.status < 500) return;
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    if (reportedErrors.has(message)) return;
+    reportedErrors.add(message);
+    const report = {
+        message: message.slice(0, 500),
+        stack: error instanceof Error ? error.stack?.slice(0, 2000) : undefined,
+        page: location.pathname,
+        requestId: error instanceof ApiError ? error.requestId : undefined
+    };
+    try {
+        const sent = (apiConfig.fetch ?? fetch)(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(report),
+            keepalive: true
+        });
+        void sent.catch(() => undefined);
+    } catch {
+        return;
+    }
+}
+
+export function reportErrors(path: string): void {
+    const host = globalThis as unknown as { addEventListener?: (name: string, listener: (event: never) => void) => void; __ktorSvelteReportError?: unknown };
+    host.__ktorSvelteReportError = (error: unknown) => sendErrorReport(path, error);
+    if (typeof host.addEventListener !== 'function') return;
+    host.addEventListener('error', (event: { error?: unknown; message?: string }) => sendErrorReport(path, event.error ?? event.message));
+    host.addEventListener('unhandledrejection', (event: { reason?: unknown }) => sendErrorReport(path, event.reason));
+}
+
 export interface PreferenceState<T> {
     value: T;
     ready: boolean;

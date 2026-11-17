@@ -72,6 +72,7 @@ internal class TypeScriptGenerator(
     private val permissions: List<String> = emptyList(),
     private val guards: List<GuardSpec> = emptyList(),
     private val preferences: PreferencesType? = null,
+    private val errorReportPath: String? = null,
 ) {
     private val declaredCookies = cookies
     private val sideSchemas =
@@ -151,7 +152,9 @@ internal class TypeScriptGenerator(
             )
         }
         return withGitAttributes(
-            "client.ts" to typeScriptTemplate("client.ts") + loginPageSource(),
+            "client.ts" to typeScriptTemplate(
+                "client.ts",
+            ) + loginPageSource() + (errorReportPath?.let { "\nreportErrors('$it');\n" } ?: ""),
             "form.ts" to typeScriptTemplate("form.ts"),
             FORM_STATE_FILE to typeScriptTemplate(FORM_STATE_FILE),
             "types.ts" to

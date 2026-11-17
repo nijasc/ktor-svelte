@@ -258,6 +258,15 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `a browser can report an error, in small amounts`() {
+        val visitor = anonymous()
+        assertEquals(204, visitor.send("POST", "/_ktor-svelte/errors", """{"message":"TypeError: test","page":"/board"}""").statusCode())
+        assertEquals(413, visitor.send("POST", "/_ktor-svelte/errors", """{"message":"${"x".repeat(9000)}"}""").statusCode())
+        val statuses = (1..12).map { visitor.send("POST", "/_ktor-svelte/errors", """{"message":"again $it"}""").statusCode() }
+        assertContains(statuses, 429)
+    }
+
+    @Test
     fun `a forged session cookie is refused`() {
         val response = anonymous().send("GET", "/api/me", null, "Cookie" to "showcase_session=userId%3D%2523i1")
         assertEquals(401, response.statusCode())
