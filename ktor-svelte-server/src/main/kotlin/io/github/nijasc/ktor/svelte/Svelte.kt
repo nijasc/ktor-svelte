@@ -246,6 +246,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                     mapOf("theme" to THEME_COOKIE, "locale" to LOCALE_COOKIE),
                 )
             },
+            pluginConfig.pageLoadsConfig.pages
+                .toList(),
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }

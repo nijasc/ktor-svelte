@@ -495,6 +495,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun idempotency (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun idempotency$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun internalAccess (Lkotlin/jvm/functions/Function1;)V
+	public final fun pageLoads (Lkotlin/jvm/functions/Function1;)V
 	public final fun paramRoutes ([Ljava/lang/String;)V
 	public final fun rateLimit (Lkotlin/jvm/functions/Function1;)V
 	public final fun securityHeaders (Lkotlin/jvm/functions/Function1;)V
@@ -598,6 +599,15 @@ public final class io/github/nijasc/ktor/svelte/SvelteMetrics {
 
 public final class io/github/nijasc/ktor/svelte/SvelteMetricsKt {
 	public static final fun getSvelteMetrics (Lio/ktor/server/application/Application;)Lio/github/nijasc/ktor/svelte/SvelteMetrics;
+}
+
+public final class io/github/nijasc/ktor/svelte/SveltePageLoadConfig {
+	public final fun data (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
+	public static synthetic fun data$default (Lio/github/nijasc/ktor/svelte/SveltePageLoadConfig;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SveltePageLoadsConfig {
+	public final fun page (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteRateLimitConfig {
