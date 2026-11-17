@@ -18,6 +18,7 @@ public abstract class SvelteExtension {
     public abstract val precompress: Property<Boolean>
     public abstract val verifyLeaks: Property<Boolean>
     public abstract val shortTaskNames: Property<Boolean>
+    public abstract val timingSummary: Property<Boolean>
 
     @get:Nested
     public abstract val dev: SvelteDevSettings

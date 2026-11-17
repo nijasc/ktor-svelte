@@ -7,6 +7,7 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.I18nSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.installableSpecOf
+import io.github.nijasc.ktor.svelte.gradle.tasks.BuildTimings
 import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.GitOutputSource
 import io.github.nijasc.ktor.svelte.gradle.tasks.OPENAPI_FILE
@@ -67,6 +68,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.build.event.BuildEventsListenerRegistry
 import org.gradle.jvm.tasks.Jar
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.plugins.ide.idea.model.IdeaModel
@@ -74,6 +76,7 @@ import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.testing.base.TestingExtension
 import java.io.File
 import java.util.Properties
+import javax.inject.Inject
 
 private const val TASK_GROUP = "svelte"
 private const val DEFAULT_APP_URL = "http://localhost:8080"
@@ -107,7 +110,10 @@ private const val VERIFY_TS_PROPERTY = "svelte.verifyTs"
 private const val SKIP_WARNING =
     "ktor-svelte: building a JAR with the frontend build skipped. The JAR may hold a stale frontend, or none."
 
-public class KtorSveltePlugin : Plugin<Project> {
+public abstract class KtorSveltePlugin : Plugin<Project> {
+    @get:Inject
+    protected abstract val buildEvents: BuildEventsListenerRegistry
+
     override fun apply(project: Project) {
         val extension = createExtension(project)
         val devMode = booleanProperty(project, DEV_PROPERTY)
@@ -144,6 +150,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
         configureClean(project, extension)
         serializeFrontendTasks(project)
+        reportBuildTimes(project, extension)
         val config = registerConfigReport(project, extension)
 
         excludeFrontendOutputFromIde(project, extension)
@@ -192,6 +199,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("precompress", extension.precompress.map { it.toString() })
             settings.put("verifyLeaks", extension.verifyLeaks.map { it.toString() })
             settings.put("shortTaskNames", extension.shortTaskNames.map { it.toString() })
+            settings.put("timingSummary", extension.timingSummary.map { it.toString() })
             settings.put("dev.port", extension.dev.port.map { it.toString() })
             settings.put("dev.script", extension.dev.script)
             settings.put("dev.debugPort", extension.dev.debugPort.map { it.toString() })
@@ -879,6 +887,18 @@ public class KtorSveltePlugin : Plugin<Project> {
         }
     }
 
+    private fun reportBuildTimes(
+        project: Project,
+        extension: SvelteExtension,
+    ) {
+        val timings =
+            project.gradle.sharedServices.registerIfAbsent("ktorSvelteBuildTimes${project.path}", BuildTimings::class.java) { spec ->
+                spec.parameters.projectPath.set(project.path)
+                spec.parameters.enabled.set(extension.timingSummary)
+            }
+        buildEvents.onTaskCompletion(timings)
+    }
+
     private fun gradleExecutablePath(gradleHome: File?): String {
         val name = if (isWindowsHost()) "gradle.bat" else "gradle"
         return gradleHome?.resolve("bin/$name")?.path ?: name
@@ -895,6 +915,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.precompress.convention(true)
         extension.verifyLeaks.convention(true)
         extension.shortTaskNames.convention(true)
+        extension.timingSummary.convention(true)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
         extension.dev.debugPort.convention(5005)
