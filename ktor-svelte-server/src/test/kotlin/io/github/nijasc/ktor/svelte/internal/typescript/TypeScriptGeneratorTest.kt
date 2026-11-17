@@ -480,6 +480,19 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `a preset format is checked in the browser with the server's message`() {
+        val source =
+            types(
+                """{"Account":{"type":"object","required":["email","password"],"properties":{
+                "email":{"type":"string","format":"email"},"password":{"type":"string","format":"strong-password"},
+                "day":{"type":"string","format":"date"}}}}""",
+            )
+        assertContains(source, "validate: (value: Account)")
+        assertContains(source, "', value.email))) addError(errors, 'email', 'Must be an email address, such as name@example.com.');")
+        assertContains(source, "matches('[A-Z]', value.password) && matches('[0-9]', value.password)")
+    }
+
+    @Test
     fun `required query parameters make the query argument required`() {
         val source =
             services(
