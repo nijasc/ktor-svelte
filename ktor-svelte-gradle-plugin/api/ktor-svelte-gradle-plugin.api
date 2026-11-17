@@ -153,6 +153,17 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/LucideSettings {
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
+public final class io/github/nijasc/ktor/svelte/gradle/NamingStyle : java/lang/Enum {
+	public static final field CamelCase Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;
+	public static final field KebabCase Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;
+	public static final field PascalCase Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;
+	public static final field SnakeCase Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getPattern ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;
+}
+
 public final class io/github/nijasc/ktor/svelte/gradle/PackageManager : java/lang/Enum {
 	public static final field Auto Lio/github/nijasc/ktor/svelte/gradle/PackageManager;
 	public static final field Bun Lio/github/nijasc/ktor/svelte/gradle/PackageManager;
@@ -195,6 +206,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getFrontends ()Lorg/gradle/api/NamedDomainObjectContainer;
 	public abstract fun getIncludeSourceMaps ()Lorg/gradle/api/provider/Property;
 	public abstract fun getLibraries ()Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;
+	public abstract fun getNaming ()Lio/github/nijasc/ktor/svelte/gradle/SvelteNamingSettings;
 	public abstract fun getNodeVersion ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOutputDir ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
@@ -203,6 +215,7 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getTimingSummary ()Lorg/gradle/api/provider/Property;
 	public abstract fun getVerifyLeaks ()Lorg/gradle/api/provider/Property;
 	public final fun libraries (Lorg/gradle/api/Action;)V
+	public final fun naming (Lorg/gradle/api/Action;)V
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
@@ -253,6 +266,20 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public static synthetic fun tailwind$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
 	public final fun toasts ()V
 	public final fun toasts (Lorg/gradle/api/Action;)V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteNamingSettings {
+	public fun <init> ()V
+	public final fun apiRoutes (Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;)V
+	public final fun dtos (Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;)V
+	public abstract fun getApiRoutes ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDtos ()Lorg/gradle/api/provider/Property;
+	public abstract fun getMessageKeys ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPages ()Lorg/gradle/api/provider/Property;
+	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
+	public final fun messageKeys (Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;)V
+	public final fun pages (Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;)V
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/TailwindSettings {
@@ -773,6 +800,20 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyMess
 	public abstract fun getKotlinSources ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public abstract fun getLocales ()Lorg/gradle/api/provider/ListProperty;
 	public abstract fun getMessagesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
+	public final fun verify ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyNamingTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getApiRoutes ()Lorg/gradle/api/provider/Property;
+	public abstract fun getDtos ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getLocales ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getMessageKeys ()Lorg/gradle/api/provider/Property;
+	public abstract fun getMessagesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getPages ()Lorg/gradle/api/provider/Property;
+	public abstract fun getRoutesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
 	public final fun verify ()V
 }

@@ -956,4 +956,28 @@ class UtilityTasksTest {
         assertContains(all, "ktor-svelte 1.3.0 -> ${pluginVersion()}")
         assertContains(project.run("svelteUpgradeNotes", "--since=999.0.0").output, "nothing in this upgrade needs your attention")
     }
+
+    @Test
+    fun `svelteVerifyNaming does nothing without rules, lists what breaks them, and fails only when strict`() {
+        val project = project()
+        project.frontend.resolve("src/routes/(app)/taskList").mkdirs()
+        project.frontend.resolve("src/routes/(app)/taskList/+page.svelte").writeText("<p>Tasks</p>\n")
+        project.frontend
+            .resolve("src/routes/about/+page.svelte")
+            .apply { parentFile.mkdirs() }
+            .writeText("<p>About</p>\n")
+
+        assertContains(project.run("svelteVerifyNaming").output, "no naming rules are set")
+
+        project.buildScript(
+            javaBuild +
+                "\n\nsvelte {\n    naming {\n        pages(io.github.nijasc.ktor.svelte.gradle.NamingStyle.KebabCase)\n    }\n}\n",
+        )
+        val listed = project.run("svelteVerifyNaming").output
+        assertContains(listed, "page 'taskList' in /(app)/taskList  ->  not kebab-case")
+        assertFalse("about" in listed)
+        assertContains(listed, "1 name(s) break the naming rules")
+
+        assertContains(project.runAndFail("svelteVerifyNaming", "--strict").output, "1 name(s) break the naming rules")
+    }
 }

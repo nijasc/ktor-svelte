@@ -54,6 +54,7 @@ svelte {
 | `precompress` | `true` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10% |
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](../features/runtime-config.md#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
+| `naming { }` | no rules | Naming rules for pages, API routes, DTOs and message keys that `svelteVerifyNaming` checks. See [svelteVerifyNaming](../guide/checks-and-tooling.md#svelteverifynaming) |
 | `frontend(name) { }` | none | Another SvelteKit project served under its own path prefix, with `frontendDir`, `outputDir`, `buildScript`, `basePath` and `devPort`. See [Multiple frontends](../guide/multiple-frontends.md) |
 
 The package manager must already be installed unless you set `bunVersion`, or `nodeVersion` with npm.
@@ -273,6 +274,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteVerifyRoutes` | `--fix` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](../features/routes.md#finding-links-that-are-still-strings) to use instead, and fails if it finds any. `--fix` rewrites the ones it can |
 | `svelteVerifyLinks` | `--strict` | Lists [internal links that lead to no page, no API route and no static file](../features/routes.md#finding-links-that-lead-nowhere) |
 | `svelteVerifyLoads` | | Fails if an API call inside a `load` function [uses neither `apiWith(event)` nor `{ fetch }`](../features/calling-the-api.md#in-load-functions) |
+| `svelteVerifyNaming` | `--strict` | Lists [names that break your naming rules](../guide/checks-and-tooling.md#svelteverifynaming) |
 | `svelteVerifyMessages` | `--strict` | Lists [i18n messages nothing uses](../features/frontend-libraries.md#messages-nothing-uses) |
 | `svelteVerifyApiRoutes` | `--strict` | Lists [API routes that nothing in the frontend calls](../features/typescript.md#routes-nothing-calls) |
 | `svelteApiChanges` | `--against`, `--strict` | Lists [what changed in the API for callers](../features/typescript.md#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. `--strict` fails on a change that can break them |

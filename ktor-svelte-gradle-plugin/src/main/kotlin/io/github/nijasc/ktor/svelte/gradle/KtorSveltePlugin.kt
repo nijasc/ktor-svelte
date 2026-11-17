@@ -48,6 +48,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLeaksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLoadsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyMessagesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyNamingTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
@@ -393,6 +394,19 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                         .orEmpty()
                 },
             )
+        }
+        project.tasks.register("svelteVerifyNaming", SvelteVerifyNamingTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Lists names that break the rules in svelte { naming { } }. Add --strict to fail the build on them."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.messagesDirectory.set(messages)
+            task.locales.set(librarySpec.map { it.i18n?.locales.orEmpty() })
+            task.pages.set(extension.naming.pages)
+            task.apiRoutes.set(extension.naming.apiRoutes)
+            task.dtos.set(extension.naming.dtos)
+            task.messageKeys.set(extension.naming.messageKeys)
+            task.strict.convention(extension.naming.strict)
         }
         project.tasks.register("svelteVerifyMessages", SvelteVerifyMessagesTask::class.java) { task ->
             task.group = TASK_GROUP

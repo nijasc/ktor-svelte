@@ -28,6 +28,9 @@ public abstract class SvelteExtension {
     @get:Nested
     public abstract val libraries: SvelteLibraries
 
+    @get:Nested
+    public abstract val naming: SvelteNamingSettings
+
     public abstract val frontends: NamedDomainObjectContainer<SvelteFrontend>
 
     public fun frontend(
@@ -45,6 +48,10 @@ public abstract class SvelteExtension {
         action.execute(dev)
     }
 
+    public fun naming(action: Action<SvelteNamingSettings>) {
+        action.execute(naming)
+    }
+
     public fun libraries(action: Action<SvelteLibraries>) {
         action.execute(libraries)
     }
@@ -53,6 +60,35 @@ public abstract class SvelteExtension {
         name: String,
         value: Any?,
     ): Nothing = throw unknownSetting(SvelteExtension::class.java, "svelte", name)
+}
+
+public abstract class SvelteNamingSettings {
+    public abstract val pages: Property<String>
+    public abstract val apiRoutes: Property<String>
+    public abstract val dtos: Property<String>
+    public abstract val messageKeys: Property<String>
+    public abstract val strict: Property<Boolean>
+
+    public fun pages(style: NamingStyle) {
+        pages.set(style.pattern)
+    }
+
+    public fun apiRoutes(style: NamingStyle) {
+        apiRoutes.set(style.pattern)
+    }
+
+    public fun dtos(style: NamingStyle) {
+        dtos.set(style.pattern)
+    }
+
+    public fun messageKeys(style: NamingStyle) {
+        messageKeys.set(style.pattern)
+    }
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(SvelteNamingSettings::class.java, "naming", name)
 }
 
 public abstract class SvelteDevSettings {
