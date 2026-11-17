@@ -80,6 +80,7 @@ internal class TypeScriptGenerator(
     private val sideSchemas =
         listOfNotNull(publicConfigSchema, currentUser?.schema, preferences?.schema).map { Json.parseToJsonElement(it) }
     private val cookies = cookies.filterNot { it.httpOnly }
+    private var componentSchemas: Map<String, JsonElement> = emptyMap()
     private val cookieFile = this.cookies.isNotEmpty() || cookies.any { it.category != null }
 
     private val iconNames = iconNames.toSet()
@@ -99,6 +100,7 @@ internal class TypeScriptGenerator(
         val document = Json.parseToJsonElement(openApiJson).jsonObject
         val filtered = withNullableReferences(withDeclaredErrors(withApiPathsOnly(document)))
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
+        componentSchemas = schemas
         enumTypes = nameEnums(filtered, schemas)
         usesDates = hasDateFormat(filtered) || sideSchemas.any { hasDateFormat(it) }
         usesQuantities = hasFormat(filtered, QUANTITY_FORMATS) || sideSchemas.any { hasFormat(it, QUANTITY_FORMATS) }
@@ -862,8 +864,9 @@ internal class TypeScriptGenerator(
         val lines =
             schema.objectAt("properties").orEmpty().map { (name, value) ->
                 val optional = if (name in required) "" else "?"
+                val readonly = if (value.jsonObject.isReadOnly()) "readonly " else ""
                 jsDoc(schemaDocs(value.jsonObject), "$indent    ") +
-                    "$indent    ${propertyKey(name)}$optional: ${tsType(value.jsonObject, references, "$indent    ")};"
+                    "$indent    $readonly${propertyKey(name)}$optional: ${tsType(value.jsonObject, references, "$indent    ")};"
             }
         return (listOf("{") + lines + "$indent}").joinToString("\n")
     }
@@ -1127,7 +1130,9 @@ internal class TypeScriptGenerator(
             } else {
                 bodyContent?.let { preferredSchema(it) }?.let { tsType(it, references) }
             }
-        if (requestBody != null) signature += "body: ${bodyType ?: "unknown"}"
+        val computed = if (multipart == null) bodyContent?.let { preferredSchema(it) }?.let(::readOnlyProperties).orEmpty() else emptyList()
+        val writableBody = if (computed.isEmpty()) bodyType else "Omit<$bodyType, ${computed.joinToString(" | ") { quoted(it) }}>"
+        if (requestBody != null) signature += "body: ${writableBody ?: "unknown"}"
 
         val queryParameters = declared.filter { it.stringAt("in") == "query" }
         if (queryParameters.isNotEmpty()) {
@@ -1171,6 +1176,7 @@ internal class TypeScriptGenerator(
                 if (queryParameters.isNotEmpty()) add("query")
                 if (headerParameters.isNotEmpty()) add("typedHeaders: headers")
                 if (requestBody != null) add("body")
+                if (computed.isNotEmpty()) add("omit: [${computed.joinToString { quoted(it) }}]")
                 if (upload != null) add("upload: $upload")
                 if (formFields != null) add("multipart: true")
             }
@@ -1206,6 +1212,17 @@ internal class TypeScriptGenerator(
                     .ifEmpty { null },
             errorStatuses = declaredErrors.keys.toList(),
         )
+    }
+
+    private fun readOnlyProperties(schema: JsonObject): List<String> {
+        val target =
+            schema.stringAt("\$ref")?.let { componentSchemas[it.substringAfterLast('/')] as? JsonObject } ?: schema
+        return target
+            .objectAt("properties")
+            .orEmpty()
+            .filterValues { (it as? JsonObject)?.isReadOnly() == true }
+            .keys
+            .toList()
     }
 
     private fun urlTemplate(path: String): String =
@@ -1384,6 +1401,8 @@ private fun quoted(value: String): String =
 private const val DEPRECATED_TAG = "@deprecated"
 
 private fun JsonObject.isDeprecated(): Boolean = (this["deprecated"] as? JsonPrimitive)?.booleanOrNull == true
+
+private fun JsonObject.isReadOnly(): Boolean = (this["readOnly"] as? JsonPrimitive)?.booleanOrNull == true
 
 private fun JsonObject.objectAt(key: String): JsonObject? = this[key] as? JsonObject
 
