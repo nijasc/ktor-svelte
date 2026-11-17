@@ -1,0 +1,118 @@
+export interface FieldBounds {
+    required?: boolean;
+    minlength?: number;
+    maxlength?: number;
+    min?: number;
+    max?: number;
+    pattern?: string;
+    autocomplete?: string;
+    type?: string;
+}
+
+export interface FieldOptions {
+    bounds?: FieldBounds;
+    errors?: string[];
+    errorClass?: string;
+    describedBy?: string;
+}
+
+type FieldElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+let fieldCount = 0;
+
+const typedBeforeHydration = new WeakMap<EventTarget, string>();
+let remembering = false;
+
+function remember(node: EventTarget | null) {
+    const textInput = (node instanceof HTMLInputElement && node.type !== 'file') || node instanceof HTMLTextAreaElement;
+    if (!textInput) return;
+    if (node.value === node.defaultValue) typedBeforeHydration.delete(node);
+    else typedBeforeHydration.set(node, node.value);
+}
+
+function rememberInput(event: Event) {
+    remember(event.target);
+}
+
+if (typeof document !== 'undefined') {
+    document.querySelectorAll('input, textarea').forEach(remember);
+    document.addEventListener('input', rememberInput, true);
+    remembering = true;
+}
+
+function restoreTypedValue(node: FieldElement) {
+    if (remembering) {
+        remembering = false;
+        queueMicrotask(() => document.removeEventListener('input', rememberInput, true));
+    }
+    const typed = typedBeforeHydration.get(node);
+    if (typed === undefined) return;
+    typedBeforeHydration.delete(node);
+    if (node.value === typed) return;
+    node.value = typed;
+    node.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+export function field(node: FieldElement, options: FieldOptions = {}) {
+    const message = document.createElement('p');
+    message.id = `ktor-svelte-field-${++fieldCount}`;
+    message.setAttribute('role', 'alert');
+    const applied = new Set<string>();
+    const own = new Set(node.getAttributeNames());
+
+    function apply({ bounds = {}, errors = [], errorClass = 'field-error', describedBy }: FieldOptions) {
+        applied.forEach((name) => node.removeAttribute(name));
+        applied.clear();
+        for (const [name, value] of Object.entries(bounds)) {
+            if (value === undefined || value === false) continue;
+            if ((name === 'autocomplete' || name === 'type') && own.has(name)) continue;
+            if (name === 'type' && !(node instanceof HTMLInputElement)) continue;
+            node.setAttribute(name, value === true ? '' : String(value));
+            applied.add(name);
+        }
+        const text = errors.join(' ');
+        message.className = errorClass;
+        message.textContent = text;
+        if (text === '') {
+            node.removeAttribute('aria-invalid');
+            if (describedBy) node.setAttribute('aria-describedby', describedBy);
+            else node.removeAttribute('aria-describedby');
+            message.remove();
+            return;
+        }
+        node.setAttribute('aria-invalid', 'true');
+        node.setAttribute('aria-describedby', describedBy ? `${describedBy} ${message.id}` : message.id);
+        if (!message.isConnected) node.after(message);
+    }
+
+    apply(options);
+    restoreTypedValue(node);
+    return { update: apply, destroy: () => message.remove() };
+}
+
+export interface PasswordRule {
+    readonly pattern: string;
+    readonly requirement: string;
+}
+
+export const passwordRules: readonly PasswordRule[] = [
+    { pattern: '^[\\s\\S]{10,}$', requirement: 'at least 10 characters' },
+    { pattern: '[a-z]', requirement: 'a lowercase letter' },
+    { pattern: '[A-Z]', requirement: 'an uppercase letter' },
+    { pattern: '[0-9]', requirement: 'a digit' },
+];
+
+export const passwordMessage = 'Must have at least 10 characters, a lowercase letter, an uppercase letter and a digit.';
+
+export interface PasswordStrength {
+    readonly met: readonly PasswordRule[];
+    readonly missing: readonly PasswordRule[];
+    readonly score: number;
+    readonly strong: boolean;
+}
+
+export function passwordStrength(password: string): PasswordStrength {
+    const met = passwordRules.filter((rule) => new RegExp(rule.pattern).test(password));
+    const missing = passwordRules.filter((rule) => !met.includes(rule));
+    return { met, missing, score: met.length / passwordRules.length, strong: missing.length === 0 };
+}

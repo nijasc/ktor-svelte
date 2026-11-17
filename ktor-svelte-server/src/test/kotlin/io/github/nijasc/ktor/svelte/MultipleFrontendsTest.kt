@@ -97,6 +97,14 @@ class MultipleFrontendsTest {
             assertEquals("/admin/users?tab=all", redirect.headers[HttpHeaders.Location])
             val folder = noFollow.get("/admin/settings") { header(HttpHeaders.Accept, "text/html") }
             assertEquals("/admin/settings/", folder.headers[HttpHeaders.Location])
+            val root = noFollow.get("/admin?tab=all") { header(HttpHeaders.Accept, "text/html") }
+            assertEquals(
+                HttpStatusCode.PermanentRedirect,
+                root.status,
+                "relative asset paths of a base-path build only work below the prefix",
+            )
+            assertEquals("/admin/?tab=all", root.headers[HttpHeaders.Location])
+            assertEquals("/admin/reports/", noFollow.get("/admin/reports").headers[HttpHeaders.Location])
         }
 
     @Test

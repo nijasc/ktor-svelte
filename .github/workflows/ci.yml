@@ -93,6 +93,8 @@ jobs:
         shell: bash
       - run: ./gradlew -p examples/showcase e2eTest svelteCheck
         shell: bash
+      - run: ./gradlew -p examples/two-frontends svelteCheck
+        shell: bash
 
   browser:
     needs: changes
@@ -114,6 +116,7 @@ jobs:
           bun-version-file: .bun-version
       - run: ./gradlew -p examples/showcase installBrowsers -Pbrowser=${{ matrix.browser }}
       - run: ./gradlew -p examples/showcase browserTest -Pbrowser=${{ matrix.browser }}
+      - run: ./gradlew -p examples/two-frontends browserTest -Pbrowser=${{ matrix.browser }}
 
   dev-mode:
     needs: changes
@@ -131,6 +134,7 @@ jobs:
           bun-version-file: .bun-version
       - run: ./gradlew -p examples/showcase installBrowsers
       - run: ./gradlew -p examples/showcase devBrowserTest
+      - run: ./gradlew -p examples/two-frontends devBrowserTest
       - if: failure()
         run: cat examples/showcase/build/dev-browser-test.log
 
@@ -213,7 +217,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
       - run: ./gradlew -p examples/notes svelteGenerateTs
       - run: ./gradlew -p examples/showcase svelteGenerateTs
-      - run: git diff --exit-code examples/notes/frontend/src/lib/api examples/showcase/frontend/src/lib/api
+      - run: ./gradlew -p examples/two-frontends svelteGenerateTs
+      - run: git diff --exit-code examples/notes/frontend/src/lib/api examples/showcase/frontend/src/lib/api examples/two-frontends/frontend/src/lib/api examples/two-frontends/admin/src/lib/api
 
   example-npm:
     needs: changes

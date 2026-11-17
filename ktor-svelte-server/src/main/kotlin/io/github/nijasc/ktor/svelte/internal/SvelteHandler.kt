@@ -80,6 +80,10 @@ internal class SvelteHandler(
         }
         if (mayProxy && devProxy?.forward(call) == true) return
         val manifest = store.manifest()
+        if (manifest != null && prefix.isNotEmpty() && fullPath == prefix) {
+            redirectInto(call, "$prefix/")
+            return
+        }
         when {
             manifest != null -> respondFromManifest(call, path, manifest, resolver, responder, privateResponses, siteFiles, prefix)
             devProxy != null && !mayProxy -> call.respondText(REMOTE_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
@@ -105,6 +109,15 @@ internal class SvelteHandler(
 }
 
 private const val ALLOWED_FRONTEND_METHODS = "GET, HEAD, OPTIONS"
+
+private suspend fun redirectInto(
+    call: ApplicationCall,
+    target: String,
+) {
+    val query = call.request.uri.substringAfter('?', "")
+    call.response.header(HttpHeaders.Location, if (query.isEmpty()) target.encodeURLPath() else "${target.encodeURLPath()}?$query")
+    call.respond(HttpStatusCode.PermanentRedirect)
+}
 
 private fun decodedPath(call: ApplicationCall): String? =
     try {
