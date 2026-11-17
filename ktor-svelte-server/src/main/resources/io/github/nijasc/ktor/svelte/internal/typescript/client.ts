@@ -560,7 +560,39 @@ function fromPrefetch<T>(url: string, run: (silent?: boolean) => Promise<T>): Pr
     return response;
 }
 
+let writesInFlight = 0;
+const pendingWatchers = new Set<(count: number) => void>();
+
+export function watchPendingWrites(watcher: (count: number) => void): () => void {
+    pendingWatchers.add(watcher);
+    watcher(writesInFlight);
+    return () => {
+        pendingWatchers.delete(watcher);
+    };
+}
+
+function changePendingWrites(by: number) {
+    writesInFlight += by;
+    for (const watcher of pendingWatchers) {
+        try {
+            watcher(writesInFlight);
+        } catch {
+            continue;
+        }
+    }
+}
+
 export async function request<T>(method: string, path: string, options: InternalOptions = {}): Promise<T> {
+    if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return sendRequest<T>(method, path, options);
+    changePendingWrites(1);
+    try {
+        return await sendRequest<T>(method, path, options);
+    } finally {
+        changePendingWrites(-1);
+    }
+}
+
+async function sendRequest<T>(method: string, path: string, options: InternalOptions): Promise<T> {
     const { url, operation, send, attempt } = prepare(method, path, options, 'application/json');
     const run = async (silent = options.silent) => {
         try {
