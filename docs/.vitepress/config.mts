@@ -156,7 +156,8 @@ export default defineConfig({
                     { text: 'Charts', link: '/features/charts' },
                     { text: 'Languages (i18n)', link: '/features/i18n' },
                     { text: 'Components', link: '/features/components' },
-                    { text: 'Installable app', link: '/features/installable-app' }
+                    { text: 'Installable app', link: '/features/installable-app' },
+                    { text: 'Emails', link: '/features/emails' }
                 ]
             },
             {

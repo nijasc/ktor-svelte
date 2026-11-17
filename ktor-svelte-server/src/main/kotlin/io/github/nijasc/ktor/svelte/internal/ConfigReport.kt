@@ -44,6 +44,7 @@ internal fun configReport(config: SvelteConfig): JsonObject =
         put("internalAccess", InternalAccess(config.internalAccessConfig).summary)
         put("healthEndpoint", config.healthEndpoint)
         put("healthChecks", config.healthCheckList.size)
+        put("warmUp", strings(config.warmUpPathList))
         put("originCheck", config.originCheck)
         put("allowedOrigins", strings(config.allowedOriginList))
         put("hideErrorDetails", config.hideErrorDetails)
@@ -77,6 +78,7 @@ internal fun configReport(config: SvelteConfig): JsonObject =
             put("refreshAfterRestart", config.devConfig.refreshAfterRestart)
             put("errorOverlay", config.devConfig.errorOverlay)
             put("startupTiming", config.devConfig.startupTiming)
+            put("catchEmails", config.devConfig.catchEmails)
         }
         putJsonObject("transport") {
             put("formats", strings(config.transportConfig.formatNames.ifEmpty { listOf("json") }))

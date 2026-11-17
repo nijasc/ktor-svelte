@@ -54,7 +54,10 @@ public abstract class SvelteInitTask : SvelteToolTask() {
             throw GradleException("ktor-svelte will not overwrite $target because it is not empty." + DocLink.CREATE_A_PROJECT.see())
         }
         val tool = FrontendTool(chooseTool())
-        if (!(bunVersion.isPresent && tool.packageManager == PackageManager.Bun)) requireToolOnPath(tool)
+        val pinned =
+            (bunVersion.isPresent && tool.packageManager == PackageManager.Bun) ||
+                (nodeVersion.isPresent && tool.packageManager == PackageManager.Npm)
+        if (!pinned) requireToolOnPath(tool)
         TEMPLATE_FILES.forEach { path -> copyTemplate(path, target) }
         createMessageFiles()
         runToolQuietly(tool, listOf("install"))
