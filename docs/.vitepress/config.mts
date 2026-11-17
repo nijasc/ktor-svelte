@@ -100,8 +100,8 @@ export default defineConfig({
         logo: '/logo.svg',
         search: { provider: 'local' },
         nav: [
-            { text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' },
-            { text: 'Features', link: '/features/typescript', activeMatch: '/features/' },
+            { text: 'Get started', link: '/guide/getting-started', activeMatch: '/guide/(introduction|getting-started|configurator|tutorial|existing-project|project-structure|comparison)' },
+            { text: 'Everything it does', link: '/features/', activeMatch: '/features/' },
             { text: 'Recipes', link: '/recipes/', activeMatch: '/recipes/' },
             { text: 'Reference', link: '/reference/ktor', activeMatch: '/reference/' },
             {
@@ -117,51 +117,93 @@ export default defineConfig({
         ],
         sidebar: [
             {
-                text: 'Guide',
+                text: 'Get started',
                 items: [
                     { text: 'What is ktor-svelte?', link: '/guide/introduction' },
-                    { text: 'Compared with other setups', link: '/guide/comparison' },
-                    { text: 'Getting started', link: '/guide/getting-started' },
+                    { text: 'Quick start', link: '/guide/getting-started' },
                     { text: 'Configurator', link: '/guide/configurator' },
                     { text: 'Tutorial: a notes app', link: '/guide/tutorial' },
                     { text: 'Add to an existing project', link: '/guide/existing-project' },
                     { text: 'Project structure', link: '/guide/project-structure' },
-                    { text: 'Dev workflow', link: '/guide/dev-workflow' },
-                    { text: 'Deployment', link: '/guide/deployment' },
-                    { text: 'Browser tests', link: '/guide/browser-tests' },
+                    { text: 'Compared with other setups', link: '/guide/comparison' },
                     { text: 'Examples', link: '/examples' }
                 ]
             },
             {
-                text: 'Features',
+                text: 'Everything it does',
+                items: [{ text: 'All features at a glance', link: '/features/' }]
+            },
+            {
+                text: 'Kotlin to TypeScript',
+                collapsed: false,
                 items: [
                     { text: 'Generated TypeScript', link: '/features/typescript' },
-                    { text: 'Generator playground', link: '/features/playground' },
                     { text: 'Calling the API', link: '/features/calling-the-api' },
-                    { text: 'Validation', link: '/features/validation' },
-                    { text: 'Transport and compression', link: '/features/transport' },
-                    { text: 'Auth', link: '/features/auth' },
-                    { text: 'Runtime config', link: '/features/runtime-config' },
-                    { text: 'Built-in endpoints', link: '/features/endpoints' },
-                    { text: 'Frontend libraries', link: '/features/frontend-libraries' },
+                    { text: 'Validation and forms', link: '/features/validation' },
                     { text: 'Typed routes', link: '/features/routes' },
-                    { text: 'Security', link: '/security' }
+                    { text: 'Runtime config', link: '/features/runtime-config' },
+                    { text: 'Generator playground', link: '/features/playground' }
+                ]
+            },
+            {
+                text: 'Frontend',
+                collapsed: false,
+                items: [
+                    { text: 'Frontend libraries', link: '/features/frontend-libraries' },
+                    { text: 'Styling and themes', link: '/features/styling' },
+                    { text: 'Icons and images', link: '/features/icons-and-images' },
+                    { text: 'Charts', link: '/features/charts' },
+                    { text: 'Languages (i18n)', link: '/features/i18n' },
+                    { text: 'Components', link: '/features/components' },
+                    { text: 'Installable app', link: '/features/installable-app' }
+                ]
+            },
+            {
+                text: 'Users and security',
+                collapsed: false,
+                items: [
+                    { text: 'Users, permissions and sign-in', link: '/features/auth' },
+                    { text: 'Security', link: '/security' },
+                    { text: 'Built-in endpoints', link: '/features/endpoints' },
+                    { text: 'Transport and compression', link: '/features/transport' }
+                ]
+            },
+            {
+                text: 'Develop and test',
+                collapsed: false,
+                items: [
+                    { text: 'Dev workflow', link: '/guide/dev-workflow' },
+                    { text: 'Checks and tooling', link: '/guide/checks-and-tooling' },
+                    { text: 'Browser tests', link: '/guide/browser-tests' }
+                ]
+            },
+            {
+                text: 'Ship and run',
+                collapsed: false,
+                items: [
+                    { text: 'Deployment', link: '/guide/deployment' },
+                    { text: 'Monitoring', link: '/guide/monitoring' }
                 ]
             },
             {
                 text: 'Recipes',
-                collapsed: false,
+                collapsed: true,
                 items: [
                     { text: 'Overview', link: '/recipes/' },
+                    { text: 'CRUD pages in minutes', link: '/recipes/crud-in-minutes' },
                     { text: 'Sign in with a session cookie', link: '/recipes/sessions' },
+                    { text: 'Roles and an admin area', link: '/recipes/role-based-app' },
+                    { text: 'Add an admin area', link: '/recipes/admin-area' },
                     { text: 'Upload files', link: '/recipes/uploads' },
-                    { text: 'Stream live updates', link: '/recipes/live-updates' },
+                    { text: 'Search as you type', link: '/recipes/search-as-you-type' },
                     { text: 'Page through long lists', link: '/recipes/pagination' },
-                    { text: 'Add an admin area', link: '/recipes/admin-area' }
+                    { text: 'Stream live updates', link: '/recipes/live-updates' },
+                    { text: 'A site in several languages', link: '/recipes/multilingual-site' }
                 ]
             },
             {
                 text: 'Reference',
+                collapsed: true,
                 items: [
                     { text: 'Ktor settings', link: '/reference/ktor' },
                     { text: 'Gradle settings and tasks', link: '/reference/gradle' },
