@@ -477,4 +477,34 @@ class GeneratedClientBehaviourTest {
         assertEquals(listOf(0, 1), counts("duringWrite"))
         assertEquals(listOf(0, 1, 0, 1, 0), counts("all"))
     }
+
+    @Test
+    fun `password strength checks the same parts the server checks`() {
+        val runtime = bun()
+        assumeTrue(runtime != null, "bun is not on PATH")
+        val files = TypeScriptGenerator(listOf("/api")).generate("""{"openapi":"3.1.1","info":{"title":"t","version":"1"},"paths":{}}""")
+        listOf("client.ts", "form.ts").forEach { dir.resolve(it).writeText(files.getValue(it)) }
+        val script = dir.resolve("strength.ts")
+        script.writeText(
+            "import { passwordStrength } from './form.ts';\n" +
+                "console.log(JSON.stringify(['', 'short1A', 'alllowercase1', 'Correct1horse'].map((password) => {\n" +
+                "    const strength = passwordStrength(password);\n" +
+                "    const missing = strength.missing.map((rule) => rule.requirement);\n" +
+                "    return { score: strength.score, strong: strength.strong, missing };\n" +
+                "})));\n",
+        )
+        val process = ProcessBuilder(runtime!!.path, script.path).directory(dir).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertEquals(true, process.waitFor(60, TimeUnit.SECONDS), output)
+        assertEquals(0, process.exitValue(), output)
+        val results = Json.parseToJsonElement(output.lines().last { it.startsWith("[") }).jsonArray.map { it.jsonObject }
+
+        fun missing(index: Int) = results[index].getValue("missing").jsonArray.map { it.jsonPrimitive.content }
+        assertEquals(listOf("at least 10 characters", "a lowercase letter", "an uppercase letter", "a digit"), missing(0))
+        assertEquals(listOf("at least 10 characters"), missing(1))
+        assertEquals(listOf("an uppercase letter"), missing(2))
+        assertEquals(emptyList(), missing(3))
+        assertEquals("true", results[3].getValue("strong").jsonPrimitive.content)
+        assertEquals("0.75", results[2].getValue("score").jsonPrimitive.content)
+    }
 }

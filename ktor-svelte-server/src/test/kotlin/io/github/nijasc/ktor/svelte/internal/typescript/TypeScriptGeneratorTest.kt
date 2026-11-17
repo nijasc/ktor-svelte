@@ -765,6 +765,15 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `the password rules the server enforces are in the client, part by part`() {
+        val form = generate().getValue("form.ts")
+        assertContains(form, "export const passwordRules: readonly PasswordRule[] = [")
+        assertContains(form, "    { pattern: '[A-Z]', requirement: 'an uppercase letter' },")
+        assertContains(form, "export function passwordStrength(password: string): PasswordStrength {")
+        assertContains(form, "export const passwordMessage = 'Must have at least 10 characters")
+    }
+
+    @Test
     fun `validate mirrors the server rules and messages`() {
         val source =
             types(

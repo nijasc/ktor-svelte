@@ -159,7 +159,7 @@ internal class TypeScriptGenerator(
             "client.ts" to typeScriptTemplate(
                 "client.ts",
             ) + loginPageSource() + (errorReportPath?.let { "\nreportErrors('$it');\n" } ?: "") + (vitalsCall?.let { "\n$it\n" } ?: ""),
-            "form.ts" to typeScriptTemplate("form.ts"),
+            "form.ts" to typeScriptTemplate("form.ts") + passwordRulesSource(),
             FORM_STATE_FILE to typeScriptTemplate(FORM_STATE_FILE),
             PENDING_WRITES_FILE to typeScriptTemplate(PENDING_WRITES_FILE),
             "types.ts" to
@@ -1068,6 +1068,22 @@ internal class TypeScriptGenerator(
     }
 
     private fun errorCodeType(): String = constantUnion(ERROR_CODE_TYPE, errorCodes)
+
+    private fun passwordRulesSource(): String {
+        val rules =
+            RulePresets.strongPassword.checks.joinToString("") { check ->
+                "    { pattern: ${literal(JsonPrimitive(check.pattern))}, requirement: ${literal(JsonPrimitive(check.requirement))} },\n"
+            }
+        return "\nexport interface PasswordRule {\n    readonly pattern: string;\n    readonly requirement: string;\n}\n\n" +
+            "export const passwordRules: readonly PasswordRule[] = [\n$rules];\n\n" +
+            "export const passwordMessage = ${literal(JsonPrimitive(RulePresets.strongPassword.message))};\n\n" +
+            "export interface PasswordStrength {\n    readonly met: readonly PasswordRule[];\n" +
+            "    readonly missing: readonly PasswordRule[];\n    readonly score: number;\n    readonly strong: boolean;\n}\n\n" +
+            "export function passwordStrength(password: string): PasswordStrength {\n" +
+            "    const met = passwordRules.filter((rule) => new RegExp(rule.pattern).test(password));\n" +
+            "    const missing = passwordRules.filter((rule) => !met.includes(rule));\n" +
+            "    return { met, missing, score: met.length / passwordRules.length, strong: missing.length === 0 };\n}\n"
+    }
 
     private fun constantUnion(
         name: String,
