@@ -118,7 +118,7 @@ internal fun leakReport(leaks: List<SecretLeak>): String {
 }
 
 @UntrackedTask(because = "Compares the frontend build with secret values from the environment and from .env files")
-public abstract class SvelteVerifySecretsTask : DefaultTask() {
+public abstract class SvelteVerifyLeaksTask : DefaultTask() {
     @get:Internal
     public abstract val buildOutput: DirectoryProperty
 

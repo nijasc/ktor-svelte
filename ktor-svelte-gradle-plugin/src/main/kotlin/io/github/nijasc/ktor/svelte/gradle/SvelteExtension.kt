@@ -16,7 +16,7 @@ public abstract class SvelteExtension {
     public abstract val addRuntimeDependency: Property<Boolean>
     public abstract val includeSourceMaps: Property<Boolean>
     public abstract val precompress: Property<Boolean>
-    public abstract val verifySecrets: Property<Boolean>
+    public abstract val verifyLeaks: Property<Boolean>
     public abstract val shortTaskNames: Property<Boolean>
 
     @get:Nested

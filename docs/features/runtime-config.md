@@ -101,7 +101,7 @@ The generating run starts the app without your environment. It therefore does no
 
 Everything in the frontend build is sent to browsers. A secret gets in there easily: a server-only variable imported in a component, a key pasted into a config file, a `.env` value Vite was told to expose. Nothing fails, and the key is public from the next deploy on.
 
-`svelteVerifySecrets` runs after `svelteBuild`, before the build is packed into the JAR, and looks for secret values in the built files. When it finds one, the build fails:
+`svelteVerifyLeaks` runs after `svelteBuild`, before the build is packed into the JAR, and looks for secret values in the built files. When it finds one, the build fails:
 
 ```text
 ktor-svelte found secret values in the frontend build. Everything in that folder is sent to browsers.
@@ -123,7 +123,7 @@ The check can only find a secret whose value it knows. On a build server that do
 
 ```kotlin
 svelte {
-    verifySecrets = false
+    verifyLeaks = false
 }
 ```
 

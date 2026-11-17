@@ -27,11 +27,11 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyApiRoutesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLeaksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLoadsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyMessagesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyRoutesTask
-import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySecretsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifySyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyTsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.ToolVersionSource
@@ -101,8 +101,8 @@ public class KtorSveltePlugin : Plugin<Project> {
         val install = registerInstall(project, extension, skipFrontend)
         val build = registerBuild(project, extension, install, skipFrontend)
         val bundle = registerBundle(project, extension, build, skipFrontend)
-        val verifySecrets =
-            project.tasks.register("svelteVerifySecrets", SvelteVerifySecretsTask::class.java) { task ->
+        val verifyLeaks =
+            project.tasks.register("svelteVerifyLeaks", SvelteVerifyLeaksTask::class.java) { task ->
                 task.group = TASK_GROUP
                 task.description = "Fails when a secret value from the environment or a .env file is in the frontend build."
                 task.dependsOn(build)
@@ -110,10 +110,10 @@ public class KtorSveltePlugin : Plugin<Project> {
                 task.projectDirectory.set(project.layout.projectDirectory)
                 task.frontendDir.set(extension.frontendDir)
                 task.publicNames.set(extension.buildEnv)
-                val enabled = extension.verifySecrets
-                task.onlyIf("svelte.verifySecrets is on and the frontend is built") { !skipFrontend && enabled.get() }
+                val enabled = extension.verifyLeaks
+                task.onlyIf("svelte.verifyLeaks is on and the frontend is built") { !skipFrontend && enabled.get() }
             }
-        bundle.configure { it.dependsOn(verifySecrets) }
+        bundle.configure { it.dependsOn(verifyLeaks) }
         registerDev(project, extension, install)
         registerUtilityTasks(project, extension, install)
         registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
@@ -165,7 +165,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("addRuntimeDependency", extension.addRuntimeDependency.map { it.toString() })
             settings.put("includeSourceMaps", extension.includeSourceMaps.map { it.toString() })
             settings.put("precompress", extension.precompress.map { it.toString() })
-            settings.put("verifySecrets", extension.verifySecrets.map { it.toString() })
+            settings.put("verifyLeaks", extension.verifyLeaks.map { it.toString() })
             settings.put("shortTaskNames", extension.shortTaskNames.map { it.toString() })
             settings.put("dev.port", extension.dev.port.map { it.toString() })
             settings.put("dev.script", extension.dev.script)
@@ -701,7 +701,7 @@ public class KtorSveltePlugin : Plugin<Project> {
         extension.addRuntimeDependency.convention(true)
         extension.includeSourceMaps.convention(false)
         extension.precompress.convention(true)
-        extension.verifySecrets.convention(true)
+        extension.verifyLeaks.convention(true)
         extension.shortTaskNames.convention(true)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
