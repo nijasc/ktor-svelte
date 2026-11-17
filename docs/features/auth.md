@@ -121,12 +121,58 @@ currentUser<User>(signInMessage = { call -> call.messages.signInFirst() }) {
 
 To have the 401 in the generated types of your routes, declare it once with `errorResponse<YourError>(HttpStatusCode.Unauthorized)`.
 
-## Expired sessions
+## The login page
 
-In the browser, react to expired sessions in one place:
+Someone opens a link to a page that needs a session, or their session ends while they fill in a form. Both should end the same way: at the login page, and after signing in, back where they were. Say where the login page is:
 
-```ts
-apiConfig.onUnauthorized = () => goto('/login');
+```kotlin no-check
+install(Svelte) {
+    loginPage = "/login"
+}
 ```
+
+With [typed routes](routes.md) that is `loginPage = FrontendRoutes.login`. Three things follow from it.
+
+**A 401 from the API opens the login page.** The generated client sends the browser to `/login?next=...`, with the page the visitor was on. There is no `apiConfig.onUnauthorized` to write. It does not happen on the login page itself, where a 401 means a wrong password, and not for calls made with `silent: true`. If you do set `apiConfig.onUnauthorized`, yours runs instead.
+
+**The server's redirect carries the page too.** Use it where Ktor's authentication turns a visitor away:
+
+```kotlin no-check
+install(Authentication) {
+    session<UserSession>("session") {
+        validate { session -> users.find(session.userId)?.let { session } }
+        challenge {
+            if (call.request.path().startsWith("/api/")) call.respond(HttpStatusCode.Unauthorized) else call.respondLoginRedirect()
+        }
+    }
+}
+```
+
+`respondLoginRedirect()` answers with a redirect to `/login?next=%2Fboard` for a visitor who asked for `/board`.
+
+**After signing in, go back.** `afterLogin` reads the page from the address, and takes your fallback when there is none:
+
+```ts no-check
+import { goto } from '$app/navigation';
+import { afterLogin, api } from '#api';
+
+await api.session.create(draft);
+await goto(afterLogin('/board'));
+```
+
+A layout that protects its pages in the browser builds the same address with `loginPath`:
+
+```ts no-check
+import { redirect } from '@sveltejs/kit';
+import { currentUser, loginPath } from '#api';
+
+export const load = async ({ url }) => {
+    const user = await currentUser.load();
+    if (!user) redirect(307, loginPath(url));
+    return { user };
+};
+```
+
+Only a path inside your app is accepted as the page to go back to. An address of another site in `next` is ignored on both sides, so a crafted link to your login page cannot send someone elsewhere after they sign in.
 
 In development mode, `svelte(public = ...)` also opens the paths Vite needs, so hot reload works on your login page.

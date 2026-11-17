@@ -76,7 +76,7 @@ The first start creates two people, `ada@example.com` as admin and `grace@exampl
 | `src/main/kotlin/showcase/Database.kt`, `src/main/resources/db/migration/` | Exposed on an embedded H2 database, with Flyway migrations |
 | `src/main/kotlin/showcase/TaskRoutes.kt` | Paged and filtered lists, typed errors in the language of the person, multipart uploads with a size and type check, and downloads that browsers never run as a page |
 | `src/main/kotlin/showcase/Model.kt` | `@JsonSchema` bounds, `Validated` rules and a sealed `Activity` that becomes a TypeScript union |
-| `frontend/src/lib/session.svelte.ts`, `frontend/src/routes/+layout.ts` | One place that knows who is signed in, and `apiConfig.onUnauthorized` |
+| `src/main/kotlin/showcase/Application.kt`, `frontend/src/routes/+layout.svelte` | `currentUser<User>` and `loginPage`, declared once, and the generated `currentUser` store that the header reads |
 | `frontend/src/routes/(app)/+layout.ts` | A layout group for the pages that need a session |
 | `frontend/src/routes/(app)/board/+page.svelte` | Search as you type with `latest`, filters, "load more" with a cursor, and `prefetchOnHover` |
 | `frontend/src/routes/(app)/tasks/[id]/+page.svelte` | Uploads with a progress bar, comments, `Activity.match` and a confirm dialog |
