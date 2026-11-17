@@ -104,6 +104,31 @@ Most pages show the first page and load more on request:
 {/if}
 ```
 
+## Show how many there are
+
+Counting every row is often the slowest part of a list, so a page only carries a total when the client asks for it with `?total=true`. `page.total { }` runs your count only then:
+
+```kotlin
+getPage<Note>("/api/notes/all") { page ->
+    val rows = store.page(page.cursor, page.limit)
+    Page(rows.items, rows.next, total = page.total { store.count().toLong() })
+}
+```
+
+```ts no-check
+import { api } from '#api';
+
+const first = await api.notes.all({ total: true });
+const heading = `${first.total} notes`;
+```
+
+| Asked with | `page.wantsTotal` | `total` in the answer |
+| --- | --- | --- |
+| no `total` | `false` | left out, your count is never run |
+| `?total=true` or `?total=1` | `true` | the number your block returns |
+
+Ask for it on the first page only, and keep the number while you load more. `Page.total` is a `Long?`; in TypeScript it is `total?: number | null` on every page type, including the one `pages()` reads.
+
 ## With filters
 
 A paged route that reads more query parameters, such as a filter, is written by hand. `getPage` only does what these lines do:

@@ -482,7 +482,7 @@ get("/api/notes/feed") {
 }
 ```
 
-`getPage` writes those lines for you and reads `cursor` and `limit`. See [Page through long lists](../recipes/pagination.md) for its settings and for paging an Exposed query.
+`getPage` writes those lines for you and reads `cursor`, `limit` and `total`. A page carries a total count only when the client asks with `total: true`, see [Show how many there are](../recipes/pagination.md#show-how-many-there-are). See [Page through long lists](../recipes/pagination.md) for its settings and for paging an Exposed query.
 
 `pages` turns any such endpoint into an async iterator that fetches one page at a time, typed from the endpoint:
 
