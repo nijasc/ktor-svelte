@@ -604,6 +604,23 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `while the first page loads the table shows placeholder rows shaped like its columns`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val held = java.util.concurrent.CopyOnWriteArrayList<Route>()
+        page.route("**/api/tasks?*") { route -> held += route }
+        page.navigationLink("Admin").click()
+        val skeleton = page.locator("#all-tasks tbody tr[data-skeleton]")
+        assertThat(skeleton).hasCount(3)
+        assertThat(skeleton.first().locator("td")).hasCount(4)
+        assertThat(skeleton.first()).hasAttribute("aria-hidden", "true")
+        page.waitForCondition { held.isNotEmpty() }
+        page.unroute("**/api/tasks?*")
+        held.forEach { it.resume() }
+        assertThat(skeleton).hasCount(0)
+        assertThat(page.locator("#all-tasks tbody tr").first()).isVisible()
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)

@@ -37,6 +37,7 @@
         workingText?: (done: number, total: number) => string;
         doneText?: (worked: number, total: number) => string;
         empty?: string;
+        skeletonRows?: number;
         noResults?: string;
         filtered?: boolean;
         emptyAction?: Snippet;
@@ -73,6 +74,7 @@
         workingText = (done: number, total: number) => `Working: ${done} of ${total}`,
         doneText = (worked: number, total: number) => `Done: ${worked} of ${total} worked.`,
         empty = 'Nothing here yet.',
+        skeletonRows = 3,
         noResults = 'Nothing matches this filter.',
         filtered,
         emptyAction,
@@ -398,6 +400,16 @@
             </tr>
         </thead>
         <tbody>
+            {#if busy && items.length === 0}
+                {#each Array.from({ length: skeletonRows }, (_, index) => index) as placeholder (placeholder)}
+                    <tr aria-hidden="true" data-skeleton>
+                        {#if selectable}<td class="w-8"></td>{/if}
+                        {#each shown as column (columnId(column))}
+                            <td class={column.class}><span class="skeleton block h-4 w-full"></span></td>
+                        {/each}
+                    </tr>
+                {/each}
+            {/if}
             {#each rows as item, index (key ? key(item) : index)}
                 <tr>
                     {#if selectable}

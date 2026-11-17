@@ -53,6 +53,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 129 | Row selection and bulk actions | #359 |
 | 130 | Sorting by header click | #360 |
 | 131 | Empty states | #361 |
+| 132 | Skeleton rows | #363 |
 
 ### Next up
 
@@ -190,7 +191,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 132 | Skeleton rows | Small | 14 |
 | 133 | Virtual scrolling | Large | 14 |
 | 134 | Keyboard navigation | Medium | 14 |
 | 135 | Breadcrumb component | Small | 14 |
