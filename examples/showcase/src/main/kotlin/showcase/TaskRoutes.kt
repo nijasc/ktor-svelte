@@ -5,6 +5,7 @@ import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.Patch
 import io.github.nijasc.ktor.svelte.ToastKind
 import io.github.nijasc.ktor.svelte.can
+import io.github.nijasc.ktor.svelte.includes
 import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.query
 import io.github.nijasc.ktor.svelte.queryOf
@@ -73,7 +74,9 @@ fun Route.taskRoutes(
             val filter = TaskFilter(query.search, query.status, query.label, viewer.id.takeIf { query.mine })
             val page: Page<Task> = tasks.page(filter, query.cursor, query.limit)
             call.respond(page)
-        }.queryOf<TaskQuery>().sparseFields<Task>()
+        }.queryOf<TaskQuery>()
+            .sparseFields<Task>()
+            .includes<Task> { relation<Comment?>("lastComment") { items -> tasks.lastComments(items.map { it.id }) } }
 
         post {
             val input = call.receive<TaskInput>()

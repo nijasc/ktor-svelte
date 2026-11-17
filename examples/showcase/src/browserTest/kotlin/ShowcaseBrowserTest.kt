@@ -658,6 +658,19 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the task list adds the last comment of each task when it is asked for`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val answer = page.request().get("/api/tasks?fields=id&include=lastComment")
+        assertEquals(200, answer.status())
+        val items =
+            (kotlinx.serialization.json.Json.parseToJsonElement(answer.text()) as kotlinx.serialization.json.JsonObject)
+                .getValue("items") as kotlinx.serialization.json.JsonArray
+        assertTrue(items.isNotEmpty())
+        items.forEach { item -> assertEquals(setOf("id", "lastComment"), (item as kotlinx.serialization.json.JsonObject).keys) }
+        assertEquals(400, page.request().get("/api/tasks?include=everything").status())
+    }
+
+    @Test
     fun `a long table renders only the rows in view and loads more while scrolling`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         val asked = java.util.concurrent.CopyOnWriteArrayList<String>()

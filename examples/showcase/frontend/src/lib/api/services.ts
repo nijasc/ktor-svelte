@@ -1,5 +1,5 @@
 import { ApiError, request, codeMessages, errorCode, type RequestOptions } from './client.js';
-import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, EmailPreview, ErrorCode, FieldCheckAnswer, Greeting, Login, LucideIcon, PasswordChange, Priority, Problem, ProfileInput, PublicConfig, Registration, RoleChange, Status, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
+import type { ActiveChange, Activity, Attachment, BoardStats, Comment, CommentInput, EmailPreview, ErrorCode, FieldCheckAnswer, Greeting, IsoDateTime, Login, LucideIcon, PasswordChange, Priority, Problem, ProfileInput, PublicConfig, Registration, RoleChange, Status, StatusChange, Task, TaskInput, User, UserRef } from './types.js';
 
 /** @see showcase/Auth.kt */
 export const adminGetEmailsWelcome = (query?: { name?: string }, options?: RequestOptions) => request<EmailPreview>('GET', '/api/admin/emails/welcome', { ...options, query, operation: 'admin.getEmailsWelcome' });
@@ -95,17 +95,25 @@ export const stats = {
 
 /** @see showcase/TaskRoutes.kt */
 export const tasksList: {
-    <F extends 'id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version' = 'id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version'>(query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly F[] }, options?: RequestOptions): Promise<{
-    items: Pick<Task, F>[];
+    <F extends 'id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version' = 'id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version', I extends 'lastComment' = never>(query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly F[]; include?: readonly I[] }, options?: RequestOptions): Promise<{
+    items: (Pick<Task, F> & Pick<{ lastComment: {
+    id: number;
+    author: {
+        id: number;
+        name: string;
+    };
+    body: string;
+    createdAt: IsoDateTime;
+} | null }, I>)[];
     next?: string | null;
     total?: number | null;
 }>;
-    (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly ('id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version')[] }, options?: RequestOptions): Promise<{
+    (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly ('id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version')[]; include?: readonly ('lastComment')[] }, options?: RequestOptions): Promise<{
     items: Task[];
     next?: string | null;
     total?: number | null;
 }>;
-} = (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly ('id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version')[] }, options?: RequestOptions) => request<{
+} = (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly ('id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version')[]; include?: readonly ('lastComment')[] }, options?: RequestOptions) => request<{
     items: Task[];
     next?: string | null;
     total?: number | null;

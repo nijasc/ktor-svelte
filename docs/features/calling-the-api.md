@@ -10,7 +10,7 @@ Call your Ktor routes from Svelte components and SvelteKit load functions throug
 |---|---|
 | [Basics](#basics) | [Quick start](#quick-start), [In components](#in-components), [In load functions](#in-load-functions), [Generated page loads](#generated-page-loads), [Inline page data](#inline-page-data), [Request options](#request-options), [Client settings](#client-settings), [Import single functions](#import-single-functions), [Find the Kotlin route of a call](#find-the-kotlin-route-of-a-call) |
 | [Errors](#errors) | [Typed errors](#typed-errors), [Error codes](#error-codes), [Errors from StatusPages](#errors-from-statuspages), [Show errors automatically](#show-errors-automatically), [Ask before a call](#ask-before-a-call), [Request IDs](#request-ids) |
-| [Reading data](#reading-data) | [Query parameters as a class](#query-parameters-as-a-class), [Share identical requests](#share-identical-requests), [Prefetch on hover](#prefetch-on-hover), [Search as you type](#search-as-you-type), [Paged lists](#paged-lists), [Only some fields](#only-some-fields), [Event streams](#event-streams) |
+| [Reading data](#reading-data) | [Query parameters as a class](#query-parameters-as-a-class), [Share identical requests](#share-identical-requests), [Prefetch on hover](#prefetch-on-hover), [Search as you type](#search-as-you-type), [Paged lists](#paged-lists), [Only some fields](#only-some-fields), [Included relations](#included-relations), [Event streams](#event-streams) |
 | [Writing data](#writing-data) | [Refresh the page after a write](#refresh-the-page-after-a-write), [Changing some fields](#changing-some-fields), [Two people, one record](#two-people-one-record), [Writes that are safe to send twice](#writes-that-are-safe-to-send-twice), [Uploads](#uploads) |
 | [The server talks back](#the-server-talks-back) | [Toasts from the server](#toasts-from-the-server), [Navigation from the server](#navigation-from-the-server), [Reload after a deploy](#reload-after-a-deploy), [The visitor's time zone](#the-visitor-s-time-zone) |
 | [Slow and flaky networks](#slow-and-flaky-networks) | [Timeouts](#timeouts), [Retries](#retries), [Rate limits](#rate-limits) |
@@ -597,6 +597,42 @@ The first line compiles; the second does not, since `body` was not asked for and
 - Routes without `sparseFields` ignore a `fields` parameter.
 - Passed on as a value, such as `load={api.tasks.list}` for a table, the call keeps the full type, and `fields` can still go into the table's `query`.
 - The trimming happens after the answer is serialized, so the handler does not change. To save the database work too, read the asked fields in the handler and load less.
+
+### Included relations
+
+A page that shows tasks with their latest comment would otherwise make one call for the tasks and one per task for the comments. Let the route add related objects on request instead:
+
+```kotlin
+get("/api/notes/feed") {
+    call.respond(store.page(call.queryParameters["cursor"], limit = 20))
+}.includes<Note> {
+    relation<User?>("author") { notes -> notes.map { users.find(it.id.toString()) } }
+}
+```
+
+```ts no-check
+const feed = await api.notes.getFeed({ include: ['author'] });
+feed.items[0].author?.name;
+const plain = await api.notes.getFeed();
+plain.items[0].author;
+```
+
+The field `author` exists in the type only when it was asked for: the second access does not compile.
+
+- The resolver gets all items of the answer at once, typed, and returns one value per item, in the same order. So it can load every author with one query. A wrong number of values is an error that says so.
+- The server reads `?include=author` (comma-separated or repeated), refuses a relation the route does not declare with 400 and the list of those it has, and adds the values to each item of a list, of one object, or of the `items` of a page.
+- A relation is computed only when it was asked for.
+- It works together with [only some fields](#only-some-fields): `?fields=id,title&include=author` sends the two fields and the author.
+- A relation may not have the name of a field of the class. The relation's values are serialized with the default `Json` settings.
+
+### How the types follow the query
+
+Both features are declared on the route, so the generator knows what can be asked for, from an `x-ktor-svelte-fields` and an `x-ktor-svelte-include` entry in the route's OpenAPI description. The generated call has two signatures:
+
+- one generic over the asked fields and relations, which returns `Pick<Task, F> & Pick<{ lastComment: Comment | null }, I>` wherever the answer holds a task,
+- and one with the full type, which TypeScript uses when the call is passed on as a value, such as `load={api.tasks.list}`.
+
+Without `fields` and `include`, the type is the full class without relations, as for any other route.
 
 ### Event streams
 
