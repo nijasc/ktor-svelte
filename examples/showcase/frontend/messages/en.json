@@ -169,5 +169,7 @@
   "table-selected": "{count} selected",
   "table-working": "Working: {done} of {total}",
   "table-done": "Done: {worked} of {total} worked.",
-  "table-mark-done": "Mark as done"
+  "table-mark-done": "Mark as done",
+  "table-no-results": "Nothing matches this search.",
+  "admin-search-tasks": "Search tasks"
 }

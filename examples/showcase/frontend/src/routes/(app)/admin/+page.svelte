@@ -9,6 +9,7 @@
     let { data }: PageProps = $props();
 
     let users = $derived<User[]>(data.users);
+    let search = $state('');
     const statusLabels: Record<Status, () => string> = { TODO: m.statusTodo, DOING: m.statusDoing, DONE: m.statusDone };
 
     function replace(user: User) {
@@ -84,9 +85,13 @@
 
 <h2 class="mb-3 mt-10 text-xl font-semibold">{m.adminTasks()}</h2>
 <div id="all-tasks" class="max-w-3xl">
+    <label class="input input-sm mb-2">
+        <span class="sr-only">{m.adminSearchTasks()}</span>
+        <input id="task-search" type="search" placeholder={m.adminSearchTasks()} bind:value={search} />
+    </label>
     <DataTable
         load={api.tasks.list}
-        query={{ limit: 5 }}
+        query={{ limit: 5, search: search || undefined }}
         paging="pages"
         key={(task) => task.id}
         columns={[
@@ -95,6 +100,7 @@
             { key: 'createdAt', label: m.taskCreatedBy(), text: (task) => `${task.creator.name}, ${formatDateTime(task.createdAt)}` }
         ]}
         empty={m.tableEmpty()}
+        noResults={m.tableNoResults()}
         loading={m.tableLoading()}
         previous={m.tablePrevious()}
         next={m.tableNext()}
