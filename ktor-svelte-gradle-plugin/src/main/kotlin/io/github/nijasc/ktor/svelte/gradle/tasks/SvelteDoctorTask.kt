@@ -79,6 +79,8 @@ internal class SetupDoctor(
     private val nodeVersion: () -> String? = ::installedNodeVersion,
     private val bunVersion: String? = null,
     private val environment: (String) -> String? = System::getenv,
+    private val userHome: File? = System.getProperty("user.home")?.let(::File),
+    private val registryProbe: ((NetworkSettings) -> RegistryAnswer)? = ::probeRegistry,
 ) {
     private val pinnedBun = bunVersion != null && (packageManager == PackageManager.Auto || packageManager == PackageManager.Bun)
 
@@ -101,7 +103,7 @@ internal class SetupDoctor(
             dependenciesInstalled(manifest),
             extraCertificates(),
             port(),
-        )
+        ) + networkFindings(networkSettings(frontend, environment, userHome), registryProbe)
     }
 
     fun fix(): List<String> = examine().mapNotNull { it.fix?.invoke() }
@@ -418,6 +420,9 @@ public abstract class SvelteDoctorTask : DefaultTask() {
     @get:Option(option = "fix", description = "Applies the fixes that are safe to make without asking")
     public abstract val fix: Property<Boolean>
 
+    @get:Input
+    public abstract val offline: Property<Boolean>
+
     @TaskAction
     public fun examine() {
         val doctor =
@@ -428,6 +433,7 @@ public abstract class SvelteDoctorTask : DefaultTask() {
                 outputDir.get(),
                 bundleDirectory.orNull?.asFile,
                 bunVersion = bunVersion.orNull,
+                registryProbe = if (offline.getOrElse(false)) null else ::probeRegistry,
             )
         val applied = if (fix.getOrElse(false)) doctor.fix() else emptyList()
         applied.forEach { logger.lifecycle("FIXED $it") }

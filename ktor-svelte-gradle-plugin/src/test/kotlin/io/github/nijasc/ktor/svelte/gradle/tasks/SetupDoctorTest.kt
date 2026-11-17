@@ -67,6 +67,8 @@ class SetupDoctorTest {
         isPortFree = { portFree },
         nodeVersion = { node },
         environment = { environment[it] },
+        userHome = null,
+        registryProbe = { RegistryAnswer.Answered(200) },
     ).examine()
 
     private fun List<Finding>.messagesAt(severity: Severity) = filter { it.severity == severity }.map { it.message }
