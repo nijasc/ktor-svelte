@@ -227,7 +227,7 @@ class ProductionFeaturesTest {
     @Test
     fun `client calls onUnauthorized and generator leaves config out by default`() {
         val generated = TypeScriptGenerator(listOf("/api")).generate("""{"paths":{}}""")
-        assertContains(generated.getValue("client.ts"), "apiConfig.onUnauthorized?.(response)")
+        assertContains(generated.getValue("client.ts"), "if (apiConfig.onUnauthorized) apiConfig.onUnauthorized(response);")
         assertFalse(generated.getValue("services.ts").contains("loadPublicConfig"))
     }
 
