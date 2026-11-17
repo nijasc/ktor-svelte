@@ -301,10 +301,13 @@ data class Article(
     @JsonSchema.ReadOnly val stamps: Stamps? = null,
 )
 
-fun newArticle(title: String, author: String) = Article(title, Stamps.created(by = author))
+fun newArticle(title: String, author: String): Article {
+    return Article(title, Stamps.created(by = author))
+}
 
-fun renamed(article: Article, title: String, editor: String) =
-    article.copy(title = title, stamps = article.stamps?.touched(by = editor))
+fun renamed(article: Article, title: String, editor: String): Article {
+    return article.copy(title = title, stamps = article.stamps?.touched(by = editor))
+}
 ```
 
 | Field | Set by | Type in TypeScript |
