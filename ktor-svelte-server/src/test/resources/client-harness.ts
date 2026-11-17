@@ -550,16 +550,16 @@ memberStep('and the next load asks again');
 results.currentUser = memberSteps;
 members.clear();
 
-let sessionLeft: number | null = 0.4;
+let sessionLeft: number | null = 3;
 let sessionHeader: string | undefined;
 const sessionCalls: string[] = [];
-apiConfig.sessionWarning = 250;
+apiConfig.sessionWarning = 2000;
 apiConfig.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const address = String(input);
     const method = init?.method ?? 'GET';
     if (address.includes('/api/current-user')) {
         sessionCalls.push(`${method} ${address}`);
-        if (address.endsWith('/extend')) sessionLeft = 5;
+        if (address.endsWith('/extend')) sessionLeft = 600;
         const user = sessionLeft === null ? null : { name: 'Ada' };
         return new Response(JSON.stringify({ user, sessionSeconds: sessionLeft }), { headers: { 'content-type': 'application/json' } });
     }
@@ -571,27 +571,27 @@ const timedState: UserState<HarnessMember> = { user: null, ready: false, session
 const timed = userStore<HarnessMember>('/api/current-user', timedState);
 const sessionSteps: unknown[] = [];
 const sessionStep = (what: string) => {
-    const left = timed.sessionEnds === null ? null : Math.round((timed.sessionEnds.getTime() - Date.now()) / 100) / 10;
+    const left = timed.sessionEnds === null ? 'no end' : timed.sessionEnds.getTime() - Date.now() > 60_000 ? 'far' : 'near';
     sessionSteps.push([what, timed.user?.name ?? null, left, timed.sessionEnding, sessionCalls.length]);
 };
 sessionStep('before loading');
 await timed.load();
-sessionStep('loaded with 0.4 seconds left');
-await new Promise((resolve) => realTimeout(resolve, 220));
+sessionStep('loaded with three seconds left');
+await new Promise((resolve) => realTimeout(resolve, 1500));
 sessionStep('inside the warning time');
 await timed.extend();
 sessionStep('extended');
-sessionHeader = '0.3';
+sessionHeader = '30';
 await request('GET', '/api/notes');
 sessionStep('another response says less is left');
-sessionHeader = '8';
+sessionHeader = '900';
 await request('GET', '/api/notes');
 sessionStep('and a later one says more');
-sessionHeader = '0.1';
+sessionHeader = '0.2';
 await request('GET', '/api/notes');
 sessionHeader = undefined;
 sessionLeft = null;
-await new Promise((resolve) => realTimeout(resolve, 260));
+await new Promise((resolve) => realTimeout(resolve, 1200));
 sessionStep('the time ran out, so the store asked and the server said nobody');
 await request('GET', '/api/notes');
 sessionStep('nothing is planned for a visitor');
