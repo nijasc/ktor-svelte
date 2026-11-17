@@ -8,19 +8,26 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.hide
+import io.ktor.server.routing.post
 import io.ktor.util.AttributeKey
 import io.ktor.util.reflect.TypeInfo
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.Serializable
+import java.time.Duration
+import java.time.Instant
 import kotlin.reflect.KClass
 
 internal const val USER_HEADER = "X-Ktor-Svelte-User"
 internal const val USER_CHANGED = "changed"
 internal const val CURRENT_USER_ROUTE = "current-user"
 
+internal const val SESSION_HEADER = "X-Ktor-Svelte-Session"
+internal const val EXTEND_ROUTE = "extend"
+
 @Serializable
 public class CurrentUserAnswer<T>(
     public val user: T?,
+    public val sessionSeconds: Long? = null,
 )
 
 internal const val SIGN_IN_MESSAGE = "Sign in first."
@@ -31,9 +38,14 @@ internal class CurrentUserSpec(
     val path: String?,
     val answerType: TypeInfo,
     val signInMessage: ((ApplicationCall) -> String)?,
+    val sessionEnds: (suspend ApplicationCall.() -> Instant?)?,
+    val extendSession: (suspend ApplicationCall.() -> Unit)?,
     val find: suspend ApplicationCall.() -> Any?,
 ) {
     val typeName: String get() = type.simpleName ?: "User"
+
+    suspend fun secondsLeft(call: ApplicationCall): Long? =
+        sessionEnds?.invoke(call)?.let { ends -> Duration.between(Instant.now(), ends).seconds.coerceAtLeast(0) }
 }
 
 internal class SignInRequiredException : RuntimeException(SIGN_IN_MESSAGE)
@@ -77,8 +89,14 @@ internal fun Route.currentUserRoute(
     path: String,
     spec: CurrentUserSpec,
 ) {
-    get(path) {
+    suspend fun answer(call: ApplicationCall) {
+        val user = call.findUser(spec.type)
         call.response.header(HttpHeaders.CacheControl, "no-store")
-        call.respond(CurrentUserAnswer(call.findUser(spec.type)), spec.answerType)
+        call.respond(CurrentUserAnswer(user, if (user == null) null else spec.secondsLeft(call)), spec.answerType)
+    }
+    get(path) { answer(call) }.hide()
+    post("$path/$EXTEND_ROUTE") {
+        if (call.findUser(spec.type) != null) spec.extendSession?.invoke(call)
+        answer(call)
     }.hide()
 }

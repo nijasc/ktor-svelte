@@ -227,6 +227,13 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
+        if (currentUser?.sessionEnds != null) {
+            onCallRespond { call, _ ->
+                if (call.response.headers[SESSION_HEADER] == null && resolver.isApiPath(decodedPathOrRaw(call))) {
+                    currentUser.secondsLeft(call)?.let { call.response.header(SESSION_HEADER, it.toString()) }
+                }
+            }
+        }
         application.attributes.put(TypedCookiesKey, pluginConfig.typedCookies.toList())
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
         if (pluginConfig.buildHeader) {

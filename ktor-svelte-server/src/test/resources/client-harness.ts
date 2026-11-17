@@ -548,6 +548,55 @@ memberFails = false;
 await members.load();
 memberStep('and the next load asks again');
 results.currentUser = memberSteps;
+members.clear();
+
+let sessionLeft: number | null = 0.4;
+let sessionHeader: string | undefined;
+const sessionCalls: string[] = [];
+apiConfig.sessionWarning = 250;
+apiConfig.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const address = String(input);
+    const method = init?.method ?? 'GET';
+    if (address.includes('/api/current-user')) {
+        sessionCalls.push(`${method} ${address}`);
+        if (address.endsWith('/extend')) sessionLeft = 5;
+        const user = sessionLeft === null ? null : { name: 'Ada' };
+        return new Response(JSON.stringify({ user, sessionSeconds: sessionLeft }), { headers: { 'content-type': 'application/json' } });
+    }
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (sessionHeader !== undefined) headers['x-ktor-svelte-session'] = sessionHeader;
+    return new Response('{}', { headers });
+}) as typeof fetch;
+const timedState: UserState<HarnessMember> = { user: null, ready: false, sessionEnds: null, sessionEnding: false };
+const timed = userStore<HarnessMember>('/api/current-user', timedState);
+const sessionSteps: unknown[] = [];
+const sessionStep = (what: string) => {
+    const left = timed.sessionEnds === null ? null : Math.round((timed.sessionEnds.getTime() - Date.now()) / 100) / 10;
+    sessionSteps.push([what, timed.user?.name ?? null, left, timed.sessionEnding, sessionCalls.length]);
+};
+sessionStep('before loading');
+await timed.load();
+sessionStep('loaded with 0.4 seconds left');
+await new Promise((resolve) => realTimeout(resolve, 220));
+sessionStep('inside the warning time');
+await timed.extend();
+sessionStep('extended');
+sessionHeader = '0.3';
+await request('GET', '/api/notes');
+sessionStep('another response says less is left');
+sessionHeader = '8';
+await request('GET', '/api/notes');
+sessionStep('and a later one says more');
+sessionHeader = '0.1';
+await request('GET', '/api/notes');
+sessionHeader = undefined;
+sessionLeft = null;
+await new Promise((resolve) => realTimeout(resolve, 260));
+sessionStep('the time ran out, so the store asked and the server said nobody');
+await request('GET', '/api/notes');
+sessionStep('nothing is planned for a visitor');
+results.session = { steps: sessionSteps, calls: sessionCalls };
+apiConfig.sessionWarning = undefined;
 apiConfig.fetch = undefined;
 
 const pageHost = globalThis as unknown as { location?: unknown };

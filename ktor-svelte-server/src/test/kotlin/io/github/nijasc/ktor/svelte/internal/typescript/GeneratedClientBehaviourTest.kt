@@ -99,6 +99,29 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `the user store knows when the session ends, warns before, extends it and notices the end`() {
+        val session = runHarness().getValue("session").jsonObject
+        val steps = session.getValue("steps").jsonArray.map { step -> step.jsonArray.joinToString(" | ") { it.jsonPrimitive.content } }
+        assertEquals(
+            listOf(
+                "before loading | null | null | false | 0",
+                "loaded with 0.4 seconds left | Ada | 0.4 | false | 1",
+                "inside the warning time | Ada | 0.2 | true | 1",
+                "extended | Ada | 5 | false | 2",
+                "another response says less is left | Ada | 0.3 | false | 2",
+                "and a later one says more | Ada | 8 | false | 2",
+                "the time ran out, so the store asked and the server said nobody | null | null | false | 3",
+                "nothing is planned for a visitor | null | null | false | 3",
+            ),
+            steps,
+        )
+        assertEquals(
+            listOf("GET /api/current-user", "POST /api/current-user/extend", "GET /api/current-user"),
+            session.getValue("calls").jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
+
+    @Test
     fun `GET requests are retried with backoff only when asked to`() {
         val results = runHarness()
 
