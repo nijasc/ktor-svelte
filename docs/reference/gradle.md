@@ -154,7 +154,7 @@ A short name that your build or another plugin already uses is left alone, and t
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
 | `svelteVerifyApiRoutes` | Lists [API routes that nothing in the frontend calls](../features/typescript.md#routes-nothing-calls). With `--strict` it fails when it finds one |
-| `svelteAdd` | [Creates a page](../features/routes.md#a-new-page) with a typed load: `svelteAdd --page=notes/[id]`. With `--route` also a Kotlin route to start from |
+| `svelteAdd` | [Creates a page](../features/routes.md#a-new-page) with a typed load: `svelteAdd --page=notes/[id]`. With `--route` also a Kotlin route to start from. `svelteAdd --crud=Note` writes [list, detail and form pages for a class](../features/routes.md#pages-for-a-class) |
 | `svelteApiChanges` | Lists [what changed in the API for callers](../features/typescript.md#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. With `--strict` it fails on a change that can break them |
 | `svelteSmokeTest` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](../guide/deployment.md#smoke-test). Not part of `check` |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](../features/routes.md#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
