@@ -571,6 +571,24 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDepe
 	public final fun update ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyA11yTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getBrowser ()Lorg/gradle/api/provider/Property;
+	public abstract fun getBuildOutput ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getDarkTheme ()Lorg/gradle/api/provider/Property;
+	protected abstract fun getExecOperations ()Lorg/gradle/process/ExecOperations;
+	public abstract fun getJarFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getJavaLauncher ()Lorg/gradle/api/provider/Property;
+	public abstract fun getLibDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getLightTheme ()Lorg/gradle/api/provider/Property;
+	public abstract fun getMainClass ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPaths ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getReportFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getRunnerClasspath ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	public final fun verify ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyApiRoutesTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
