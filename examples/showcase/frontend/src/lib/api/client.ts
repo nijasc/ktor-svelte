@@ -776,6 +776,74 @@ export function reportErrors(path: string): void {
     host.addEventListener('unhandledrejection', (event: { reason?: unknown }) => sendErrorReport(path, event.reason));
 }
 
+interface TimingEntry {
+    startTime: number;
+    duration: number;
+    value?: number;
+    hadRecentInput?: boolean;
+    interactionId?: number;
+    responseStart?: number;
+    name?: string;
+}
+
+export function reportVitals(path: string, sampleRate = 1): void {
+    const host = globalThis as unknown as {
+        PerformanceObserver?: new (seen: (list: { getEntries(): TimingEntry[] }) => void) => {
+            observe(options: { type: string; buffered: boolean; durationThreshold?: number }): void;
+        };
+        addEventListener?: (name: string, listener: () => void) => void;
+        document?: { visibilityState?: string };
+        navigator?: { sendBeacon?: (url: string, body: string) => boolean };
+    };
+    const Observer = host.PerformanceObserver;
+    if (!Observer || typeof host.addEventListener !== 'function' || typeof location === 'undefined' || Math.random() >= sampleRate) return;
+    const page = location.pathname;
+    const metrics: Record<string, number> = {};
+    const watch = (type: string, seen: (entry: TimingEntry) => void, durationThreshold?: number) => {
+        try {
+            new Observer((list) => list.getEntries().forEach(seen)).observe({ type, buffered: true, durationThreshold });
+        } catch {
+            return;
+        }
+    };
+    watch('navigation', (entry) => {
+        if (typeof entry.responseStart === 'number' && entry.responseStart > 0) metrics.TTFB = entry.responseStart;
+    });
+    watch('paint', (entry) => {
+        if (entry.name === 'first-contentful-paint') metrics.FCP = entry.startTime;
+    });
+    watch('largest-contentful-paint', (entry) => {
+        metrics.LCP = entry.startTime;
+    });
+    watch('layout-shift', (entry) => {
+        if (!entry.hadRecentInput) metrics.CLS = (metrics.CLS ?? 0) + (entry.value ?? 0);
+    });
+    watch(
+        'event',
+        (entry) => {
+            if (entry.interactionId) metrics.INP = Math.max(metrics.INP ?? 0, entry.duration);
+        },
+        40
+    );
+    let sent = false;
+    const send = () => {
+        if (sent || Object.keys(metrics).length === 0) return;
+        sent = true;
+        const rounded = Object.fromEntries(Object.entries(metrics).map(([name, value]) => [name, Math.round(value * 1000) / 1000]));
+        const body = JSON.stringify({ page, metrics: rounded });
+        try {
+            if (host.navigator?.sendBeacon?.(path, body)) return;
+            void (apiConfig.fetch ?? fetch)(path, { method: 'POST', body, keepalive: true }).catch(() => undefined);
+        } catch {
+            return;
+        }
+    };
+    host.addEventListener('visibilitychange', () => {
+        if (host.document?.visibilityState === 'hidden') send();
+    });
+    host.addEventListener('pagehide', send);
+}
+
 export interface PreferenceState<T> {
     value: T;
     ready: boolean;
@@ -1298,3 +1366,5 @@ export function consentStore<C extends string>(
 apiConfig.loginPage = '/login';
 
 reportErrors('/_ktor-svelte/errors');
+
+reportVitals('/_ktor-svelte/vitals', 1.0);
