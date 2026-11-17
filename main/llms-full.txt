@@ -6809,6 +6809,34 @@ A number field that groups digits and uses the decimal separator of the visitor'
 - A `Decimal` never goes through a JavaScript number, so `12345678901234567890.1234` keeps every digit. Use `number` only for values that fit a double, such as counts.
 - The keyboard on phones is the decimal one, and the caret stays where you are typing, as in [MaskedInput](#maskedinput), which this component builds on.
 
+## Breadcrumbs
+
+A ready breadcrumb trail for the open page, built from the titles your pages declare in [`_nav`](https://nijasc.github.io/ktor-svelte/main/features/routes#menu-titles-and-breadcrumbs). It comes with `components()` when `routes()` is on too:
+
+```svelte
+<script lang="ts">
+    import Breadcrumbs from '#components/Breadcrumbs.svelte';
+
+    let { data } = $props();
+</script>
+
+<Breadcrumbs current={data.task.title} />
+```
+
+On `/admin/tasks` this shows "Home / Admin / All tasks", each part a link except the last.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `current` | | The name of the open page, such as a record's title. It replaces the page's own title, or is added when the page has none, as for `/tasks/[id]` |
+| `labels` | `{}` | Other names for parts of the trail, keyed by their link, such as `{ '/projects/7': project.name }` |
+| `label` | `Breadcrumb` | The accessible name of the `<nav>`; pass a message for other languages |
+| `class` | | More classes |
+
+- The trail follows the page's place in your routes: every parent folder with a title is a step. Groups such as `(app)` are left out.
+- It shows nothing on a page with no parents, so you can put it in a layout.
+- The current page is marked with `aria-current="page"` and is not a link.
+- With DaisyUI it uses the `breadcrumbs` class; without, a small style with `/` between the parts.
+
 ## EnumSelect
 
 A `<select>` over a generated enum object:
