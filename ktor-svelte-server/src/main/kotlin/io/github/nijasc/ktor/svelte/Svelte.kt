@@ -73,6 +73,7 @@ import io.github.nijasc.ktor.svelte.internal.startupSteps
 import io.github.nijasc.ktor.svelte.internal.subscribeWhileRunning
 import io.github.nijasc.ktor.svelte.internal.typescript.CurrentUserType
 import io.github.nijasc.ktor.svelte.internal.typescript.FRONTEND_DIR_PROPERTY
+import io.github.nijasc.ktor.svelte.internal.typescript.GuardSpec
 import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGeneration
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
@@ -225,6 +226,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             currentUser?.let { CurrentUserType(it.typeName, it.schema, currentUserPath.orEmpty()) },
             loginPage,
             pluginConfig.permissionSet?.names.orEmpty(),
+            pluginConfig.guardsConfig.rules.map { GuardSpec(it.page, it.permission?.name) },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
@@ -237,6 +239,19 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 "permissions takes a ${permissions.userType.simpleName}, but currentUser is declared as ${currentUser.typeName}."
             }
             application.attributes.put(PermissionsKey, permissions)
+        }
+        val guards = pluginConfig.guardsConfig.rules.toList()
+        if (guards.isNotEmpty()) {
+            checkNotNull(currentUser) { "guards needs to know who is signed in: add currentUser<User> { ... } to install(Svelte)." }
+            guards.mapNotNull { it.permission }.forEach { asked ->
+                checkNotNull(permissions) {
+                    "guards asks for ${asked.javaClass.simpleName}.$asked, so it needs permissions<${asked.javaClass.simpleName}, User> { ... }."
+                }
+                check(permissions.type.isInstance(asked)) {
+                    "guards asks for ${asked.javaClass.simpleName}.$asked, but permissions are declared as ${permissions.type.simpleName}."
+                }
+            }
+            installGuards(application, guards, pluginConfig.apiPrefixList)
         }
         if (currentUser?.sessionEnds != null) {
             onCallRespond { call, _ ->

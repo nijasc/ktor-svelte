@@ -37,6 +37,7 @@ public class SvelteConfig internal constructor() {
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
     internal val constantHolders: MutableList<Any> = mutableListOf()
     internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
+    internal val guardsConfig: SvelteGuardsConfig = SvelteGuardsConfig()
     internal val typedCookies: MutableList<TypedCookie<*>> = mutableListOf()
     internal var errorCodeSet: ErrorCodeSet? = null
         private set
@@ -190,6 +191,10 @@ public class SvelteConfig internal constructor() {
             permissionSet == null,
         ) { "permissions is already set to ${permissionSet?.type?.simpleName}. An app has one enum of permissions." }
         permissionSet = PermissionSet(type, names, userType, refusedMessage, of)
+    }
+
+    public fun guards(configure: SvelteGuardsConfig.() -> Unit) {
+        guardsConfig.configure()
     }
 
     public fun cookies(vararg cookies: TypedCookie<*>) {

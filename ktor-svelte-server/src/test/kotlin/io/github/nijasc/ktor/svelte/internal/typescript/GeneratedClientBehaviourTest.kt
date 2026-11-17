@@ -146,6 +146,24 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `a page is guarded by the deepest guard above it`() {
+        assertEquals(
+            listOf(
+                "/admin -> /admin (Manage)",
+                "/admin/ -> /admin (Manage)",
+                "/admin/users/4 -> /admin (Manage)",
+                "/admin/help -> /admin/help",
+                "/admin/help/x -> /admin/help",
+                "/administrators -> open",
+                "/board -> /board",
+                "/ -> open",
+                "/about -> open",
+            ),
+            runHarness().getValue("guards").jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
+
+    @Test
     fun `GET requests are retried with backoff only when asked to`() {
         val results = runHarness()
 

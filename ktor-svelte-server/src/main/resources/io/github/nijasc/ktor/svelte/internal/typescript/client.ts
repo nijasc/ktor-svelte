@@ -741,6 +741,21 @@ export function userStore<T, P extends string = string>(path: string, state: Use
     };
 }
 
+export interface PageGuard<P extends string = string> {
+    page: string;
+    permission?: P;
+}
+
+export function matchGuard<P extends string>(guards: readonly PageGuard<P>[], path: string): PageGuard<P> | undefined {
+    const clean = path.replace(/\/+$/, '') || '/';
+    let best: PageGuard<P> | undefined;
+    for (const guard of guards) {
+        const covers = clean === guard.page || clean.startsWith(`${guard.page}/`);
+        if (covers && (!best || guard.page.length > best.page.length)) best = guard;
+    }
+    return best;
+}
+
 export interface PageOf<T> {
     items: T[];
     next?: string | null;

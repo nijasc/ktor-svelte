@@ -10,7 +10,8 @@
     const status = $derived(page.error?.status ?? page.status);
     const given = $derived(page.error?.message ?? '');
     const fallback = $derived(status === 404 ? {{notFound}} : status === 403 ? {{forbidden}} : status === 401 ? {{signIn}} : {{failed}});
-    const message = $derived(given === '' || given === 'Not Found' || given === 'Internal Error' ? fallback : given);
+    const standard = ['', 'Not Found', 'Internal Error', 'Forbidden', 'Unauthorized'];
+    const message = $derived(standard.includes(given) ? fallback : given);
     const requestId = $derived(status >= 500 ? page.error?.requestId : undefined);
 </script>
 

@@ -67,7 +67,7 @@ internal suspend fun ApplicationCall.findUser(asked: KClass<*>): Any? {
                 "call.user needs to know how the signed-in user is found. " +
                     "Say it once: install(Svelte) { currentUser<${asked.simpleName}> { ... } }." + DocLink.CURRENT_USER.see(),
             )
-    check(asked.java.isAssignableFrom(spec.type.java)) {
+    check(asked == Any::class || asked.java.isAssignableFrom(spec.type.java)) {
         "call.user<${asked.simpleName}>() was asked, but currentUser is declared as ${spec.typeName}."
     }
     attributes.getOrNull(FoundUserKey)?.let { return it.user }

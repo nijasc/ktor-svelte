@@ -214,6 +214,40 @@ The frontend gets the same enum and a `can` function:
 
 `can` in the browser decides what is shown. What is allowed is decided by the check on the route, so every hidden button needs one.
 
+## Page guards
+
+Which pages need a signed-in user, and which a permission, is one more rule that both sides have to agree on. Declare it once, by page:
+
+```kotlin no-check
+install(Svelte) {
+    guards {
+        signedIn(FrontendRoutes.board, FrontendRoutes.settings, "/tasks")
+        permission(Permission.UsersManage, FrontendRoutes.admin)
+    }
+}
+```
+
+A guard covers the page and everything below it: `/tasks` also covers `/tasks/4`. When two guards cover a page, the deeper one decides.
+
+**The API below the same name is closed by the server.** With the guards above, every route under `/api/tasks` answers a visitor with a 401, and every route under `/api/admin` answers a user without `UsersManage` with a 403. This is the part that protects your data, and it needs no `authenticate` or `requires` around those routes. A route with another name, such as `/api/stats` for the board page, is not covered and keeps its own check.
+
+**The pages are guarded in the browser by one generated function.** Use it in the layout of the route group that holds the pages:
+
+```ts no-check
+// src/routes/(app)/+layout.ts
+import { signedInUser } from '#api';
+
+export const ssr = false;
+
+export const load = async ({ url }) => ({ user: await signedInUser(url) });
+```
+
+`signedInUser(url)` resolves to the user, typed and never `null`. A visitor is sent to [the login page](#the-login-page) with the way back, and a user without the permission that the page's guard asks for gets your error page with a 403. `guardPages` does the same for a layout that has no use for the user: `export const load = guardPages;`. It only acts on pages that a guard covers.
+
+Do not put either in the root `+layout.ts`. SvelteKit cannot show your error page for an error from the root layout, and the visitor would see a bare "Forbidden".
+
+The guard in the browser is a convenience: it spares the visitor a page that would only fail. Anyone can skip it, so what must stay private is kept private by the API.
+
 ## The login page
 
 Someone opens a link to a page that needs a session, or their session ends while they fill in a form. Both should end the same way: at the login page, and after signing in, back where they were. Say where the login page is:

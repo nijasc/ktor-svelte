@@ -490,7 +490,9 @@ class ShowcaseBrowserTest {
         assertThat(page.navigationLink("Admin")).hasCount(0)
         page.navigate("/admin")
         assertThat(page.heading()).hasText("403")
-        assertThat(page.locator("#error-message")).hasText("Only admins can do that.")
+        assertThat(page.locator("#error-message")).hasText("You are not allowed to see this page.")
+        val asked = page.evaluate("fetch('/api/admin/users').then((answer) => answer.status)")
+        assertEquals(403, asked)
     }
 
     @Test

@@ -32,6 +32,14 @@ private const val CURRENT_USER_STORE = "currentUser"
 private const val PERMISSION_TYPE = "Permission"
 private const val CAN_FUNCTION = "can"
 
+internal const val GUARDS_FILE = "guards.ts"
+private val GUARD_EXPORTS = listOf("guardPages", "signedInUser", "pageGuards")
+
+internal class GuardSpec(
+    val page: String,
+    val permission: String?,
+)
+
 internal class CurrentUserType(
     val typeName: String,
     val schema: String,
@@ -50,6 +58,7 @@ internal class TypeScriptGenerator(
     private val currentUser: CurrentUserType? = null,
     private val loginPage: String? = null,
     private val permissions: List<String> = emptyList(),
+    private val guards: List<GuardSpec> = emptyList(),
 ) {
     private val declaredCookies = cookies
     private val sideSchemas = listOfNotNull(publicConfigSchema, currentUser?.schema).map { Json.parseToJsonElement(it) }
@@ -100,6 +109,10 @@ internal class TypeScriptGenerator(
             "permissions exports '$PERMISSION_TYPE' and '$CAN_FUNCTION', and the generated client already uses one of the names. " +
                 "Rename the class or the route that takes it."
         }
+        check(guards.isEmpty() || currentUser != null) { "guards needs currentUser, which says who is signed in." }
+        check(guards.isEmpty() || GUARD_EXPORTS.none { it in taken }) {
+            "guards exports ${GUARD_EXPORTS.joinToString()}, and the generated client already uses one of the names."
+        }
         check(cookies.isEmpty() || "cookies" !in taken) {
             "cookies(...) would be exported as 'cookies', which the generated client already uses for the routes under /cookies."
         }
@@ -134,10 +147,12 @@ internal class TypeScriptGenerator(
                 ),
             "index.ts" to typeScriptTemplate("index.ts") + (if (constants.isEmpty()) "" else "export * from './constants.js';\n") +
                 (if (cookieFile) "export * from './cookies.js';\n" else "") +
-                (if (currentUser != null) "export * from './${CURRENT_USER_FILE.removeSuffix(".ts")}.js';\n" else ""),
+                (if (currentUser != null) "export * from './${CURRENT_USER_FILE.removeSuffix(".ts")}.js';\n" else "") +
+                (if (guards.isNotEmpty()) "export * from './${GUARDS_FILE.removeSuffix(".ts")}.js';\n" else ""),
             *(if (constants.isEmpty()) emptyArray() else arrayOf(CONSTANTS_FILE to constantsSource(constants))),
             *(if (cookieFile) arrayOf(COOKIES_FILE to cookiesSource(declaredCookies)) else emptyArray()),
             *(currentUser?.let { arrayOf(CURRENT_USER_FILE to currentUserSource(it)) } ?: emptyArray()),
+            *(if (guards.isEmpty()) emptyArray() else arrayOf(GUARDS_FILE to guardsSource())),
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
     }
@@ -248,6 +263,39 @@ internal class TypeScriptGenerator(
     private fun loginPageSource(): String {
         val page = loginPage ?: return ""
         return "\napiConfig.loginPage = '${page.replace("\\", "\\\\").replace("'", "\\'")}';\n"
+    }
+
+    private fun guardsSource(): String {
+        val withPermissions = guards.any { it.permission != null }
+        val rows =
+            guards.sortedBy { it.page }.joinToString("") { guard ->
+                val permission = guard.permission?.let { ", permission: ${quoted(it)}" }.orEmpty()
+                "    { page: ${quoted(guard.page)}$permission },\n"
+            }
+        val turnedAway =
+            if (loginPage != null) "redirect(307, loginPath(url))" else "error(401, 'Unauthorized')"
+        return "import { error${if (loginPage != null) ", redirect" else ""} } from '@sveltejs/kit';\n" +
+            "import { ${if (loginPage != null) "loginPath, " else ""}matchGuard, type PageGuard } from './client.js';\n" +
+            "import { $CURRENT_USER_STORE } from './${CURRENT_USER_FILE.removeSuffix(".ts")}.js';\n" +
+            "import type { ${if (withPermissions) "$CURRENT_USER_TYPE, $PERMISSION_TYPE" else CURRENT_USER_TYPE} } from './types.js';\n\n" +
+            "export const pageGuards: readonly PageGuard<${if (withPermissions) PERMISSION_TYPE else "never"}>[] = [\n$rows];\n\n" +
+            "export async function signedInUser(url: URL): Promise<$CURRENT_USER_TYPE> {\n" +
+            "    const user = await $CURRENT_USER_STORE.load();\n" +
+            "    if (!user) $turnedAway;\n" +
+            (
+                if (withPermissions) {
+                    "    const guard = matchGuard(pageGuards, url.pathname);\n" +
+                        "    if (guard?.permission && !$CURRENT_USER_STORE.can(guard.permission)) error(403, 'Forbidden');\n"
+                } else {
+                    ""
+                }
+            ) +
+            "    return user;\n" +
+            "}\n\n" +
+            "export async function guardPages(event: { url: URL }): Promise<void> {\n" +
+            "    if (typeof document === 'undefined' || !matchGuard(pageGuards, event.url.pathname)) return;\n" +
+            "    await signedInUser(event.url);\n" +
+            "}\n"
     }
 
     private fun currentUserDeclaration(schemas: Map<String, JsonElement>): String {
