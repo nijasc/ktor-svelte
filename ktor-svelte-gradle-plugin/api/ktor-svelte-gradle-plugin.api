@@ -485,6 +485,15 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDoctorTask
 	public abstract fun getPackageManager ()Lorg/gradle/api/provider/Property;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteEmailsTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
+	public fun <init> ()V
+	public abstract fun getGeneratedPackage ()Lorg/gradle/api/provider/Property;
+	public abstract fun getKotlinDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getResourcesDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getSources ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	public final fun render ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteFormatTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public final fun format ()V

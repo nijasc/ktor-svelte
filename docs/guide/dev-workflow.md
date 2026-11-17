@@ -194,6 +194,7 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 | [Save fixtures](#save-fixtures) | The calls of this page as JSON for frontend tests |
 | [Clear site data](#clear-site-data) | This browser as a first-time visitor, in one click |
 | [Slowest routes](#slowest-routes) | The API routes that took the most time since the app started |
+| [Emails](#emails) | Emails the app sent in development, caught instead of sent |
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
 | [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
 | [Migrations](#migrations) | Which Flyway migrations ran, which are pending, and whether the last one failed |
@@ -278,6 +279,49 @@ The **Slowest routes** section ranks the API routes by the time the server spent
 - **Refresh** updates it. A restart, such as after a Kotlin change, starts the count again.
 
 It counts every API call the server answered, also those from other tabs. For the calls of one page, look at the [request log](#request-log).
+
+### Emails
+
+In development the app sends no email. Emails go to the **Emails** section of the panel instead, so you can click through "invite a colleague" or "reset my password" without a mail server and without writing to real addresses.
+
+Send email through `application.mailer`:
+
+```kotlin
+post("/api/invites") {
+    val address = call.receiveText()
+    call.application.mailer.send(
+        Email(
+            to = address,
+            subject = "You are invited",
+            text = "Open the app to join the team.",
+            html = "<p>Open the app to join the <b>team</b>.</p>",
+        ),
+    )
+    call.respond(HttpStatusCode.Accepted)
+}
+```
+
+And give the plugin the mailer that really sends, for production. `Mailer` is a one-method interface, so wrap the library or the email service you use:
+
+```kotlin no-check
+install(Svelte) {
+    mailer = Mailer { email -> smtp.send(email.from ?: "team@example.com", email.to, email.subject, email.html ?: email.text) }
+}
+```
+
+| `Email` field | What it is |
+|---|---|
+| `to` | One address, or a list. At least one |
+| `subject` | The subject line |
+| `text`, `html` | The plain text and the HTML body. At least one of them |
+| `from` | The sender. `null` leaves it to the mailer |
+| `cc`, `bcc`, `replyTo` | Copies and the reply address |
+
+In the panel each caught email shows its subject, recipients and time. Open one to see its headers and the HTML as the mail client would render it, with scripts off, and the text version below it. The list updates after each API call, keeps the last 50 and **Clear** empties it. The log also gets a line for each caught email.
+
+- Emails are caught whenever Ktor runs in development mode, also without Vite. Outside development, `application.mailer` is the mailer you set.
+- In development no mailer is needed. Outside development, sending without one fails with "ktor-svelte has no mailer to send ... with: set mailer = ... in install(Svelte)".
+- To send real emails while developing, for example to test a mail server, set `dev { catchEmails = false }`.
 
 ### Status
 
@@ -612,6 +656,7 @@ Everything on this page that you can turn on or off, in one place. Gradle settin
 | `refreshAfterRestart` | Ktor | `true` | Open pages rerun their `load` after a restart |
 | `slowApiCall` | Ktor | `500.milliseconds` | Logs slower API calls. `null` turns it off |
 | `startupTiming` | Ktor | `true` | Logs what the startup time was spent on |
+| `catchEmails` | Ktor | `true` | Shows emails in the dev panel instead of sending them |
 
 ## Full example
 

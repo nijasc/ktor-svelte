@@ -23,6 +23,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
 import io.github.nijasc.ktor.svelte.internal.constantGetPaths
+import io.github.nijasc.ktor.svelte.internal.dev.CaughtEmails
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
 import io.github.nijasc.ktor.svelte.internal.dev.DevRequestLog
 import io.github.nijasc.ktor.svelte.internal.dev.SlowCallLog
@@ -32,6 +33,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
 import io.github.nijasc.ktor.svelte.internal.dev.devClearSiteDataRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devCookieRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devEmailRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devEnvironmentRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devMigrationsRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
@@ -201,6 +203,8 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
         val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles, defaultFavicon)
         application.attributes.put(SvelteHandlerKey, handler)
+        val caughtEmails = if (application.developmentMode && pluginConfig.devConfig.catchEmails) CaughtEmails(application.log) else null
+        application.attributes.put(MailerKey, mailerFor(pluginConfig.mailer, caughtEmails))
         val metrics = SvelteMetrics()
         application.attributes.put(SvelteMetricsKey, metrics)
 
@@ -453,6 +457,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 devMigrationsRoute(allowRemote) { application.environment.classLoader }
                 devRuntimeRoute(allowRemote)
                 devClearSiteDataRoute(allowRemote)
+                caughtEmails?.let { devEmailRoutes(allowRemote, it) }
                 devRequestRoutes(
                     devRequests,
                     allowRemote,

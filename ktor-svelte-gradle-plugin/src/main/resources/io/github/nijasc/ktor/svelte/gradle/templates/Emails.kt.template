@@ -1,0 +1,62 @@
+import java.util.concurrent.ConcurrentHashMap
+
+public data class RenderedEmail(
+    val subject: String,
+    val html: String,
+    val text: String,
+)
+
+public object Emails {
+{{functions}}
+}
+
+private val emailTemplates = ConcurrentHashMap<String, String>()
+
+private fun emailTemplate(path: String): String =
+    emailTemplates.getOrPut(path) {
+        Emails::class.java.getResource("/{{resources}}/$path")?.readText()
+            ?: error("The email template $path is not on the classpath. Build the app again.")
+    }
+
+private fun renderEmail(
+    name: String,
+    locale: String,
+    values: Map<String, String>,
+): RenderedEmail =
+    RenderedEmail(
+        subject = fillEmail(emailTemplate("$name/$locale.subject"), values) { it.replace('\r', ' ').replace('\n', ' ') },
+        html = fillEmail(emailTemplate("$name/$locale.html"), values, ::escapeEmailHtml),
+        text = fillEmail(emailTemplate("$name/$locale.txt"), values) { it },
+    )
+
+private fun fillEmail(
+    template: String,
+    values: Map<String, String>,
+    encode: (String) -> String,
+): String =
+    buildString {
+        var at = 0
+        while (true) {
+            val start = template.indexOf('', at)
+            if (start < 0) break
+            val end = template.indexOf('', start)
+            append(template, at, start)
+            append(encode(values.getValue(template.substring(start + 1, end))))
+            at = end + 1
+        }
+        append(template, at, template.length)
+    }
+
+private fun escapeEmailHtml(value: String): String =
+    buildString {
+        value.forEach { character ->
+            when (character) {
+                '&' -> append("&amp;")
+                '<' -> append("&lt;")
+                '>' -> append("&gt;")
+                '"' -> append("&quot;")
+                '\'' -> append("&#39;")
+                else -> append(character)
+            }
+        }
+    }
