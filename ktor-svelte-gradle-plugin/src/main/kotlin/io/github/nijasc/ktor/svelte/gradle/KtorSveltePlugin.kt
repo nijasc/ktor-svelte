@@ -30,6 +30,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteLiveTemplatesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteReadmeTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRecordTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRenameTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
@@ -694,6 +695,22 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.offline.set(project.gradle.startParameter.isOffline)
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
+        project.tasks.register("svelteReadme", SvelteReadmeTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description =
+                "Writes the commands, addresses and environment variables of the app between the markers in README.md. " +
+                "Add --check to fail when it is out of date."
+            task.readmeFile.set(project.layout.projectDirectory.file("README.md"))
+            task.environmentExample.set(project.layout.projectDirectory.file(".env.example"))
+            task.taskPrefix.set(if (project == project.rootProject) "" else "${project.path}:")
+            task.taskNames.set(project.provider { project.tasks.names.toSet() })
+            task.appUrl.set(hasApplicationPlugin.flatMap { if (it) project.provider { DEFAULT_APP_URL } else project.provider { null } })
+            task.devPort.set(extension.dev.port)
+            task.debugPort.set(extension.dev.debugPort)
+            task.https.set(extension.dev.https)
+            task.httpsPort.set(extension.dev.httpsPort)
+            task.buildEnv.set(extension.buildEnv.map { it.toList() })
+        }
         project.tasks.register("svelteLiveTemplates", SvelteLiveTemplatesTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Writes IntelliJ live templates for routes, DTOs and client calls. Add --install to copy them into the IDE."
