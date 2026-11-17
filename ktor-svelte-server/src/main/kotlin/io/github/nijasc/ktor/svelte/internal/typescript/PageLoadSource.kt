@@ -35,6 +35,7 @@ internal fun pageLoadFunction(page: String): String {
 
 internal fun pageModuleSource(page: String): String =
     "$PAGE_LOAD_MARKER\n" +
+        "// See https://nijasc.github.io/ktor-svelte/features/calling-the-api#generated-page-loads\n" +
         "import { ${pageLoadFunction(page)} } from '#api';\n" +
         "import type { PageLoad } from './\$types';\n\n" +
         "export const load: PageLoad = (event) => ${pageLoadFunction(page)}(event);\n"
