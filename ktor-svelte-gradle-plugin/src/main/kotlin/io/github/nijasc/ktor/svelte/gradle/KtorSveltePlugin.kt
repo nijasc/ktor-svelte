@@ -25,6 +25,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteLiveTemplatesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRecordTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRenameTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
@@ -700,6 +701,32 @@ public class KtorSveltePlugin : Plugin<Project> {
             project.configurations.detachedConfiguration(
                 project.dependencies.create("io.github.nijasc:ktor-svelte-test:${pluginVersion()}"),
             )
+        project.tasks.register("svelteRecordTest", SvelteRecordTestTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Opens the packaged app in a browser and writes what you do there as a Kotlin browser test: --name=SignIn"
+            val names = project.tasks.names
+            if ("shadowJar" in names) {
+                task.dependsOn(if ("buildFatJar" in names) "buildFatJar" else "shadowJar")
+                task.jarFile.set(project.tasks.named("shadowJar", Jar::class.java).flatMap { it.archiveFile })
+            } else {
+                val installed = project.tasks.named("installDist", Sync::class.java)
+                task.dependsOn(installed)
+                task.libDirectory.fileProvider(installed.map { it.destinationDir.resolve("lib") })
+            }
+            task.mainClass.set(application.mainClass)
+            task.javaLauncher.set(toolchains.launcherFor(toolchain))
+            task.runnerClasspath.from(a11yRunner)
+            task.dependsOn(a11yRunner)
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.routesDirectory.set(
+                extension.libraries.routesSettings.dir
+                    .orElse(extension.frontendDir.dir("src/routes")),
+            )
+            task.typedRoutes.set(extension.libraries.routesEnabled.orElse(false))
+            task.generatedPackage.set(extension.libraries.generatedPackage.orElse("io.github.nijasc.ktorsvelte"))
+            task.workDirectory.set(project.layout.buildDirectory.dir("ktor-svelte/recorded"))
+            task.browser.set(project.providers.gradleProperty("browser"))
+        }
         project.tasks.register("svelteVerifyA11y", SvelteVerifyA11yTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Packages the app, opens its prerendered pages in a browser and fails on accessibility problems axe finds."
