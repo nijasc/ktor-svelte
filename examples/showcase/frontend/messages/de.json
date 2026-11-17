@@ -169,5 +169,7 @@
   "table-selected": "{count} ausgewaehlt",
   "table-working": "In Arbeit: {done} von {total}",
   "table-done": "Fertig: {worked} von {total} geklappt.",
-  "table-mark-done": "Als erledigt markieren"
+  "table-mark-done": "Als erledigt markieren",
+  "table-no-results": "Keine Aufgabe passt zu dieser Suche.",
+  "admin-search-tasks": "Aufgaben suchen"
 }

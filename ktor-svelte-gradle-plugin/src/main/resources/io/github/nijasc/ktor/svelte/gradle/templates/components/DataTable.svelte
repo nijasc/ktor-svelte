@@ -37,6 +37,9 @@
         workingText?: (done: number, total: number) => string;
         doneText?: (worked: number, total: number) => string;
         empty?: string;
+        noResults?: string;
+        filtered?: boolean;
+        emptyAction?: Snippet;
         loading?: string;
         more?: string;
         previous?: string;
@@ -70,6 +73,9 @@
         workingText = (done: number, total: number) => `Working: ${done} of ${total}`,
         doneText = (worked: number, total: number) => `Done: ${worked} of ${total} worked.`,
         empty = 'Nothing here yet.',
+        noResults = 'Nothing matches this filter.',
+        filtered,
+        emptyAction,
         loading = 'Loading',
         more = 'Load more',
         previous = 'Previous',
@@ -125,6 +131,18 @@
     }
 
     let items = $state.raw<T[]>(untrack(() => first?.items ?? []));
+    const PAGING_KEYS = ['cursor', 'limit'];
+    const isFiltered = $derived(
+        filtered ??
+            Object.entries((query ?? {}) as Record<string, unknown>).some(
+                ([name, value]) =>
+                    !PAGING_KEYS.includes(name) &&
+                    value !== undefined &&
+                    value !== null &&
+                    value !== '' &&
+                    !(Array.isArray(value) && value.length === 0)
+            )
+    );
     let sorting = $state<{ id: string; descending: boolean } | null>(null);
 
     function sortName(column: Column): string {
@@ -412,7 +430,10 @@
     {:else if busy}
         <p class="{{note}}" role="status">{loading}</p>
     {:else if items.length === 0}
-        <p class="{{note}}">{empty}</p>
+        <div class="{{emptyState}}" data-empty={isFiltered ? 'filtered' : 'none'}>
+            <p class="{{note}}">{isFiltered ? noResults : empty}</p>
+            {#if emptyAction && !isFiltered}{@render emptyAction()}{/if}
+        </div>
     {/if}
     {#if paging === 'more'}
         {#if cursor && !problem}

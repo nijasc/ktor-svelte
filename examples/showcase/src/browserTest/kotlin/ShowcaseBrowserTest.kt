@@ -590,6 +590,20 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `an empty table says whether nothing exists or nothing matches the filter`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigationLink("Admin").click()
+        val table = page.locator("#all-tasks")
+        assertThat(table.locator("[data-empty]")).hasCount(0)
+        page.locator("#task-search").fill(unique("NoSuchTask").replace(" ", ""))
+        assertThat(table.locator("[data-empty]")).hasAttribute("data-empty", "filtered")
+        assertThat(table.getByText("Nothing matches this search.")).isVisible()
+        assertThat(table.getByText("Nothing here yet.")).hasCount(0)
+        page.locator("#task-search").fill("")
+        assertThat(table.locator("[data-empty]")).hasCount(0)
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
