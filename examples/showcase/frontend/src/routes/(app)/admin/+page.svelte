@@ -99,5 +99,10 @@
         previous={m.tablePrevious()}
         next={m.tableNext()}
         retry={m.tableRetry()}
+        chooser
+        remember="admin-tasks"
+        columnsLabel={m.tableColumns()}
+        moveUp={m.tableMoveUp()}
+        moveDown={m.tableMoveDown()}
     />
 </div>

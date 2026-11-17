@@ -159,5 +159,8 @@
   "error-home": "Back to the start page",
   "session-ending": "You will be signed out soon.",
   "session-extend": "Stay signed in",
-  "saving": "Saving..."
+  "saving": "Saving...",
+  "table-columns": "Columns",
+  "table-move-up": "Up",
+  "table-move-down": "Down"
 }

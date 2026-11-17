@@ -14,7 +14,12 @@
         key?: (item: T) => string | number;
         paging?: 'more' | 'pages';
         caption?: string;
-        row?: Snippet<[T]>;
+        row?: Snippet<[T, Column[]]>;
+        chooser?: boolean;
+        remember?: string;
+        columnsLabel?: string;
+        moveUp?: string;
+        moveDown?: string;
         empty?: string;
         loading?: string;
         more?: string;
@@ -33,6 +38,11 @@
         paging = 'more',
         caption,
         row,
+        chooser = false,
+        remember,
+        columnsLabel = 'Columns',
+        moveUp = 'Up',
+        moveDown = 'Down',
         empty = 'Nothing here yet.',
         loading = 'Loading',
         more = 'Load more',
@@ -41,6 +51,52 @@
         retry = 'Try again',
         class: className = ''
     }: Props = $props();
+
+    type ColumnChoice = { order: string[]; hidden: string[] };
+
+    function storedChoice(): ColumnChoice | undefined {
+        if (!remember || typeof localStorage === 'undefined') return undefined;
+        try {
+            const raw = localStorage.getItem(`ktor-svelte-table:${remember}`);
+            return raw ? (JSON.parse(raw) as ColumnChoice) : undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
+    const initialChoice = untrack(() => storedChoice());
+    let order = $state<string[]>(initialChoice?.order ?? []);
+    let hidden = $state<string[]>(initialChoice?.hidden ?? []);
+    const arranged = $derived.by(() => {
+        const byId = new Map(columns.map((column) => [columnId(column), column]));
+        const known = order.filter((id) => byId.has(id));
+        const added = columns.map(columnId).filter((id) => !known.includes(id));
+        return [...known, ...added].map((id) => byId.get(id) as Column);
+    });
+    const shown = $derived(arranged.filter((column) => !hidden.includes(columnId(column))));
+
+    function saveChoice() {
+        if (!remember || typeof localStorage === 'undefined') return;
+        try {
+            localStorage.setItem(`ktor-svelte-table:${remember}`, JSON.stringify({ order, hidden }));
+        } catch {
+            return;
+        }
+    }
+
+    function toggleColumn(id: string) {
+        hidden = hidden.includes(id) ? hidden.filter((other) => other !== id) : [...hidden, id];
+        saveChoice();
+    }
+
+    function moveColumn(index: number, by: number) {
+        const ids = arranged.map(columnId);
+        const target = index + by;
+        if (target < 0 || target >= ids.length) return;
+        [ids[index], ids[target]] = [ids[target], ids[index]];
+        order = ids;
+        saveChoice();
+    }
 
     let items = $state.raw<T[]>(untrack(() => first?.items ?? []));
     let cursor = $state<string | null>(untrack(() => first?.next ?? null));
@@ -111,11 +167,41 @@
 </script>
 
 <div class={['overflow-x-auto', className]}>
+    {#if chooser}
+        <details class="mb-2">
+            <summary class="btn btn-sm">{columnsLabel}</summary>
+            <ul class="menu bg-base-200 rounded-box mt-1 w-fit gap-1">
+                {#each arranged as column, index (columnId(column))}
+                    <li>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={!hidden.includes(columnId(column))}
+                                disabled={shown.length === 1 && !hidden.includes(columnId(column))}
+                                onchange={() => toggleColumn(columnId(column))}
+                            />
+                            {column.label}
+                        </label>
+                        <button type="button" class="btn btn-sm" aria-label="{moveUp}: {column.label}" disabled={index === 0} onclick={() => moveColumn(index, -1)}
+                            >{moveUp}</button
+                        >
+                        <button
+                            type="button"
+                            class="btn btn-sm"
+                            aria-label="{moveDown}: {column.label}"
+                            disabled={index === arranged.length - 1}
+                            onclick={() => moveColumn(index, 1)}>{moveDown}</button
+                        >
+                    </li>
+                {/each}
+            </ul>
+        </details>
+    {/if}
     <table class="table" aria-busy={busy}>
         {#if caption}<caption class="text-left font-semibold">{caption}</caption>{/if}
         <thead>
             <tr>
-                {#each columns as column (columnId(column))}
+                {#each shown as column (columnId(column))}
                     <th scope="col" class={column.class}>{column.label}</th>
                 {/each}
             </tr>
@@ -124,9 +210,9 @@
             {#each items as item, index (key ? key(item) : index)}
                 <tr>
                     {#if row}
-                        {@render row(item)}
+                        {@render row(item, shown)}
                     {:else}
-                        {#each columns as column (columnId(column))}
+                        {#each shown as column (columnId(column))}
                             <td class={column.class}>{cellText(item, column)}</td>
                         {/each}
                     {/if}
