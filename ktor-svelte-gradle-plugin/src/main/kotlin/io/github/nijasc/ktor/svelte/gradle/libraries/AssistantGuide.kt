@@ -80,6 +80,10 @@ internal fun assistantGuide(
                 "- `DateInput.svelte` and `DateTimeInput.svelte`: the same for `IsoDate` and `IsoDateTime` values, without converting text by hand.",
             )
             appendLine(
+                "- `MaskedInput.svelte`: formats phone numbers, IBANs, dates and money while typing and binds the clean value, " +
+                    "such as `<MaskedInput label=\"IBAN\" mask=\"iban\" bind:value={form.draft.iban} />`.",
+            )
+            appendLine(
                 "- `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, " +
                     "such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.",
             )

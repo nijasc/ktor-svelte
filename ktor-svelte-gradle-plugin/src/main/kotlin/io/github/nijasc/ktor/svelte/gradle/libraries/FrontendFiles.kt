@@ -221,6 +221,8 @@ internal fun componentFiles(
             "$COMPONENTS_DIR/Field.svelte" to field,
             "$COMPONENTS_DIR/DateInput.svelte" to renderTemplate("components/DateInput.svelte", input),
             "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
+            "$COMPONENTS_DIR/MaskedInput.svelte" to renderTemplate("components/MaskedInput.svelte", input),
+            "$COMPONENTS_DIR/masks.ts" to renderTemplate("components/masks.ts"),
             "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
             "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
             "$COMPONENTS_DIR/FileDrop.svelte" to fileDrop(daisy),
