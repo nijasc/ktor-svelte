@@ -46,6 +46,7 @@ internal class TypeScriptGenerator(
     private val errorCodes: List<String> = emptyList(),
     cookies: List<CookieSpec> = emptyList(),
     private val currentUser: CurrentUserType? = null,
+    private val loginPage: String? = null,
 ) {
     private val declaredCookies = cookies
     private val sideSchemas = listOfNotNull(publicConfigSchema, currentUser?.schema).map { Json.parseToJsonElement(it) }
@@ -110,7 +111,7 @@ internal class TypeScriptGenerator(
             )
         }
         return withGitAttributes(
-            "client.ts" to typeScriptTemplate("client.ts"),
+            "client.ts" to typeScriptTemplate("client.ts") + loginPageSource(),
             "form.ts" to typeScriptTemplate("form.ts"),
             FORM_STATE_FILE to typeScriptTemplate(FORM_STATE_FILE),
             "types.ts" to
@@ -233,6 +234,11 @@ internal class TypeScriptGenerator(
     private fun publicConfigDeclaration(schemas: Map<String, JsonElement>): String {
         val schema = publicConfigSchema ?: return ""
         return "\n" + declaration("PublicConfig", Json.parseToJsonElement(schema).jsonObject, mutableSetOf(), schemas)
+    }
+
+    private fun loginPageSource(): String {
+        val page = loginPage ?: return ""
+        return "\napiConfig.loginPage = '${page.replace("\\", "\\\\").replace("'", "\\'")}';\n"
     }
 
     private fun currentUserDeclaration(schemas: Map<String, JsonElement>): String {

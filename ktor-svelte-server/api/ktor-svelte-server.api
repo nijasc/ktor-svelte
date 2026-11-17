@@ -175,6 +175,10 @@ public final class io/github/nijasc/ktor/svelte/LibrariesKt {
 	public static final fun getSvelteTheme (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
 }
 
+public final class io/github/nijasc/ktor/svelte/LoginPageKt {
+	public static final fun respondLoginRedirect (Lio/ktor/server/application/ApplicationCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public abstract interface annotation class io/github/nijasc/ktor/svelte/Lowercase : java/lang/annotation/Annotation {
 }
 
@@ -317,6 +321,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun getHealthEndpoint ()Z
 	public final fun getHideErrorDetails ()Z
 	public final fun getInlinePublicConfig ()Z
+	public final fun getLoginPage ()Ljava/lang/String;
 	public final fun getMaxApiBodySize ()Ljava/lang/Long;
 	public final fun getMaxJsonDepth ()Ljava/lang/Integer;
 	public final fun getMaxJsonStringLength ()Ljava/lang/Integer;
@@ -352,6 +357,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setHealthEndpoint (Z)V
 	public final fun setHideErrorDetails (Z)V
 	public final fun setInlinePublicConfig (Z)V
+	public final fun setLoginPage (Ljava/lang/String;)V
 	public final fun setMaxApiBodySize (Ljava/lang/Long;)V
 	public final fun setMaxJsonDepth (Ljava/lang/Integer;)V
 	public final fun setMaxJsonStringLength (Ljava/lang/Integer;)V

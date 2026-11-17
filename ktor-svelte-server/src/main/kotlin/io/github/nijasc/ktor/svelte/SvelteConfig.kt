@@ -68,6 +68,7 @@ public class SvelteConfig internal constructor() {
     public var defaultFavicon: Boolean = true
     public var sitemap: Boolean = true
     public var siteUrl: String? = null
+    public var loginPage: String? = null
     public var maxApiBodySize: Long? = 1024L * 1024L
     public var maxJsonDepth: Int? = 64
     public var maxJsonStringLength: Int? = null

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class GeneratedClientBehaviourTest {
@@ -63,6 +64,38 @@ class GeneratedClientBehaviourTest {
             ),
             steps,
         )
+    }
+
+    @Test
+    fun `a 401 sends the visitor to the login page with the page they were on`() {
+        val login = runHarness().getValue("login").jsonObject
+
+        fun texts(
+            of: JsonObject,
+            name: String,
+        ) = of.getValue(name).jsonArray.map { it.jsonPrimitive.content }
+        val redirects = login.getValue("redirects").jsonObject
+        val stays = listOf("the call failed first")
+        assertEquals(stays + "/login?next=%2Fnotes%2F7%3Ftab%3Dfiles%23top", texts(redirects, "fromAPage"))
+        assertEquals(stays, texts(redirects, "fromTheLoginPage"))
+        assertEquals(stays, texts(redirects, "silentCall"))
+        assertEquals(stays, texts(redirects, "otherStatus"))
+        assertEquals(stays + "own handler", texts(redirects, "ownHandler"))
+        assertEquals(stays, texts(redirects, "noLoginPage"))
+        assertEquals(stays + "assign /login?next=%2Fnotes", texts(redirects, "withoutRouter"))
+        assertEquals(stays, texts(redirects, "otherOrigin"))
+        assertEquals(
+            listOf(
+                "/login?next=%2Fboard%3Fmine%3Dtrue",
+                "/login?next=%2Ftasks%2F4",
+                "/login?next=%2Ftasks%2F4%3Ftab%3Dfiles",
+                "/login",
+                "/login",
+            ),
+            texts(login, "paths"),
+        )
+        assertEquals(listOf("/tasks/4?tab=files", "/board", "/board", "/board", "/settings", "/tasks/4?tab=files"), texts(login, "returns"))
+        assertContains(login.getValue("withoutLoginPage").jsonPrimitive.content, "install(Svelte) { loginPage = \"/login\" }")
     }
 
     @Test
