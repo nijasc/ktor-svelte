@@ -282,6 +282,7 @@ Every form needs the same few variables: the values being edited, whether they c
 | `form.error`, `form.message` | Any other failure of the last submit, and its text for the user. `message` is empty when there is none |
 | `form.checking` | `true` while a [check](#checks-only-the-server-can-make) waits for its answer |
 | `form.reset()` | Back to the last saved values, with the errors cleared. `form.reset(values)` makes `values` the saved ones, such as after loading a record |
+| `form.submitChanges(send)` | Like `submit`, but `send` gets only the changed fields as a `Patch<T>`, and is not called when nothing changed |
 | `form.submit(send)` | Runs `validate` first and stops on errors without calling the server. Otherwise calls `send` with a plain copy of the draft and returns its result, or `undefined` when it failed |
 | `form.conflict`, `form.takeTheirs()`, `form.keepMine()` | After a [version conflict](./calling-the-api.md#two-people-one-record): the other person's record, reset to it, or take over its version so the next submit goes through |
 
@@ -326,6 +327,29 @@ Each field knows whether it differs from the saved value. Use it for a marker be
 - Fields are compared as JSON, so a list or a nested object counts as changed when anything inside it changed, and changing a value back removes it from the list.
 - After a successful submit the sent values are the saved ones, so `changes` is empty again.
 - `<Field changed>` shows a small dot after the label, announced as "Changed"; pass a text instead of `true` for another language, such as `changed={form.changed('title') && m.fieldChanged()}`.
+
+### Send only what changed
+
+For a big record where only one field was edited, send just the changed fields. `submitChanges` validates the whole draft like `submit`, then calls your function with a [`Patch<T>`](./calling-the-api.md#changing-some-fields) of the changed fields only:
+
+```svelte no-check
+<script lang="ts">
+    import { api, NoteInput } from '#api';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+
+    const form = formState<NoteInput>({ title: note.title, body: note.body, tags: note.tags }, { validate: NoteInput.validate });
+
+    async function save(event: SubmitEvent) {
+        event.preventDefault();
+        await form.submitChanges((changes) => api.notes.patch(note.id, changes));
+    }
+</script>
+```
+
+- When only the title changed, the body is `{"title": "Oat milk"}`.
+- When nothing changed, your function is not called and the result is `undefined`, so a double click on "Save" sends nothing.
+- Fields are compared as JSON against the saved values, the same way as [`form.changes`](#what-changed). A field set to `undefined` is sent as `null`, which the server's `Patch<T>` reads as "clear it".
+- Errors, conflicts and the saved state work exactly as with `submit`.
 
 ### Focus the first error
 
