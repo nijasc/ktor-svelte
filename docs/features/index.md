@@ -188,6 +188,7 @@ The dev loop, the dev panel and the tools around them.
 | [Server error overlay](../guide/dev-workflow.md) | A failed call shows the exception and a link to your code in the browser | Ktor plugin |
 | [Browser logs in your console](../guide/dev-workflow.md) | `console.log` and browser errors land in the dev log | Ktor plugin |
 | [Restart summary and startup timing](../guide/dev-workflow.md) | What caused a restart, how long it took, and where startup time went | Gradle, Ktor plugin |
+| [Multiple frontends](../guide/multiple-frontends.md) | A public site and an admin area as two SvelteKit projects under their own path prefixes, in one app and one JAR | Ktor plugin, Gradle |
 | [HTTPS in development](../guide/dev-workflow.md#https-in-development) | Develop with `Secure` cookies and service workers | Gradle |
 | [When a port is still in use](../guide/dev-workflow.md#when-a-port-is-still-in-use) | Leftover processes from a crash are cleaned up | Gradle |
 | [Debugging](../guide/dev-workflow.md) | Run configurations to debug Kotlin and the frontend, in one click | Gradle |
