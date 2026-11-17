@@ -115,6 +115,7 @@ class DevModeBrowserTest {
                         environment()["SHOWCASE_ADMIN_PASSWORD"] = ADMIN_PASSWORD
                         environment()["SHOWCASE_MEMBER_PASSWORD"] = MEMBER_PASSWORD
                         environment()["SESSION_SIGN_KEY"] = SESSION_SIGN_KEY
+                        environment()["SHOWCASE_LOGIN_ATTEMPTS"] = "1000"
                     }.redirectErrorStream(true)
                     .redirectOutput(log)
                     .start()
@@ -129,6 +130,7 @@ class DevModeBrowserTest {
             page.navigate("/board")
             page.waitForURL(Pattern.compile(".*/(board|login(\\?next=.*)?)$"), soon)
             if (!page.url().endsWith("/board")) {
+                page.waitForLoadState(LoadState.NETWORKIDLE)
                 page.getByLabel("Email").fill(ADMIN_EMAIL)
                 page.getByLabel("Password").fill(ADMIN_PASSWORD)
                 page.getByRole(AriaRole.MAIN).getByRole(AriaRole.BUTTON).click()
