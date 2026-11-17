@@ -165,6 +165,25 @@ private fun passwordStrength(daisy: Boolean): String =
         ),
     )
 
+private const val PLAIN_CRUMBS_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-crumbs-list {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 0.4em;\n" +
+        "        margin: 0;\n        padding: 0;\n        list-style: none;\n    }\n\n" +
+        "    .ktor-svelte-crumbs-list li + li::before {\n        content: '/';\n        margin-right: 0.4em;\n" +
+        "        opacity: 0.5;\n    }\n" +
+        "</style>\n"
+
+private fun breadcrumbs(daisy: Boolean): String =
+    renderTemplate(
+        "components/Breadcrumbs.svelte",
+        mapOf(
+            "wrapper" to if (daisy) "breadcrumbs text-sm" else "ktor-svelte-crumbs",
+            "list" to if (daisy) "" else "ktor-svelte-crumbs-list",
+            "link" to if (daisy) "link link-hover" else "ktor-svelte-crumbs-link",
+            "style" to if (daisy) "" else PLAIN_CRUMBS_STYLE,
+        ),
+    )
+
 private fun errorSummary(daisy: Boolean): String =
     renderTemplate(
         "components/ErrorSummary.svelte",
@@ -278,6 +297,7 @@ internal fun componentFiles(
     val switches =
         buildMap {
             if (daisy) put("$COMPONENTS_DIR/ThemeToggle.svelte", renderTemplate("components/ThemeToggle.svelte"))
+            if (spec.routes) put("$COMPONENTS_DIR/Breadcrumbs.svelte", breadcrumbs(daisy))
             if (spec.i18n != null) {
                 put("$COMPONENTS_DIR/TimeAgo.svelte", renderTemplate("components/TimeAgo.svelte"))
                 val classes = mapOf("select" to if (daisy) "select select-sm" else "ktor-svelte-locale-switch")

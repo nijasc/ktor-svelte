@@ -97,6 +97,19 @@ class ComponentsTest {
     }
 
     @Test
+    fun `breadcrumbs come with typed routes and name the current page`() {
+        assertFalse(
+            componentFiles(spec(components = true)).keys.any { it.endsWith("Breadcrumbs.svelte") },
+            "without routes there is nothing to build the trail from",
+        )
+        val withRoutes = LibrarySpec(null, null, false, null, 5173, "app.generated", components = true, routes = true)
+        val crumbs = componentFiles(withRoutes).getValue("$COMPONENTS_DIR/Breadcrumbs.svelte")
+        assertContains(crumbs, "import { breadcrumbs, type Crumb } from '#routes';")
+        assertContains(crumbs, "<span aria-current=\"page\">{crumb.title}</span>")
+        assertContains(crumbs, ".ktor-svelte-crumbs-list li + li::before {")
+    }
+
+    @Test
     fun `the data table loads pages through the route's own function and types its columns from the items`() {
         val table = componentFiles(spec(components = true, withDaisy = true)).getValue("$COMPONENTS_DIR/DataTable.svelte")
         assertContains(table, "<script lang=\"ts\" generics=\"T, Q extends { cursor?: string } = { cursor?: string }\">")
