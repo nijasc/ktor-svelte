@@ -32,7 +32,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 52 | Installable app (PWA) | #338 |
+| 52 | Installable app (PWA) | #338, #340 |
 | 110 | Typed request headers | #341 |
 | 111 | Per-route timeout | #342 |
 | 114 | Totals for lists | #343 |
@@ -71,13 +71,17 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 144 | Catch outgoing email | #380 |
 | 66 | Inline page data | #381, #388 |
 | 61 | Emails from Svelte components | #379, #385, #389 |
-| 60 | Multiple frontends | #384, #386 |
+| 60 | Multiple frontends | #384, #386, #393, #394 |
 | 147 | Pinned Node download | #382 |
 | 148 | Warm-up before ready | #383 |
 | 149 | Latency and errors per route | #387 |
 | 17 | One-step `svelteUpgrade` | #392 |
 | 150 | README section | #390 |
 | 151 | Pages-to-routes diagram | #391 |
+| 152 | Doc links in generated code | #395 |
+| 153 | Naming conventions check | #396 |
+| 112 | Sparse fields | #398 |
+| 113 | Included relations | #399 |
 
 ### Next up
 
@@ -208,11 +212,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 52 | Installable app (PWA) | Large | 11 |
-| 112 | Sparse fields | Large | 14 |
-| 113 | Included relations | Large | 14 |
-| 152 | Doc links in generated code | Small | 14 |
-| 153 | Naming conventions check | Medium | 14 |
 
 ## Scope
 
