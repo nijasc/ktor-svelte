@@ -79,6 +79,36 @@ class KtorSveltePluginTest {
     }
 
     @Test
+    fun `svelteDeploy writes the Railway file once, and only for hosts it knows`() {
+        val project = project()
+        dir
+            .resolve(
+                ".env.example",
+            ).writeText("# Signs the session. Required. Secret.\nSESSION_SIGN_KEY=\n\n# Port. Default: 8080.\n# PORT=8080\n")
+        val file = dir.resolve(".railway/railway.ts")
+
+        val first = project.run("svelteDeploy")
+        assertContains(first.output, "ktor-svelte wrote .railway/railway.ts. It is yours from here on.")
+        assertContains(first.output, "Set these in Railway before the first deploy: SESSION_SIGN_KEY.")
+        assertContains(file.readText(), "start: \"build/install/sample/bin/sample\",")
+        assertContains(file.readText(), "SESSION_SIGN_KEY: preserve(),")
+        assertFalse("PORT" in file.readText())
+
+        file.writeText("mine now")
+        assertContains(project.runAndFail("svelteDeploy").output, ".railway/railway.ts is already there and belongs to the app now.")
+        assertEquals("mine now", file.readText())
+
+        dir.resolve("Dockerfile").writeText("FROM eclipse-temurin:21-jre\n")
+        val forced = project.run("svelteDeploy", "--force", "--host=railway")
+        assertContains(forced.output, "Railway builds with the Dockerfile it finds")
+        assertFalse("start:" in file.readText())
+        assertContains(
+            project.runAndFail("svelteDeploy", "--host=heroku", "--force").output,
+            "svelteDeploy has no preset for 'heroku' yet.",
+        )
+    }
+
+    @Test
     fun `frontend output is hidden on success and shown on failure`() {
         val project = project()
         assertFalse(project.run("jar").output.contains("fake build output"))

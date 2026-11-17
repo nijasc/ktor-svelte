@@ -338,6 +338,17 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteConfigTask
 	public final fun report ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDeployTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getBuildCommand ()Lorg/gradle/api/provider/Property;
+	public abstract fun getForce ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHost ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getProjectName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getStartCommand ()Lorg/gradle/api/provider/Property;
+	public final fun write ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public abstract fun getAppClasspath ()Lorg/gradle/api/file/ConfigurableFileCollection;
