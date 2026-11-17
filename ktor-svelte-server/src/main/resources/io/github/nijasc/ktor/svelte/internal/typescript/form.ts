@@ -5,6 +5,8 @@ export interface FieldBounds {
     min?: number;
     max?: number;
     pattern?: string;
+    autocomplete?: string;
+    type?: string;
 }
 
 export interface FieldOptions {
@@ -56,12 +58,15 @@ export function field(node: FieldElement, options: FieldOptions = {}) {
     message.id = `ktor-svelte-field-${++fieldCount}`;
     message.setAttribute('role', 'alert');
     const applied = new Set<string>();
+    const own = new Set(node.getAttributeNames());
 
     function apply({ bounds = {}, errors = [], errorClass = 'field-error', describedBy }: FieldOptions) {
         applied.forEach((name) => node.removeAttribute(name));
         applied.clear();
         for (const [name, value] of Object.entries(bounds)) {
             if (value === undefined || value === false) continue;
+            if ((name === 'autocomplete' || name === 'type') && own.has(name)) continue;
+            if (name === 'type' && !(node instanceof HTMLInputElement)) continue;
             node.setAttribute(name, value === true ? '' : String(value));
             applied.add(name);
         }
