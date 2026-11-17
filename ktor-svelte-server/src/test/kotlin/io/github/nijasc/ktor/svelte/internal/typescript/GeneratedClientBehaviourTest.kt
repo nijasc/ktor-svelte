@@ -40,6 +40,32 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `the user store loads once, follows sign-in and sign-out, and clears on a 401`() {
+        val steps =
+            runHarness().getValue("currentUser").jsonArray.map { step ->
+                step.jsonArray.joinToString(" | ") { it.jsonPrimitive.content }
+            }
+        assertEquals(
+            listOf(
+                "before loading | null | false | false | 0",
+                "a change before the first load asks nothing | null | false | false | 0",
+                "loaded once for two callers: Ada Ada | Ada | true | true | 1",
+                "loading again asks nothing | Ada | true | true | 1",
+                "the sign-in response reloads: Grace | Grace | true | true | 2",
+                "other calls ask nothing | Grace | true | true | 2",
+                "the sign-out response reloads | null | true | false | 3",
+                "set by hand | Linus | true | true | 3",
+                "a 401 clears | null | true | false | 3",
+                "reload asks | Ada | true | true | 4",
+                "an answer that arrives after clear is dropped: null | null | true | false | 5",
+                "a failed call keeps what was known | null | true | false | 6",
+                "and the next load asks again | Ada | true | true | 7",
+            ),
+            steps,
+        )
+    }
+
+    @Test
     fun `GET requests are retried with backoff only when asked to`() {
         val results = runHarness()
 

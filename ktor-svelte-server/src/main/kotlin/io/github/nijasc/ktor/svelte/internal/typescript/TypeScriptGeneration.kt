@@ -104,6 +104,7 @@ internal fun installTypeScriptGeneration(
     constants: List<SharedHolder> = emptyList(),
     errorCodes: List<String> = emptyList(),
     cookies: List<CookieSpec> = emptyList(),
+    currentUser: CurrentUserType? = null,
 ) {
     val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
     val generateOnly = verifyReport != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
@@ -132,6 +133,7 @@ internal fun installTypeScriptGeneration(
             constants,
             errorCodes,
             cookies,
+            currentUser,
         )
 
     application.onOwn(ApplicationStarted) {

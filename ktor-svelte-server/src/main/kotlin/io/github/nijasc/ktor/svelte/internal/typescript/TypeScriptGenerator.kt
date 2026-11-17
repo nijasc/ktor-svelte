@@ -26,6 +26,16 @@ private val IDENTIFIER = Regex("[A-Za-z_$][A-Za-z0-9_$]*")
 private val PATH_PARAMETER = Regex("\\{([^}]+)\\}")
 private val prettyJson = Json { prettyPrint = true }
 
+internal const val CURRENT_USER_FILE = "current-user.svelte.ts"
+private const val CURRENT_USER_TYPE = "CurrentUser"
+private const val CURRENT_USER_STORE = "currentUser"
+
+internal class CurrentUserType(
+    val typeName: String,
+    val schema: String,
+    val path: String,
+)
+
 internal class TypeScriptGenerator(
     apiPrefixes: List<String>,
     private val excludedPaths: List<String> = emptyList(),
@@ -35,8 +45,10 @@ internal class TypeScriptGenerator(
     private val constants: List<SharedHolder> = emptyList(),
     private val errorCodes: List<String> = emptyList(),
     cookies: List<CookieSpec> = emptyList(),
+    private val currentUser: CurrentUserType? = null,
 ) {
     private val declaredCookies = cookies
+    private val sideSchemas = listOfNotNull(publicConfigSchema, currentUser?.schema).map { Json.parseToJsonElement(it) }
     private val cookies = cookies.filterNot { it.httpOnly }
     private val cookieFile = this.cookies.isNotEmpty() || cookies.any { it.category != null }
 
@@ -58,15 +70,13 @@ internal class TypeScriptGenerator(
         val filtered = withNullableReferences(withDeclaredErrors(withApiPathsOnly(document)))
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
         enumTypes = nameEnums(filtered, schemas)
-        usesDates = hasDateFormat(filtered) || publicConfigSchema?.let { hasDateFormat(Json.parseToJsonElement(it)) } == true
-        usesQuantities =
-            hasFormat(filtered, QUANTITY_FORMATS) ||
-            publicConfigSchema?.let { hasFormat(Json.parseToJsonElement(it), QUANTITY_FORMATS) } == true
+        usesDates = hasDateFormat(filtered) || sideSchemas.any { hasDateFormat(it) }
+        usesQuantities = hasFormat(filtered, QUANTITY_FORMATS) || sideSchemas.any { hasFormat(it, QUANTITY_FORMATS) }
         val dateTypes =
             (if (usesDates) DATE_FORMATS.values else emptyList()) + (if (usesQuantities) QUANTITY_FORMATS.values else emptyList())
         validationHelpers.clear()
         operations.clear()
-        val types = typesSource(schemas) + publicConfigDeclaration(schemas)
+        val types = typesSource(schemas) + publicConfigDeclaration(schemas) + currentUserDeclaration(schemas)
         val taken =
             schemas.keys.map(::typeName) +
                 filtered
@@ -76,6 +86,10 @@ internal class TypeScriptGenerator(
                     .map(::groupName) + SERVICES_MODULE_NAMES
         check(errorCodes.isEmpty() || ERROR_CODE_TYPE !in taken) {
             "errorCodes would be exported as '$ERROR_CODE_TYPE', which a class of your API is already called. Rename that class."
+        }
+        check(currentUser == null || (CURRENT_USER_TYPE !in taken && CURRENT_USER_STORE !in taken)) {
+            "currentUser exports '$CURRENT_USER_STORE' and '$CURRENT_USER_TYPE', and the generated client already uses one of the names. " +
+                "Rename the class or the route that takes it."
         }
         check(cookies.isEmpty() || "cookies" !in taken) {
             "cookies(...) would be exported as 'cookies', which the generated client already uses for the routes under /cookies."
@@ -109,9 +123,11 @@ internal class TypeScriptGenerator(
                     schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name } + dateTypes,
                 ),
             "index.ts" to typeScriptTemplate("index.ts") + (if (constants.isEmpty()) "" else "export * from './constants.js';\n") +
-                (if (cookieFile) "export * from './cookies.js';\n" else ""),
+                (if (cookieFile) "export * from './cookies.js';\n" else "") +
+                (if (currentUser != null) "export * from './${CURRENT_USER_FILE.removeSuffix(".ts")}.js';\n" else ""),
             *(if (constants.isEmpty()) emptyArray() else arrayOf(CONSTANTS_FILE to constantsSource(constants))),
             *(if (cookieFile) arrayOf(COOKIES_FILE to cookiesSource(declaredCookies)) else emptyArray()),
+            *(currentUser?.let { arrayOf(CURRENT_USER_FILE to currentUserSource(it)) } ?: emptyArray()),
             "openapi.json" to prettyJson.encodeToString(JsonElement.serializer(), filtered) + "\n",
         )
     }
@@ -218,6 +234,19 @@ internal class TypeScriptGenerator(
         val schema = publicConfigSchema ?: return ""
         return "\n" + declaration("PublicConfig", Json.parseToJsonElement(schema).jsonObject, mutableSetOf(), schemas)
     }
+
+    private fun currentUserDeclaration(schemas: Map<String, JsonElement>): String {
+        val user = currentUser ?: return ""
+        val same = schemas.keys.firstOrNull { typeName(it) == user.typeName }
+        if (same != null) return "\nexport type $CURRENT_USER_TYPE = ${typeName(same)};\n"
+        return "\n" + declaration(CURRENT_USER_TYPE, Json.parseToJsonElement(user.schema).jsonObject, mutableSetOf(), schemas)
+    }
+
+    private fun currentUserSource(user: CurrentUserType): String =
+        "import { userStore } from './client.js';\n" +
+            "import type { $CURRENT_USER_TYPE } from './types.js';\n\n" +
+            "const state = \$state<{ user: $CURRENT_USER_TYPE | null; ready: boolean }>({ user: null, ready: false });\n\n" +
+            "export const $CURRENT_USER_STORE = userStore<$CURRENT_USER_TYPE>('${user.path}', state);\n"
 
     private fun isApiPath(path: String): Boolean =
         excludedPaths.none { path == it || path.startsWith("$it/") } &&

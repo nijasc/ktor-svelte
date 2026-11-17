@@ -8,6 +8,8 @@ import {
     errorMessage,
     fixtureFetch,
     typedCookie,
+    userStore,
+    type UserState,
     isRateLimitError,
     isUploadError,
     isVersionConflict,
@@ -475,5 +477,75 @@ results.consent = {
     fromHeader: [visits.get('visits=9'), visits.get('visits=9; cookie-consent=analytics'), visits.get('visits=9; cookie-consent=none')]
 };
 if (!hadDocument) Reflect.deleteProperty(cookieHost, 'document');
+
+interface HarnessMember {
+    name: string;
+}
+apiConfig.retry = undefined;
+apiConfig.onError = undefined;
+apiConfig.onUnauthorized = undefined;
+apiConfig.baseUrl = '';
+let memberNow: HarnessMember | null = { name: 'Ada' };
+let memberAsks = 0;
+let memberFails = false;
+let memberGate: Promise<void> | undefined;
+apiConfig.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const address = String(input);
+    if (address.endsWith('/api/current-user')) {
+        memberAsks++;
+        const answer = memberNow;
+        if (memberGate) await memberGate;
+        if (memberFails) throw new TypeError('offline');
+        return new Response(JSON.stringify({ user: answer }), { headers: { 'content-type': 'application/json' } });
+    }
+    if (address.endsWith('/api/session')) {
+        memberNow = init?.method === 'DELETE' ? null : { name: 'Grace' };
+        return new Response(null, { status: 204, headers: { 'x-ktor-svelte-user': 'changed' } });
+    }
+    if (address.endsWith('/api/secret')) return new Response('{}', { status: 401 });
+    return new Response('{}', { headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+const memberState: UserState<HarnessMember> = { user: null, ready: false };
+const members = userStore<HarnessMember>('/api/current-user', memberState);
+const memberSteps: unknown[] = [];
+const memberStep = (what: string) => memberSteps.push([what, members.user?.name ?? null, members.ready, members.signedIn, memberAsks]);
+memberStep('before loading');
+await request('POST', '/api/session');
+memberStep('a change before the first load asks nothing');
+memberNow = { name: 'Ada' };
+const [firstMember, secondMember] = await Promise.all([members.load(), members.load()]);
+memberStep(`loaded once for two callers: ${firstMember?.name} ${secondMember?.name}`);
+await members.load();
+memberStep('loading again asks nothing');
+await request('POST', '/api/session');
+const afterSignIn = await members.load();
+memberStep(`the sign-in response reloads: ${afterSignIn?.name}`);
+await request('GET', '/api/notes');
+memberStep('other calls ask nothing');
+await request('DELETE', '/api/session');
+await members.load();
+memberStep('the sign-out response reloads');
+members.set({ name: 'Linus' });
+memberStep('set by hand');
+await request('GET', '/api/secret').catch(() => undefined);
+memberStep('a 401 clears');
+memberNow = { name: 'Ada' };
+await members.reload();
+memberStep('reload asks');
+let openGate = () => {};
+memberGate = new Promise((resolve) => (openGate = resolve));
+const slowMember = members.reload();
+members.clear();
+openGate();
+memberGate = undefined;
+memberStep(`an answer that arrives after clear is dropped: ${(await slowMember)?.name ?? null}`);
+memberFails = true;
+await members.reload();
+memberStep('a failed call keeps what was known');
+memberFails = false;
+await members.load();
+memberStep('and the next load asks again');
+results.currentUser = memberSteps;
+apiConfig.fetch = undefined;
 
 console.log(JSON.stringify(results));

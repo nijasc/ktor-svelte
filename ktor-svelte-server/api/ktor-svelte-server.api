@@ -42,6 +42,31 @@ public final class io/github/nijasc/ktor/svelte/CookiesKt {
 	public static final fun writeCookie (Lio/ktor/server/application/ApplicationCall;Lio/github/nijasc/ktor/svelte/TypedCookie;Ljava/lang/Object;)V
 }
 
+public final class io/github/nijasc/ktor/svelte/CurrentUserAnswer {
+	public static final field Companion Lio/github/nijasc/ktor/svelte/CurrentUserAnswer$Companion;
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun getUser ()Ljava/lang/Object;
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/CurrentUserAnswer$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public fun <init> (Lkotlinx/serialization/KSerializer;)V
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lio/github/nijasc/ktor/svelte/CurrentUserAnswer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lio/github/nijasc/ktor/svelte/CurrentUserAnswer;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/CurrentUserAnswer$Companion {
+	public final fun serializer (Lkotlinx/serialization/KSerializer;)Lkotlinx/serialization/KSerializer;
+}
+
+public final class io/github/nijasc/ktor/svelte/CurrentUserKt {
+	public static final fun currentUserChanged (Lio/ktor/server/application/ApplicationCall;)V
+}
+
 public final class io/github/nijasc/ktor/svelte/DecimalSerializer : kotlinx/serialization/KSerializer {
 	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/DecimalSerializer;
 	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
@@ -316,6 +341,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setApiDocs (Z)V
 	public final fun setApiDocsPath (Ljava/lang/String;)V
 	public final fun setBuildHeader (Z)V
+	public final fun setCurrentUser (Ljava/lang/String;Lio/ktor/openapi/JsonSchema;Lio/ktor/util/reflect/TypeInfo;Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
 	public final fun setDefaultFavicon (Z)V
 	public final fun setDefaultTimeZone (Ljava/lang/String;)V
 	public final fun setErrorCodes (Ljava/lang/Class;Ljava/util/List;Lkotlin/jvm/functions/Function2;)V
