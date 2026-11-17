@@ -282,6 +282,7 @@ Besides the settings, the plugin gives your routes these helpers:
 | `call.navigateTo(path)` | Tells the client to go to a page after the call | [Navigation from the server](../features/calling-the-api.md#navigation-from-the-server) |
 | `call.respondIfStale(sent, current) { record }` | Answers 409 with the current record when the write was based on an old version | [Two people, one record](../features/calling-the-api.md#two-people-one-record) |
 | `call.respondLoginRedirect()` | Redirects to `loginPage`, carrying the current page | [The login page](../features/auth.md#the-login-page) |
+| `route.timeout(30.seconds)` | Cancels the handler after the limit with a 503, and makes the generated call use it as its timeout | [A time limit per route](../features/calling-the-api.md#a-time-limit-per-route) |
 | `getPage<T>(path) { }` | A paged `GET` route with `cursor` and `limit` | [Page through long lists](../recipes/pagination.md) |
 | `resource<T, ID>(path) { }` | The routes of one class, declared in one block | [Resource routes](../features/typescript.md#resource-routes) |
 | `application.buildInfo` | Version, commit and commit time of the build | [Build info](../guide/monitoring.md#build-info) |
