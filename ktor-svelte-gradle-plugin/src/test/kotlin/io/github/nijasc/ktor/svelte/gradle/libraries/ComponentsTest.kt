@@ -28,7 +28,9 @@ class ComponentsTest {
                 "ErrorPage.svelte",
                 "Field.svelte",
                 "FileDrop.svelte",
+                "MaskedInput.svelte",
                 "NavigationProgress.svelte",
+                "masks.ts",
             ),
             files.keys
                 .filter { it.startsWith(COMPONENTS_DIR) }
