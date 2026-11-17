@@ -530,6 +530,47 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteApiChanges compares the committed API with another revision and only fails when asked to`() {
+        val project = project()
+        val api = project.frontend.resolve("src/lib/api/openapi.json").apply { parentFile.mkdirs() }
+
+        fun document(vararg paths: String): String {
+            val operations = paths.joinToString(",") { "\"$it\":{\"get\":{\"responses\":{}}}" }
+            return """{"openapi":"3.1.1","paths":{$operations},"components":{"schemas":{}}}"""
+        }
+
+        fun git(vararg arguments: String) {
+            val process =
+                ProcessBuilder(
+                    listOf("git", "-c", "user.name=Test", "-c", "user.email=test@example.com") + arguments,
+                ).directory(dir).redirectErrorStream(true).start()
+            val output = process.inputStream.bufferedReader().readText()
+            assertEquals(0, process.waitFor(), output)
+        }
+        api.writeText(document("/api/notes", "/api/old"))
+        assertContains(project.runAndFail("svelteApiChanges").output, "is not in a git repository")
+
+        git("init", "-q", "-b", "main")
+        git("add", "frontend/src/lib/api/openapi.json")
+        git("commit", "-q", "-m", "first")
+        assertContains(project.run("svelteApiChanges", "--against=main").output, "the API is the same for callers as on main.")
+
+        api.writeText(document("/api/notes", "/api/new"))
+        val changed = project.run("svelteApiChanges", "--against=main").output
+        assertContains(changed, "API changes against main: 1 that can break callers, 1 other.")
+        assertContains(changed, "  GET /api/old  removed")
+        assertContains(changed, "  GET /api/new  added")
+        assertContains(
+            project.runAndFail("svelteApiChanges", "--against=main", "--strict").output,
+            "1 API change(s) against main can break callers.",
+        )
+        assertContains(
+            project.run("svelteApiChanges").output,
+            "origin/main has no frontend/src/lib/api/openapi.json, so there is nothing to compare with yet.",
+        )
+    }
+
+    @Test
     fun `svelteVerifyTs exists only with the application plugin`() {
         val project = project()
         assertContains(project.runAndFail("svelteVerifyTs").output, "not found")
