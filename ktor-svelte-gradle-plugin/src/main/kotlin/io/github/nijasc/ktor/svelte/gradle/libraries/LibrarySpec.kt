@@ -92,6 +92,7 @@ public data class LibrarySpec internal constructor(
     val components: Boolean = false,
     val fonts: FontSpec? = null,
     val charts: Boolean = false,
+    val installable: InstallableSpec? = null,
 ) : Serializable {
     internal val isEmpty: Boolean
         get() =
@@ -104,9 +105,10 @@ public data class LibrarySpec internal constructor(
                 !routes &&
                 !components &&
                 fonts == null &&
-                !charts
+                !charts &&
+                installable == null
     internal val usesCss: Boolean get() = tailwind != null || daisy != null
-    internal val usesHooks: Boolean get() = daisy != null || i18n != null || fonts != null
+    internal val usesHooks: Boolean get() = daisy != null || i18n != null || fonts != null || installable != null
 
     internal val requiredPackages: Set<String>
         get() =

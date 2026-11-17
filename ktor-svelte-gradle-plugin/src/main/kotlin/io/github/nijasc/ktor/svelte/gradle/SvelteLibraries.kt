@@ -2,6 +2,7 @@ package io.github.nijasc.ktor.svelte.gradle
 
 import org.gradle.api.Action
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
@@ -229,6 +230,22 @@ public abstract class RoutesSettings {
     ): Nothing = throw unknownSetting(RoutesSettings::class.java, "routes", name)
 }
 
+public abstract class InstallableSettings {
+    public abstract val enabled: Property<Boolean>
+    public abstract val name: Property<String>
+    public abstract val shortName: Property<String>
+    public abstract val description: Property<String>
+    public abstract val themeColor: Property<String>
+    public abstract val backgroundColor: Property<String>
+    public abstract val display: Property<String>
+    public abstract val icon: RegularFileProperty
+
+    public fun propertyMissing(
+        name: String,
+        value: Any?,
+    ): Nothing = throw unknownSetting(InstallableSettings::class.java, "installable", name)
+}
+
 public abstract class SvelteLibraries {
     public abstract val lucideEnabled: Property<Boolean>
     public abstract val imagesEnabled: Property<Boolean>
@@ -258,6 +275,9 @@ public abstract class SvelteLibraries {
 
     @get:Nested
     public abstract val routesSettings: RoutesSettings
+
+    @get:Nested
+    public abstract val installableSettings: InstallableSettings
 
     public abstract val overrides: MapProperty<String, String>
 
@@ -289,6 +309,11 @@ public abstract class SvelteLibraries {
     ) {
         fontSettings.sans.set(sans)
         action.execute(fontSettings)
+    }
+
+    public fun installable(action: Action<InstallableSettings>) {
+        installableSettings.enabled.set(true)
+        action.execute(installableSettings)
     }
 
     public fun charts() {
