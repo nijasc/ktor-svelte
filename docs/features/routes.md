@@ -142,3 +142,57 @@ src/main/kotlin/notes/Routes.kt:52  respondRedirect("/notes/${id}/edit")  ->  no
 It only lists what it finds. Add `--strict` to fail the build instead, for example in CI.
 
 The check works with or without typed routes. Paths under your API are never reported, because the generated client already makes a call to a missing route a compile error. The API roots come from the generated `openapi.json`, or `/api` when there is none. A link that starts with a value, such as `href="/{section}/overview"`, cannot be judged and is skipped, and with `LocaleStrategy.UrlPrefix` a leading language such as `/de` is accepted.
+
+## A new page
+
+A new page is a folder, two files with the right names, the load's types, and for a page with a parameter two settings that are easy to forget. `svelteAdd` writes them:
+
+```bash
+./gradlew svelteAdd --page=notes/[id]
+```
+
+```text
+ktor-svelte added /notes/[id]:
+  frontend/src/routes/notes/[id]/+page.svelte
+  frontend/src/routes/notes/[id]/+page.ts
+Its load calls api.notes.get, the route that answers at the same path.
+Add paramRoutes("/notes/[id]") to install(Svelte), so the app serves the page for every value.
+The files are yours from here on.
+```
+
+Write the folder as it is under `src/routes`, with groups such as `(app)/settings` if you use them.
+
+The `+page.ts` has a typed load. When the generated client already has a `GET` route at the same path below your API prefix, the load calls it, with the page's parameters in the type the route wants:
+
+```ts no-check
+import { apiWith } from '#api';
+import type { PageLoad } from './$types';
+
+export const prerender = false;
+export const ssr = false;
+
+export const load: PageLoad = async (event) => {
+    return { note: await apiWith(event).notes.get(Number(event.params.id)) };
+};
+```
+
+Without such a route the load returns the page's parameters, and you fill in the rest. The `+page.svelte` shows a title and the loaded data, so the page works before you have designed it. With `routes()` on, `routes.ts` is updated in the same run.
+
+Add `--route` and the task also writes a Kotlin file with a route to start from, at the API path of the page:
+
+```bash
+./gradlew svelteAdd --page=orders/[id] --route
+```
+
+```kotlin no-check
+fun Route.ordersIdRoutes() {
+    get("/api/orders/{id}") {
+        val id = call.parameters["id"].orEmpty()
+        call.respondText("Orders $id")
+    }
+}
+```
+
+The file goes into the package of your main class. Call the function inside `routing { }`, and after the next `svelteGenerateTs` the client has the route.
+
+The task only creates. It refuses when one of its files is already there, it never edits a file of yours, and what it wrote has no generated header: the files are yours.

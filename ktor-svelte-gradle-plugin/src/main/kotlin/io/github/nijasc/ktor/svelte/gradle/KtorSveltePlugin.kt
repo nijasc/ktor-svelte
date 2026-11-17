@@ -7,6 +7,7 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
 import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.GitOutputSource
 import io.github.nijasc.ktor.svelte.gradle.tasks.OPENAPI_FILE
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteAddTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteApiChangesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildInfoTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
@@ -370,6 +371,18 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.description = "Fails if an API call inside a load function uses neither apiWith(event) nor { fetch }."
             task.frontendDir.set(extension.frontendDir)
             task.routesDirectory.set(routes)
+        }
+        project.tasks.register("svelteAdd", SvelteAddTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description =
+                "Creates a page with a typed load: svelteAdd --page=notes/[id]. Add --route for a Kotlin route to start from."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.projectDirectory.set(project.layout.projectDirectory)
+            project.plugins.withId("application") {
+                task.mainClass.set(project.extensions.getByType(JavaApplication::class.java).mainClass)
+            }
+            task.finalizedBy(sync)
         }
         project.tasks.register("svelteRename", SvelteRenameTask::class.java) { task ->
             task.group = TASK_GROUP
