@@ -196,14 +196,17 @@ public final class io/github/nijasc/ktor/svelte/NavigationKt {
 public final class io/github/nijasc/ktor/svelte/Page {
 	public static final field Companion Lio/github/nijasc/ktor/svelte/Page$Companion;
 	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/Long;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/lang/Long;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Ljava/lang/String;
-	public final fun copy (Ljava/util/List;Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/Page;
-	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/Page;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Page;
+	public final fun component3 ()Ljava/lang/Long;
+	public final fun copy (Ljava/util/List;Ljava/lang/String;Ljava/lang/Long;)Lio/github/nijasc/ktor/svelte/Page;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/Page;Ljava/util/List;Ljava/lang/String;Ljava/lang/Long;ILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/Page;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getItems ()Ljava/util/List;
 	public final fun getNext ()Ljava/lang/String;
+	public final fun getTotal ()Ljava/lang/Long;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -231,15 +234,20 @@ public final class io/github/nijasc/ktor/svelte/PageKt {
 
 public final class io/github/nijasc/ktor/svelte/PageRequest {
 	public fun <init> (Ljava/lang/String;I)V
+	public fun <init> (Ljava/lang/String;IZ)V
+	public synthetic fun <init> (Ljava/lang/String;IZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()I
-	public final fun copy (Ljava/lang/String;I)Lio/github/nijasc/ktor/svelte/PageRequest;
-	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/PageRequest;Ljava/lang/String;IILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/PageRequest;
+	public final fun component3 ()Z
+	public final fun copy (Ljava/lang/String;IZ)Lio/github/nijasc/ktor/svelte/PageRequest;
+	public static synthetic fun copy$default (Lio/github/nijasc/ktor/svelte/PageRequest;Ljava/lang/String;IZILjava/lang/Object;)Lio/github/nijasc/ktor/svelte/PageRequest;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCursor ()Ljava/lang/String;
 	public final fun getLimit ()I
+	public final fun getWantsTotal ()Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public final fun total (Lkotlin/jvm/functions/Function0;)Ljava/lang/Long;
 }
 
 public final class io/github/nijasc/ktor/svelte/Patch {
