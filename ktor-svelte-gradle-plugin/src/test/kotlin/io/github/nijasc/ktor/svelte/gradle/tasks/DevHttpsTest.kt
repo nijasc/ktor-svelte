@@ -180,4 +180,17 @@ class DevHttpsTest {
         assertTrue(head.chunked)
         assertFalse(head.upgrades)
     }
+
+    @Test
+    fun `with HTTPS on, the banner names the secure address and remembers the app's own port`() {
+        val banner = ReadyBanner(5173, httpsPort = 8443)
+        var opened = ""
+        banner.onFirstReady = { opened = it }
+        val text = banner.onAppLine("Responding at http://0.0.0.0:8080").orEmpty()
+        assertContains(text, "App:  https://localhost:8443")
+        assertEquals("https://localhost:8443", opened)
+        assertEquals(8080, banner.appPort)
+        assertEquals("ktor-svelte: the app is ready again at https://localhost:8443", banner.onAppLine("Responding at http://0.0.0.0:8081"))
+        assertEquals(8081, banner.appPort)
+    }
 }

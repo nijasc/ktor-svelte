@@ -10,9 +10,16 @@ internal fun browsableUrl(url: String): String =
         .replace("://[::]", "://localhost")
         .replace("://127.0.0.1", "://localhost")
 
+private val PORT_OF = Regex(""":(\d+)(?:/|$)""")
+
 internal class ReadyBanner(
     private val vitePort: Int,
+    private val httpsPort: Int? = null,
 ) {
+    @Volatile
+    var appPort: Int? = null
+        private set
+
     private var apiDocsPath: String? = null
     private var announced = false
     var onFirstReady: (String) -> Unit = {}
@@ -26,13 +33,20 @@ internal class ReadyBanner(
                 ?.groupValues
                 ?.get(1)
                 ?.let(::browsableUrl) ?: return null
-        if (announced) return "ktor-svelte: the app is ready again at $appUrl"
+        appPort =
+            PORT_OF
+                .find(appUrl)
+                ?.groupValues
+                ?.get(1)
+                ?.toIntOrNull()
+        val shownUrl = httpsPort?.let { "https://localhost:$it" } ?: appUrl
+        if (announced) return "ktor-svelte: the app is ready again at $shownUrl"
         announced = true
-        onFirstReady(appUrl)
+        onFirstReady(shownUrl)
         val rows =
             listOfNotNull(
-                "App" to appUrl,
-                apiDocsPath?.let { "API docs" to appUrl + it },
+                "App" to shownUrl,
+                apiDocsPath?.let { "API docs" to shownUrl + it },
                 "Vite" to "http://localhost:$vitePort",
             )
         val width = rows.maxOf { it.first.length } + 1

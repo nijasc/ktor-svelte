@@ -159,6 +159,8 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/RoutesSettings {
 public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteDevSettings {
 	public fun <init> ()V
 	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHttps ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHttpsPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
@@ -402,11 +404,14 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDeployTask
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteDevAllTask : io/github/nijasc/ktor/svelte/gradle/tasks/SvelteToolTask {
 	public fun <init> ()V
 	public abstract fun getAppClasspath ()Lorg/gradle/api/file/ConfigurableFileCollection;
+	public abstract fun getCertificateDirectory ()Lorg/gradle/api/provider/Property;
 	public abstract fun getClassesDirectories ()Lorg/gradle/api/file/ConfigurableFileCollection;
 	public abstract fun getCompileErrorsFile ()Lorg/gradle/api/file/RegularFileProperty;
 	public abstract fun getDebugPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getFullStackTraces ()Lorg/gradle/api/provider/Property;
 	public abstract fun getGradleExecutable ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHttps ()Lorg/gradle/api/provider/Property;
+	public abstract fun getHttpsPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getJavaLauncher ()Lorg/gradle/api/provider/Property;
 	public abstract fun getMainClass ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;

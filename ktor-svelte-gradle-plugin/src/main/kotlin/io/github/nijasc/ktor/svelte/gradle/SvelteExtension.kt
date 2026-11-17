@@ -44,6 +44,8 @@ public abstract class SvelteDevSettings {
     public abstract val script: Property<String>
     public abstract val debugPort: Property<Int>
     public abstract val openBrowser: Property<Boolean>
+    public abstract val https: Property<Boolean>
+    public abstract val httpsPort: Property<Int>
 
     public fun propertyMissing(
         name: String,
