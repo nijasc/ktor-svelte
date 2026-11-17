@@ -649,6 +649,19 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the app's own font is preloaded and used, and nothing is asked of another host`() {
+        val hosts = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+        page.onRequest { request -> hosts += java.net.URI(request.url()).host }
+        page.navigate("/about")
+        val preload = page.locator("link[rel=preload][as=font]")
+        assertThat(preload).hasAttribute("href", Pattern.compile("^/_app/immutable/assets/inter-latin-wght-normal\\.[^./]+\\.woff2$"))
+        assertThat(preload).hasAttribute("type", "font/woff2")
+        assertEquals(true, page.evaluate("getComputedStyle(document.documentElement).fontFamily.includes('Inter Variable')"))
+        page.waitForFunction("document.fonts.ready.then(() => document.fonts.check('16px \"Inter Variable\"'))")
+        assertEquals(1, hosts.size, hosts.toString())
+    }
+
+    @Test
     fun `a profile can be renamed and the password needs the current one`() {
         val name = unique("Renamed")
         page.register("Before $name")

@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.gradle.DocLink
 import io.github.nijasc.ktor.svelte.gradle.libraries.CLIENT_HOOKS
 import io.github.nijasc.ktor.svelte.gradle.libraries.COMPONENTS_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.ERROR_ROUTE
+import io.github.nijasc.ktor.svelte.gradle.libraries.FONT_PACKAGE_VERSION
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_DIR
 import io.github.nijasc.ktor.svelte.gradle.libraries.GENERATED_MARKER
 import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
@@ -58,7 +59,7 @@ internal fun updatedPackageJson(
     val result = LinkedHashMap(current)
     val devDependencies = java.util.TreeMap<String, Any?>((current["devDependencies"] as? Map<String, Any?>).orEmpty())
     KNOWN_PACKAGES.filter { it !in spec.requiredPackages }.forEach(devDependencies::remove)
-    spec.requiredPackages.forEach { name -> devDependencies.putIfAbsent(name, PACKAGE_VERSIONS.getValue(name)) }
+    spec.requiredPackages.forEach { name -> devDependencies.putIfAbsent(name, PACKAGE_VERSIONS[name] ?: FONT_PACKAGE_VERSION) }
     result["devDependencies"] = devDependencies
     val imports = LinkedHashMap((current["imports"] as? Map<String, Any?>).orEmpty())
     imports.putIfAbsent("#lib/*", "./src/lib/*")

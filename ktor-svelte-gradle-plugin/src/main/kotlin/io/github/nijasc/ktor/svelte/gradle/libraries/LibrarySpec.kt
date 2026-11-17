@@ -44,6 +44,31 @@ public data class DaisySpec internal constructor(
 }
 
 @ConsistentCopyVisibility
+public data class FontSpec internal constructor(
+    val sans: String,
+    val mono: String?,
+    val variable: Boolean,
+) : Serializable {
+    internal val families: List<String> get() = listOfNotNull(sans, mono)
+
+    internal fun packageName(family: String): String = (if (variable) "@fontsource-variable/" else "@fontsource/") + fontSlug(family)
+
+    internal fun cssName(family: String): String = if (variable) "$family Variable" else family
+
+    internal fun stylesheets(family: String): List<String> =
+        if (variable) listOf("${packageName(family)}/wght.css") else STATIC_WEIGHTS.map { "${packageName(family)}/$it.css" }
+
+    internal fun preloadFile(family: String): String =
+        "${packageName(family)}/files/${fontSlug(family)}-latin-${if (variable) "wght" else STATIC_WEIGHTS.first()}-normal.woff2"
+}
+
+internal const val FONT_PACKAGE_VERSION = "^5.3.0"
+private val STATIC_WEIGHTS = listOf("400", "700")
+private val FONT_NAME = Regex("[A-Za-z0-9]+( [A-Za-z0-9]+)*")
+
+internal fun fontSlug(family: String): String = family.lowercase().replace(' ', '-')
+
+@ConsistentCopyVisibility
 public data class I18nSpec internal constructor(
     val locales: List<String>,
     val defaultLocale: String,
@@ -64,11 +89,21 @@ public data class LibrarySpec internal constructor(
     val routes: Boolean = false,
     val reloadPrompt: Boolean = false,
     val components: Boolean = false,
+    val fonts: FontSpec? = null,
 ) : Serializable {
     internal val isEmpty: Boolean
-        get() = tailwind == null && daisy == null && !lucide && i18n == null && !images && !toasts && !routes && !components
+        get() =
+            tailwind == null &&
+                daisy == null &&
+                !lucide &&
+                i18n == null &&
+                !images &&
+                !toasts &&
+                !routes &&
+                !components &&
+                fonts == null
     internal val usesCss: Boolean get() = tailwind != null || daisy != null
-    internal val usesHooks: Boolean get() = daisy != null || i18n != null
+    internal val usesHooks: Boolean get() = daisy != null || i18n != null || fonts != null
 
     internal val requiredPackages: Set<String>
         get() =
@@ -82,9 +117,25 @@ public data class LibrarySpec internal constructor(
                 if (daisy != null) add("daisyui")
                 if (lucide) add("@lucide/svelte")
                 if (images) add("@sveltejs/enhanced-img")
+                fonts?.let { font -> font.families.forEach { add(font.packageName(it)) } }
             }
 
     internal fun validate() {
+        if (fonts != null) {
+            val wrong = fonts.families.filterNot { FONT_NAME.matches(it) }
+            if (wrong.isNotEmpty()) {
+                throw GradleException(
+                    "fonts: $wrong is not a font name. Write it as it is spelled, such as \"Inter\" or \"JetBrains Mono\"." +
+                        DocLink.FRONTEND_LIBRARIES.see(),
+                )
+            }
+            if (!usesCss) {
+                throw GradleException(
+                    "fonts needs tailwind() or daisyUi(), which bring the stylesheet the font goes into." +
+                        DocLink.FRONTEND_LIBRARIES.see(),
+                )
+            }
+        }
         if (daisy != null) {
             if (daisy.allThemes.isEmpty()) throw GradleException("daisyUi needs at least one theme." + DocLink.DAISYUI.see())
             if (daisy.defaultTheme !in daisy.allThemes) {

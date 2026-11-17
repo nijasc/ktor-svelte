@@ -99,6 +99,14 @@ public final class io/github/nijasc/ktor/svelte/gradle/DaisyTheme : java/lang/En
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/FontSettings {
+	public fun <init> ()V
+	public abstract fun getMono ()Lorg/gradle/api/provider/Property;
+	public abstract fun getSans ()Lorg/gradle/api/provider/Property;
+	public abstract fun getVariable ()Lorg/gradle/api/provider/Property;
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/I18nSettings {
 	public fun <init> ()V
 	public abstract fun getDefaultLocale ()Lorg/gradle/api/provider/Property;
@@ -182,8 +190,11 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public final fun components ()V
 	public final fun daisyUi (Lorg/gradle/api/Action;)V
 	public static synthetic fun daisyUi$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
+	public final fun fonts (Ljava/lang/String;Lorg/gradle/api/Action;)V
+	public static synthetic fun fonts$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Ljava/lang/String;Lorg/gradle/api/Action;ILjava/lang/Object;)V
 	public abstract fun getComponentsEnabled ()Lorg/gradle/api/provider/Property;
 	public abstract fun getDaisySettings ()Lio/github/nijasc/ktor/svelte/gradle/DaisySettings;
+	public abstract fun getFontSettings ()Lio/github/nijasc/ktor/svelte/gradle/FontSettings;
 	public abstract fun getGeneratedPackage ()Lorg/gradle/api/provider/Property;
 	public abstract fun getI18nSettings ()Lio/github/nijasc/ktor/svelte/gradle/I18nSettings;
 	public abstract fun getImagesEnabled ()Lorg/gradle/api/provider/Property;
@@ -241,6 +252,18 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec : jav
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/github/nijasc/ktor/svelte/gradle/libraries/FontSpec : java/io/Serializable {
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMono ()Ljava/lang/String;
+	public final fun getSans ()Ljava/lang/String;
+	public final fun getVariable ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec : java/io/Serializable {
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Ljava/lang/String;
@@ -258,6 +281,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun component10 ()Z
 	public final fun component11 ()Z
 	public final fun component12 ()Z
+	public final fun component13 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/FontSpec;
 	public final fun component2 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun component3 ()Z
 	public final fun component4 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
@@ -271,6 +295,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun getComponents ()Z
 	public final fun getDaisy ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun getDevPort ()I
+	public final fun getFonts ()Lio/github/nijasc/ktor/svelte/gradle/libraries/FontSpec;
 	public final fun getGeneratedPackage ()Ljava/lang/String;
 	public final fun getI18n ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
 	public final fun getImages ()Z

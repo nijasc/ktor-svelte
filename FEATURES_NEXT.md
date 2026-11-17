@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 59 | Self-hosted fonts |  |
+| 108 | Charts preset |  |
 
 ### In review
 
@@ -36,6 +36,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 49 | Plurals in messages | #295 |
 | 50 | Shared formatting | #296 |
 | 96 | Relative time | #297 |
+| 59 | Self-hosted fonts | #298 |
 
 ### Next up
 
@@ -140,7 +141,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 108 | Charts preset | Medium | 7 |
 | 48 | API change report | Medium | 7 |
 | 81 | Production smoke test | Medium | 7 |
 | 21 | Typed current user | Medium | 8 |

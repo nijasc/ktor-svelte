@@ -23,6 +23,7 @@ svelte {
             defaultTheme(DaisyTheme.ShadcnLight)
             prefersDark(DaisyTheme.ShadcnDark)
         }
+        fonts("Inter")
         lucide()
         images()
         toasts()
@@ -125,6 +126,43 @@ customTheme("sunset") {
 The real block lists all twelve colors, and says `colorScheme = "dark"` when you started from a dark theme. Paste it into `daisyUi { }`, add the name to your themes, and `svelteSync` makes it a theme like any other. The changes on the page are a preview only: **Reset**, or a reload, brings the theme back.
 
 The saved theme is applied by a small inline script. The automatic [Content-Security-Policy](../security.md#security-headers) allows it by its hash. If you set your own `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
+
+## Fonts
+
+A font from a font CDN is a request to another company on every first visit, a line in the privacy policy, and an exception in the Content-Security-Policy. `fonts` serves the font from your own app instead:
+
+```kotlin
+svelte {
+    libraries {
+        tailwind()
+        fonts("Inter")
+    }
+}
+```
+
+`svelteSync` then does three things:
+
+- It installs the font from [Fontsource](https://fontsource.org), an npm package per font, so the lockfile pins the files like any other dependency.
+- It imports the font into the generated stylesheet and makes it the default: `font-sans` in Tailwind, and so the font of the whole page.
+- It preloads the Latin file on every page, through the generated server hooks, so text does not first appear in a fallback font.
+
+The files end up in the frontend build under hashed names and are served by your app, with the long cache lifetime of every other asset.
+
+```kotlin no-check
+fonts("Inter") {
+    mono = "JetBrains Mono"
+}
+```
+
+`mono` sets the font for code, `font-mono`. Write the names as the fonts are called, with spaces. The font is taken in its variable version, one file for all weights. For a font that has none, say so, and the regular and bold files are used:
+
+```kotlin no-check
+fonts("Roboto") {
+    variable = false
+}
+```
+
+`fonts` needs `tailwind()` or `daisyUi()`, which bring the stylesheet. Whether a font exists, and whether it has a variable version, shows on its Fontsource page. A name that does not exist fails at `svelteSync`, when the package cannot be installed. When you drop or change a font, remove its old `@fontsource` package from `package.json` yourself: the plugin does not know which of them are yours.
 
 ## Lucide
 
