@@ -12,3 +12,4 @@
 - svelteMetrics now also records latency and errors per route template and page.
 - New and opt-in: warmUp(...) calls a few routes before the health endpoint reports up; svelte { nodeVersion = "22.12.0" } pins Node for npm and pnpm; svelte { frontend("admin") { } } serves a second SvelteKit project; svelteDoctor checks the package registry and proxy.
 - Builds that run the frontend end with a short table of step times. Turn it off with svelte { timingSummary = false }.
+- New tasks: svelteReadme fills a section of your README between <!-- ktor-svelte:start --> and <!-- ktor-svelte:end --> with the commands, addresses and environment variables of the app (it writes nothing without the markers), and svelteRoutesDiagram draws which page calls which API route.
