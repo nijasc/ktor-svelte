@@ -5,6 +5,7 @@ form-state.svelte.ts text eol=lf linguist-generated merge=ktor-svelte
 pending-writes.svelte.ts text eol=lf linguist-generated merge=ktor-svelte
 types.ts text eol=lf linguist-generated merge=ktor-svelte
 services.ts text eol=lf linguist-generated merge=ktor-svelte
+loads.ts text eol=lf linguist-generated merge=ktor-svelte
 index.ts text eol=lf linguist-generated merge=ktor-svelte
 constants.ts text eol=lf linguist-generated merge=ktor-svelte
 cookies.ts text eol=lf linguist-generated merge=ktor-svelte

@@ -173,5 +173,9 @@
   "table-no-results": "Nothing matches this search.",
   "admin-search-tasks": "Search tasks",
   "admin-all-tasks": "All tasks",
-  "nav-breadcrumb": "Breadcrumb"
+  "nav-breadcrumb": "Breadcrumb",
+  "sidebar-label": "Admin sections",
+  "sidebar-collapse": "Collapse",
+  "sidebar-expand": "Expand",
+  "sidebar-menu": "Menu"
 }

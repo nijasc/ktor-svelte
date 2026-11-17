@@ -76,6 +76,8 @@ internal class TypeScriptGenerator(
     private val errorReportPath: String? = null,
     private val vitalsCall: String? = null,
 ) {
+    private var pageLoads: List<PageLoadSpec> = emptyList()
+
     private val declaredCookies = cookies
     private val sideSchemas =
         listOfNotNull(publicConfigSchema, currentUser?.schema, preferences?.schema).map { Json.parseToJsonElement(it) }
@@ -95,8 +97,10 @@ internal class TypeScriptGenerator(
     fun generate(
         openApiJson: String,
         routeFiles: Map<String, String> = emptyMap(),
+        pageLoads: List<PageLoadSpec> = emptyList(),
     ): Map<String, String> {
         this.routeFiles = routeFiles
+        this.pageLoads = pageLoads
         val document = Json.parseToJsonElement(openApiJson).jsonObject
         val filtered = withNullableReferences(withDeclaredErrors(withApiPathsOnly(document)))
         val schemas = filtered.objectAt("components")?.objectAt("schemas").orEmpty()
@@ -172,7 +176,9 @@ internal class TypeScriptGenerator(
                     filtered.objectAt("paths").orEmpty(),
                     schemas.keys + LUCIDE_TYPE + enumTypes.values.map { it.name } + dateTypes,
                 ),
+            *(if (pageLoads.isEmpty()) emptyArray() else arrayOf(PAGE_LOADS_FILE to pageLoadsSource(pageLoads, operations))),
             "index.ts" to typeScriptTemplate("index.ts") + (if (constants.isEmpty()) "" else "export * from './constants.js';\n") +
+                (if (pageLoads.isEmpty()) "" else "export * from './${PAGE_LOADS_FILE.removeSuffix(".ts")}.js';\n") +
                 (if (cookieFile) "export * from './cookies.js';\n" else "") +
                 (if (currentUser != null) "export * from './${CURRENT_USER_FILE.removeSuffix(".ts")}.js';\n" else "") +
                 (if (guards.isNotEmpty()) "export * from './${GUARDS_FILE.removeSuffix(".ts")}.js';\n" else "") +
@@ -1000,7 +1006,16 @@ internal class TypeScriptGenerator(
                         references += endpoint.references
                         val name = uniqueName(endpoint.name, endpoint.parameters, taken)
                         val operation = "$group.$name"
-                        operations += GeneratedOperation(operation, endpoint.method, endpoint.path)
+                        operations +=
+                            GeneratedOperation(
+                                operation,
+                                endpoint.method,
+                                endpoint.path,
+                                endpoint.parameters,
+                                endpoint.pathTypes,
+                                endpoint.optionalSlots,
+                                endpoint.needsInput,
+                            )
                         endpoint.errorType?.let { errors += ErrorEntry(operation, it, endpoint.errorStatuses) }
                         endpoint.upload?.let { uploads[operation] = it }
                         val exportName = exportName("$group-$name", exportNames)
@@ -1137,11 +1152,13 @@ internal class TypeScriptGenerator(
         val declared = (pathItem.arrayAt("parameters").orEmpty() + operation.arrayAt("parameters").orEmpty()).map { it.jsonObject }
         val pathParameters = PATH_PARAMETER.findAll(path).map { it.groupValues[1] }.toList()
         val signature = mutableListOf<String>()
+        val pathTypes = mutableListOf<String>()
 
         pathParameters.forEach { parameter ->
             val schema = declared.firstOrNull { it.stringAt("name") == parameter && it.stringAt("in") == "path" }?.objectAt("schema")
             val type = schema?.let { tsType(it, references) }?.takeUnless { it == "unknown" || it == "string" } ?: "string | number"
             signature += "${parameterName(parameter)}: $type"
+            pathTypes += type
         }
 
         val requestBody = operation.objectAt("requestBody")
@@ -1226,6 +1243,9 @@ internal class TypeScriptGenerator(
                         routeFiles["${method.uppercase()} $path"]?.let { "@see $it" },
                     ),
             parameters = pathParameters,
+            pathTypes = pathTypes,
+            optionalSlots = signature.size - pathParameters.size - 1,
+            needsInput = signature.drop(pathParameters.size).dropLast(1).any { !it.substringBefore(':').endsWith("?") },
             source = { key ->
                 val arguments = (extras + "operation: '$key'").joinToString()
                 val call = if (streaming) "stream" else "request"
@@ -1372,6 +1392,9 @@ internal class TypeScriptGenerator(
         val upload: String?,
         val errorType: String?,
         val errorStatuses: List<Int>,
+        val pathTypes: List<String> = emptyList(),
+        val optionalSlots: Int = 0,
+        val needsInput: Boolean = false,
     )
 
     private class ErrorEntry(
@@ -1587,6 +1610,10 @@ internal data class GeneratedOperation(
     val name: String,
     val method: String,
     val path: String,
+    val pathParameters: List<String> = emptyList(),
+    val pathTypes: List<String> = emptyList(),
+    val optionalSlots: Int = 0,
+    val needsInput: Boolean = false,
 )
 
 internal data class SourceLocation(

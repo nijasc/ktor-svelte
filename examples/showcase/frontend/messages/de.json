@@ -173,5 +173,9 @@
   "table-no-results": "Keine Aufgabe passt zu dieser Suche.",
   "admin-search-tasks": "Aufgaben suchen",
   "admin-all-tasks": "Alle Aufgaben",
-  "nav-breadcrumb": "Navigationspfad"
+  "nav-breadcrumb": "Navigationspfad",
+  "sidebar-label": "Bereiche der Verwaltung",
+  "sidebar-collapse": "Einklappen",
+  "sidebar-expand": "Ausklappen",
+  "sidebar-menu": "Menü"
 }
