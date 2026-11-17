@@ -905,6 +905,46 @@ docker build -t my-app .
 docker run -p 8080:8080 --env-file .env my-app
 ```
 
+## Railway
+
+`./gradlew svelteDeploy` writes `.railway/railway.ts`, Railway's infrastructure-as-code file, from what the project already knows:
+
+```ts
+import { defineRailway, github, preserve, project, service } from "railway/iac";
+
+export default defineRailway(() => {
+    const app = service("shop", {
+        source: github("acme/shop"),
+        build: "./gradlew buildFatJar --no-daemon",
+        start: "java -jar build/libs/shop-all.jar",
+        healthcheck: "/_ktor-svelte/health",
+        healthcheckTimeout: 120,
+        env: {
+            DATABASE_URL: preserve(),
+            SESSION_SIGN_KEY: preserve(),
+        },
+    });
+
+    return project("shop", {
+        resources: [app],
+    });
+});
+```
+
+| Part | Where it comes from |
+|---|---|
+| Names | The Gradle project name. |
+| `source` | The `origin` remote, when it is on GitHub. Left out otherwise. |
+| `build` and `start` | `buildFatJar` when the Ktor plugin is applied, `shadowJar` with Shadow, `installDist` otherwise. Left out when the project has a `Dockerfile`, because Railway builds with the Dockerfile it finds. |
+| `healthcheck` | The built-in health endpoint. Turn it on with `healthEndpoint = true`. |
+| `env` | The required variables in [`.env.example`](https://nijasc.github.io/ktor-svelte/main/features/runtime-config#environment-variables). `preserve()` keeps the value you set in Railway, so no secret is written to the file. |
+
+The file is written once and is yours from then on: add a database, replicas or domains to it as Railway's reference describes. Running the task again refuses to replace it unless you pass `--force`.
+
+To use it, install Railway's package where the file is (`npm install railway`), then `railway login`, `railway link`, `railway config plan` to see what would change and `railway config apply` to do it. Set the listed variables in Railway before the first deploy.
+
+Railway is the only host so far. `--host` exists for the ones to come, and another value says so.
+
 ## A plain server
 
 Copy the JAR to the server and run it as a service. A minimal systemd unit:
