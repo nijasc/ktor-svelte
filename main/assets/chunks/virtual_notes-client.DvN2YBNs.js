@@ -262,6 +262,8 @@ function sendWithProgress(onProgress: (progress: UploadProgress) => void): typeo
         });
 }
 
+const userWatchers: { gone: () => void; changed: () => void }[] = [];
+
 function isSameOrigin(url: string): boolean {
     if (typeof location === 'undefined') return !/^[a-z][a-z0-9+.-]*:/i.test(url);
     return new URL(url, location.href).origin === location.origin;
@@ -442,6 +444,10 @@ async function checked(response: Response, url: string, operation: string | unde
     noticeBuild(response);
     noticeToasts(response, url);
     if (response.ok) noticeNavigation(response, url);
+    if (isSameOrigin(url)) {
+        if (response.status === 401) for (const watcher of userWatchers) watcher.gone();
+        else if (response.headers.get('x-ktor-svelte-user') === 'changed') for (const watcher of userWatchers) watcher.changed();
+    }
     if (response.status === 401) apiConfig.onUnauthorized?.(response);
     if (!response.ok) {
         const requestId = response.headers.get('x-request-id') ?? undefined;
@@ -564,6 +570,75 @@ export async function* stream<T>(method: string, path: string, options: Internal
     } finally {
         reader.cancel().catch(() => undefined);
     }
+}
+
+export interface UserState<T> {
+    user: T | null;
+    ready: boolean;
+}
+
+export interface UserStore<T> {
+    readonly user: T | null;
+    readonly ready: boolean;
+    readonly signedIn: boolean;
+    load(): Promise<T | null>;
+    reload(): Promise<T | null>;
+    set(user: T | null): void;
+    clear(): void;
+}
+
+export function userStore<T>(path: string, state: UserState<T>): UserStore<T> {
+    let pending: Promise<T | null> | undefined;
+    let turn = 0;
+    const settle = (user: T | null) => {
+        turn++;
+        state.user = user;
+        state.ready = true;
+        pending = Promise.resolve(user);
+    };
+    const ask = (): Promise<T | null> => {
+        const mine = ++turn;
+        const asked: Promise<T | null> = request<{ user?: T | null }>('GET', path, { silent: true }).then(
+            (answer) => {
+                if (mine !== turn) return pending ?? null;
+                state.user = answer?.user ?? null;
+                state.ready = true;
+                return state.user;
+            },
+            () => {
+                if (mine !== turn) return pending ?? null;
+                pending = undefined;
+                state.ready = true;
+                return state.user;
+            }
+        );
+        pending = asked;
+        return asked;
+    };
+    userWatchers.push({
+        gone: () => settle(null),
+        changed: () => {
+            if (pending) void ask();
+        }
+    });
+    return {
+        get user() {
+            return state.user;
+        },
+        get ready() {
+            return state.ready;
+        },
+        get signedIn() {
+            return state.user !== null;
+        },
+        load: () => {
+            if (typeof document === 'undefined' && !apiConfig.fetch) return Promise.resolve(null);
+            return pending ?? ask();
+        },
+        reload: ask,
+        set: settle,
+        clear: () => settle(null)
+    };
 }
 
 export interface PageOf<T> {
