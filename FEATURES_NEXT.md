@@ -39,6 +39,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 115 | Rule presets | #344 |
 | 116 | Read-only computed fields | #346 |
 | 117 | Created and updated stamps | #347 |
+| 118 | Owner checks | #348 |
 
 ### Next up
 
@@ -176,7 +177,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 118 | Owner checks | Small | 14 |
 | 119 | Pending writes indicator | Small | 14 |
 | 120 | Input masks | Medium | 14 |
 | 121 | Focus the first error | Small | 14 |
