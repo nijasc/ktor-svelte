@@ -351,6 +351,62 @@ For a big record where only one field was edited, send just the changed fields. 
 - Fields are compared as JSON against the saved values, the same way as [`form.changes`](#what-changed). A field set to `undefined` is sent as `null`, which the server's `Patch<T>` reads as "clear it".
 - Errors, conflicts and the saved state work exactly as with `submit`.
 
+### Forms in several steps
+
+`formWizard` splits one form into steps. Each step is checked against the same `validate()` before you can move on, the progress survives a reload, and the whole object is sent once at the end:
+
+```svelte no-check
+<script lang="ts">
+    import { api, Signup } from '#api';
+    import Field from '#components/Field.svelte';
+    import { formWizard } from '#lib/api/form-state.svelte.ts';
+
+    const wizard = formWizard<Signup>(Signup.empty(), {
+        validate: Signup.validate,
+        steps: [['name', 'email'], ['company', 'role'], ['password']],
+        keep: 'signup'
+    });
+
+    async function finish(event: SubmitEvent) {
+        event.preventDefault();
+        if (!wizard.last) return void wizard.next();
+        await wizard.submit((draft) => api.signups.create(draft));
+    }
+</script>
+
+<p>Step {wizard.step + 1} of {wizard.count}</p>
+<form novalidate onsubmit={finish}>
+    {#if wizard.step === 0}
+        <Field id="name" label="Name" bind:value={wizard.draft.name} errors={wizard.errors.name} />
+        <Field id="email" label="Email" bind:value={wizard.draft.email} errors={wizard.errors.email} />
+    {:else if wizard.step === 1}
+        <Field id="company" label="Company" bind:value={wizard.draft.company} errors={wizard.errors.company} />
+        <Field id="role" label="Role" bind:value={wizard.draft.role} errors={wizard.errors.role} />
+    {:else}
+        <Field id="password" label="Password" type="password" bind:value={wizard.draft.password} errors={wizard.errors.password} />
+    {/if}
+    {#if !wizard.first}<button type="button" onclick={wizard.back}>Back</button>{/if}
+    <button disabled={wizard.submitting}>{wizard.last ? 'Create account' : 'Next'}</button>
+</form>
+```
+
+| Option | What it does |
+| --- | --- |
+| `steps` | The fields of each step, in order. Errors of a nested path such as `address.city` or `lines[2].sku` belong to the step of `address` or `lines` |
+| `keep` | A `sessionStorage` key. The step and the draft are kept there, so a reload or a back button does not lose the progress; it is cleared after a successful submit or a `reset()` |
+| `validate`, `checks`, `focusErrors`, ... | As for [`formState`](#form-state) |
+
+| Name | What it is |
+| --- | --- |
+| `wizard.step`, `count`, `first`, `last` | Where you are |
+| `wizard.reached` | The furthest step reached; `goTo` cannot jump past it |
+| `wizard.fields` | The fields of the current step |
+| `wizard.next()` | Checks the current step's fields only; shows and focuses their errors and returns `false`, or moves on and returns `true` |
+| `wizard.back()`, `wizard.goTo(n)` | Move back, or to any step already reached |
+| `wizard.submit(send)` | Checks everything and sends once. When an earlier step is invalid, or the server answers 422 for one of its fields, it jumps back to the first step with an error |
+
+Everything else of a `formState` (`draft`, `errors`, `dirty`, `changes`, `submitChanges`, `reset`, ...) works on the wizard too. `form.setErrors(errors)` sets the shown errors by hand, on any form.
+
 ### Focus the first error
 
 When a submit fails validation, `formState` waits for the error messages to appear and then moves focus to the first field marked invalid, scrolled to the middle of the screen. Keyboard and screen reader users land right on the problem, and on a long form nobody has to scroll to find it.
