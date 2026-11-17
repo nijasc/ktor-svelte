@@ -280,6 +280,59 @@ function routeMap(root) {
     filter.addEventListener('input', draw);
 }
 
+function environmentView(root) {
+    const section = root.querySelector('.environment');
+    const rows = root.querySelector('.environment-rows');
+    const filter = root.querySelector('.environment-filter');
+    const note = root.querySelector('.environment-note');
+    let groups = [];
+
+    function draw() {
+        const wanted = filter.value.trim().toLowerCase();
+        let shown = 0;
+        let all = 0;
+        const lines = [];
+        for (const group of groups) {
+            const matching = group.rows.filter((row) => `${row.name} ${row.value}`.toLowerCase().includes(wanted));
+            all += group.rows.length;
+            shown += matching.length;
+            if (matching.length === 0) continue;
+            const title = document.createElement('div');
+            title.className = 'environment-group';
+            title.textContent = `${group.name} (${matching.length})`;
+            lines.push(title);
+            for (const entry of matching) {
+                const line = document.createElement('div');
+                line.className = entry.hidden ? 'environment-row hidden' : 'environment-row';
+                const name = document.createElement('span');
+                name.textContent = entry.name;
+                const value = document.createElement('span');
+                value.textContent = entry.value;
+                if (entry.hidden) value.title = 'Hidden because the name or the value looks like a secret';
+                line.append(name, value);
+                lines.push(line);
+            }
+        }
+        rows.replaceChildren(...lines);
+        note.textContent = shown === all ? `${all} in all` : `${shown} of ${all}`;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/environment', { headers: { accept: 'application/json' } });
+            groups = (await response.json()).groups;
+            draw();
+        } catch {
+            note.textContent = 'The environment could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    filter.addEventListener('input', draw);
+}
+
 function statusView(root) {
     const section = root.querySelector('.status');
     const rows = root.querySelector('.status-rows');
@@ -744,6 +797,16 @@ button.routes-file:hover { text-decoration: underline; }
 .status-row span:last-child { overflow-wrap: anywhere; }
 .status-row.ok span:last-child { color: #7bd88f; }
 .status-row.bad span:last-child { color: #ff7b72; }
+.environment { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.environment summary { padding: 6px 10px; cursor: pointer; }
+.environment-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; }
+.environment-filter { flex: 1; min-width: 0; padding: 2px 4px; border: 1px solid #4a447a; border-radius: 4px; background: #15122b; color: #eee; font: 12px ui-monospace, monospace; }
+.environment-note { color: #aaa; }
+.environment-group { padding: 6px 10px 2px; color: #aaa; }
+.environment-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 8px; padding: 1px 10px; font-family: ui-monospace, monospace; }
+.environment-row span { overflow-wrap: anywhere; }
+.environment-row span:first-child { color: #f3c969; }
+.environment-row.hidden span:last-child { color: #aaa; }
 .theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .theme[hidden] { display: none; }
 .theme summary { padding: 6px 10px; cursor: pointer; }
@@ -1038,6 +1101,14 @@ function startPanel() {
                 <summary>Status</summary>
                 <div class="status-rows"></div>
             </details>
+            <details class="environment">
+                <summary>Environment</summary>
+                <div class="environment-tools">
+                    <input type="search" class="environment-filter" placeholder="Filter by name or value" aria-label="Filter the environment" />
+                    <span class="environment-note"></span>
+                </div>
+                <div class="environment-rows"></div>
+            </details>
             <details class="theme" hidden>
                 <summary>Theme colors</summary>
                 <div class="theme-rows"></div>
@@ -1152,6 +1223,7 @@ function startPanel() {
     cookieInspector(root);
     routeMap(root);
     statusView(root);
+    environmentView(root);
     themeEditor(root);
     accessibilityHints(root);
     untranslatedTexts(root);

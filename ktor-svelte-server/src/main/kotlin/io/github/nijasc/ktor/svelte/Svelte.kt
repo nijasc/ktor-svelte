@@ -31,6 +31,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.browserLogRoute
 import io.github.nijasc.ktor.svelte.internal.dev.compileErrorsFile
 import io.github.nijasc.ktor.svelte.internal.dev.devClientRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devCookieRoutes
+import io.github.nijasc.ktor.svelte.internal.dev.devEnvironmentRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devStatus
 import io.github.nijasc.ktor.svelte.internal.dev.installDevHttps
@@ -445,6 +446,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (devRequests != null && devProxy != null) {
                 val healthChecks = pluginConfig.healthCheckList.toList()
                 devCookieRoutes(allowRemote, devRequests.sensitive)
+                devEnvironmentRoute(allowRemote, devRequests.sensitive) { application.environment.config }
                 devRequestRoutes(
                     devRequests,
                     allowRemote,
