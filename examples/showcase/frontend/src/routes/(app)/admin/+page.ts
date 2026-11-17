@@ -10,3 +10,5 @@ export const load: PageLoad = async (event) => {
         throw cause;
     }
 };
+
+export const _nav = { title: 'nav-admin', icon: 'ShieldCheck', order: 3 };
