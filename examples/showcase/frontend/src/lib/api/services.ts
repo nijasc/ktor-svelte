@@ -94,7 +94,18 @@ export const stats = {
 };
 
 /** @see showcase/TaskRoutes.kt */
-export const tasksList = (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string }, options?: RequestOptions) => request<{
+export const tasksList: {
+    <F extends 'id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version' = 'id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version'>(query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly F[] }, options?: RequestOptions): Promise<{
+    items: Pick<Task, F>[];
+    next?: string | null;
+    total?: number | null;
+}>;
+    (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly ('id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version')[] }, options?: RequestOptions): Promise<{
+    items: Task[];
+    next?: string | null;
+    total?: number | null;
+}>;
+} = (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; fields?: readonly ('id' | 'title' | 'description' | 'status' | 'priority' | 'labels' | 'icon' | 'assignee' | 'creator' | 'dueOn' | 'createdAt' | 'updatedAt' | 'comments' | 'attachments' | 'version')[] }, options?: RequestOptions) => request<{
     items: Task[];
     next?: string | null;
     total?: number | null;

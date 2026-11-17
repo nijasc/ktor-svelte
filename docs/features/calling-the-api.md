@@ -10,7 +10,7 @@ Call your Ktor routes from Svelte components and SvelteKit load functions throug
 |---|---|
 | [Basics](#basics) | [Quick start](#quick-start), [In components](#in-components), [In load functions](#in-load-functions), [Generated page loads](#generated-page-loads), [Inline page data](#inline-page-data), [Request options](#request-options), [Client settings](#client-settings), [Import single functions](#import-single-functions), [Find the Kotlin route of a call](#find-the-kotlin-route-of-a-call) |
 | [Errors](#errors) | [Typed errors](#typed-errors), [Error codes](#error-codes), [Errors from StatusPages](#errors-from-statuspages), [Show errors automatically](#show-errors-automatically), [Ask before a call](#ask-before-a-call), [Request IDs](#request-ids) |
-| [Reading data](#reading-data) | [Query parameters as a class](#query-parameters-as-a-class), [Share identical requests](#share-identical-requests), [Prefetch on hover](#prefetch-on-hover), [Search as you type](#search-as-you-type), [Paged lists](#paged-lists), [Event streams](#event-streams) |
+| [Reading data](#reading-data) | [Query parameters as a class](#query-parameters-as-a-class), [Share identical requests](#share-identical-requests), [Prefetch on hover](#prefetch-on-hover), [Search as you type](#search-as-you-type), [Paged lists](#paged-lists), [Only some fields](#only-some-fields), [Event streams](#event-streams) |
 | [Writing data](#writing-data) | [Refresh the page after a write](#refresh-the-page-after-a-write), [Changing some fields](#changing-some-fields), [Two people, one record](#two-people-one-record), [Writes that are safe to send twice](#writes-that-are-safe-to-send-twice), [Uploads](#uploads) |
 | [The server talks back](#the-server-talks-back) | [Toasts from the server](#toasts-from-the-server), [Navigation from the server](#navigation-from-the-server), [Reload after a deploy](#reload-after-a-deploy), [The visitor's time zone](#the-visitor-s-time-zone) |
 | [Slow and flaky networks](#slow-and-flaky-networks) | [Timeouts](#timeouts), [Retries](#retries), [Rate limits](#rate-limits) |
@@ -570,6 +570,33 @@ for await (const notes of pages(api.notes.getFeed, { limit: '50' })) render(note
 ```
 
 To fetch one page at a time on demand, such as behind a "Load more" button, call the endpoint with the `cursor` yourself, as in [A paged table](#a-paged-table).
+
+### Only some fields
+
+A list that shows three columns does not need the other twenty fields of each row. Let the route answer with only the fields the page asks for:
+
+```kotlin
+get("/api/notes/feed") {
+    call.respond(store.page(call.queryParameters["cursor"], limit = 20))
+}.sparseFields<Note>()
+```
+
+The page names the fields, and the type of the answer narrows to exactly those:
+
+```ts no-check
+const feed = await api.notes.getFeed({ fields: ['id', 'title'] });
+feed.items[0].title;
+feed.items[0].body;
+```
+
+The first line compiles; the second does not, since `body` was not asked for and is not in the answer. Without `fields`, the call returns every field, as before.
+
+- The server reads `?fields=id,title` or `?fields=id&fields=title`, and sends only those fields of each object: of a list, of one object, or of the `items` of a [page](#paged-lists).
+- A field that the class does not have is refused with 400 and a message that lists the fields there are, such as `secret is not a field of Note. Ask for id, title, body.`
+- The fields are the top-level properties of the class, by their JSON names, so `@SerialName` is respected. Nested objects are sent whole.
+- Routes without `sparseFields` ignore a `fields` parameter.
+- Passed on as a value, such as `load={api.tasks.list}` for a table, the call keeps the full type, and `fields` can still go into the table's `query`.
+- The trimming happens after the answer is serialized, so the handler does not change. To save the database work too, read the asked fields in the handler and load less.
 
 ### Event streams
 

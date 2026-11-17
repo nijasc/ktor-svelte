@@ -939,7 +939,27 @@
                     {
                         "session": []
                     }
-                ]
+                ],
+                "x-ktor-svelte-fields": {
+                    "type": "Task",
+                    "fields": [
+                        "id",
+                        "title",
+                        "description",
+                        "status",
+                        "priority",
+                        "labels",
+                        "icon",
+                        "assignee",
+                        "creator",
+                        "dueOn",
+                        "createdAt",
+                        "updatedAt",
+                        "comments",
+                        "attachments",
+                        "version"
+                    ]
+                }
             }
         },
         "/api/tasks/{id}": {

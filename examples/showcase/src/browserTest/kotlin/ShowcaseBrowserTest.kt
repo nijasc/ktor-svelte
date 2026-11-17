@@ -644,6 +644,20 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the table of every task asks only for the fields it shows`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val answer = page.waitForResponse({ it.url().contains("/api/tasks?") }) { page.navigate("/admin/tasks") }
+        assertContains(answer.url(), "fields=id")
+        val first =
+            kotlinx.serialization.json.Json
+                .parseToJsonElement(answer.text())
+                .let { (it as kotlinx.serialization.json.JsonObject).getValue("items") as kotlinx.serialization.json.JsonArray }
+                .first() as kotlinx.serialization.json.JsonObject
+        assertEquals(setOf("id", "title", "status", "createdAt", "creator"), first.keys)
+        assertThat(page.locator("#every-task tbody tr").first()).isVisible()
+    }
+
+    @Test
     fun `a long table renders only the rows in view and loads more while scrolling`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         val asked = java.util.concurrent.CopyOnWriteArrayList<String>()

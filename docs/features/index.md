@@ -50,6 +50,7 @@ Your Ktor routes and classes become a typed client, so the frontend breaks at co
 | [Two people, one record](./calling-the-api.md#two-people-one-record) | A version check that refuses a save over someone else's change | Ktor plugin, Generated client |
 | [Path parameters](../reference/ktor.md#path-parameters) | `call.pathParameter<T>(name)` reads a path parameter as a number, UUID or enum | Ktor plugin |
 | [Paged lists](../recipes/pagination.md) | `Page<T>` and `getPage` on the server, `pages()` in the browser | Ktor plugin, Generated client |
+| [Only some fields](./calling-the-api.md#only-some-fields) | `?fields=id,title` sends only those fields, and the client's return type narrows to them | Ktor plugin, Generated client |
 | [Uploads](../recipes/uploads.md) | `FormData` bodies with upload progress, and size and type rules shared by both sides | Ktor plugin, Generated client |
 | [Live updates](../recipes/live-updates.md) | Server-sent events become async generators in the client | Ktor plugin, Generated client |
 | [In load functions](./calling-the-api.md#in-load-functions) | `apiWith(event)` runs every call through SvelteKit's `fetch` | Generated client |

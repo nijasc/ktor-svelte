@@ -457,6 +457,10 @@ public final synthetic class io/github/nijasc/ktor/svelte/Sensitive$Impl : io/gi
 	public fun <init> ()V
 }
 
+public final class io/github/nijasc/ktor/svelte/SparseFieldsKt {
+	public static final fun sparseFields (Lio/ktor/server/routing/Route;Ljava/lang/String;Ljava/util/List;)Lio/ktor/server/routing/Route;
+}
+
 public final class io/github/nijasc/ktor/svelte/Stamps {
 	public static final field Companion Lio/github/nijasc/ktor/svelte/Stamps$Companion;
 	public fun <init> (Lkotlin/time/Instant;Lkotlin/time/Instant;Ljava/lang/String;Ljava/lang/String;)V
