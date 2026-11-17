@@ -4,6 +4,7 @@ set -euo pipefail
 event="$1"
 base="${2:-}"
 head="${3:-}"
+branch="${4:-}"
 output="${GITHUB_OUTPUT:-/dev/stdout}"
 
 areas=(code examples setup docs)
@@ -15,6 +16,11 @@ emit_all() {
 
 if [[ "$event" != "pull_request" || -z "$base" || -z "$head" ]]; then
   emit_all "not a pull request"
+  exit 0
+fi
+
+if [[ "$branch" == release-please--* ]]; then
+  emit_all "a release pull request"
   exit 0
 fi
 
