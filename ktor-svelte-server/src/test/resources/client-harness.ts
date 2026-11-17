@@ -7,6 +7,7 @@ import {
     errorCode,
     errorMessage,
     fixtureFetch,
+    inlinePageData,
     typedCookie,
     userStore,
     reportErrors,
@@ -941,5 +942,24 @@ await request('DELETE', '/api/notes/1', { silent: true }).catch(() => undefined)
 stopWatching();
 await request('PUT', '/api/notes/1', { body: {} });
 results.pendingWrites = { duringWrite, all: pendingSeen };
+
+const inlineHost = globalThis as unknown as { document?: unknown };
+const hadInlineDocument = 'document' in globalThis;
+let inlineElement: { textContent: string; remove: () => void } | null = null;
+inlineHost.document = { getElementById: (id: string) => (id === 'ktor-svelte-data' ? inlineElement : null) };
+const inlineElementWith = (text: string) => {
+    inlineElement = { textContent: text, remove: () => (inlineElement = null) };
+};
+inlineElementWith('{"path":"/tasks/5","data":{"task":{"id":5}}}');
+const inlineOtherPath = inlinePageData('/tasks/6') ?? null;
+const inlineAfterOtherPath = inlinePageData('/tasks/5') ?? null;
+inlineElementWith('{"path":"/tasks/5","data":{"task":{"id":5}}}');
+const inlineMatching = inlinePageData('/tasks/5') ?? null;
+const inlineSecondTime = inlinePageData('/tasks/5') ?? null;
+inlineElementWith('not json');
+const inlineBroken = inlinePageData('/tasks/5') ?? null;
+if (!hadInlineDocument) Reflect.deleteProperty(inlineHost, 'document');
+const inlineWithoutDocument = inlinePageData('/tasks/5') ?? null;
+results.inlinePageData = { otherPath: inlineOtherPath, afterOtherPath: inlineAfterOtherPath, matching: inlineMatching, secondTime: inlineSecondTime, broken: inlineBroken, withoutDocument: inlineWithoutDocument };
 
 console.log(JSON.stringify(results));

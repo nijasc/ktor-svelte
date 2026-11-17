@@ -117,6 +117,7 @@ fun Application.module() {
             signedIn(FrontendRoutes.board, "/tasks", FrontendRoutes.settings)
             permission(Permission.ManageUsers, FrontendRoutes.admin)
         }
+        pageLoads { inline = true }
         maxApiBodySize = MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES
         paramRoutes("/tasks/[id]")
         publicConfig(

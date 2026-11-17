@@ -42,6 +42,7 @@ public class SvelteConfig internal constructor() {
     internal val constantHolders: MutableList<Any> = mutableListOf()
     internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
     internal val guardsConfig: SvelteGuardsConfig = SvelteGuardsConfig()
+    internal val pageLoadsConfig: SveltePageLoadsConfig = SveltePageLoadsConfig()
     internal val frontendErrorsConfig: SvelteFrontendErrorsConfig = SvelteFrontendErrorsConfig()
     internal val webVitalsConfig: SvelteWebVitalsConfig = SvelteWebVitalsConfig()
     internal val typedCookies: MutableList<TypedCookie<*>> = mutableListOf()
@@ -292,6 +293,10 @@ public class SvelteConfig internal constructor() {
 
     public fun guards(configure: SvelteGuardsConfig.() -> Unit) {
         guardsConfig.configure()
+    }
+
+    public fun pageLoads(configure: SveltePageLoadsConfig.() -> Unit) {
+        pageLoadsConfig.configure()
     }
 
     public fun cookies(vararg cookies: TypedCookie<*>) {

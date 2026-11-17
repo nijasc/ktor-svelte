@@ -454,6 +454,29 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a task page opened directly arrives with its data and does not fetch it again`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val id = page.createTask(unique("Inline"))
+        val calls = mutableListOf<String>()
+        page.onRequest { request -> if (request.url().contains("/api/tasks/$id")) calls += request.url() }
+        val html = page.request().get("/tasks/$id")
+        assertTrue(html.text().contains("id=\"ktor-svelte-data\""), "the page carries its data")
+        assertEquals("private, no-store", html.headers()["cache-control"])
+
+        page.navigate("/tasks/$id")
+        assertThat(page.locator("#task-title")).containsText("Inline")
+        assertEquals(emptyList<String>(), calls, "the first load used the data in the page")
+
+        page.reload()
+        assertThat(page.locator("#task-title")).containsText("Inline")
+        page.navigationLink("Board").click()
+        assertThat(page).hasURL(BOARD)
+        page.goBack()
+        assertThat(page.locator("#task-title")).containsText("Inline")
+        assertTrue(calls.isNotEmpty(), "a later navigation in the app loads through the API")
+    }
+
+    @Test
     fun `a task that does not exist shows the error page`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/tasks/999999")
@@ -685,6 +708,46 @@ class ShowcaseBrowserTest {
         assertThat(trail.locator("[aria-current=page]")).hasText("All tasks")
         trail.getByRole(AriaRole.LINK, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Admin")).click()
         assertThat(page).hasURL(Pattern.compile(".*/admin$"))
+    }
+
+    @Test
+    fun `the admin sidebar collapses to icons, remembers it, and is a drawer on a small screen`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/admin")
+        val sidebar = page.getByRole(AriaRole.NAVIGATION, Page.GetByRoleOptions().setName("Admin sections"))
+        assertThat(sidebar.getByRole(AriaRole.LINK)).hasCount(2)
+        assertThat(sidebar.getByRole(AriaRole.LINK).first()).hasAttribute("aria-current", "page")
+        val layout = page.locator("[data-collapsed]")
+        page.button("Collapse").click()
+        assertThat(layout).hasAttribute("data-collapsed", "true")
+        assertThat(sidebar.getByRole(AriaRole.LINK).first()).hasAttribute("title", "Admin")
+        page.reload()
+        assertThat(layout).hasAttribute("data-collapsed", "true")
+        page.button("Expand").click()
+        assertThat(layout).hasAttribute("data-collapsed", "false")
+
+        page.setViewportSize(500, 800)
+        assertThat(sidebar).not().isVisible()
+        page.button("Menu").click()
+        assertThat(sidebar).isVisible()
+        page.keyboard().press("Escape")
+        assertThat(sidebar).not().isVisible()
+        page.button("Menu").click()
+        sidebar.getByRole(AriaRole.LINK, com.microsoft.playwright.Locator.GetByRoleOptions().setName("All tasks")).click()
+        assertThat(page).hasURL(Pattern.compile(".*/admin/tasks$"))
+        assertThat(sidebar).not().isVisible()
+    }
+
+    @Test
+    fun `after a navigation in the app the new page's heading has the focus`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigationLink("Settings").click()
+        assertThat(page).hasURL(Pattern.compile(".*/settings$"))
+        assertThat(page.heading()).isFocused()
+        page.navigationLink("Board").click()
+        assertThat(page).hasURL(BOARD)
+        assertThat(page.heading()).isFocused()
+        assertThat(page.heading()).hasAttribute("tabindex", "-1")
     }
 
     @Test
