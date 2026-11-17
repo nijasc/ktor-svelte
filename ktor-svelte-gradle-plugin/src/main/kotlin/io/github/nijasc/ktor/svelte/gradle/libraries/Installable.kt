@@ -13,7 +13,9 @@ import javax.imageio.ImageIO
 internal const val DEFAULT_APP_COLOR = "#ffffff"
 internal const val DEFAULT_APP_DISPLAY = "standalone"
 internal const val APP_STATIC_DIR = "static/ktor-svelte"
-internal const val SERVICE_WORKER = "src/service-worker.ts"
+internal const val SERVICE_WORKER_DIR = "src/service-worker"
+internal const val SERVICE_WORKER = "$SERVICE_WORKER_DIR/index.ts"
+internal const val SERVICE_WORKER_TSCONFIG = "$SERVICE_WORKER_DIR/tsconfig.json"
 internal const val APP_MANIFEST = "$APP_STATIC_DIR/manifest.webmanifest"
 private const val APP_PUBLIC_DIR = "/ktor-svelte"
 private const val SMALLEST_SOURCE = 512
@@ -96,6 +98,7 @@ internal fun installableFiles(
         APP_MANIFEST to webManifest(app, i18n),
         "$APP_STATIC_DIR/.gitattributes" to STATIC_ATTRIBUTES,
         SERVICE_WORKER to serviceWorker(app, i18n, messages),
+        SERVICE_WORKER_TSCONFIG to "// $GENERATED_MARKER\n{\n  \"extends\": \"\$app/tsconfig/service-worker\"\n}\n",
     )
 
 internal fun webManifest(

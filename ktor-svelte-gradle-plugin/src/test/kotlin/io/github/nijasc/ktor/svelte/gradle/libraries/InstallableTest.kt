@@ -66,7 +66,8 @@ class InstallableTest {
         assertContains(files.getValue("$APP_STATIC_DIR/.gitattributes"), "*.png binary")
         val worker = files.getValue(SERVICE_WORKER)
         assertTrue(worker.startsWith("// $GENERATED_MARKER\n"))
-        assertContains(worker, "import { build, version } from '\$service-worker';")
+        assertContains(worker, "import { immutable } from '\$app/manifest';")
+        assertContains(files.getValue(SERVICE_WORKER_TSCONFIG), "\"extends\": \"\$app/tsconfig/service-worker\"")
         val hooks = files.getValue("$GENERATED_DIR/server-hooks.ts")
         assertContains(hooks, "<link rel=\"manifest\" href=\"/ktor-svelte/manifest.webmanifest\">")
         assertContains(hooks, "<meta name=\"theme-color\" content=\"#4f46e5\">")
@@ -77,7 +78,7 @@ class InstallableTest {
     @Test
     fun `the service worker caches only the hashed build files and answers failed page loads with the offline page`() {
         val worker = frontendFiles(spec(app()), null, false).getValue(SERVICE_WORKER)
-        assertContains(worker, "cache.addAll(build)")
+        assertContains(worker, "cache.addAll(files)")
         assertContains(worker, "if (request.method !== 'GET') return;")
         assertContains(worker, "if (request.mode === 'navigate') {\n        event.respondWith(fetch(request).catch(() => offline()));")
         assertContains(worker, "if (assets.has(url.pathname)) {")

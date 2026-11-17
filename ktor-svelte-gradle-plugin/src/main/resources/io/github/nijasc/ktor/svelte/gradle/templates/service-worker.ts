@@ -1,16 +1,14 @@
-/// <reference no-default-lib="true"/>
-/// <reference lib="esnext" />
-/// <reference lib="webworker" />
-/// <reference types="@sveltejs/kit" />
-import { build, version } from '$service-worker';
+import { version } from '$app/env';
+import { immutable } from '$app/manifest';
 
 const worker = self as unknown as ServiceWorkerGlobalScope;
 const cacheName = `ktor-svelte-${version}`;
-const assets = new Set(build);
+const files = immutable.map(({ path }) => new URL(path, worker.registration.scope).pathname);
+const assets = new Set(files);
 const offlinePage = {{offlinePage}};
 
 worker.addEventListener('install', (event) => {
-    event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(build)));
+    event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(files)));
 });
 
 worker.addEventListener('activate', (event) => {
