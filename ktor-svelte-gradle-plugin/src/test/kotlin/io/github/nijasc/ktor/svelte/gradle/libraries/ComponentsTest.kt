@@ -136,10 +136,15 @@ class ComponentsTest {
     fun `the error page comes with its route, the hook that fills it and the type of what it reads`() {
         val files = frontendFiles(spec(components = true), null, false)
         assertEquals(
-            "<!-- $GENERATED_MARKER -->\n<script lang=\"ts\">\n    import ErrorPage from '#components/ErrorPage.svelte';\n</script>\n\n<ErrorPage />\n",
+            "<!-- $GENERATED_MARKER -->\n<!-- See https://nijasc.github.io/ktor-svelte/features/components -->\n" +
+                "<script lang=\"ts\">\n    import ErrorPage from '#components/ErrorPage.svelte';\n</script>\n\n<ErrorPage />\n",
             files.getValue(ERROR_ROUTE),
         )
-        assertEquals("// $GENERATED_MARKER\nexport { handleError } from './lib/ktor-svelte/errors';\n", files.getValue(CLIENT_HOOKS))
+        assertEquals(
+            "// $GENERATED_MARKER\n// See https://nijasc.github.io/ktor-svelte/features/frontend-libraries\n" +
+                "export { handleError } from './lib/ktor-svelte/errors';\n",
+            files.getValue(CLIENT_HOOKS),
+        )
         assertContains(
             files.getValue("$GENERATED_DIR/errors.ts"),
             "export function handleError(input: { error: unknown; kind?: string; status?: number }): PageErrorDetails | undefined {",
