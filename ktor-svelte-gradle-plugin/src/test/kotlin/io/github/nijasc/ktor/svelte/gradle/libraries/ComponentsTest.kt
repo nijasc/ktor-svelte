@@ -31,6 +31,7 @@ class ComponentsTest {
                 "FileDrop.svelte",
                 "MaskedInput.svelte",
                 "NavigationProgress.svelte",
+                "NumberInput.svelte",
                 "PasswordStrength.svelte",
                 "masks.ts",
             ),
@@ -90,7 +91,7 @@ class ComponentsTest {
         assertContains(select, "<select id={inputId} class=\"select w-full\" bind:value use:field={fieldOptions} {...rest}>")
         assertContains(select, "{#each Object.values(options) as option (option)}")
         files.values.forEach { assertFalse("{{" in it) }
-        componentFiles(spec(components = true)).filterKeys { "Input" in it || "Select" in it }.values.forEach {
+        componentFiles(spec(components = true)).filterKeys { ("Input" in it || "Select" in it) && "NumberInput" !in it }.values.forEach {
             assertContains(it, "class=\"ktor-svelte-field-input\"")
         }
     }

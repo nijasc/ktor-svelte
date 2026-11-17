@@ -70,6 +70,18 @@ class MasksTest {
     }
 
     @Test
+    fun `numbers take a chosen number of decimals, whole numbers none, and long numbers keep every digit`() {
+        val whole = mask("wholeDe")
+        assertEquals(listOf("1.234.567", "125", "-40"), whole["retyped"])
+        assertEquals(listOf("1234567", "125", "-40"), whole["cleaned"])
+        assertEquals(listOf("1.234.567", "-40"), whole["shown"])
+        val precise = mask("preciseEn")
+        assertEquals(listOf("12,345,678,901,234,567,890.1234"), precise["retyped"])
+        assertEquals(listOf("12345678901234567890.1234"), precise["cleaned"])
+        assertEquals(listOf("12,345,678,901,234,567,890.1234"), precise["shown"])
+    }
+
+    @Test
     fun `the caret stays after the same typed character when the text is regrouped`() {
         val caret = mask("caret")
         assertEquals(5, caret["keptBeforeCaret"])
