@@ -1,14 +1,11 @@
-import java.util.concurrent.ConcurrentHashMap
-
+{{imports}}
 public data class RenderedEmail(
     val subject: String,
     val html: String,
     val text: String,
 )
 
-public object Emails {
-{{functions}}
-}
+{{emails}}
 
 private val emailTemplates = ConcurrentHashMap<String, String>()
 

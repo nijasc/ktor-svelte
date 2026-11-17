@@ -160,7 +160,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         project.pluginManager.withPlugin("java") {
             wireResources(project, bundle)
             wireGeneratedSources(project, extension, librarySpec)
-            wireEmails(project, extension, install)
+            wireEmails(project, extension, install, librarySpec)
             addRuntimeDependency(project, extension)
             warnOnSkippedJar(project, skipFrontend)
         }
@@ -580,6 +580,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         project: Project,
         extension: SvelteExtension,
         install: TaskProvider<SvelteInstallTask>,
+        librarySpec: Provider<LibrarySpec>,
     ) {
         val emails =
             project.tasks.register("svelteEmails", SvelteEmailsTask::class.java) { task ->
@@ -596,6 +597,9 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                     },
                 )
                 task.generatedPackage.set(extension.libraries.generatedPackage.orElse(DEFAULT_GENERATED_PACKAGE))
+                task.locales.set(librarySpec.map { it.i18n?.locales.orEmpty() })
+                task.defaultLocale.set(librarySpec.map { it.i18n?.defaultLocale ?: "" }.filter { it.isNotEmpty() })
+                task.hasRuntimeDependency.set(extension.addRuntimeDependency)
                 task.kotlinDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/emails-kotlin"))
                 task.resourcesDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/emails"))
                 task.mustRunAfter("svelteSync")

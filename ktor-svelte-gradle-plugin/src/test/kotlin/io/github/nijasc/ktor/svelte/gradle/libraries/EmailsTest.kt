@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
+import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
 import io.github.nijasc.ktor.svelte.gradle.tasks.renderedComponents
 import org.gradle.api.GradleException
 import kotlin.test.Test
@@ -155,6 +156,43 @@ class EmailsTest {
         )
         assertContains(source, "getResource(\"/ktor-svelte/emails/\$path\")")
         assertFalse("{{" in source)
+    }
+
+    @Test
+    fun `with i18n each email takes its language from forLocale and the call`() {
+        val i18n = I18nSpec(listOf("en", "de"), "en", LocaleStrategy.Cookie)
+        val templates =
+            listOf("en", "de").map { locale ->
+                emailTemplate(RenderedComponent("Welcome", locale, listOf("name"), "<title>$locale $name</title>", "<p>$name</p>"))
+            }
+
+        val source = emailsKotlin("app.generated", templates, i18n, callExtension = true)
+        val withoutRuntime = emailsKotlin("app.generated", templates, i18n, callExtension = false)
+
+        assertContains(source, "public class Emails private constructor(\n    public val locale: String,\n) {\n")
+        assertContains(source, "renderEmail(\"Welcome\", locale, mapOf(\"name\" to name))")
+        assertContains(source, "public val locales: List<String> = listOf(\"en\", \"de\")")
+        assertContains(source, "public val defaultLocale: String = \"en\"")
+        assertContains(source, "public fun forLocale(locale: String): Emails = Emails(if (locale in locales) locale else defaultLocale)")
+        assertContains(source, "import io.github.nijasc.ktor.svelte.svelteLocale\nimport io.ktor.server.application.ApplicationCall\n")
+        assertContains(source, "public val ApplicationCall.emails: Emails get() = Emails.forLocale(svelteLocale)")
+        assertFalse("ApplicationCall" in withoutRuntime)
+        assertContains(templates.last().html, "<html lang=\"de\">")
+        assertEquals(
+            setOf("ktor-svelte/emails/Welcome/en.html", "ktor-svelte/emails/Welcome/de.html"),
+            emailResources(templates).keys.filter { it.endsWith(".html") }.toSet(),
+        )
+    }
+
+    @Test
+    fun `a prop that one language leaves out is fine while another shows it`() {
+        val templates =
+            listOf(
+                RenderedComponent("Welcome", "en", listOf("name"), "<title>Hi $name</title>", "<p>Hi</p>"),
+                RenderedComponent("Welcome", "de", listOf("name"), "<title>Hallo</title>", "<p>Hallo</p>"),
+            )
+
+        assertEquals(2, emailTemplates(templates).size)
     }
 
     @Test
