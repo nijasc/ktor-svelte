@@ -6891,6 +6891,25 @@ A table over any route that returns [`Page<T>`](https://nijasc.github.io/ktor-sv
 | `empty`, `loading`, `more`, `previous`, `next`, `retry` | The texts, in English unless given: "Nothing here yet.", "Loading", "Load more", "Previous", "Next", "Try again" |
 | `class` | Added to the wrapper |
 
+### Choosing columns
+
+With `chooser`, a "Columns" menu above the table lets people hide columns and change their order. With `remember`, the choice is kept in the browser for next time:
+
+```svelte
+<DataTable load={api.tasks.list} columns={columns} chooser remember="admin-tasks" />
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `chooser` | `false` | Shows the menu with a checkbox per column and buttons to move it up or down |
+| `remember` | | A name for this table. The order and the hidden columns are kept in `localStorage` under `ktor-svelte-table:<name>` |
+| `columnsLabel`, `moveUp`, `moveDown` | `Columns`, `Up`, `Down` | The texts of the menu, for other languages |
+
+- The last visible column cannot be hidden.
+- A column you add to `columns` later shows up at the end; one you remove is forgotten.
+- The move buttons say which column they move, such as "Up: Status", for screen readers.
+- A [custom `row`](#cells-with-markup) gets the visible columns as its second argument, `{#snippet row(task, columns)}`, so its cells can follow the choice.
+
 ### Cells with markup
 
 For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
