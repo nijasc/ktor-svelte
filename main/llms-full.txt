@@ -13784,7 +13784,7 @@ svelte {
 }
 ```
 
-`bunVersion` is unset by default, and `libraries { }` is empty.
+`bunVersion` and `nodeVersion` are unset by default, and `libraries { }` is empty.
 
 ## Settings
 
@@ -13794,6 +13794,7 @@ svelte {
 | `outputDir` | `"build"` | Adapter output, a folder inside `frontendDir` given relative to it. Must match the adapter's `pages` option |
 | `packageManager` | `PackageManager.Auto` | `Auto`, `Bun`, `Pnpm`, `Npm` or `Yarn`. `Auto` picks from `bun.lock`, `pnpm-lock.yaml`, `package-lock.json` or `yarn.lock` |
 | `bunVersion` | unset | An exact Bun version, such as `"1.3.14"`, that ktor-svelte downloads and uses instead of the Bun on `PATH`. See [Pin Bun](#pin-bun) |
+| `nodeVersion` | unset | An exact Node version, such as `"22.12.0"`, that ktor-svelte downloads and puts first on `PATH` for every frontend task, with npm from that Node. For npm and pnpm teams. See [Pin Node](#pin-node) |
 | `buildScript` | `"build"` | `package.json` script that builds the frontend |
 | `buildEnv` | empty | Environment variables that affect the build. Declare any your frontend reads through `$env`, or Gradle can reuse a stale build. Also counted as public by `svelteVerifyLeaks` |
 | `addRuntimeDependency` | `true` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version, and `ktor-svelte-test` to a `browserTest` suite |
@@ -13804,7 +13805,7 @@ svelte {
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](https://nijasc.github.io/ktor-svelte/main/features/runtime-config#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
 
-The package manager must already be installed unless you set `bunVersion`. The plugin does not download Node.
+The package manager must already be installed unless you set `bunVersion`, or `nodeVersion` with npm.
 
 ### dev { }
 
@@ -13896,6 +13897,23 @@ svelte {
 - Every task then uses this Bun, even when another one is on `PATH`, so all machines build with the same version.
 - With `packageManager = AUTO`, Bun becomes the package manager. Bun runs Vite itself, so Node is not needed.
 - It works on Windows, macOS and Linux, including Alpine, on x64 and arm64.
+- Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
+
+## Pin Node
+
+Teams whose lockfile is npm's or pnpm's need Node, and every laptop and CI image has its own. Set `nodeVersion` and the plugin downloads that exact Node from nodejs.org the first time a task needs it:
+
+```kotlin
+svelte {
+    nodeVersion = "22.12.0"
+}
+```
+
+- It follows the rules of the pinned Bun: the archive is checked against the release's `SHASUMS256.txt` before it is unpacked into `~/.gradle/ktor-svelte/node/<version>/`, and every later build reuses it.
+- Every frontend task runs with that Node first on `PATH`, so Vite and every script use it. npm comes with it: with `package-lock.json`, the plugin runs the npm of that Node and needs none installed.
+- pnpm and Yarn are still taken from `PATH`, and run on the pinned Node.
+- `svelteDoctor` reports the pinned Node instead of the installed one, and the build cache counts the version, so a new Node builds the frontend again.
+- It works on Windows, macOS and Linux, on x64 and arm64. Node publishes no build for Alpine: install it with `apk` there.
 - Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
 
 ## Build times
