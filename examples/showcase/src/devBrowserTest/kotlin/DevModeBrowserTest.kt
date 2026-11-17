@@ -587,6 +587,86 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `each API call in the dev panel shows how big its answer was and its largest fields`() {
+        assertTrue(reachBoard(page))
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        assertThat(panel.locator(".row .size").first()).hasText(Pattern.compile("^\\d+(\\.\\d)? (B|KB|MB)$"))
+        assertThat(panel.locator(".row .size[title^='Largest fields: ']").first()).isVisible()
+    }
+
+    @Test
+    fun `the dev panel shows the environment the app sees, with secrets hidden`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".environment summary").click()
+        panel.locator(".environment-filter").fill("SHOWCASE_")
+        val rows = panel.locator(".environment-row")
+
+        fun row(name: String) = rows.filter(Locator.FilterOptions().setHasText(Pattern.compile("^$name"))).first()
+        assertThat(row("SHOWCASE_DATA")).containsText("data")
+        assertThat(row("SHOWCASE_ADMIN_PASSWORD")).hasText("SHOWCASE_ADMIN_PASSWORD***")
+        assertThat(row("SHOWCASE_ADMIN_PASSWORD")).hasClass(Pattern.compile("\\bhidden\\b"))
+        assertFalse(ADMIN_PASSWORD in panel.innerText())
+    }
+
+    @Test
+    fun `the dev panel shows which Flyway migrations ran`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".migrations summary").click()
+        assertThat(panel.locator(".migrations-note")).hasText("At version 2, 2 ran.")
+        assertThat(panel.locator(".migrations-row")).hasCount(2)
+        assertThat(panel.locator(".migrations-row").first()).containsText("create tables")
+        assertThat(panel.locator(".migrations-row").first()).containsText("Success")
+    }
+
+    @Test
+    fun `the dev panel shows heap, garbage collection and threads of the app`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".runtime summary").click()
+        val rows = panel.locator(".runtime-row")
+
+        fun row(label: String) = rows.filter(Locator.FilterOptions().setHasText(Pattern.compile("^$label"))).first()
+        assertThat(row("heap")).containsText(Pattern.compile("\\d+ MB used of \\d+ MB taken"))
+        assertThat(row("threads")).containsText(Pattern.compile("\\d+ live"))
+        assertThat(row("GC ")).containsText("runs")
+        panel.locator(".runtime-gc").click()
+        assertThat(row("GC ")).containsText("runs")
+    }
+
+    @Test
+    fun `clear site data in the dev panel signs out and empties the storage`() {
+        assertTrue(reachBoard(page))
+        page.evaluate("localStorage.setItem('dev-panel-marker', 'kept')")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".clear-site").click()
+        waitFor("the cleared storage", 20) { page.evaluate("localStorage.getItem('dev-panel-marker')") == null }
+        page.navigate("/board")
+        assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
+    }
+
+    @Test
+    fun `the dev panel ranks the routes that took the most time`() {
+        assertTrue(reachBoard(page))
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".slowest summary").click()
+        assertThat(panel.locator(".slowest-note")).containsText("since the app started")
+        val first = panel.locator(".slowest-row").first()
+        assertThat(first).containsText(Pattern.compile("\\d+ calls?, .* on average, slowest "))
+        assertThat(panel.locator(".slowest-row .path").first()).hasText(Pattern.compile("^/api/"))
+    }
+
+    @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))

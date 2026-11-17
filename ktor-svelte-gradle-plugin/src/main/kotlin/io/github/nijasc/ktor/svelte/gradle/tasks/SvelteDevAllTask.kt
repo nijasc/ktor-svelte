@@ -276,10 +276,8 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
 
     private fun startVite(): Process {
         val tool = tool()
-        val command =
-            listOf(executable(tool).absolutePath) +
-                tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort"))
-        return start(LogSource.VITE, command, frontendDir.get().asFile)
+        val command = command(tool, tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort")))
+        return start(LogSource.VITE, command.arguments, frontendDir.get().asFile, pathPrefix = command.pathPrefix)
     }
 
     private fun startCompiler(errors: CompileErrorReport): Process {
@@ -294,7 +292,7 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                 "svelteSync",
                 "-Psvelte.dev=true",
             )
-        return start(LogSource.KOTLIN, command, projectDirectory.get().asFile, errors::onLine)
+        return start(LogSource.KOTLIN, command, projectDirectory.get().asFile, onLine = errors::onLine)
     }
 
     private fun classpathSnapshots(): File = compileErrorsFile.get().asFile.resolveSibling("dev-classpath")
@@ -328,10 +326,12 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         source: LogSource,
         command: List<String>,
         directory: File,
+        pathPrefix: File? = null,
         onLine: (String) -> Unit = {},
     ): Process {
         val builder = ProcessBuilder(command).directory(directory).redirectErrorStream(true)
         builder.environment().putAll(System.getenv())
+        pathPrefix?.let { builder.environment().putAll(prependedPath(builder.environment(), it)) }
         val process = builder.start()
         thread(isDaemon = true, name = "ktor-svelte-${source.label}") {
             process.inputStream.bufferedReader().use { reader ->

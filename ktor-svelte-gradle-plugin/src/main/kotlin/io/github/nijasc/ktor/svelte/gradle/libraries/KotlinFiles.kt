@@ -5,7 +5,7 @@ import io.github.nijasc.ktor.svelte.gradle.renderTemplate
 
 private const val MAX_GENERATED_LINE_LENGTH = 140
 
-private fun kotlinString(value: String): String =
+internal fun kotlinString(value: String): String =
     buildString {
         append('"')
         value.forEach { character ->
@@ -22,7 +22,7 @@ private fun kotlinString(value: String): String =
         append('"')
     }
 
-private fun fileHeader(generatedPackage: String): String = "// $GENERATED_MARKER\npackage $generatedPackage\n\n"
+internal fun fileHeader(generatedPackage: String): String = "// $GENERATED_MARKER\npackage $generatedPackage\n\n"
 
 internal fun kotlinFiles(
     spec: LibrarySpec,

@@ -11,6 +11,7 @@ public abstract class SvelteExtension {
     public abstract val outputDir: Property<String>
     public abstract val packageManager: Property<PackageManager>
     public abstract val bunVersion: Property<String>
+    public abstract val nodeVersion: Property<String>
     public abstract val buildScript: Property<String>
     public abstract val buildEnv: SetProperty<String>
     public abstract val addRuntimeDependency: Property<Boolean>
@@ -18,6 +19,7 @@ public abstract class SvelteExtension {
     public abstract val precompress: Property<Boolean>
     public abstract val verifyLeaks: Property<Boolean>
     public abstract val shortTaskNames: Property<Boolean>
+    public abstract val timingSummary: Property<Boolean>
 
     @get:Nested
     public abstract val dev: SvelteDevSettings

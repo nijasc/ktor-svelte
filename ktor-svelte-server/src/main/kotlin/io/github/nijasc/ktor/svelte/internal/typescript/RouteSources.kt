@@ -47,7 +47,7 @@ internal fun routeEntries(root: RoutingNode): Map<String, SourceLocation?> {
     return locations
 }
 
-private fun parameterSegment(
+internal fun parameterSegment(
     prefix: String?,
     name: String,
     suffix: String?,

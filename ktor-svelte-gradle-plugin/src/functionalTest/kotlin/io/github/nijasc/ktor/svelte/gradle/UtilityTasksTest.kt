@@ -1,10 +1,12 @@
 package io.github.nijasc.ktor.svelte.gradle
 
+import com.sun.net.httpserver.HttpServer
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.Test
@@ -385,7 +387,7 @@ class UtilityTasksTest {
     @Test
     fun `svelteDoctor fails with what to fix`() {
         val project = project()
-        val output = project.runAndFail("svelteDoctor").output
+        val output = project.runAndFail("svelteDoctor", "--offline").output
         assertContains(output, "OK    Package manager bun is on PATH")
         assertContains(output, "ERROR @sveltejs/kit is not a dependency")
     }
@@ -395,15 +397,41 @@ class UtilityTasksTest {
         val project = project()
         val manifest = project.frontend.resolve("package.json")
 
-        assertContains(project.runAndFail("svelteDoctor").output, "svelteDoctor --fix can fix 1 of these.")
+        assertContains(project.runAndFail("svelteDoctor", "--offline").output, "svelteDoctor --fix can fix 1 of these.")
         assertEquals("{}", manifest.readText())
 
-        val output = project.runAndFail("svelteDoctor", "--fix").output
+        val output = project.runAndFail("svelteDoctor", "--fix", "--offline").output
 
         assertContains(output, "FIXED Added the #api import to package.json")
         assertContains(output, "OK    #api import is configured")
         assertContains(output, "ERROR @sveltejs/kit is not a dependency")
         assertContains(manifest.readText(), "\"#api\": \"./src/lib/api/index.ts\"")
+    }
+
+    @Test
+    fun `svelteDoctor asks the registry the frontend installs from, and only when Gradle is online`() {
+        val project = project()
+        val registry = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)
+        registry.createContext("/") { exchange ->
+            exchange.sendResponseHeaders(200, -1)
+            exchange.close()
+        }
+        registry.start()
+        try {
+            val address = "http://${registry.address.address.hostAddress}:${registry.address.port}/"
+            project.frontend.resolve(".npmrc").writeText("registry=$address\n")
+
+            val online = project.runAndFail("svelteDoctor").output
+            assertContains(online, "OK    Network: registry $address (registry in frontend/.npmrc), no proxy, ")
+            assertContains(online, "OK    Registry $address is reachable")
+
+            assertContains(
+                project.runAndFail("svelteDoctor", "--offline").output,
+                "OK    Gradle runs offline, so the registry was not contacted",
+            )
+        } finally {
+            registry.stop(0)
+        }
     }
 
     @Test
