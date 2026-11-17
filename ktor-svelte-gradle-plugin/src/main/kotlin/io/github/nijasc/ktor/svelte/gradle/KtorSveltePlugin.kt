@@ -207,6 +207,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             settings.put("libraries.routes", libraries.routesEnabled.map { it.toString() }.orElse("false"))
             settings.put("libraries.components", libraries.componentsEnabled.map { it.toString() }.orElse("false"))
             settings.put("libraries.fonts", libraries.fontSettings.sans.orElse("none"))
+            settings.put("libraries.charts", libraries.chartsEnabled.map { it.toString() }.orElse("false"))
             settings.put(
                 "libraries.i18n",
                 libraries.i18nSettings.enabled
@@ -255,6 +256,7 @@ public class KtorSveltePlugin : Plugin<Project> {
                 toasts = libraries.toastsEnabled.getOrElse(false),
                 routes = libraries.routesEnabled.getOrElse(false),
                 components = libraries.componentsEnabled.getOrElse(false),
+                charts = libraries.chartsEnabled.getOrElse(false),
                 fonts =
                     libraries.fontSettings.sans.orNull?.let { sans ->
                         FontSpec(sans, libraries.fontSettings.mono.orNull, libraries.fontSettings.variable.getOrElse(true))

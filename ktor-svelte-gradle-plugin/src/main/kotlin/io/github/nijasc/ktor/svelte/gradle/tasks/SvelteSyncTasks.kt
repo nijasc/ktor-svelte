@@ -70,6 +70,7 @@ internal fun updatedPackageJson(
             if (spec.daisy != null) put("#theme", "./$GENERATED_DIR/theme.ts")
             if (spec.lucide) put("#icon", "./$GENERATED_DIR/Icon.svelte")
             if (spec.routes) put("#routes", "./$GENERATED_DIR/routes.ts")
+            if (spec.charts) put("#charts", "./$GENERATED_DIR/charts.ts")
             if (spec.components) put("#components/*", "./$COMPONENTS_DIR/*")
         }
     imports.entries.removeIf { (name, target) -> name !in aliases && target.toString().startsWith("./$GENERATED_DIR/") }

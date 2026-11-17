@@ -187,11 +187,13 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteLibraries {
 	public fun <init> ()V
+	public final fun charts ()V
 	public final fun components ()V
 	public final fun daisyUi (Lorg/gradle/api/Action;)V
 	public static synthetic fun daisyUi$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Lorg/gradle/api/Action;ILjava/lang/Object;)V
 	public final fun fonts (Ljava/lang/String;Lorg/gradle/api/Action;)V
 	public static synthetic fun fonts$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteLibraries;Ljava/lang/String;Lorg/gradle/api/Action;ILjava/lang/Object;)V
+	public abstract fun getChartsEnabled ()Lorg/gradle/api/provider/Property;
 	public abstract fun getComponentsEnabled ()Lorg/gradle/api/provider/Property;
 	public abstract fun getDaisySettings ()Lio/github/nijasc/ktor/svelte/gradle/DaisySettings;
 	public abstract fun getFontSettings ()Lio/github/nijasc/ktor/svelte/gradle/FontSettings;
@@ -282,6 +284,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun component11 ()Z
 	public final fun component12 ()Z
 	public final fun component13 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/FontSpec;
+	public final fun component14 ()Z
 	public final fun component2 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun component3 ()Z
 	public final fun component4 ()Lio/github/nijasc/ktor/svelte/gradle/libraries/I18nSpec;
@@ -292,6 +295,7 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/LibrarySpec : j
 	public final fun component9 ()Z
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAllIcons ()Z
+	public final fun getCharts ()Z
 	public final fun getComponents ()Z
 	public final fun getDaisy ()Lio/github/nijasc/ktor/svelte/gradle/libraries/DaisySpec;
 	public final fun getDevPort ()I

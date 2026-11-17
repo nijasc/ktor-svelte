@@ -20,6 +20,7 @@ internal val PACKAGE_VERSIONS =
         "daisyui" to "^5.7.50",
         "@lucide/svelte" to "^1.67.0",
         "@sveltejs/enhanced-img" to "1.0.0",
+        "layerchart" to "^2.10.1",
     )
 
 @ConsistentCopyVisibility
@@ -90,6 +91,7 @@ public data class LibrarySpec internal constructor(
     val reloadPrompt: Boolean = false,
     val components: Boolean = false,
     val fonts: FontSpec? = null,
+    val charts: Boolean = false,
 ) : Serializable {
     internal val isEmpty: Boolean
         get() =
@@ -101,7 +103,8 @@ public data class LibrarySpec internal constructor(
                 !toasts &&
                 !routes &&
                 !components &&
-                fonts == null
+                fonts == null &&
+                !charts
     internal val usesCss: Boolean get() = tailwind != null || daisy != null
     internal val usesHooks: Boolean get() = daisy != null || i18n != null || fonts != null
 
@@ -117,10 +120,14 @@ public data class LibrarySpec internal constructor(
                 if (daisy != null) add("daisyui")
                 if (lucide) add("@lucide/svelte")
                 if (images) add("@sveltejs/enhanced-img")
+                if (charts) add("layerchart")
                 fonts?.let { font -> font.families.forEach { add(font.packageName(it)) } }
             }
 
     internal fun validate() {
+        if (charts && daisy == null) {
+            throw GradleException("charts needs daisyUi(), whose theme colors the charts take." + DocLink.FRONTEND_LIBRARIES.see())
+        }
         if (fonts != null) {
             val wrong = fonts.families.filterNot { FONT_NAME.matches(it) }
             if (wrong.isNotEmpty()) {
