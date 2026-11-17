@@ -162,12 +162,17 @@ class RoutesTest {
             "    public fun langFilesPath(lang: String? = null, path: String): String = path(encode(lang), \"files\", encodeRest(path))",
         )
         assertContains(source, "private fun encodeRest(")
+        assertContains(source, "    public object Patterns {\n        public const val home: String = \"/\"")
+        assertContains(source, "        public const val notesId: String = \"/notes/[id]\"")
+        assertContains(source, "        public const val langFilesPath: String = \"/[[lang]]/files/[...path]\"")
+        assertContains(source, "        public const val aboutUs: String = \"/about us\"")
     }
 
     @Test
     fun `static routes need no helpers`() {
         val source = routesObject("app.generated", listOf(routeOf("/"), routeOf("/about")))
         assertFalse(source.contains("private fun"))
+        assertContains(source, "public const val about: String = \"/about\"")
     }
 
     @Test
