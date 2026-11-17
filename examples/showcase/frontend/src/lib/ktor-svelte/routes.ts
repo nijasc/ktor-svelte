@@ -6,6 +6,7 @@ import { m } from './i18n.js';
 export const routeIds = {
     home: '/',
     admin: '/(app)/admin',
+    adminTasks: '/(app)/admin/tasks',
     board: '/(app)/board',
     settings: '/(app)/settings',
     tasksId: '/(app)/tasks/[id]',
@@ -62,6 +63,7 @@ function link<T extends RouteId>(id: T): RouteLink<T> {
 export const routes = {
     home: link(routeIds.home),
     admin: link(routeIds.admin),
+    adminTasks: link(routeIds.adminTasks),
     board: link(routeIds.board),
     settings: link(routeIds.settings),
     tasksId: link(routeIds.tasksId),

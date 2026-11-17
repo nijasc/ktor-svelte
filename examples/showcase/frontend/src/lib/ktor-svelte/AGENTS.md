@@ -56,6 +56,7 @@ In Kotlin, redirects use the generated `FrontendRoutes` object. After adding, mo
 |---|---|
 | `routes.home` | `/` |
 | `routes.admin` | `/(app)/admin` |
+| `routes.adminTasks` | `/(app)/admin/tasks` |
 | `routes.board` | `/(app)/board` |
 | `routes.settings` | `/(app)/settings` |
 | `routes.tasksId` | `/(app)/tasks/[id]` |
