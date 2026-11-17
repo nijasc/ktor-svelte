@@ -101,7 +101,12 @@ class ComponentsTest {
         val table = componentFiles(spec(components = true, withDaisy = true)).getValue("$COMPONENTS_DIR/DataTable.svelte")
         assertContains(table, "<script lang=\"ts\" generics=\"T, Q extends { cursor?: string } = { cursor?: string }\">")
         assertContains(table, "load: (query: Q) => Promise<PageOf<T>>;")
-        assertContains(table, "| { key: keyof T & string; label: string; text?: (item: T) => string; class?: string }")
+        assertContains(
+            table,
+            "| { key: keyof T & string; label: string; text?: (item: T) => string; class?: string; " +
+                "sort?: boolean | string }",
+        )
+        assertContains(table, "<th scope=\"col\" class={column.class} aria-sort={ariaSort(column)}>")
         assertContains(table, "export function reload(): Promise<void> {")
         assertContains(table, "<table class=\"table\" aria-busy={busy}>")
         assertContains(table, "<p class=\"text-error py-2 text-sm\" role=\"alert\">")

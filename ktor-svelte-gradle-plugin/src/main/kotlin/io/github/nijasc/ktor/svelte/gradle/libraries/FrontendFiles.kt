@@ -86,6 +86,8 @@ private const val PLAIN_TABLE_STYLE =
         "    .ktor-svelte-table-wrap {\n        overflow-x: auto;\n    }\n\n" +
         "    .ktor-svelte-table {\n        width: 100%;\n        border-collapse: collapse;\n        text-align: left;\n    }\n\n" +
         "    .ktor-svelte-table-pager {\n        display: flex;\n        gap: 0.5rem;\n    }\n\n" +
+        "    .ktor-svelte-table-sort {\n        padding: 0;\n        border: 0;\n        background: none;\n" +
+        "        font: inherit;\n        font-weight: 600;\n        cursor: pointer;\n    }\n\n" +
         "    .ktor-svelte-table-actions {\n        display: flex;\n        flex-wrap: wrap;\n        align-items: center;\n" +
         "        gap: 0.5rem;\n        margin-bottom: 0.5rem;\n    }\n\n" +
         "    .ktor-svelte-table-chooser-list {\n        display: grid;\n        gap: 0.25rem;\n" +
@@ -180,6 +182,7 @@ private fun dataTable(daisy: Boolean): String =
             "pager" to if (daisy) "flex gap-2 py-2" else "ktor-svelte-table-pager",
             "chooser" to if (daisy) "mb-2" else "ktor-svelte-table-chooser",
             "selectCell" to if (daisy) "w-8" else "ktor-svelte-table-select",
+            "sortButton" to if (daisy) "link link-hover font-semibold" else "ktor-svelte-table-sort",
             "actionBar" to if (daisy) "bg-base-200 rounded-box mb-2 flex flex-wrap items-center gap-2 p-2" else "ktor-svelte-table-actions",
             "chooserList" to if (daisy) "menu bg-base-200 rounded-box mt-1 w-fit gap-1" else "ktor-svelte-table-chooser-list",
             "style" to if (daisy) "" else PLAIN_TABLE_STYLE,
