@@ -305,6 +305,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 )
             },
             { application.pageLoadSpecs() },
+            pluginConfig.frontendList.map { Path(frontendClientOutput(it)) },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }

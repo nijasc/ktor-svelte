@@ -30,6 +30,7 @@ install(Svelte) {
 | `notFoundPage` | `"404.html"` | The page for missing paths, when there is no fallback |
 | `paramRoutes(...)` | none | Like the main `paramRoutes`, with paths relative to the prefix |
 | `devUrl` | set by `svelteDevAll` | The Vite of this frontend in development. Without one, development serves its build |
+| `generateTsOutput` | `src/lib/api` in the frontend's folder | Where its copy of the typed client goes, when `generateTs` is on |
 
 Outside development, a frontend without a build stops the start, like the main frontend does. In development it is a warning.
 
@@ -56,6 +57,10 @@ svelte {
 Each frontend gets its own tasks, named after it: `svelteInstallAdmin`, `svelteBuildAdmin` and `svelteBundleAdmin`. They run with the main frontend's tasks when the JAR is built, and `svelteBundleAdmin` puts the build under `ktor-svelte/frontends/admin/`, where `install(Svelte) { frontend("/admin") }` reads it. The settings that are not per frontend, such as `packageManager`, `bunVersion`, `precompress` and `includeSourceMaps`, apply to every frontend.
 
 When no page of the build loads its files from `/admin/_app/`, `svelteBundleAdmin` warns: the base path is missing from the frontend's Vite config.
+
+## The typed client
+
+With `generateTs = true`, every frontend gets the same generated client as the main one, in its own `src/lib/api`, so the admin pages call the API with the same types. The frontend's folder comes from Gradle (`svelteDevAll`, `run` and `svelteGenerateTs` pass it to the app); without Gradle it is the folder named like the frontend, or set `generateTsOutput`.
 
 ## In development
 
@@ -87,4 +92,6 @@ These parts of ktor-svelte know only the main frontend for now:
 - The sitemap and `robots.txt`, the default favicon and the language redirect of i18n.
 - The startup warning about Ktor routes that hide a page, the route table and the route map of the dev panel.
 - The build fingerprint in `X-Ktor-Svelte-Build` and in the status endpoint.
+- `svelteVerifyTs` checks the main frontend's client only.
+- The typed page routes (`FrontendRoutes`) and the generated Kotlin of `libraries { }` come from the main frontend.
 - In Gradle, `libraries { }` with `svelteSync`, the `svelteVerify...` checks, `svelteVerifyLeaks`, `svelteCheck` and the other frontend tools work on the main frontend. Another frontend is installed, built and packaged; add what it needs to its own `package.json`.

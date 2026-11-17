@@ -114,6 +114,7 @@ internal fun installTypeScriptGeneration(
     vitalsCall: String? = null,
     preferences: PreferencesType? = null,
     pageLoads: () -> List<PageLoadSpec> = { emptyList() },
+    frontendOutputs: List<Path> = emptyList(),
 ) {
     val verifyReport = System.getProperty(VERIFY_REPORT_PROPERTY)?.let { Path(it) }
     val generateOnly = verifyReport != null || System.getProperty(GENERATE_ONLY_PROPERTY) == "true"
@@ -132,12 +133,13 @@ internal fun installTypeScriptGeneration(
 
     val frontendDir = System.getProperty(FRONTEND_DIR_PROPERTY) ?: "frontend"
     val output = Path(configuredOutput ?: "$frontendDir/src/lib/api")
-    val generator =
+
+    fun generatorFor(directory: Path) =
         TypeScriptGenerator(
             apiPrefixes,
             excludedPaths,
             publicConfigSchema,
-            readIconNames(output),
+            readIconNames(directory),
             declaredErrors,
             constants,
             errorCodes,
@@ -152,7 +154,8 @@ internal fun installTypeScriptGeneration(
         )
 
     application.onOwn(ApplicationStarted) {
-        val succeeded = generate(application, output, generator, verifyReport, pageLoads())
+        val succeeded = generate(application, output, generatorFor(output), verifyReport, pageLoads())
+        if (verifyReport == null) frontendOutputs.forEach { generate(application, it, generatorFor(it), null) }
         if (generateOnly) Runtime.getRuntime().halt(if (succeeded) 0 else 1)
     }
 }
