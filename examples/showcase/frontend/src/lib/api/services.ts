@@ -93,6 +93,7 @@ export const stats = {
 export const tasksList = (query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string }, options?: RequestOptions) => request<{
     items: Task[];
     next?: string | null;
+    total?: number | null;
 }>('GET', '/api/tasks', { ...options, query, operation: 'tasks.list' });
 /** @see showcase/TaskRoutes.kt */
 export const tasksCreate = (body: TaskInput, options?: RequestOptions) => request<Task>('POST', '/api/tasks', { ...options, body, operation: 'tasks.create' });

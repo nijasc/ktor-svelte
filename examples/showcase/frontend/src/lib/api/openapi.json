@@ -851,6 +851,12 @@
                                                 "string",
                                                 "null"
                                             ]
+                                        },
+                                        "total": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ]
                                         }
                                     }
                                 }

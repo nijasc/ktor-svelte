@@ -16,9 +16,10 @@ export const notesCreate = (body: NoteInput, options?: RequestOptions) => reques
 /** @see notes/Routes.kt */
 export const notesGetExport = (options?: RequestOptions) => request<NotesExport>('GET', '/api/notes/export', { ...options, operation: 'notes.getExport' });
 /** @see notes/Routes.kt */
-export const notesGetFeed = (query?: { cursor?: string; limit?: string }, options?: RequestOptions) => request<{
+export const notesGetFeed = (query?: { cursor?: string; limit?: string; total?: boolean }, options?: RequestOptions) => request<{
     items: Note[];
     next?: string | null;
+    total?: number | null;
 }>('GET', '/api/notes/feed', { ...options, query, operation: 'notes.getFeed' });
 /** @see notes/Routes.kt */
 export const notesGet = (id: number, options?: RequestOptions) => request<Note>('GET', `/api/notes/${encodeURIComponent(id)}`, { ...options, operation: 'notes.get' });

@@ -153,6 +153,13 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "name": "total",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
                     }
                 ],
                 "responses": {
@@ -177,6 +184,12 @@
                                                 "string",
                                                 "null"
                                             ]
+                                        },
+                                        "total": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ]
                                         }
                                     }
                                 }
@@ -197,6 +210,12 @@
                                         "next": {
                                             "type": [
                                                 "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "total": {
+                                            "type": [
+                                                "integer",
                                                 "null"
                                             ]
                                         }
