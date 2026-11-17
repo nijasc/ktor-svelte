@@ -1,4 +1,4 @@
-import { untrack } from 'svelte';
+import { tick, untrack } from 'svelte';
 import { errorMessage, isValidationError, isVersionConflict, type RequestOptions } from './client.js';
 
 export type FieldErrors = Record<string, string[]>;
@@ -10,6 +10,7 @@ export interface FormStateOptions<T> {
     resetOnSuccess?: boolean;
     checks?: Partial<Record<keyof T & string, FieldCheckRoute>>;
     checkDelay?: number;
+    focusErrors?: boolean;
 }
 
 export interface FormState<T> {
@@ -25,6 +26,7 @@ export interface FormState<T> {
     takeTheirs(next?: T): void;
     reset(next?: T): void;
     submit<R>(send: (draft: T) => Promise<R>): Promise<R | undefined>;
+    focusFirstError(): Promise<void>;
 }
 
 export function formState<T extends object>(initial: T, options: FormStateOptions<T> = {}): FormState<T> {
@@ -81,6 +83,15 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         if (ask) watch(name, ask as FieldCheckRoute);
     }
 
+    async function focusFirstError() {
+        if (typeof document === 'undefined') return;
+        await tick();
+        const first = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+        if (!first) return;
+        first.focus({ preventScroll: true });
+        first.scrollIntoView({ block: 'center' });
+    }
+
     function settle(value: T) {
         saved = $state.snapshot(value) as T;
         baseline = JSON.stringify(saved);
@@ -116,6 +127,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         conflict = undefined;
         if (invalid && Object.keys(invalid).length > 0) {
             errors = invalid;
+            if (options.focusErrors !== false) void focusFirstError();
             return undefined;
         }
         errors = {};
@@ -127,8 +139,12 @@ export function formState<T extends object>(initial: T, options: FormStateOption
             else if (JSON.stringify(draft) === JSON.stringify(sending)) settle(sending);
             return result;
         } catch (error) {
-            if (isValidationError(error)) errors = error.body.fields ?? {};
-            else failure = error;
+            if (isValidationError(error)) {
+                errors = error.body.fields ?? {};
+                if (options.focusErrors !== false) void focusFirstError();
+            } else {
+                failure = error;
+            }
             if (isVersionConflict(error)) conflict = error.body.current;
             return undefined;
         } finally {
@@ -167,6 +183,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         keepMine,
         takeTheirs,
         reset,
-        submit
+        submit,
+        focusFirstError
     };
 }
