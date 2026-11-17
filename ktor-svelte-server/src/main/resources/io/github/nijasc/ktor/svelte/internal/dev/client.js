@@ -1183,6 +1183,16 @@ const NOT_A_CALL_SITE = ['/_ktor-svelte/', '/src/lib/api/', '/node_modules/', '/
 const SOURCE_FRAME = /https?:\/\/[^\s/)]+(\/[^\s?:)]+)(?:\?[^\s:)]*)?:(\d+):\d+/;
 let replaying = false;
 
+function deepStack() {
+    const limit = Error.stackTraceLimit;
+    try {
+        Error.stackTraceLimit = 50;
+        return new Error().stack;
+    } finally {
+        Error.stackTraceLimit = limit;
+    }
+}
+
 function callSite(stack) {
     for (const line of (stack ?? '').split('\n').slice(1)) {
         const frame = SOURCE_FRAME.exec(line);
@@ -1217,7 +1227,7 @@ function rememberCalls() {
                     body: typeof body === 'string' ? body : undefined,
                     bodyNotKept: body != null && typeof body !== 'string',
                     at: performance.now(),
-                    site: callSite(new Error().stack)
+                    site: callSite(deepStack())
                 };
                 call.duplicate = sameCallJustBefore(call);
                 seenCalls.set(id, call);
