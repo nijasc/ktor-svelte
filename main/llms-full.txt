@@ -3837,6 +3837,35 @@ for await (const users of pages(api.users.list, { limit: '100' })) table.push(..
 - Use the ID or sort key of the last item as the cursor, not an offset, so rows added while someone pages do not shift the results.
 - Always cap `limit` on the server.
 
+## With Exposed
+
+For apps that use [Exposed](https://www.jetbrains.com/exposed/) with JDBC, two helpers do the usual parts. They are only loaded when you call them, so the library does not bring Exposed with it.
+
+`pageBy` pages a query by a column and returns a `Page`. It adds the condition for the cursor, the order and the limit, and makes the next cursor from the last row:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.pageBy
+import io.github.nijasc.ktor.svelte.toDto
+
+getPage<Note>("/api/notes") { request ->
+    transaction {
+        Notes.selectAll().where { Notes.owner eq userId }.pageBy(Notes.id, request) { it.toDto<Note>() }
+    }
+}
+```
+
+- The column is what the list is ordered by, newest first unless you pass `descending = false`. Use one whose values are unique, such as the id, or rows with equal values can be skipped between pages.
+- It takes a `PageRequest` or a cursor and a limit, for `Int` and `Long` columns. For another type, pass `parse` to turn the cursor text back into a value.
+- Do not order the query yourself. A cursor that the list never gave out is answered with 400.
+
+`toDto` turns a row into a `@Serializable` class by matching property names to column names, `starCount` to `star_count` too. Enums stored as text, nullable columns and properties with defaults work as you would expect. For a property the row does not have, or one that is stored differently, pass the value:
+
+```kotlin
+row.toDto<Note>("createdAt" to Instant.fromEpochMilliseconds(row[Notes.createdAt]), "author" to author)
+```
+
+When a required property has neither a column nor a passed value, the error names it and lists the row's columns. After a join, two tables may have a column of the same name, and the first one selected is used.
+
 ## A table without the code
 
 With `libraries { components() }`, the generated [`<DataTable>`](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#datatable) does all of the above for a table: it takes the route's function and a list of columns, and loads, pages and shows the empty and failed states itself.
