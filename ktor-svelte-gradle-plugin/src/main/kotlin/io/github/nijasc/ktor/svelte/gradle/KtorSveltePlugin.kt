@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.gradle.libraries.LibrarySpec
 import io.github.nijasc.ktor.svelte.gradle.libraries.TailwindSpec
 import io.github.nijasc.ktor.svelte.gradle.tasks.DeleteUnlockedFiles
 import io.github.nijasc.ktor.svelte.gradle.tasks.GitOutputSource
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteApiChangesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildInfoTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBuildTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteBundleTask
@@ -349,6 +350,12 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.messagesDirectory.set(messages)
             task.kotlinSources.from(project.layout.projectDirectory.dir("src/main/kotlin"))
             task.locales.set(librarySpec.map { it.i18n?.locales.orEmpty() })
+        }
+        project.tasks.register("svelteApiChanges", SvelteApiChangesTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description =
+                "Lists what changed in the API for callers since another git revision. Add --strict to fail on breaking changes."
+            task.frontendDir.set(extension.frontendDir)
         }
         project.tasks.register("svelteVerifyApiRoutes", SvelteVerifyApiRoutesTask::class.java) { task ->
             task.group = TASK_GROUP
