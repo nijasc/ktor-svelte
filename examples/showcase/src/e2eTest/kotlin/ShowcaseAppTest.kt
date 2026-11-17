@@ -168,7 +168,8 @@ class ShowcaseAppTest {
         listOf("/board", "/tasks/1", "/settings", "/admin").forEach { path ->
             val response = visitor.send("GET", path, null, html)
             assertEquals(302, response.statusCode(), path)
-            assertEquals("/login", response.headers().firstValue("Location").orElse(""), path)
+            val back = java.net.URLEncoder.encode(path, Charsets.UTF_8)
+            assertEquals("/login?next=$back", response.headers().firstValue("Location").orElse(""), path)
         }
         listOf("/api/tasks", "/api/me", "/api/stats", "/api/members", "/api/admin/users", "/api/attachments/1").forEach { path ->
             val response = visitor.send("GET", path)

@@ -82,8 +82,41 @@ class ShowcaseBrowserTest {
     fun `pages behind the login send visitors to the sign in page`() {
         listOf("/board", "/tasks/1", "/settings", "/admin").forEach { path ->
             page.navigate(path)
-            assertThat(page).hasURL(LOGIN)
+            assertThat(page).hasURL(loginFrom(path))
         }
+    }
+
+    @Test
+    fun `signing in brings the visitor back to the page they asked for`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val id = page.createTask(unique("Come back"))
+        page.button("Sign out").click()
+        assertThat(page).hasURL(LOGIN)
+
+        page.navigate("/tasks/$id")
+        assertThat(page).hasURL(loginFrom("/tasks/$id"))
+        page.getByLabel("Email").fill(ADMIN_EMAIL)
+        page.getByLabel("Password").fill(ADMIN_PASSWORD)
+        page.submitSignIn()
+        assertThat(page).hasURL(Pattern.compile(".*/tasks/$id$"))
+        assertThat(page.locator("#task-title")).containsText("Come back")
+    }
+
+    @Test
+    fun `a session that ends while a page is open leads to the login page and back`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/settings")
+        assertThat(page.getByLabel("Name")).not().hasValue("")
+        context.clearCookies(com.microsoft.playwright.BrowserContext.ClearCookiesOptions().setName("showcase_session"))
+        page.getByLabel("Name").fill("Ada Lovelace")
+        page.button("Save").click()
+        assertThat(page).hasURL(loginFrom("/settings"))
+        assertThat(page.locator("#signed-in-as")).hasCount(0)
+
+        page.getByLabel("Email").fill(ADMIN_EMAIL)
+        page.getByLabel("Password").fill(ADMIN_PASSWORD)
+        page.submitSignIn()
+        assertThat(page).hasURL(Pattern.compile(".*/settings$"))
     }
 
     @Test
@@ -446,7 +479,7 @@ class ShowcaseBrowserTest {
         page.button("Sign out").click()
         assertThat(page).hasURL(LOGIN)
         page.navigate("/board")
-        assertThat(page).hasURL(LOGIN)
+        assertThat(page).hasURL(loginFrom("/board"))
     }
 
     @Test

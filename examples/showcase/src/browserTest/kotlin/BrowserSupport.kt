@@ -31,6 +31,8 @@ val PNG_PIXEL: ByteArray =
 val BOARD: Pattern = Pattern.compile(".*/board$")
 val LOGIN: Pattern = Pattern.compile(".*/login$")
 
+fun loginFrom(path: String): Pattern = Pattern.compile(".*/login\\?next=" + java.net.URLEncoder.encode(path, Charsets.UTF_8) + "$")
+
 class ShowcaseServer(
     dataDirectory: Path,
     appName: String = "Showcase under test",
