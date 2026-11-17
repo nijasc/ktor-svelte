@@ -460,6 +460,27 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteRoutesDiagram draws which page calls which API route`() {
+        val project = project()
+        project.frontend.resolve("src/lib/api").mkdirs()
+        project.frontend.resolve("src/lib/api/services.ts").writeText(
+            "export const notesList = (options?: RequestOptions) => " +
+                "request<Note[]>('GET', '/api/notes', { ...options, operation: 'notes.list' });\n",
+        )
+        project.frontend.resolve("src/routes/notes").mkdirs()
+        val page = project.frontend.resolve("src/routes/notes/+page.ts")
+        page.writeText("import { notesList } from '#api';\nexport const load = () => notesList();\n")
+
+        assertContains(project.run("svelteRoutesDiagram").output, "wrote 1 page(s), 1 API route(s) and 1 call(s)")
+        val diagram = dir.resolve("build/ktor-svelte/pages-to-routes.md").readText()
+        assertContains(diagram, "page0[\"/notes\"]")
+        assertContains(diagram, "page0 --> api0")
+
+        project.run("svelteRoutesDiagram", "--output=docs/routes.md")
+        assertEquals(diagram, dir.resolve("docs/routes.md").readText())
+    }
+
+    @Test
     fun `the short task names are the same tasks under another name, options included`() {
         val project = project()
         project.buildScript(applicationBuild)
