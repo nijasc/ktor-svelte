@@ -31,6 +31,7 @@ class ComponentsTest {
                 "FileDrop.svelte",
                 "MaskedInput.svelte",
                 "NavigationProgress.svelte",
+                "PasswordStrength.svelte",
                 "masks.ts",
             ),
             files.keys

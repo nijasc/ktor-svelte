@@ -89,3 +89,30 @@ export function field(node: FieldElement, options: FieldOptions = {}) {
     restoreTypedValue(node);
     return { update: apply, destroy: () => message.remove() };
 }
+
+export interface PasswordRule {
+    readonly pattern: string;
+    readonly requirement: string;
+}
+
+export const passwordRules: readonly PasswordRule[] = [
+    { pattern: '^[\\s\\S]{10,}$', requirement: 'at least 10 characters' },
+    { pattern: '[a-z]', requirement: 'a lowercase letter' },
+    { pattern: '[A-Z]', requirement: 'an uppercase letter' },
+    { pattern: '[0-9]', requirement: 'a digit' },
+];
+
+export const passwordMessage = 'Must have at least 10 characters, a lowercase letter, an uppercase letter and a digit.';
+
+export interface PasswordStrength {
+    readonly met: readonly PasswordRule[];
+    readonly missing: readonly PasswordRule[];
+    readonly score: number;
+    readonly strong: boolean;
+}
+
+export function passwordStrength(password: string): PasswordStrength {
+    const met = passwordRules.filter((rule) => new RegExp(rule.pattern).test(password));
+    const missing = passwordRules.filter((rule) => !met.includes(rule));
+    return { met, missing, score: met.length / passwordRules.length, strong: missing.length === 0 };
+}

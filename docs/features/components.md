@@ -197,6 +197,49 @@ A box that lists every error of a form, each a link that moves focus to its fiel
 - A link finds its field by `id` first, then by `name`, so give the fields an `id` or `name` equal to the property, as `<Field id="email" ...>` does.
 - With DaisyUI it is an `alert alert-error`; without, it has a small style of its own.
 
+## PasswordStrength
+
+A meter and a checklist under a password field, driven by the same rule the server enforces with [`@Rule.StrongPassword`](./validation.md#ready-made-rules). Nobody has to guess what "strong" means, and the browser can never accept a password the server will refuse:
+
+```svelte no-check
+<script lang="ts">
+    import Field from '#components/Field.svelte';
+    import PasswordStrength from '#components/PasswordStrength.svelte';
+</script>
+
+<Field label="New password" type="password" bind:value={form.draft.password} errors={form.errors.password} />
+<PasswordStrength password={form.draft.password} />
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `password` | required | The password typed so far |
+| `requirements` | `{}` | Your own text per requirement, keyed by the English text, such as `{ 'a digit': m.passwordDigit() }` |
+| `label` | `Password strength` | Accessible name of the meter |
+| `strongText` | `Strong enough.` | Announced once every rule is met |
+| `class` | | More classes |
+
+The rules come from the generated client, so you can also use them without the component:
+
+```ts no-check
+import { passwordMessage, passwordRules, passwordStrength } from '#api';
+
+const strength = passwordStrength('Correct1horse');
+strength.score;
+strength.strong;
+strength.missing.map((rule) => rule.requirement);
+```
+
+| Name | What it is |
+| --- | --- |
+| `passwordRules` | Every part of the rule: `pattern` and `requirement`, such as `at least 10 characters`, `a lowercase letter`, `an uppercase letter`, `a digit` |
+| `passwordStrength(password)` | `met`, `missing`, `score` from 0 to 1, and `strong` when nothing is missing |
+| `passwordMessage` | The message the server answers with when the rule fails |
+
+- Each rule is shown with a `+` or a `-` and a color, so it does not depend on color alone.
+- Screen readers hear the meter's value and, once, that the password is strong enough, instead of every keystroke.
+- Use it only for a property with `@Rule.StrongPassword`; for your own rule, write your own list.
+
 ## EnumSelect
 
 A `<select>` over a generated enum object:
