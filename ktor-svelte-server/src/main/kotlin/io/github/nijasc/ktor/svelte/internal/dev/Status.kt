@@ -18,6 +18,8 @@ internal fun Manifest.fingerprint(): String {
     return digest.digest().joinToString("") { "%02x".format(it) }
 }
 
+private const val P95 = 0.95
+
 internal suspend fun statusJson(
     manifest: Manifest?,
     devProxy: DevProxy?,
@@ -54,6 +56,26 @@ internal suspend fun statusJson(
                 put("rateLimit", metrics.rateLimitRefusals)
             },
         )
+        val routes = metrics.routes
+        if (routes.isNotEmpty()) {
+            put(
+                "routes",
+                buildJsonArray {
+                    routes.forEach { route ->
+                        addJsonObject {
+                            put("kind", route.kind.name.lowercase())
+                            put("method", route.method)
+                            put("route", route.route)
+                            put("count", route.count)
+                            put("serverErrors", route.serverErrors)
+                            put("clientErrors", route.clientErrors)
+                            put("averageMillis", route.averageMillis)
+                            put("p95Millis", route.percentileMillis(P95))
+                        }
+                    }
+                },
+            )
+        }
         val vitals = metrics.webVitals
         if (vitals.isNotEmpty()) {
             put(

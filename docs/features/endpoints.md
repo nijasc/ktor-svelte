@@ -77,6 +77,7 @@ install(Svelte) {
 | `present`, `formatVersion`, `files`, `fingerprint` | The bundled build |
 | `proxy`, and when active `url` and `reachable` | The dev proxy |
 | `refusals`: `crossOrigin`, `bodyTooLarge`, `rateLimit` | How many requests the [security guards](../security.md#api-request-guards) refused |
+| `routes`: `kind`, `method`, `route`, `count`, `serverErrors`, `clientErrors`, `averageMillis`, `p95Millis` | [Latency and errors per route](../guide/monitoring.md#latency-and-errors-per-route), once a call was answered |
 
 It is off by default, never cached, hidden from the OpenAPI document, and answers only requests from this machine with a local `Host`. Everything else gets 403, unless you [open it to more callers](#who-may-see-internal-endpoints).
 
