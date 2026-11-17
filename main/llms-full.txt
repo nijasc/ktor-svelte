@@ -1300,7 +1300,7 @@ The dev loop, the dev panel and the tools around them.
 | [Setup script](https://nijasc.github.io/ktor-svelte/main/guide/getting-started) | One command creates a project with everything wired up | Script |
 | [Configurator](https://nijasc.github.io/ktor-svelte/main/guide/configurator) | Tick options and copy the settings | This site |
 | [Dev workflow](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | `svelteDevAll` runs Vite, the compiler and your app with hot reload on one port, in one readable log | Gradle |
-| [Dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | Every API call with replay, curl, payload size, SQL counts and duplicates, plus status, environment, migrations, cookies, routes, public config, accessibility and a theme editor | Ktor plugin |
+| [Dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | Every API call with replay, curl, payload size, SQL counts and duplicates, plus status, environment, migrations, memory and threads, cookies, clear site data, routes, public config, accessibility and a theme editor | Ktor plugin |
 | [Server error overlay](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | A failed call shows the exception and a link to your code in the browser | Ktor plugin |
 | [Browser logs in your console](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | `console.log` and browser errors land in the dev log | Ktor plugin |
 | [Restart summary and startup timing](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | What caused a restart, how long it took, and where startup time went | Gradle, Ktor plugin |
@@ -9452,9 +9452,11 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 | [Open route in your editor](#open-the-route-in-your-editor) | Click a path to open the Kotlin route that answered it |
 | [Server errors](#server-errors-in-the-browser) | The Kotlin exception of a failed call, as an overlay |
 | [Save fixtures](#save-fixtures) | The calls of this page as JSON for frontend tests |
+| [Clear site data](#clear-site-data) | This browser as a first-time visitor, in one click |
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
 | [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
 | [Migrations](#migrations) | Which Flyway migrations ran, which are pending, and whether the last one failed |
+| [Memory and threads](#memory-and-threads) | Heap, garbage collection and threads of the running app, live |
 | [Cookies](#cookie-inspector) | What this browser sends, as the server reads it, with Clear buttons |
 | [Routes](#route-map) | Every page and API route with the file behind it |
 | [Accessibility](#accessibility-check) | An axe check of the page you are looking at |
@@ -9515,6 +9517,16 @@ When an API call from the page fails with an exception on the server, the browse
 
 **Save fixtures** in the panel's header downloads the calls this page made, with their answers, as a JSON file that [frontend tests can replay](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#fixtures-for-frontend-tests) without a backend.
 
+### Clear site data
+
+**Clear site data** in the panel's header gives you this browser as a first-time visitor in one click: it clears the cookies, the local and session storage, IndexedDB, the Cache Storage and the service workers of the app, then reloads the page.
+
+- The server answers with a [`Clear-Site-Data`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Clear-Site-Data) header, so `HttpOnly` cookies and the HTTP cache go too. The panel also clears what it can reach from the page, for browsers that do not act on the header fully.
+- Storage and caches are cleared for the app's address only, such as `localhost:8080`. Cookies do not tell ports apart, so other apps on `localhost` lose their cookies too.
+- It signs you out, and it also forgets the [Public config](#public-config) values you changed in this browser.
+
+To end only some cookies, use the [Cookies](#cookie-inspector) section instead.
+
 ### Status
 
 The **Status** section shows what the app is running with, in plain rows:
@@ -9557,6 +9569,20 @@ A pending or failed migration is usually why a new column "does not exist". The 
 
 - It needs `flyway-core` and Exposed in the app. Without Flyway on the classpath the section says so; ktor-svelte itself does not depend on it.
 - It reads Flyway's default setup: migrations in `src/main/resources/db/migration` and the history in `flyway_schema_history`. With other `locations` or another `table`, the list may not match what your app runs.
+
+### Memory and threads
+
+The **Memory and threads** section shows how the running app is doing, refreshed every two seconds while it is open:
+
+- a bar of the heap in use against the limit, and the heap in numbers: used, taken from the system, and the `-Xmx` limit,
+- memory outside the heap, such as loaded classes,
+- each garbage collector with how often it ran and how long it took in all,
+- the threads: live, daemon, the peak, how many were started since the start, and how many are running, waiting or blocked,
+- the processors the JVM sees, and how long the app has been up.
+
+**Collect garbage** asks the JVM for a full collection. What is still in use afterwards is what the app really holds, so a heap that keeps growing after each collection while you click through a page points to a leak. A thread count that only goes up points to threads or coroutines that never end.
+
+The numbers come from the JVM's standard management beans, so they need no agent and no library.
 
 ### Cookie inspector
 
@@ -10098,7 +10124,7 @@ ktor-svelte: the production build answered 2 pages, 1 asset, 2 API routes correc
 
 ### svelteDoctor
 
-**Catches:** a frontend setup that cannot work: the adapter, the adapter output against `svelte.outputDir`, the bundled manifest, `#api`, `tsconfig.json`, the SvelteKit version, Node, the package manager and port, packages that lost their files, and whether `NODE_EXTRA_CA_CERTS` points to a file.
+**Catches:** a frontend setup that cannot work: the adapter, the adapter output against `svelte.outputDir`, the bundled manifest, `#api`, `tsconfig.json`, the SvelteKit version, Node, the package manager and port, packages that lost their files, whether `NODE_EXTRA_CA_CERTS` points to a file, and whether the package registry is reachable.
 
 ```bash
 ./gradlew svelteDoctor
@@ -10111,8 +10137,20 @@ OK    adapter-static writes to build, matching svelte.outputDir
 OK    SvelteKit 3
 ERROR src/routes/+page.svelte imports $lib. SvelteKit 3 uses #lib.
 WARN  Node 20.10.0 is too old for Vite. Use Node 20.19, 22.12 or newer.
+OK    Network: registry https://registry.npmjs.org/ (default), proxy http://proxy.corp:8080 (HTTPS_PROXY), no extra certificates
+WARN  Registry https://registry.npmjs.org/ is not reachable: its certificate is not trusted, which happens when a company proxy inspects HTTPS. Set NODE_EXTRA_CA_CERTS to your company's root certificate (a PEM file), and add it to Java's trust store for Gradle.
 ktor-svelte: svelteDoctor --fix can fix 1 of these.
 ```
+
+**Network:** a first install that hangs or fails behind a company proxy is hard to read from the package manager's output. The doctor shows which registry, proxy and certificate settings apply and where each comes from, then asks the registry once:
+
+| Setting | Read from, first match wins |
+|---|---|
+| Registry | `npm_config_registry`, `registry` in `frontend/.npmrc`, `registry` in `frontend/bunfig.toml`, `registry` in `~/.npmrc`, else `https://registry.npmjs.org/` |
+| Proxy | `npm_config_https_proxy`, `https-proxy` in `.npmrc`, `HTTPS_PROXY`, `proxy` in `.npmrc`, `npm_config_proxy`, `HTTP_PROXY`. `NO_PROXY` and `noproxy` take the registry out of it |
+| Certificates | `NODE_EXTRA_CA_CERTS`, and `npm_config_cafile` or `cafile` in `.npmrc` |
+
+When the registry does not answer, it says what to set: `HTTPS_PROXY` when there is no proxy, the proxy's source when there is one, `NODE_EXTRA_CA_CERTS` when a proxy replaces the registry's certificate, a token when the registry answers 401, and credentials when the proxy answers 407. `strict-ssl=false` gets a warning, because it turns off certificate checks for every download. Passwords in proxy addresses are shown as `***`. The check uses Java's network stack, so a certificate Node trusts through `NODE_EXTRA_CA_CERTS` can still fail here; the message then says so. Network findings are warnings, and `./gradlew svelteDoctor --offline` skips the request.
 
 **Fix it for you:** `--fix` repairs what needs no decision from you: a missing `#api` import, a `tsconfig.json` that does not extend `$app/tsconfig`, `$lib` imports left over from SvelteKit 2, and a `node_modules` folder whose packages lost their files, which it deletes so the next build installs it again. Each change is printed as `FIXED`.
 
@@ -13826,7 +13864,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteApiChanges` | `--against`, `--strict` | Lists [what changed in the API for callers](https://nijasc.github.io/ktor-svelte/main/features/typescript#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. `--strict` fails on a change that can break them |
 | `svelteVerifyA11y` (app) | `--path`, `-Pbrowser` | Packages the app, opens its prerendered pages in a browser in light and dark, and fails on [accessibility problems](https://nijasc.github.io/ktor-svelte/main/guide/browser-tests#accessibility) that axe finds. Not part of `check` |
 | `svelteSmokeTest` (app) | `--path`, `--skip`, `--start-seconds` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](https://nijasc.github.io/ktor-svelte/main/guide/deployment#smoke-test). Not part of `check` |
-| `svelteDoctor` | `--fix` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, and that `NODE_EXTRA_CA_CERTS` points to a file, and says what to fix. `--fix` repairs what needs no decision. Short name `doctor` |
+| `svelteDoctor` | `--fix` | Checks adapter, adapter output against `svelte.outputDir`, the bundled manifest, `#api`, tsconfig, Kit version, Node, tool and port, that every installed package still has its files, that `NODE_EXTRA_CA_CERTS` points to a file, and that the package registry is reachable with the proxy and certificate settings that apply, and says what to fix. Gradle's `--offline` skips the registry. `--fix` repairs what needs no decision. Short name `doctor` |
 | `svelteConfig` | | Prints every setting of `svelte { }` and of `install(Svelte) { }`, marks the ones you changed from the default, scores the setup and suggests what to turn on. See [Review your configuration](#review-your-configuration) |
 | `svelteCheck` | | Runs the frontend's `check` script |
 
