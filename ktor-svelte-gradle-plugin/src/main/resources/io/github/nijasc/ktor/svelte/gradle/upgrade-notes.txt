@@ -1,0 +1,9 @@
+# Upgrade notes that svelteUpgrade prints, oldest version first.
+# A note applies when its version is newer than the old one and not newer than this plugin.
+# "when <path>:" shows a note only to projects that have that file or folder; {frontend} is the frontend folder.
+
+## 1.4.0
+- when {frontend}/src/lib/components: New generated components: Breadcrumbs, Sidebar (collapses to icons, a drawer on small screens) and FocusHeading (moves the focus to the new page's heading). svelteSync wrote them; nothing changes until you import them.
+- pageLoads { page("/tasks/[id]") { data("task", "tasks.get") } } can now write a page's +page.ts for you, and pageLoads { inline = true } puts the answers into the HTML of a page opened directly. Existing hand-written loads are never touched.
+- In development, application.mailer keeps outgoing emails and shows them in the dev panel instead of sending them. Set dev { catchEmails = false } to send for real while developing.
+- The dev panel gained payload sizes, an environment view with secrets hidden, migration state, memory and threads, clear site data and the slowest routes. Nothing to change.
