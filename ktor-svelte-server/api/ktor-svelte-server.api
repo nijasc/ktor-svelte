@@ -189,6 +189,11 @@ public final class io/github/nijasc/ktor/svelte/FieldChecksKt {
 	public static final fun fieldCheck (Lio/ktor/server/routing/Route;Ljava/lang/String;Lkotlin/jvm/functions/Function3;)Lio/ktor/server/routing/Route;
 }
 
+public final class io/github/nijasc/ktor/svelte/LatencyBucket {
+	public final fun getCount ()J
+	public final fun getUpToMillis ()Ljava/lang/Long;
+}
+
 public final class io/github/nijasc/ktor/svelte/LibrariesKt {
 	public static final fun getSvelteLocale (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
 	public static final fun getSvelteTheme (Lio/ktor/server/application/ApplicationCall;)Ljava/lang/String;
@@ -378,6 +383,28 @@ public final class io/github/nijasc/ktor/svelte/ResourceShape {
 	public final fun listBy (Lio/ktor/server/routing/Route;Lkotlinx/serialization/KSerializer;Lkotlin/jvm/functions/Function3;)V
 	public final fun missing (Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function2;)V
 	public final fun update (Lio/ktor/server/routing/Route;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function4;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/RouteKind : java/lang/Enum {
+	public static final field Api Lio/github/nijasc/ktor/svelte/RouteKind;
+	public static final field Page Lio/github/nijasc/ktor/svelte/RouteKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/RouteKind;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/RouteKind;
+}
+
+public final class io/github/nijasc/ktor/svelte/RouteMetric {
+	public final fun getAverageMillis ()D
+	public final fun getBuckets ()Ljava/util/List;
+	public final fun getClientErrors ()J
+	public final fun getCount ()J
+	public final fun getErrorRate ()D
+	public final fun getKind ()Lio/github/nijasc/ktor/svelte/RouteKind;
+	public final fun getMaxMillis ()D
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getRoute ()Ljava/lang/String;
+	public final fun getServerErrors ()J
+	public final fun percentileMillis (D)Ljava/lang/Long;
 }
 
 public final class io/github/nijasc/ktor/svelte/RouteTimeoutKt {
@@ -641,6 +668,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteMetrics {
 	public final fun getBodyTooLargeRefusals ()J
 	public final fun getCrossOriginRefusals ()J
 	public final fun getRateLimitRefusals ()J
+	public final fun getRoutes ()Ljava/util/List;
 	public final fun getWebVitals ()Ljava/util/List;
 }
 

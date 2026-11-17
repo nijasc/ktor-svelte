@@ -11,6 +11,9 @@ import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
 import io.github.nijasc.ktor.svelte.internal.IdempotencyStore
 import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
+import io.github.nijasc.ktor.svelte.internal.MetricRoute
+import io.github.nijasc.ktor.svelte.internal.MetricStartedAt
+import io.github.nijasc.ktor.svelte.internal.SERVER_ERROR_STATUS
 import io.github.nijasc.ktor.svelte.internal.StartupTiming
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
 import io.github.nijasc.ktor.svelte.internal.WEB_VITALS_PATH
@@ -61,6 +64,7 @@ import io.github.nijasc.ktor.svelte.internal.installRequestIds
 import io.github.nijasc.ktor.svelte.internal.installTransport
 import io.github.nijasc.ktor.svelte.internal.jvmStartIfFirstApplication
 import io.github.nijasc.ktor.svelte.internal.onOwn
+import io.github.nijasc.ktor.svelte.internal.recordRouteMetric
 import io.github.nijasc.ktor.svelte.internal.runtimeVersion
 import io.github.nijasc.ktor.svelte.internal.security.BodyTooLarge
 import io.github.nijasc.ktor.svelte.internal.security.CONTENT_SECURITY_POLICY_HEADER
@@ -418,6 +422,11 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 metrics.rateLimited.incrementAndGet()
             }
         }
+        application.subscribeWhileRunning(RoutingRoot.RoutingCallStarted, { it.application === application }) { call ->
+            call.attributes.put(MetricRoute, call.route)
+        }
+        onCall { call -> call.attributes.put(MetricStartedAt, System.nanoTime()) }
+        on(ResponseSent) { call -> recordRouteMetric(call, metrics.routeStore, resolver, pluginConfig.paramRouteList) }
 
         if (devRequests != null) {
             devRequests.install(application)
@@ -488,6 +497,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 respondWithoutDetails(call, cause, resolver.isApiPath(decodedPathOrRaw(call)))
             }
             devRequests?.leftUnanswered(call)
+            if (!call.response.isCommitted) {
+                recordRouteMetric(call, metrics.routeStore, resolver, pluginConfig.paramRouteList, answered = SERVER_ERROR_STATUS)
+            }
         }
 
         val automaticRouting = pluginConfig.routing == SvelteRouting.Automatic

@@ -8,6 +8,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -51,6 +52,14 @@ public abstract class SvelteBundleTask : DefaultTask() {
     @get:OutputDirectory
     public abstract val bundleDirectory: DirectoryProperty
 
+    @get:Input
+    @get:Optional
+    public abstract val resourceRoot: Property<String>
+
+    @get:Input
+    @get:Optional
+    public abstract val basePath: Property<String>
+
     @TaskAction
     public fun bundle() {
         val source = buildOutput.get().asFile
@@ -72,12 +81,22 @@ public abstract class SvelteBundleTask : DefaultTask() {
             )
         }
 
+        basePath.orNull?.let { base ->
+            val pages = files.filterKeys { it.endsWith(".html") }.values
+            if (pages.none { "$base/_app/" in it.readText() }) {
+                logger.warn(
+                    "ktor-svelte: no page of the frontend in $source loads its files from $base/_app/. " +
+                        "Set paths: { base: '$base' } in the sveltekit() options of its vite.config.ts." + DocLink.MULTIPLE_FRONTENDS.see(),
+                )
+            }
+        }
         val target = bundleDirectory.get().asFile
         target.deleteRecursively()
-        val publicRoot = target.resolve("ktor-svelte/public")
+        val root = target.resolve(resourceRoot.getOrElse("ktor-svelte"))
+        val publicRoot = root.resolve("public")
         files.forEach { (path, file) -> file.copyTo(publicRoot.resolve(path), overwrite = true) }
         val compressed = if (precompress.get()) gzipUncompressed(files, publicRoot) else emptyMap()
-        target.resolve("ktor-svelte/manifest.json").writeText(manifestJson(files + compressed))
+        root.resolve("manifest.json").writeText(manifestJson(files + compressed))
     }
 
     private fun gzipUncompressed(
