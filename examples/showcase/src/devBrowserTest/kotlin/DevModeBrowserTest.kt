@@ -36,6 +36,7 @@ private const val MEMBER_PASSWORD = "dev-browser-member-password"
 private const val SESSION_SIGN_KEY = "6b746f722d7376656c74652d6465762d62726f777365722d746573742d6b6579"
 private const val START_SECONDS = 240
 private const val CHANGE_SECONDS = 180
+private const val QUIET_MILLIS = 6_000L
 
 class DevModeBrowserTest {
     companion object {
@@ -72,6 +73,15 @@ class DevModeBrowserTest {
                 Thread.sleep(500)
             }
             fail("Timed out waiting for $what. The last request: $lastAnswer. The dev log ends with: " + log.readLines().takeLast(15).joinToString(" | "))
+        }
+
+        fun waitUntilTheDevLoopIsQuiet() {
+            waitFor("the dev loop to finish what the change set off", 120) {
+                val seen = log.length()
+                Thread.sleep(QUIET_MILLIS)
+                val added = log.readBytes().drop(seen.toInt()).toByteArray().decodeToString()
+                added.lines().none { " kotlin " in it || " app " in it } && get("/_ktor-svelte/health")?.statusCode() == 200
+            }
         }
 
         fun change(
@@ -209,6 +219,7 @@ class DevModeBrowserTest {
             0,
             com.microsoft.playwright.assertions.LocatorAssertions.HasCountOptions().setTimeout(60_000.0),
         )
+        waitUntilTheDevLoopIsQuiet()
     }
 
     @Test
@@ -497,8 +508,7 @@ class DevModeBrowserTest {
             restore(about)
         }
         waitFor("Vite to serve the restored page", 60) { "twice" !in get("/src/routes/about/+page.svelte")?.body().orEmpty() }
-        page.navigate("/about")
-        page.waitForLoadState(LoadState.NETWORKIDLE)
+        waitUntilTheDevLoopIsQuiet()
     }
 
     @Test

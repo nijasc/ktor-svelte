@@ -33,6 +33,7 @@ class TestKitBrowserTest : BrowserTest() {
         val problems = page.problems()
         page.navigate(FrontendRoutes.about)
         assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.BANNER)).containsText("Showcase from the kit")
+        page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE)
         page.navigate(FrontendRoutes.board)
         assertThat(page).hasURL(Pattern.compile(".*/login\\?next=%2Fboard$"))
         assertEquals(emptyList(), problems)
@@ -50,6 +51,7 @@ class TestKitBrowserTest : BrowserTest() {
         val renamed: User = api.put("/api/me", ProfileInput("Ada Lovelace"))
         assertEquals(ada.id, renamed.id)
 
+        page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE)
         page.navigate(FrontendRoutes.board)
         assertThat(page.locator("#signed-in-as")).hasText("Ada Lovelace")
         api.delete("/api/session")
