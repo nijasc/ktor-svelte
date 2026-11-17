@@ -48,6 +48,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 124 | Autocomplete hints from names | #354 |
 | 125 | Password strength meter | #355 |
 | 126 | Money and number inputs | #356 |
+| 127 | Multi-step forms | #357 |
 
 ### Next up
 
@@ -185,7 +186,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 127 | Multi-step forms | Medium | 14 |
 | 128 | Column chooser | Medium | 14 |
 | 129 | Row selection and bulk actions | Medium | 14 |
 | 130 | Sorting by header click | Medium | 14 |
