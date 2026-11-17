@@ -1,8 +1,50 @@
 # Frontend libraries
 
-Tailwind, DaisyUI, Lucide, i18n, image optimization, an installable app, error toasts and typed routes, configured in Gradle with typed helpers on both sides.
+Tailwind, DaisyUI, fonts, charts, Lucide icons, optimized images, an installable app, toasts, typed routes, ready-made components and i18n, all turned on in Gradle, with typed helpers on both sides.
 
-Turn on what you need in `build.gradle.kts`. Packages get installed and configured for you, and everything works together, including across Kotlin and TypeScript.
+<Badge type="info" text="Gradle" /> <Badge type="warning" text="Generated files" />
+
+You list what you want in `build.gradle.kts`. ktor-svelte installs the packages, configures them, and generates the glue, so everything works together, including across Kotlin and TypeScript. This page is the map: what each library does, how they are applied, and what ktor-svelte owns in your frontend. Each library has its own page with every option and longer examples.
+
+## Quick start
+
+```kotlin
+svelte {
+    libraries {
+        daisyUi()
+        lucide()
+        toasts()
+    }
+}
+```
+
+```bash
+./gradlew svelteSync
+```
+
+That is a styled app with themes, typed icons and error toasts. Add the rest one line at a time.
+
+## All libraries
+
+| Library | In `libraries { }` | What you get | Page |
+|---|---|---|---|
+| Tailwind | `tailwind()` | Tailwind 4 wired into Vite and the CSS, with the typography and forms plugins on request | [Styling](./styling.md#tailwind) |
+| DaisyUI | `daisyUi { }` | Components and themes, typed in TypeScript and Kotlin, with no flash of the wrong theme | [Styling](./styling.md#daisyui) |
+| Fonts | `fonts("Inter")` | A font served from your own app, preloaded, as the default font | [Styling](./styling.md#fonts) |
+| Charts | `charts()` | LayerChart in your theme colors, with typed series | [Charts](./charts.md) |
+| Lucide | `lucide()` | A typed `LucideIcon` enum and an `<Icon>` component, with only the icons you use in the build | [Icons and images](./icons-and-images.md#lucide-icons) |
+| Images | `images()` | `<enhanced:img>`: AVIF and WebP in several widths, at build time | [Icons and images](./icons-and-images.md#images) |
+| Installable app | `installable { }` | A web manifest, icons in every size and a service worker with an offline page | [Installable app](./installable-app.md) |
+| Toasts | `toasts()` | Failed API calls shown as toasts, a `toast()` helper and an optional reload prompt | [Calling the API](./calling-the-api.md#show-errors-automatically), [Components](./components.md#toasts) |
+| Routes | `routes()` | Every page as a typed constant in TypeScript and Kotlin | [Typed routes](./routes.md) |
+| Components | `components()` | Form fields, date inputs, a data table, file drop, error page, theme and language switches | [Components](./components.md) |
+| i18n | `i18n { }` | Typed messages, plurals, and number, money and date formats that match on both sides | [i18n](./i18n.md) |
+
+Every project with generated files also gets a [modal helper](./components.md#modals), a [confirm helper](./components.md#confirm-before-a-call), a [guide for coding assistants](./components.md#guide-for-coding-assistants) and [lint rules](./components.md#lint-rules).
+
+## The libraries block
+
+Everything at once, as a full example:
 
 ```kotlin
 import io.github.nijasc.ktor.svelte.gradle.DaisyTheme
@@ -39,15 +81,42 @@ svelte {
 }
 ```
 
-Then apply it:
+Some libraries build on others:
+
+- `daisyUi()` turns on `tailwind()` as well.
+- `fonts(...)` needs `tailwind()` or `daisyUi()`, which bring the stylesheet.
+- `charts()` needs `daisyUi()`, whose theme colors the charts take.
+- `components()` imports from `#api`, so it needs `generateTs = true` on the server.
+- `ThemeToggle` is generated with `daisyUi`, and `LocaleSwitch` and `TimeAgo` with `i18n`.
+
+A setting the plugin does not know, such as a typo inside `daisyUi { }`, fails the build with the name of the block.
+
+## Apply changes with svelteSync
 
 ```bash
 ./gradlew svelteSync
 ```
 
-`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result. The generated folder `src/lib/ktor-svelte` carries its own `.gitattributes`, which marks the files as generated and keeps their line endings the same on every machine. `svelteDev` and `svelteDevAll` sync automatically. A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
+`svelteSync` adds the packages, updates your lockfile and writes the generated files. Commit the result.
 
-**ktor-svelte owns `vite.config.ts`** once any library is on. Put your own Vite settings in `vite.user.ts`, and they are merged in:
+- The generated folder `src/lib/ktor-svelte` carries its own `.gitattributes`, which marks the files as generated and keeps their line endings the same on every machine.
+- `svelteDev` and `svelteDevAll` sync automatically.
+- A production build never changes anything: it fails and asks you to run `svelteSync` if something is out of date.
+
+## What ktor-svelte owns
+
+Once any library is on, some files belong to the plugin. You change them through Gradle, not by hand.
+
+| File | Who writes it | How you add your own |
+|---|---|---|
+| `vite.config.ts` | ktor-svelte | Put your settings in `vite.user.ts`. They are merged in |
+| `src/hooks.server.ts` | ktor-svelte | Combine your `handle` with `ktorSvelteHandle`, see below |
+| `src/hooks.ts` | ktor-svelte, for URL prefixes | |
+| `src/lib/ktor-svelte/` | ktor-svelte, rewritten by every sync | Write your own files next to it, such as a component on the same helper |
+| `src/routes/+layout.svelte` | Created only when you have none | Add the stylesheet import to yours |
+| Generated Kotlin | ktor-svelte, in `io.github.nijasc.ktorsvelte` | Change the package with `generatedPackage` |
+
+Your own Vite settings go in `vite.user.ts`:
 
 ```ts
 export default {
@@ -55,7 +124,7 @@ export default {
 };
 ```
 
-It also generates `src/hooks.server.ts`, and `src/hooks.ts` for URL prefixes. If you already have your own versions of these files, sync stops rather than overwriting them. It tells you to move your settings and delete the file. To combine your own `handle` with ours, use `sequence` from `@sveltejs/kit/hooks` with `ktorSvelteHandle` from `#lib/ktor-svelte/server-hooks.js`, after removing the generated hook file and any use of a library that needs it.
+If you already have your own versions of the hook files, sync stops rather than overwriting them, and tells you to move your settings and delete the file. To combine your own `handle` with ours, use `sequence` from `@sveltejs/kit/hooks` with `ktorSvelteHandle` from `#lib/ktor-svelte/server-hooks.js`, after removing the generated hook file and any use of a library that needs it.
 
 If you already have `src/routes/+layout.svelte`, add this line once. Without a layout, one is created for you.
 
@@ -63,38 +132,23 @@ If you already have `src/routes/+layout.svelte`, add this line once. Without a l
 import '#lib/ktor-svelte/app.css';
 ```
 
-Generated Kotlin lands in the `io.github.nijasc.ktorsvelte` package. Change it with `generatedPackage = "com.example.ui"`.
-
-## Tailwind
-
-`tailwind()` installs Tailwind 4 and wires Vite and the CSS. `typography()` and `forms()` add the official plugins. Everything else is normal Tailwind CSS.
-
-## DaisyUI
-
-Use the theme selector in the top bar of this site to see every theme ktor-svelte ships, the shadcn themes included, applied to these pages. `daisyUi()` turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme.
-
-```svelte
-<script lang="ts">
-    import { setTheme, themes } from '#theme';
-</script>
-
-{#each themes as theme}
-    <button class="btn" onclick={() => setTheme(theme)}>{theme}</button>
-{/each}
-```
+Generated Kotlin lands in the `io.github.nijasc.ktorsvelte` package. Change it in the libraries block:
 
 ```kotlin
-import io.github.nijasc.ktorsvelte.AppTheme
-import io.github.nijasc.ktorsvelte.theme
-
-get("/api/report") {
-    val isDark = call.theme == AppTheme.Dark
+svelte {
+    libraries {
+        generatedPackage = "com.example.ui"
+    }
 }
 ```
 
-### shadcn themes
+## Tailwind
 
-`DaisyTheme.ShadcnLight` and `DaisyTheme.ShadcnDark` bring the look of [shadcn/ui](https://ui.shadcn.com) to every DaisyUI component: its neutral palette, `0.625rem` corners, thin borders and flat surfaces without shadows or noise. Use them like any other theme. Projects created by the setup script start with them:
+`tailwind()` installs Tailwind 4 and wires Vite and the CSS. `typography()` and `forms()` add the official plugins. See [Styling: Tailwind](./styling.md#tailwind).
+
+## DaisyUI
+
+`daisyUi()` adds DaisyUI and turns on Tailwind as well. With no themes listed, you get `Light` and `Dark`. Themes are typed on both sides, and the saved choice is applied before the first paint, so there is no flash of the wrong theme. Use the theme selector in the top bar of this site to see every theme ktor-svelte ships, the shadcn themes included.
 
 ```kotlin
 import io.github.nijasc.ktor.svelte.gradle.DaisyTheme
@@ -110,203 +164,45 @@ svelte {
 }
 ```
 
-On the server they are `AppTheme.ShadcnLight` and `AppTheme.ShadcnDark`, and in the frontend `'shadcn-light'` and `'shadcn-dark'`. When you only pick these two, the dark one is used for visitors who prefer dark mode. Themes appear in `themes` in the order you list them.
+```svelte
+<script lang="ts">
+    import { setTheme, themes } from '#theme';
+</script>
 
-`customTheme` also accepts `secondary`, `accent`, `neutral`, `base200`, `base300`, `baseContent`, `info`, `success`, `warning` and `error`, plus `variable("radius-box", "1rem")` for anything else Daisy supports. Pass `colorScheme = "dark"` for dark themes.
-
-You do not have to guess those colors in the build file. With DaisyUI on, the [dev panel](../guide/dev-workflow.md) has a **Theme colors** section with a color picker for each of the twelve. Changing one recolors the open page at once, so you tune the theme on your real screens. **Copy for Gradle** puts the result on the clipboard as a finished block, named as you typed it:
-
-```kotlin no-check
-customTheme("sunset") {
-    primary = "#ff0044"
-    secondary = "#f5f5f5"
-    base100 = "#fff8e7"
-}
+{#each themes as theme}
+    <button class="btn" onclick={() => setTheme(theme)}>{theme}</button>
+{/each}
 ```
 
-The real block lists all twelve colors, and says `colorScheme = "dark"` when you started from a dark theme. Paste it into `daisyUi { }`, add the name to your themes, and `svelteSync` makes it a theme like any other. The changes on the page are a preview only: **Reset**, or a reload, brings the theme back.
+The build stops when `daisyUi` has no theme, when `defaultTheme` or `prefersDark` names a theme that is not in the list, or when a custom theme name is not lowercase letters, digits and dashes. Custom themes, the dev panel color picker, the server side and the full list of themes are on [Styling: DaisyUI](./styling.md#daisyui).
 
-The saved theme is applied by a small inline script. The automatic [Content-Security-Policy](../security.md#security-headers) allows it by its hash. If you set your own `contentSecurityPolicy`, allow it with SvelteKit's `csp` option in `hash` mode.
+### shadcn themes
+
+`DaisyTheme.ShadcnLight` and `DaisyTheme.ShadcnDark` bring the look of shadcn/ui to every DaisyUI component. See [Styling: shadcn themes](./styling.md#shadcn-themes).
 
 ## Fonts
 
-A font from a font CDN is a request to another company on every first visit, a line in the privacy policy, and an exception in the Content-Security-Policy. `fonts` serves the font from your own app instead:
-
-```kotlin
-svelte {
-    libraries {
-        tailwind()
-        fonts("Inter")
-    }
-}
-```
-
-`svelteSync` then does three things:
-
-- It installs the font from [Fontsource](https://fontsource.org), an npm package per font, so the lockfile pins the files like any other dependency.
-- It imports the font into the generated stylesheet and makes it the default: `font-sans` in Tailwind, and so the font of the whole page.
-- It preloads the Latin file on every page, through the generated server hooks, so text does not first appear in a fallback font.
-
-The files end up in the frontend build under hashed names and are served by your app, with the long cache lifetime of every other asset.
-
-```kotlin no-check
-fonts("Inter") {
-    mono = "JetBrains Mono"
-}
-```
-
-`mono` sets the font for code, `font-mono`. Write the names as the fonts are called, with spaces. The font is taken in its variable version, one file for all weights. For a font that has none, say so, and the regular and bold files are used:
-
-```kotlin no-check
-fonts("Roboto") {
-    variable = false
-}
-```
-
-`fonts` needs `tailwind()` or `daisyUi()`, which bring the stylesheet. Whether a font exists, and whether it has a variable version, shows on its Fontsource page. A name that does not exist fails at `svelteSync`, when the package cannot be installed. When you drop or change a font, remove its old `@fontsource` package from `package.json` yourself: the plugin does not know which of them are yours.
+`fonts("Inter")` serves a font from your own app instead of a font CDN. See [Styling: Fonts](./styling.md#fonts).
 
 ## Charts
 
-`charts()` sets up [LayerChart](https://layerchart.com), a chart library for Svelte 5, so that its charts take the colors of your DaisyUI themes, light and dark, without any setup of your own:
-
-```kotlin
-svelte {
-    libraries {
-        daisyUi()
-        charts()
-    }
-}
-```
-
-`svelteSync` installs the package, adds LayerChart's DaisyUI preset to the generated stylesheet, and writes a small helper for series. A chart is then a component in an element with a height:
-
-```svelte no-check
-<script lang="ts">
-    import { BarChart, LineChart } from 'layerchart';
-    import { chartSeries } from '#charts';
-
-    interface Day {
-        day: string;
-        opened: number;
-        closed: number;
-    }
-
-    let { days }: { days: Day[] } = $props();
-
-    const series = chartSeries<Day>({ opened: 'Opened', closed: { label: 'Closed', color: 'success' } });
-</script>
-
-<div class="h-64">
-    <LineChart data={days} x="day" {series} />
-</div>
-```
-
-`chartSeries<Day>` is the typed part. Its keys must be number properties of `Day`, so a renamed field fails `svelteCheck` instead of drawing an empty chart. Each entry is a label, or a label and one of the theme's colors: `primary`, `secondary`, `accent`, `neutral`, `info`, `success`, `warning` and `error`. Without a color, the series take them in that order. The colors are CSS variables, so a chart follows the theme when the visitor switches it.
-
-`chartColors` holds the same colors, for anything else you draw. For what the components can do, see LayerChart's own documentation. `charts()` needs `daisyUi()`.
+`charts()` sets up LayerChart in your theme colors. See [Charts](./charts.md).
 
 ## Lucide
 
-`lucide()` generates a `LucideIcon` enum from the installed version, so a misspelled icon is a compile error. Use it in your DTOs and it reaches the frontend as the same type:
-
-```kotlin
-import io.github.nijasc.ktorsvelte.LucideIcon
-
-@Serializable
-data class Note(val title: String, val icon: LucideIcon)
-```
-
-```svelte
-<script lang="ts">
-    import Icon from '#icon';
-</script>
-
-<Icon name="ArrowRight" size={20} />
-<Icon name={note.icon} class="text-primary" />
-```
-
-Each icon loads on demand, so you only download the ones a page uses. An icon's enum name is its Lucide name in PascalCase, such as `arrow-right` to `ArrowRight`. Names starting with a digit get an `Icon` prefix. A misspelled icon name from a client gets a 400 from Ktor.
-
-Only the icons your app uses are built into the frontend. `svelteSync` finds them in your Kotlin code (`LucideIcon.Flame`) and in your frontend (`name="ArrowRight"`, `Icon.Tags`, or a string such as `'Search'`), and writes just those into `src/lib/ktor-svelte/icons.ts`. Lucide has almost 2,000 icons, and each would otherwise become its own file in your JAR. In the notes example, this takes the frontend build from 6,180 files and 11 MB down to 120 files and 1.8 MB. The `LucideIcon` enum and the TypeScript type still list every icon, so anything stored or sent stays valid.
-
-In development, an icon that isn't in the list yet still shows, with a console hint to run `svelteSync`. A production build checks the list and fails with "Run svelteSync" when an icon is missing, so nothing silently disappears. `svelteDevAll` syncs on every Kotlin change.
-
-If icon names come from somewhere the scan can't see, such as a database your users fill or an icon picker, keep all icons:
-
-```kotlin
-svelte {
-    libraries {
-        lucide {
-            allIcons()
-        }
-    }
-}
-```
+`lucide()` generates a typed `LucideIcon` enum and builds only the icons you use. See [Icons and images: Lucide icons](./icons-and-images.md#lucide-icons).
 
 ## Images
 
-`images()` adds SvelteKit's [`@sveltejs/enhanced-img`](https://svelte.dev/docs/kit/images#sveltejs-enhanced-img). Keep pictures next to your code, for example in `frontend/src/lib/assets`, and use `enhanced:img` instead of `img`:
-
-```svelte
-<enhanced:img src="#lib/assets/hero.png" alt="Our team" sizes="(min-width: 768px) 65ch, 100vw" />
-```
-
-At build time, every image becomes AVIF and WebP in several widths, plus a fallback in the original format, inside a `<picture>` with `srcset`, `width` and `height`. Browsers download only the size and format they need, and the layout doesn't jump while the image loads. In the notes example, a 339 KB PNG becomes an 8 KB AVIF for a laptop screen. The files land in `_app/immutable/`, so browsers cache them for a year like any other hashed asset.
-
-Files in `frontend/static/` are copied as they are, because nothing in the build knows where they are used. Move images there to `src/lib/assets` to have them optimized. Processing uses `sharp`, which comes with prebuilt binaries for Windows, macOS and Linux. The first build with many large images takes longer, and later builds reuse Vite's cache.
+`images()` adds `<enhanced:img>`, which turns pictures into AVIF and WebP in several widths at build time. See [Icons and images: Images](./icons-and-images.md#images).
 
 ## Installable app
 
-`installable { }` makes the app installable, on phones and on desktops: a web manifest, icons in every size, a theme color and a small service worker with an offline page. Name, colors and icon are set once, here:
-
-```kotlin
-svelte {
-    libraries {
-        installable {
-            name = "Notes"
-            shortName = "Notes"
-            description = "Notes for the whole team"
-            themeColor = "#4f46e5"
-            backgroundColor = "#ffffff"
-            display = "standalone"
-            icon = file("app-icon.png")
-        }
-    }
-}
-```
-
-| Setting | Default | Purpose |
-|---|---|---|
-| `name` | required | The name shown when the app is installed and in the app list |
-| `shortName` | `name` | The name under the icon on a home screen, where space is short |
-| `description` | none | What the app does, shown by some install dialogs |
-| `themeColor` | `#ffffff` | Color of the browser bar and the title bar of the installed app, as a hex color |
-| `backgroundColor` | `#ffffff` | Color of the splash screen while the app starts, and behind the maskable and Apple icons |
-| `display` | `standalone` | `standalone`, `fullscreen`, `minimal-ui` or `browser` |
-| `icon` | required | A square PNG of at least 512 pixels |
-
-`svelteSync` then writes:
-
-- `static/ktor-svelte/manifest.webmanifest`, with `start_url` and `scope` set to `/` and the default locale as `lang` when i18n is on.
-- `static/ktor-svelte/icon-48.png` to `icon-512.png` in nine sizes, `icon-maskable-192.png` and `icon-maskable-512.png` with the icon inside the safe zone on the background color, and `apple-touch-icon.png`.
-- `src/service-worker/index.ts` and its `tsconfig.json`, which SvelteKit builds and registers by itself.
-- The manifest link, the `theme-color` tag and the Apple icon in the head of every page, through the generated server hook.
-
-The icons are made from your PNG with plain Java, so nothing else needs to be installed. `svelteVerifySync` compares them by their pixels, so a build on another JDK, which may compress PNGs differently, does not count as a change. Commit the files like the rest of the generated ones. `static/ktor-svelte` carries its own `.gitattributes` that keeps the PNGs binary.
-
-**What the service worker does.** It caches the hashed files of the build, everything under `_app/immutable/`, when it is installed, and serves them from that cache. When a page cannot be loaded because there is no connection, it answers with an offline page in the app's colors, which reloads by itself once the connection is back. It never caches API responses or HTML pages, so a deploy is never hidden behind a stale copy, and requests to other sites, and anything but GET, go straight to the network. A new build installs a new worker, which takes over once every tab of the old version is closed and then deletes the old cache. Open tabs keep the files of the version they started with. Use `toasts { reloadPrompt() }` to offer a reload.
-
-The offline page is in English. To translate it, add `offline-title`, `offline-text` and `offline-retry` to your messages. The page uses the default locale, since a service worker cannot know the visitor's.
-
-On the server nothing needs setting up. The files are served like the rest of the build, without a long cache time, so a new manifest or worker is picked up right away. When the app answers `svelte(public = ...)` and asks for a sign-in everywhere else, `/service-worker.js` and `/ktor-svelte/*` stay public, since a browser fetches them without a session.
-
-Service workers only run on `https` or on `localhost`. Test on another device with [HTTPS in development](../guide/dev-workflow.md#https-in-development). Turning `installable` off again removes the files, and browsers unregister the old worker when `/service-worker.js` no longer exists.
-
-If you already have `src/service-worker/index.ts`, sync stops instead of overwriting it.
+`installable { }` makes the app installable on phones and desktops, with a manifest, icons and an offline page. See [Installable app](./installable-app.md).
 
 ## Toasts
 
-`toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](./calling-the-api.md#show-errors-automatically).
+`toasts()` shows failed API calls as toasts, without any error handling in your components. See [Show errors automatically](./calling-the-api.md#show-errors-automatically), and [Components: Toasts](./components.md#toasts) for your own toasts.
 
 `toasts { reloadPrompt() }` also offers a reload when the server runs a newer build than the page. See [Reload after a deploy](./calling-the-api.md#reload-after-a-deploy).
 
@@ -316,466 +212,84 @@ If you already have `src/service-worker/index.ts`, sync stops instead of overwri
 
 ## i18n
 
-Keep one JSON file per language in `frontend/messages`. Change the folder with `messagesDir`. `svelteInit` creates an empty file for every locale you configured, and never touches one that is already there. Files are flat, and `{name}` is a parameter:
-
-```json
-{
-  "server-greeting": "Hello {name}, greetings from Ktor!",
-  "app-title": "Notes"
-}
-```
-
-Both sides get typed functions from the same files. A missing key or a mismatched parameter in any language fails the build, so translations can't drift.
-
-While `svelteDevAll` or `svelteDev` runs, saving a message file updates the frontend functions at once, and Vite reloads them, with no Gradle run. Under `svelteDevAll` the Kotlin `Messages` follow and the app restarts. With `svelteDev` alone, they update the next time Kotlin compiles. A file with a missing key or a mismatched parameter is reported in the console, and the last good version stays until you fix it.
-
-```svelte
-<script lang="ts">
-    import { getLocale, localizeHref, locales, m, setLocale } from '#i18n';
-</script>
-
-<h1>{m.appTitle()}</h1>
-<p>{m.serverGreeting({ name: 'Ada' })}</p>
-<a href={localizeHref('/about')}>About</a>
-<button onclick={() => setLocale('de')}>Deutsch</button>
-```
+`i18n { }` gives both sides typed functions from one set of JSON message files, and a missing key or a mismatched parameter in any language fails the build.
 
 ```kotlin
-import io.github.nijasc.ktorsvelte.Messages
-import io.github.nijasc.ktorsvelte.messages
+import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy
 
-get("/api/hello") {
-    call.respondText(call.messages.serverGreeting("Ada"))
+svelte {
+    libraries {
+        i18n {
+            locales("en", "de")
+            defaultLocale = "en"
+            strategy = LocaleStrategy.Cookie
+        }
+    }
 }
-
-val german = Messages.forLocale("de").appTitle()
 ```
 
-Choose how the language is picked with `strategy`:
-
-| Strategy | URLs | Best for | Trade-off |
-|---|---|---|---|
-| `Cookie` (default) | `/about` | Apps behind a login | Prerendered pages hold the default language and switch on load, so others can flash briefly, and search engines mostly see one language |
-| `UrlPrefix` | `/de/about` | Public sites and SEO | Every language gets its own prerendered pages. Plain paths redirect to the visitor's language. Links must use `localizeHref`, or [typed routes](./routes.md), or pages won't be prerendered per language |
-
-On the server, `call.svelteLocale` and `call.messages` follow the same rules: the URL prefix if that strategy is on, then the cookie, then `Accept-Language`, then your default. `localizeHref` is safe with either strategy, and `call.localizeHref` does the same for redirects from Ktor.
-
-Parameters are plain text replacements. Plurals and date formatting aren't built in yet.
+The build stops when `i18n` has no locale, when `defaultLocale` is not one of the locales, or when a locale is not a tag such as `en` or `pt-BR`. Messages, strategies, plurals and formats are on the [i18n page](./i18n.md).
 
 ### Plurals
 
-"1 note" and "2 notes" are one message with two forms, and how many forms there are depends on the language. Write the forms into the message:
-
-```json
-{
-    "notes-count": "{count, plural, =0 {No notes} one {# note} other {# notes}} in {folder}"
-}
-```
-
-`#` stands for the number. The generated functions take the count as a number and pick the form for the current language, in TypeScript and in Kotlin alike:
-
-```ts no-check
-m.notesCount({ count: notes.length, folder: 'Inbox' });
-```
-
-```kotlin no-check
-call.messages.notesCount(notes.size, "Inbox")
-```
-
-- The forms are `zero`, `one`, `two`, `few`, `many` and `other`. A language uses only some of them: English and German `one` and `other`, Russian and Polish `one`, `few`, `many` and `other`, Japanese only `other`. Every plural needs `other`.
-- `=0`, `=1` and so on match one exact number, before the forms of the language. That is how "No notes" is written.
-- A form can hold other placeholders, and another plural.
-- Counts are whole numbers.
-
-`svelteSync` checks the messages: a plural without `other`, a form the language of that file never uses, a form name that does not exist, or a count in one language that is plain text in another all stop it with the key named.
-
-In the browser the choice of form comes from `Intl.PluralRules`. In Kotlin it comes from rules that are generated for the configured languages, checked against the browser's for the languages the plugin knows: the western and northern European ones, the Slavic and Baltic ones, Romanian, Hebrew, Arabic, and those without plural forms such as Japanese, Chinese and Korean. A language outside that list is treated like English in Kotlin.
+Moved to [i18n: Plurals](./i18n.md#plurals).
 
 ### Numbers, money and dates
 
-A price on the page and the same price in an email from the server should read the same. With `toLocaleString` in the browser and `NumberFormat` on the JVM they often do not: the two carry different versions of the locale data, and disagree about spaces, month names and where the currency sign goes.
-
-With `i18n` on, both sides get the same five functions, generated from one table for the configured languages:
-
-```ts no-check
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatTime } from '#format';
-
-formatNumber(1234567.891, 2); // 1,234,567.89   or  1.234.567,89
-formatMoney(order.total, 'EUR'); // the euro sign and 1,234.50, in the order the language uses
-formatDate(note.dueOn); // Mar 7, 2026      or  07.03.2026
-formatDateTime(note.createdAt); // Dec 24, 2026, 3:05 PM
-formatTime(note.createdAt);
-```
-
-```kotlin no-check
-val formats = call.formats
-formats.formatMoney(order.total, "EUR")
-formats.formatDate(note.dueOn)
-formats.formatDateTime(note.createdAt, call.timeZone)
-```
-
-What is supported, and nothing else, so the two sides cannot drift apart:
-
-| Function | Input | Output |
-|---|---|---|
-| `formatNumber(value, decimals = 0)` | A number, or decimal text such as a `Decimal` | Grouped in threes, rounded half up to exactly `decimals` places. |
-| `formatMoney(amount, currency)` | As above, and a currency code | The sign and decimal places of the currency for 37 common currencies, the code and two places for others. |
-| `formatDate(value, style)` | An ISO date, or a `Date`. In Kotlin a `LocalDate` | `short` (3/7/26), `medium` (Mar 7, 2026, the default) or `long` (March 7, 2026). |
-| `formatDateTime(value, style)` | An ISO date-time, or a `Date`. In Kotlin an `Instant` and a `ZoneId` | `short` or `medium` date with the time in hours and minutes. |
-| `formatTime(value)` | As above | Hours and minutes, with AM and PM where the language uses them. |
-
-- The language is the visitor's, as for messages. Every function takes a locale as its last argument in TypeScript, and `Formats.forLocale(...)` gives another one in Kotlin.
-- Dates and times are printed in the browser's time zone in TypeScript. In Kotlin you pass the zone, and [`call.timeZone`](calling-the-api.md#the-visitors-time-zone) is the visitor's.
-- The table covers 64 locales. A region without its own entry uses its language, and a language that is not in the table is formatted like English.
-- Not covered: weekday names, seconds, time zone names, compact numbers such as 1.2K, percent, and digits other than 0 to 9. For those, format on one side only.
-
-`timeAgo` from the same file tells a time as its distance from now, in the visitor's language: "now", "3 minutes ago", "yesterday", "in 2 hours". It is for the browser only and uses the browser's own words, through `Intl.RelativeTimeFormat`:
-
-```ts no-check
-import { timeAgo } from '#format';
-
-timeAgo(note.createdAt);
-```
-
-Text made once goes stale while the page stays open. With `components()`, `<TimeAgo value={note.createdAt} />` keeps itself current: it renders a `<time>` element with the exact date and time as its tooltip, and every instance on the page is refreshed by one shared timer, twice a minute.
-
-The data comes from the JDK's copy of the Unicode locale data and is fixed in each plugin version, so a new JDK or browser does not change what your app prints.
+Moved to [i18n: Numbers, money and dates](./i18n.md#numbers-money-and-dates).
 
 ### Messages nobody translated yet
 
-A key has to exist in every language file, or the build fails. The quick way to get past that is to paste the English text into the other files and translate later, and "later" is easy to forget. In development the [dev panel](../guide/dev-workflow.md) shows a **Not translated** section whenever you look at the app in another language than the default one. It lists every message on the page whose text is the same as in the default language, with its key.
-
-Tick **Outline them on the page** and those texts get a dashed outline where they appear, so you see what a visitor in that language would read in the wrong one. The choice is remembered in your browser.
-
-Some words are the same in two languages on purpose, such as "Name" or "Status" in English and German. They are listed too, which is why the outline is off until you ask for it.
+Moved to [i18n: Messages nobody translated yet](./i18n.md#messages-nobody-translated-yet).
 
 ### Messages nothing uses
 
-A missing message fails the build, but one that is no longer used stays in every locale file and keeps being translated. `svelteVerifyMessages` lists them:
-
-```bash
-./gradlew svelteVerifyMessages
-```
-
-```text
-old-banner  ->  nothing calls oldBanner() and no source names 'old-banner'
-```
-
-A message counts as used when its generated function is called anywhere in the frontend or in Kotlin, or when its key appears as a string, because it may then be looked up by name. The task only lists what it finds. Add `--strict` to fail the build instead.
+Moved to [i18n: Messages nothing uses](./i18n.md#messages-nothing-uses).
 
 ## Components
 
-`components()` generates Svelte components into `src/lib/ktor-svelte/components`, imported as `#components/...`. They are the pieces that exist because of something the plugin already generates: a component here is a few lines of markup over a generated helper, written once. They use DaisyUI's classes when `daisyUi` is on, and plain class names with a minimal style otherwise.
-
-The files belong to the plugin and are rewritten by `svelteSync`. For a different look, write your own component on the same helper. The generated ones are short enough to copy as a start.
-
-The components import from `#api`, so they need `generateTs = true` on the server.
+`components()` generates Svelte components over the helpers ktor-svelte already writes. See [Components](./components.md).
 
 ### Field
 
-One form field: its label, the input, an optional hint, and the validation errors.
-
-```svelte no-check
-<script lang="ts">
-    import { NoteInput } from '#api';
-    import Field from '#components/Field.svelte';
-    import { formState } from '#lib/api/form-state.svelte.ts';
-
-    const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate });
-</script>
-
-<Field label="Title" bind:value={form.draft.title} bounds={NoteInput.bounds.title} errors={form.errors.title} hint="Shown in the list." />
-<Field label="Text" multiline rows={4} bind:value={form.draft.text} errors={form.errors.text} />
-```
-
-| Prop | Meaning |
-|---|---|
-| `label` | The text of the `<label>`, tied to the input. |
-| `bind:value` | The value, as with an `<input>`. |
-| `bounds` | The limits from the DTO, such as `NoteInput.bounds.title`. They become `required`, `maxlength` and the like. |
-| `errors` | The messages for this field, from `validate()` or from a 422. |
-| `hint` | A line under the input, announced with it by screen readers. |
-| `multiline` | Renders a `<textarea>`. |
-| `class` | Added to the wrapper. |
-
-Everything else, such as `type`, `autocomplete`, `placeholder` or `id`, goes to the input unchanged. Underneath it is the [`field` action](validation.md), so errors appear and disappear the same way as with `use:field`.
-
-For a control that is not a plain input, pass it as the `control` snippet. It gets the `id` the label points at and the `options` for `use:field`, and the label, hint and errors stay as they are:
-
-```svelte no-check
-<Field label="Color" errors={form.errors.color}>
-    {#snippet control({ id, options })}
-        <input {id} type="color" bind:value={form.draft.color} use:field={options} />
-    {/snippet}
-</Field>
-```
+Moved to [Components: Field](./components.md#field).
 
 ### DateInput and DateTimeInput
 
-A date from the API is an `IsoDate`, text such as `2026-12-24`, and a field that may be empty is `null`. A plain `<input type="date">` gives `''` for empty and plain text otherwise, so pages convert by hand. `DateInput` binds to the value as it is:
-
-```svelte no-check
-<script lang="ts">
-    import DateInput from '#components/DateInput.svelte';
-    import DateTimeInput from '#components/DateTimeInput.svelte';
-</script>
-
-<DateInput label="Due on" bind:value={form.draft.dueOn} errors={form.errors.dueOn} />
-<DateTimeInput label="Starts at" bind:value={form.draft.startsAt} />
-<DateTimeInput label="Opens at" local bind:value={form.draft.opensAt} />
-```
-
-Both take the props of `Field`, and an empty input is `null`.
-
-`DateTimeInput` shows a moment in the visitor's own time zone and stores it as the UTC text the server expects for a Kotlin `Instant`. With `local`, it is for a Kotlin `LocalDateTime` instead: the wall-clock text goes to the server as typed, with no time zone.
+Moved to [Components: DateInput and DateTimeInput](./components.md#dateinput-and-datetimeinput).
 
 ### EnumSelect
 
-A `<select>` over a generated enum object:
-
-```svelte no-check
-<script lang="ts">
-    import { Status } from '#api';
-    import EnumSelect from '#components/EnumSelect.svelte';
-</script>
-
-<EnumSelect label="Status" options={Status} bind:value={form.draft.status} labels={{ TODO: 'To do', DONE: 'Done' }} placeholder="Any" />
-```
-
-It lists every value of the enum, so a value added in Kotlin appears after the next `svelteGenerateTs`. `labels` gives the text to show, as text or as a function for translations, and a value without one shows its name. With `placeholder` there is a first option that stands for `null`. The bound value has the enum's type, so no cast is needed.
+Moved to [Components: EnumSelect](./components.md#enumselect).
 
 ### DataTable
 
-A table over any route that returns [`Page<T>`](../recipes/pagination.md). It loads the pages, and shows a line while it loads, when there is nothing, and when a load failed, with a button to try again.
-
-```svelte no-check
-<script lang="ts">
-    import { api } from '#api';
-    import DataTable from '#components/DataTable.svelte';
-
-    let search = $state('');
-</script>
-
-<input type="search" bind:value={search} aria-label="Search" />
-<DataTable
-    load={api.notes.list}
-    query={{ search, limit: '20' }}
-    key={(note) => note.id}
-    columns={[
-        { key: 'title', label: 'Title' },
-        { key: 'createdAt', label: 'Created', text: (note) => new Date(note.createdAt).toLocaleDateString() },
-        { id: 'size', label: 'Size', text: (note) => `${note.text.length} characters` }
-    ]}
-/>
-```
-
-`load` is the generated function of the route, and the rows have the type it returns. So a column's `key` must be a property of the item, a typo fails `svelteCheck`, and `text` gets the typed item. A column that is not one property has an `id` and a `text` instead.
-
-| Prop | Meaning |
-|---|---|
-| `load` | The generated function of a route that returns `Page<T>`. |
-| `columns` | The headers, and what each cell shows. |
-| `query` | The query parameters besides the cursor. When they change, the table loads again from the start. |
-| `key` | A stable id per row, such as `(note) => note.id`. |
-| `paging` | `'more'` (the default) adds rows with a Load more button. `'pages'` shows one page with Previous and Next. |
-| `first` | A first page that a `load` function already fetched, so the table does not fetch it again. |
-| `caption` | A caption for the table. |
-| `empty`, `loading`, `more`, `previous`, `next`, `retry` | The texts, in English unless given. |
-| `class` | Added to the wrapper. |
-
-For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
-
-```svelte no-check
-<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }, { id: 'open', label: '' }]}>
-    {#snippet row(note)}
-        <td>{note.title}</td>
-        <td><a href={routes.notesId({ id: note.id })}>Open</a></td>
-    {/snippet}
-</DataTable>
-```
-
-After a change elsewhere on the page, `bind:this` the table and call its `reload()`.
-
-The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
+Moved to [Components: DataTable](./components.md#datatable).
 
 ### FileDrop
 
-A drop area with a file input for an [upload route](../recipes/uploads.md). Files can be dropped on it or chosen, and each one is shown while it travels: a preview for images, the name and size, a progress bar, and the reason when it was refused.
-
-```svelte no-check
-<script lang="ts">
-    import { api, uploadRules } from '#api';
-    import FileDrop from '#components/FileDrop.svelte';
-
-    let documents = $state<StoredFile[]>([]);
-</script>
-
-<FileDrop
-    label="Add documents"
-    hint="PDF or images, up to 5 MiB each."
-    multiple
-    rules={uploadRules['documents.create']}
-    upload={(file, options) => api.documents.create({ file }, options)}
-    onuploaded={(stored) => (documents = [...documents, stored])}
-/>
-```
-
-| Prop | Meaning |
-|---|---|
-| `upload` | Sends one file. Pass the route's generated function, and hand it the `options` it is given: they carry the progress. |
-| `label` | The label of the file input. |
-| `rules` | The route's entry in `uploadRules`. Its types become the input's `accept`. |
-| `hint` | A line under the input. |
-| `multiple` | Takes several files. They are sent one after another, each in its own request. |
-| `onuploaded` | Called with the route's answer and the file, after each one that went through. |
-| `problem` | Turns a failed upload into the text to show, for your own wording or language. Without it the server's message is shown. |
-| `uploading` | The start of the progress bar's accessible name, `Uploading` unless given. |
-| `disabled`, `id`, `class` | As on an input. |
-
-The route's rules are checked before a file is sent, as with any call to the generated function, so a file that is too large or of the wrong type is refused at once and nothing is uploaded. A file that went through leaves the list, and one that failed stays with its reason until the next files are chosen.
+Moved to [Components: FileDrop](./components.md#filedrop).
 
 ### ErrorPage
 
-`components()` also writes `src/routes/+error.svelte`, the page SvelteKit shows when a page cannot be shown. It is three lines around `<ErrorPage />`, which shows:
-
-- the status, such as 404
-- the message: the one the server sent in the error body when a call failed, the one you passed to `error(...)`, and otherwise a sentence for 404, 403, 401 or anything else
-- the request ID for a status of 500 and above, so a visitor can quote it and you can find the request in the log
-- a link back to the start page, `home="/"` unless you pass another
-
-A `load` function no longer has to translate a failed call into a page error. Let it throw:
-
-```ts no-check
-export const load: PageLoad = async (event) => {
-    return { note: await apiWith(event).notes.get(event.params.id) };
-};
-```
-
-When the server answers 404 with `{ "message": "That note does not exist." }`, the error page shows 404 and that message. This works through `handleError` in `src/hooks.client.ts`, which `svelteSync` writes. It puts the status, message, request ID and [error code](calling-the-api.md#error-codes) of a failed call into `page.error`, typed through `App.Error`, so your own components can read `page.error.code` too.
-
-The sentences are English until your messages have their keys. With `i18n` on, add the ones you want translated and run `svelteSync`:
-
-| Key | Default |
-|---|---|
-| `error-not-found` | This page does not exist. |
-| `error-forbidden` | You are not allowed to see this page. |
-| `error-sign-in` | Sign in to see this page. |
-| `error-failed` | Something went wrong. Please try again. |
-| `error-request-id` | Request ID: |
-| `error-home` | Back to the start page |
-
-Your own files win. If `src/routes/+error.svelte` exists and is not the generated one, it is left alone, and you can use `<ErrorPage />` inside it or not. To change the generated one, remove its first line, and it is yours. The same goes for `src/hooks.client.ts` when `toasts()` is off: keep your own and add `export { handleError } from '#lib/ktor-svelte/errors.ts';` to it.
+Moved to [Components: ErrorPage](./components.md#errorpage).
 
 ### ThemeToggle and LocaleSwitch
 
-The theme and i18n helpers already know the themes and languages you configured. These two components put them on the page, so a new app has both switches from the start:
-
-```svelte no-check
-<script lang="ts">
-    import LocaleSwitch from '#components/LocaleSwitch.svelte';
-    import ThemeToggle from '#components/ThemeToggle.svelte';
-</script>
-
-<ThemeToggle />
-<LocaleSwitch />
-```
-
-`ThemeToggle` is generated when `daisyUi` is on. With two themes it is a button that flips between them, with more it is a `<select>`. It applies the theme at once and remembers it, as `setTheme` does.
-
-`LocaleSwitch` is generated when `i18n` is on. It lists each language under its own name, such as English and Deutsch, and switches with `setLocale`.
-
-Both take `label` for the accessible name (`Theme` and `Language` unless given, so pass a translated one), `labels` to name single entries yourself, an object from theme or language to the text to show, and `class` and `id`.
+Moved to [Components: ThemeToggle and LocaleSwitch](./components.md#themetoggle-and-localeswitch).
 
 ### NavigationProgress
 
-A thin bar at the top of the page while SvelteKit navigates, which includes the time a `load` function waits for the server. Without it, a click on a link to a slow page looks like nothing happened. Put it in the root layout, once:
-
-```svelte no-check
-<script lang="ts">
-    import NavigationProgress from '#components/NavigationProgress.svelte';
-
-    let { children } = $props();
-</script>
-
-<NavigationProgress />
-{@render children()}
-```
-
-- It appears only when a navigation takes longer than `delay`, 150 ms unless given, so quick ones do not flash.
-- Its color is the theme's primary color with DaisyUI, and the text color otherwise. Set the CSS variable `--ktor-svelte-progress` to choose another.
-- It is announced as a progress bar with the name `label`, `Loading page` unless given.
-- With "reduce motion" set in the visitor's system, it is a still line.
+Moved to [Components: NavigationProgress](./components.md#navigationprogress).
 
 ## Modals
 
-A `<dialog>` normally needs a `bind:this`, a `showModal()` and a way to learn how it was closed. `modal()` from `#lib/ktor-svelte/modal.ts` is those three:
-
-```svelte
-<script lang="ts">
-    import { modal } from '#lib/ktor-svelte/modal.ts';
-
-    const rename = modal<string>();
-    let name = $state('');
-
-    async function askForName() {
-        const chosen = await rename.open();
-        if (chosen) console.log('renamed to', chosen);
-    }
-</script>
-
-<button onclick={askForName}>Rename</button>
-
-<dialog class="modal" use:rename.attach>
-    <div class="modal-box">
-        <input bind:value={name} aria-label="New name" />
-        <button onclick={() => rename.close(name)}>Save</button>
-        <button onclick={() => rename.close()}>Cancel</button>
-    </div>
-</dialog>
-```
-
-`open()` shows the dialog and returns a promise. It resolves with what `close(result)` was given, or with `undefined` when the dialog was closed any other way: `close()` without a value, Escape, or a click beside the box. Pass `modal({ closeOnBackdrop: false })` to keep such clicks from closing it. `isOpen` tells whether it is showing.
-
-The markup is yours, so it works with DaisyUI's `modal` classes, as above, and with a plain `<dialog>`. To only ask a yes or no question before a call, use [`confirmed`](./calling-the-api.md#ask-before-a-call), which brings its own dialog.
+`modal()` opens a `<dialog>` and returns a promise with its result. See [Components: Modals](./components.md#modals).
 
 ## Guide for coding assistants
 
-`svelteSync` also writes `src/lib/ktor-svelte/AGENTS.md`, a short guide for coding assistants such as Claude Code, Cursor or Copilot. It tells them what they otherwise get wrong in a project like this:
-
-- which files are generated and must not be edited, and which Gradle setting or Kotlin route to change instead
-- that the backend is called through the typed client from `#api`, with `apiWith(event)` in `load` functions, never through a hand-written `fetch`
-- the libraries you turned on and how to use them: icons, messages, themes, toasts
-- your pages by their typed route name, when `routes()` is on
-- the Gradle commands to run
-
-It describes your project, not ktor-svelte in general: a project without i18n gets no word about messages. Like every generated file it is kept current by `svelteSync` and checked by `svelteVerifySync`.
-
-Assistants that read nested `AGENTS.md` files find it when they work in the frontend. To make sure, link it from the file your assistant reads at the project root, such as `AGENTS.md` or `CLAUDE.md`:
-
-```md
-Read `frontend/src/lib/ktor-svelte/AGENTS.md` before changing anything.
-```
-
-Projects created by the setup script have that `AGENTS.md` already. ktor-svelte never edits a root `AGENTS.md` or `CLAUDE.md` of yours.
+`svelteSync` writes an `AGENTS.md` that tells coding assistants how your project works. See [Components: Guide for coding assistants](./components.md#guide-for-coding-assistants).
 
 ## Lint rules
 
-Next to the generated files, `svelteSync` writes `src/lib/ktor-svelte/eslint.js`, a small ESLint plugin with rules for mistakes that are easy to make in a ktor-svelte app. They show up in the editor while you type:
-
-| Rule | What it flags |
-|---|---|
-| `ktor-svelte/no-string-page-links` | An `href`, `goto` or `redirect` that leads to one of your pages as a string, when [typed routes](./routes.md) are on |
-| `ktor-svelte/fetch-in-load` | An API call inside a `load` function that goes through neither `apiWith(event)` nor `{ fetch }`, which SvelteKit reports at runtime as `window_fetch_in_load` |
-| `ktor-svelte/no-error-body-message` | Reading `error.body.message` from a caught error without narrowing it with `isApiError` first, where [`errorMessage`](./calling-the-api.md) is the safe choice |
-
-A project made by the setup script has them wired in. In an existing project, add two lines to `eslint.config.js`:
-
-```js
-import ktorSvelte from './src/lib/ktor-svelte/eslint.js';
-
-export default [
-    ...ktorSvelte.configs.recommended
-];
-```
-
-All three are warnings. To turn one off or make it an error, set it like any other rule, such as `{ rules: { 'ktor-svelte/fetch-in-load': 'error' } }`. The page list inside the file follows your routes, so the first rule stays current the same way `routes.ts` does. For a one-off check across the whole project, and to rewrite string links automatically, use [`svelteVerifyRoutes`](./routes.md#finding-links-that-are-still-strings).
+`svelteSync` writes a small ESLint plugin for common ktor-svelte mistakes. See [Components: Lint rules](./components.md#lint-rules).
