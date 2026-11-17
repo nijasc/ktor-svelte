@@ -1020,7 +1020,7 @@ internal class TypeScriptGenerator(
                         endpoint.upload?.let { uploads[operation] = it }
                         val exportName = exportName("$group-$name", exportNames)
                         exports.append(jsDoc(endpoint.docs, ""))
-                        exports.append("export const $exportName = ${endpoint.source(operation)};\n")
+                        exports.append("export const $exportName${endpoint.annotation} = ${endpoint.source(operation)};\n")
                         jsDoc(endpoint.docs, "    ") + "    ${propertyKey(name)}: $exportName,"
                     }
                 "$exports\nexport const $group = {\n$members\n};\n"
@@ -1180,16 +1180,30 @@ internal class TypeScriptGenerator(
         val writableBody = if (computed.isEmpty()) bodyType else "Omit<$bodyType, ${computed.joinToString(" | ") { quoted(it) }}>"
         if (requestBody != null) signature += "body: ${writableBody ?: "unknown"}"
 
-        val queryParameters = declared.filter { it.stringAt("in") == "query" }
-        if (queryParameters.isNotEmpty()) {
+        val sparse = operation.objectAt(FIELDS_EXTENSION)
+        val sparseNames =
+            sparse
+                ?.arrayAt("fields")
+                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                .orEmpty()
+        val sparseUnion = sparseNames.joinToString(" | ") { quoted(it) }.ifEmpty { null }
+        val queryParameters = declared.filter { it.stringAt("in") == "query" && !(sparseUnion != null && it.stringAt("name") == "fields") }
+        var queryIndex = -1
+        var narrowedQuery = ""
+        if (queryParameters.isNotEmpty() || sparseUnion != null) {
             val fields =
-                queryParameters.joinToString("; ") { parameter ->
+                queryParameters.map { parameter ->
                     val required = parameter["required"]?.jsonPrimitive?.contentOrNull == "true"
                     val type = parameter.objectAt("schema")?.let { tsType(it, references) }?.takeUnless { it == "unknown" } ?: "string"
                     "${propertyKey(parameter.stringAt("name").orEmpty())}${if (required) "" else "?"}: $type"
                 }
             val anyRequired = queryParameters.any { it["required"]?.jsonPrimitive?.contentOrNull == "true" }
-            signature += "query${if (anyRequired) "" else "?"}: { $fields }"
+            val query = "query${if (anyRequired) "" else "?"}"
+            queryIndex = signature.size
+            val asked = listOfNotNull(sparseUnion?.let { "fields?: readonly ($it)[]" })
+            val narrowedAsked = listOfNotNull("fields?: readonly F[]".takeIf { sparseUnion != null })
+            signature += "$query: { ${(fields + asked).joinToString("; ")} }"
+            narrowedQuery = "$query: { ${(fields + narrowedAsked).joinToString("; ")} }"
         }
         val headerParameters =
             declared.filter { it.stringAt("in") == "header" && it.stringAt("name").orEmpty().lowercase() !in MANAGED_HEADERS }
@@ -1219,15 +1233,26 @@ internal class TypeScriptGenerator(
             buildList {
                 if (timeout != null) add("timeout: $timeout")
                 add("...options")
-                if (queryParameters.isNotEmpty()) add("query")
+                if (queryParameters.isNotEmpty() || sparseUnion != null) add("query")
                 if (headerParameters.isNotEmpty()) add("typedHeaders: headers")
                 if (requestBody != null) add("body")
                 if (computed.isNotEmpty()) add("omit: [${computed.joinToString { quoted(it) }}]")
                 if (upload != null) add("upload: $upload")
                 if (formFields != null) add("multipart: true")
             }
-        val returnType = responseType(operation, references)
+        val sparseType = sparse?.stringAt("type")
+        val fullType = responseType(operation, references)
         val streaming = isEventStream(operation)
+        val annotation =
+            if (sparseUnion != null && sparseType != null && !streaming && queryIndex >= 0) {
+                val narrowedType = Regex("\\b${Regex.escape(sparseType)}\\b").replace(fullType, "Pick<$sparseType, F>")
+                val narrowed = signature.toMutableList().also { it[queryIndex] = narrowedQuery }
+                ": {\n    <F extends $sparseUnion = $sparseUnion>(${narrowed.joinToString()}): Promise<$narrowedType>;\n" +
+                    "    (${signature.joinToString()}): Promise<$fullType>;\n}"
+            } else {
+                ""
+            }
+        val returnType = fullType
         val declaredErrors = errorResponses(operation, references)
         return Endpoint(
             method = method.uppercase(),
@@ -1251,6 +1276,7 @@ internal class TypeScriptGenerator(
                 val call = if (streaming) "stream" else "request"
                 "(${signature.joinToString()}) => $call<$returnType>('${method.uppercase()}', $urlSource, { $arguments })"
             },
+            annotation = annotation,
             references = references,
             streaming = streaming,
             upload = upload,
@@ -1395,6 +1421,7 @@ internal class TypeScriptGenerator(
         val pathTypes: List<String> = emptyList(),
         val optionalSlots: Int = 0,
         val needsInput: Boolean = false,
+        val annotation: String = "",
     )
 
     private class ErrorEntry(
@@ -1499,6 +1526,7 @@ private const val BRAND_SYMBOL = "declare const brand: unique symbol;\n"
 private val BRANDED_TYPES = setOf("string", "integer", "number")
 internal const val UPLOAD_EXTENSION = "x-ktor-svelte-upload"
 internal const val TIMEOUT_EXTENSION = "x-ktor-svelte-timeout"
+internal const val FIELDS_EXTENSION = "x-ktor-svelte-fields"
 private const val ERROR_CODE_TYPE = "ErrorCode"
 private val ERROR_CODE_HELPERS =
     """
