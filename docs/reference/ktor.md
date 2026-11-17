@@ -24,6 +24,7 @@ install(Svelte) {
     statusEndpoint = false
     internalAccess { }
     healthEndpoint = false
+    warmUp()
     originCheck = true
     hideErrorDetails = true
     apiCompression = true
@@ -222,6 +223,7 @@ See [Built-in endpoints](../features/endpoints.md).
 | Setting | Default | What it does |
 |---|---|---|
 | `healthEndpoint` | `false` | Serves `/_ktor-svelte/health` for load balancers and orchestrators. See [Health endpoint](../features/endpoints.md#health-endpoint) |
+| `warmUp(...)` | none | Paths the app calls on itself once the port is open, before the health endpoint reports it up. See [Warm-up before ready](../features/endpoints.md#warm-up-before-ready) |
 | `healthCheck { }` | none | Adds a check of your own. Every check must return `true` for the app to be up |
 | `statusEndpoint` | `false` | Serves build and proxy details at `/_ktor-svelte/status`, to this machine only. See [Status endpoint](../features/endpoints.md#status-endpoint) |
 | `internalAccess { }` | this machine only | Who may see the status endpoint and the API docs besides this machine: a `token`, `networks(...)` or your own `allow { }` check. See [Who may see internal endpoints](../features/endpoints.md#who-may-see-internal-endpoints) |

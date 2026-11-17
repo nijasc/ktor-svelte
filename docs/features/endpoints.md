@@ -102,6 +102,24 @@ install(Svelte) {
 - Unlike the status endpoint, it answers every client, because it reveals nothing beyond up or down.
 - It is off by default, never cached and hidden from the OpenAPI document.
 
+### Warm-up before ready
+
+The first request to a fresh JVM is the slow one: classes load, the JIT has not started, connection pools are empty. `warmUp` lets the app take that request itself:
+
+```kotlin
+install(Svelte) {
+    healthEndpoint = true
+    warmUp("/", "/api/notes", "/api/me")
+}
+```
+
+Once the port is open, the app sends a `GET` to each path on its own HTTP connector, one after the other. Until the last one has answered, the health endpoint answers `503` with `{"status":"starting"}`, so a load balancer or orchestrator that waits for it sends no visitor to an instance that is still cold.
+
+- A path that fails or answers with a 5xx is logged as a warning, and the app still becomes ready. Each call gives up after 30 seconds.
+- The log says how long it took: `ktor-svelte: warmed up 3 route(s) in 840 ms.`
+- The calls carry an `X-Ktor-Svelte-Warm-Up: true` header, so your own code can tell them apart. Pick paths that need no sign-in and change nothing; a guarded route still warms up the code up to the guard.
+- Without `warmUp`, nothing changes: the app is ready as soon as the port is open.
+
 A Docker health check, for example:
 
 ```text

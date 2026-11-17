@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.internal.BuildFingerprint
 import io.github.nijasc.ktor.svelte.internal.DocLink
 import io.github.nijasc.ktor.svelte.internal.FRONTEND_ERRORS_PATH
 import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
+import io.github.nijasc.ktor.svelte.internal.HEALTH_STARTING_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
 import io.github.nijasc.ktor.svelte.internal.IdempotencyStore
@@ -13,6 +14,7 @@ import io.github.nijasc.ktor.svelte.internal.MISSING_BUILD_MESSAGE
 import io.github.nijasc.ktor.svelte.internal.StartupTiming
 import io.github.nijasc.ktor.svelte.internal.SvelteHandler
 import io.github.nijasc.ktor.svelte.internal.WEB_VITALS_PATH
+import io.github.nijasc.ktor.svelte.internal.WarmUp
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.ClasspathAssetStore
@@ -89,6 +91,7 @@ import io.github.nijasc.ktor.svelte.internal.typescript.installTypeScriptGenerat
 import io.github.nijasc.ktor.svelte.internal.typescript.sharedHolder
 import io.github.nijasc.ktor.svelte.internal.validation.SchemaConstraints
 import io.github.nijasc.ktor.svelte.internal.validation.installInputNormalisation
+import io.github.nijasc.ktor.svelte.internal.warmUpBaseUrl
 import io.github.nijasc.ktor.svelte.internal.webVitalsRoute
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -314,6 +317,15 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 application.log.info(startupTiming.line(System.currentTimeMillis(), application.startupSteps().toList()))
             }
         }
+        val warmUp = WarmUp(pluginConfig.warmUpPathList)
+        if (!warmUp.done) {
+            application.subscribeWhileRunning(ServerReady, { it === application.environment }) {
+                application.launch {
+                    val baseUrl = runCatching { warmUpBaseUrl(application.engine.resolvedConnectors()) }.getOrNull()
+                    warmUp.run(application, baseUrl)
+                }
+            }
+        }
         application.onOwn(ApplicationStarted) {
             if (summary.isNotEmpty()) application.log.info("ktor-svelte settings:\n" + summary.joinToString("\n") { "  $it" })
             val manifest = store.manifest()
@@ -525,7 +537,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 val health = HealthReport(pluginConfig.healthCheckList.toList())
                 get(HEALTH_PATH) {
                     call.response.header(HttpHeaders.CacheControl, "no-store")
-                    if (health.isUp(call, frontendReady = store.manifest() != null || devProxy != null)) {
+                    if (!warmUp.done) {
+                        call.respondText(HEALTH_STARTING_JSON, ContentType.Application.Json, HttpStatusCode.ServiceUnavailable)
+                    } else if (health.isUp(call, frontendReady = store.manifest() != null || devProxy != null)) {
                         call.respondText(HEALTH_UP_JSON, ContentType.Application.Json)
                     } else {
                         call.respondText(HEALTH_DOWN_JSON, ContentType.Application.Json, HttpStatusCode.ServiceUnavailable)

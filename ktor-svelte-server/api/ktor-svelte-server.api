@@ -558,6 +558,7 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun setSpaFallback (Ljava/lang/String;)V
 	public final fun setStatusEndpoint (Z)V
 	public final fun transport (Lkotlin/jvm/functions/Function1;)V
+	public final fun warmUp ([Ljava/lang/String;)V
 	public final fun webVitals (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun webVitals$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 }
