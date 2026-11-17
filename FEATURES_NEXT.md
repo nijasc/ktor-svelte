@@ -32,7 +32,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 105 | HTTPS in development | #333 |
+| 52 | Installable app (PWA) | #338 |
 
 ### Next up
 
@@ -157,6 +157,7 @@ Features of this plan that are merged:
 | 30 | Kotlin browser test kit | #330 |
 | 47 | Accessibility check task | #331 |
 | 107 | Browser test recorder | #332 |
+| 105 | HTTPS in development | #333 |
 
 ### Backlog
 
