@@ -24,6 +24,7 @@ import io.github.nijasc.ktor.svelte.internal.assets.DirectoryAssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.PublicConfigSource
 import io.github.nijasc.ktor.svelte.internal.assets.RequestResolver
 import io.github.nijasc.ktor.svelte.internal.assets.SiteFiles
+import io.github.nijasc.ktor.svelte.internal.assets.frontendResourceRoot
 import io.github.nijasc.ktor.svelte.internal.constantGetPaths
 import io.github.nijasc.ktor.svelte.internal.dev.CaughtEmails
 import io.github.nijasc.ktor.svelte.internal.dev.DevProxy
@@ -204,7 +205,33 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             } else {
                 null
             }
-        val handler = SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles, defaultFavicon)
+        val frontends =
+            pluginConfig.frontendList.map { frontend ->
+                require(!resolver.isApiPath(frontend.prefix)) {
+                    "The frontend under ${frontend.prefix} is inside the API prefixes ${pluginConfig.apiPrefixList}. Give it a path of its own."
+                }
+                MountedFrontend(frontend, createFrontendStore(frontend, application))
+            }
+        val mounted =
+            frontends.sortedByDescending { it.config.prefix.length }.map { frontend ->
+                val frontendPolicy = pageContentSecurityPolicy(frontend.store, securityHeaders, devProxy != null)
+                if (frontendPolicy != null && !application.developmentMode) {
+                    application.launch(Dispatchers.IO) { frontendPolicy.precomputeAll() }
+                }
+                val frontendInjector = publicConfig?.takeIf { pluginConfig.inlinePublicConfig }?.let { ConfigInjector(frontend.store, it) }
+                SvelteHandler(
+                    frontend.store,
+                    RequestResolver(emptyList(), frontend.config.spaFallback, frontend.config.notFoundPage, frontend.config.paramRouteList),
+                    AssetResponder(frontend.store, pluginConfig.cacheConfig, frontendPolicy, frontendInjector),
+                    null,
+                    devUrl,
+                    allowRemote,
+                    prefix = frontend.config.prefix,
+                    isApiPath = resolver::isApiPath,
+                )
+            }
+        val handler =
+            SvelteHandler(store, resolver, responder, devProxy, devUrl, allowRemote, siteFiles, defaultFavicon, mounted = mounted)
         application.attributes.put(SvelteHandlerKey, handler)
         val caughtEmails = if (application.developmentMode && pluginConfig.devConfig.catchEmails) CaughtEmails(application.log) else null
         application.attributes.put(MailerKey, mailerFor(pluginConfig.mailer, caughtEmails))
@@ -342,6 +369,13 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         if (store.manifest() == null) {
             check(application.developmentMode || devProxy != null) { MISSING_BUILD_MESSAGE }
             if (devProxy == null) application.log.warn(MISSING_BUILD_MESSAGE)
+        }
+        frontends.forEach { frontend ->
+            if (frontend.store.manifest() == null) {
+                val message = missingFrontendBuildMessage(frontend.config)
+                check(application.developmentMode) { message }
+                application.log.warn(message)
+            }
         }
 
         if (pluginConfig.idempotencyConfig.enabled) {
@@ -625,6 +659,24 @@ private fun isDevProxyActive(
         DevMode.Auto -> application.developmentMode
         DevMode.Always -> true
         DevMode.Never -> false
+    }
+
+private class MountedFrontend(
+    val config: SvelteFrontendConfig,
+    val store: AssetStore,
+)
+
+private fun missingFrontendBuildMessage(frontend: SvelteFrontendConfig): String =
+    "ktor-svelte found no build of the frontend under ${frontend.prefix}. Add svelte { frontend(\"${frontend.name}\") { } } " +
+        "to the Gradle build, or point source at its build folder." + DocLink.MULTIPLE_FRONTENDS.see()
+
+private fun createFrontendStore(
+    frontend: SvelteFrontendConfig,
+    application: Application,
+): AssetStore =
+    when (val source = frontend.source) {
+        SvelteSource.Classpath -> ClasspathAssetStore(application.environment.classLoader, frontendResourceRoot(frontend.name))
+        is SvelteSource.Directory -> DirectoryAssetStore(source.path, rescanOnEveryRead = application.developmentMode)
     }
 
 private fun createStore(

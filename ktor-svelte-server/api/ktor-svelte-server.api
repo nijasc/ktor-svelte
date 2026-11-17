@@ -486,6 +486,8 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun constants ([Ljava/lang/Object;)V
 	public final fun cookies ([Lio/github/nijasc/ktor/svelte/TypedCookie;)V
 	public final fun dev (Lkotlin/jvm/functions/Function1;)V
+	public final fun frontend (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun frontend$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun frontendErrors (Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun frontendErrors$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun getAccessLog ()Z
@@ -584,6 +586,18 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun setSlowApiCall-BwNAW2A (Lkotlin/time/Duration;)V
 	public final fun setStartupTiming (Z)V
 	public final fun setUrl (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteFrontendConfig {
+	public final fun getName ()Ljava/lang/String;
+	public final fun getNotFoundPage ()Ljava/lang/String;
+	public final fun getPrefix ()Ljava/lang/String;
+	public final fun getSource ()Lio/github/nijasc/ktor/svelte/SvelteSource;
+	public final fun getSpaFallback ()Ljava/lang/String;
+	public final fun paramRoutes ([Ljava/lang/String;)V
+	public final fun setNotFoundPage (Ljava/lang/String;)V
+	public final fun setSource (Lio/github/nijasc/ktor/svelte/SvelteSource;)V
+	public final fun setSpaFallback (Ljava/lang/String;)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteFrontendErrorsConfig {

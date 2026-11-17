@@ -17,6 +17,7 @@ internal enum class DocLink(
     GENERATED_TYPESCRIPT("features/typescript", null),
     I18N("features/frontend-libraries", "i18n"),
     KTOR("reference/ktor", null),
+    MULTIPLE_FRONTENDS("guide/multiple-frontends", null),
     TRANSPORT("features/transport", null),
     ;
 

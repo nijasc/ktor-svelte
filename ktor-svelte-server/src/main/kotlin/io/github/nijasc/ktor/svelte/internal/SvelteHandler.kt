@@ -1,5 +1,6 @@
 package io.github.nijasc.ktor.svelte.internal
 
+import io.github.nijasc.ktor.svelte.coversPath
 import io.github.nijasc.ktor.svelte.internal.assets.AssetResponder
 import io.github.nijasc.ktor.svelte.internal.assets.AssetStore
 import io.github.nijasc.ktor.svelte.internal.assets.DefaultFavicon
@@ -39,23 +40,37 @@ internal class SvelteHandler(
     private val allowRemote: Boolean,
     private val siteFiles: SiteFiles? = null,
     private val defaultFavicon: DefaultFavicon? = null,
+    private val prefix: String = "",
+    private val isApiPath: (String) -> Boolean = resolver::isApiPath,
+    private val mounted: List<SvelteHandler> = emptyList(),
 ) {
-    val proxiesToVite: Boolean get() = devProxy != null
+    val proxiesToVite: Boolean get() = devProxy != null || mounted.any { it.proxiesToVite }
+
+    val vitePrefixes: List<String> get() = listOfNotNull(prefix.takeIf { devProxy != null }) + mounted.flatMap { it.vitePrefixes }
+
+    private fun covers(path: String): Boolean = prefix.isNotEmpty() && coversPath(prefix, path)
+
+    private fun local(path: String): String = if (prefix.isEmpty()) path else path.removePrefix(prefix).ifEmpty { "/" }
 
     suspend fun handle(
         call: ApplicationCall,
         privateResponses: Boolean = false,
     ) {
         val method = call.request.httpMethod
-        val path = decodedPath(call)
-        if (path == null || resolver.isApiPath(path)) return
+        val fullPath = decodedPath(call)
+        if (fullPath == null || isApiPath(fullPath)) return
+        mounted.firstOrNull { it.covers(fullPath) }?.let { frontend ->
+            frontend.handle(call, privateResponses)
+            return
+        }
+        val path = local(fullPath)
         val mayProxy = allowRemote || isLocalCall(call)
         if (method != HttpMethod.Get && method != HttpMethod.Head) {
             if (method in PROXIED_BODY_METHODS && mayProxy && devProxy?.forward(call) == true) return
             respondWrongMethod(call, path, method)
             return
         }
-        if (needsLocalePrefix(path, call.application.libraryConfig)) {
+        if (prefix.isEmpty() && needsLocalePrefix(path, call.application.libraryConfig)) {
             redirectToLocale(call)
             return
         }
@@ -66,7 +81,7 @@ internal class SvelteHandler(
         if (mayProxy && devProxy?.forward(call) == true) return
         val manifest = store.manifest()
         when {
-            manifest != null -> respondFromManifest(call, path, manifest, resolver, responder, privateResponses, siteFiles)
+            manifest != null -> respondFromManifest(call, path, manifest, resolver, responder, privateResponses, siteFiles, prefix)
             devProxy != null && !mayProxy -> call.respondText(REMOTE_REFUSED_MESSAGE, status = HttpStatusCode.Forbidden)
             else -> respondMissingBuild(call, devProxy, devUrl)
         }
@@ -121,6 +136,7 @@ private suspend fun respondFromManifest(
     responder: AssetResponder,
     privateResponses: Boolean,
     siteFiles: SiteFiles?,
+    prefix: String,
 ) {
     when (val resolution = resolver.resolve(path, acceptsHtml(call), manifest)) {
         is Resolution.Serve -> {
@@ -129,7 +145,7 @@ private suspend fun respondFromManifest(
 
         is Resolution.Redirect -> {
             val query = call.request.uri.substringAfter('?', "")
-            val path = resolution.location.encodeURLPath()
+            val path = (prefix + resolution.location).encodeURLPath()
             val location = if (query.isEmpty()) path else "$path?$query"
             call.response.header(HttpHeaders.Location, location)
             call.respond(HttpStatusCode.PermanentRedirect)
