@@ -27,6 +27,15 @@ object Users : Table("users") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object PreferenceRows : Table("user_preferences") {
+    val userId = integer("user_id")
+    val theme = varchar("theme", MAX_THEME_LENGTH).nullable()
+    val locale = varchar("locale", MAX_LOCALE_LENGTH).nullable()
+    val compactBoard = bool("compact_board")
+
+    override val primaryKey = PrimaryKey(userId)
+}
+
 object Tasks : Table("tasks") {
     val id = integer("id").autoIncrement()
     val title = varchar("title", MAX_TITLE_LENGTH)

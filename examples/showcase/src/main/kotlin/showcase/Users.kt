@@ -11,6 +11,7 @@ import kotlin.time.Instant
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -93,6 +94,28 @@ class UserStore {
                     it[createdAt] = Clock.System.now().toEpochMilliseconds()
                 } get Users.id
             Users.selectAll().where { Users.id eq id }.single().toUser()
+        }
+    }
+
+    suspend fun preferences(id: Int): Preferences? =
+        query {
+            PreferenceRows.selectAll().where { PreferenceRows.userId eq id }.singleOrNull()?.let { row ->
+                Preferences(row[PreferenceRows.theme], row[PreferenceRows.locale], row[PreferenceRows.compactBoard])
+            }
+        }
+
+    suspend fun savePreferences(
+        id: Int,
+        preferences: Preferences,
+    ) {
+        query {
+            PreferenceRows.deleteWhere { PreferenceRows.userId eq id }
+            PreferenceRows.insert {
+                it[userId] = id
+                it[theme] = preferences.theme
+                it[locale] = preferences.locale
+                it[compactBoard] = preferences.compactBoard
+            }
         }
     }
 

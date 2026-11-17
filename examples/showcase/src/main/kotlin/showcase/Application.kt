@@ -106,6 +106,11 @@ fun Application.module() {
         siteUrl = env.siteUrl
         loginPage = FrontendRoutes.login
         permissions<Permission, User>(refusedMessage = { it.messages.problemAdminsOnly() }) { user -> permissionsOf(user) }
+        preferences<Preferences, User>(
+            defaults = Preferences(),
+            load = { user -> users.preferences(user.id) },
+            save = { user, preferences -> users.savePreferences(user.id, preferences) },
+        )
         guards {
             signedIn(FrontendRoutes.board, "/tasks", FrontendRoutes.settings)
             permission(Permission.ManageUsers, FrontendRoutes.admin)
