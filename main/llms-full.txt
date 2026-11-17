@@ -3640,6 +3640,45 @@ try {
 
 The server checks the type the browser declares and the file name, as the browser does. Neither proves what the bytes are, so treat stored files as untrusted when you serve them.
 
+## A form with named fields
+
+With `uploadRules`, the generated function takes a `FormData`, and nothing checks the field names in it. When an upload comes with other values, or the field names matter, declare the form:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.receiveForm
+import io.github.nijasc.ktor.svelte.uploadForm
+
+post("/api/documents") {
+    val form = call.receiveForm()
+    val title = form.text("title")
+    val cover = form.file("cover")
+    val pages = form.files("pages")
+    call.respondText("$title: ${cover.fileName} and ${pages.size} pages")
+}.uploadForm(maxSize = 5L * 1024 * 1024, types = listOf("image/*", ".pdf")) {
+    text("title")
+    text("note", required = false)
+    file("cover")
+    files("pages")
+}
+```
+
+The generated function then takes an object with those fields, and builds the form itself:
+
+```ts
+await api.documents.create({ title: 'Report', cover, pages: [first, second] });
+```
+
+```ts
+export const documentsCreate = (body: { title: string; note?: string; cover: File; pages?: File[] }, options?: RequestOptions) => ...
+```
+
+- `file` is one file and required unless you say otherwise, `files` is any number of them, `text` is a text value.
+- `maxSize`, `types` and `maxFiles` are the rules from above, for every file in the form. Both sides check them as before.
+- `call.receiveForm()` gives `text`, `file` and `files` by name, and `textOrNull` and `fileOrNull` for the optional ones.
+- A request with a field the form does not have, without a required one, with a file where text belongs, or with two files for a `file` field, is answered with 400 and a `code` of `upload.field` or `upload.missing`.
+
+On a route without `uploadForm`, `receiveForm()` takes any field, for forms whose fields are not known in advance.
+
 - API bodies are limited to 1 MiB by default. Raise `maxApiBodySize` to the largest upload you accept.
 - `readRemaining()` keeps each file in memory. For large files, copy `part.provider()` to a file or object storage instead.
 - Never use `originalFileName` as a path on disk. Store files under an ID you choose.

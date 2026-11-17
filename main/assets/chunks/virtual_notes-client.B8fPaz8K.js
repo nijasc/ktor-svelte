@@ -1,4 +1,4 @@
-const e={"client.ts":`export interface UploadProgress {
+const n={"client.ts":`export interface UploadProgress {
     loaded: number;
     total?: number;
 }
@@ -131,6 +131,7 @@ interface InternalOptions extends RequestOptions {
     body?: unknown;
     operation?: string;
     upload?: UploadRules;
+    multipart?: boolean;
 }
 
 export interface UploadRules {
@@ -204,6 +205,18 @@ function queryString(query: Record<string, unknown> | undefined): string {
     }
     const text = params.toString();
     return text ? \`?\${text}\` : '';
+}
+
+function toFormData(fields: Record<string, unknown>): FormData {
+    const form = new FormData();
+    for (const [name, value] of Object.entries(fields)) {
+        if (value === undefined || value === null) continue;
+        for (const item of Array.isArray(value) ? value : [value]) {
+            if (item instanceof Blob) form.append(name, item);
+            else form.append(name, String(item));
+        }
+    }
+    return form;
 }
 
 function isRawBody(body: unknown): body is BodyInit {
@@ -340,8 +353,23 @@ function timeZone(): string | undefined {
 }
 
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
-    const { query, body, operation, upload, fetch: customFetch, headers, onUploadProgress, timeout, signal, silent, retry, refresh, ...init } =
-        options;
+    const {
+        query,
+        body: given,
+        operation,
+        upload,
+        multipart,
+        fetch: customFetch,
+        headers,
+        onUploadProgress,
+        timeout,
+        signal,
+        silent,
+        retry,
+        refresh,
+        ...init
+    } = options;
+    const body = multipart && given !== undefined && !isRawBody(given) ? toFormData(given as Record<string, unknown>) : given;
     const plan = streaming ? undefined : retryPlan(method, retry);
     const chosenRetry = retry ?? apiConfig.retry;
     const longestLimitWait = streaming || !chosenRetry ? undefined : ((chosenRetry === true ? undefined : chosenRetry.maxDelay) ?? 5000);
@@ -1483,4 +1511,4 @@ export const PublicConfig = {
 function addError(errors: Record<string, string[]>, field: string, message: string): void {
     (errors[field] ??= []).push(message);
 }
-`};export{e as default};
+`};export{n as default};
