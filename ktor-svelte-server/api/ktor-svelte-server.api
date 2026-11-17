@@ -343,6 +343,45 @@ public final class io/github/nijasc/ktor/svelte/RouteTimeoutKt {
 	public static final fun timeout-HG0u8IE (Lio/ktor/server/routing/Route;J)Lio/ktor/server/routing/Route;
 }
 
+public final class io/github/nijasc/ktor/svelte/Rule {
+	public static final field INSTANCE Lio/github/nijasc/ktor/svelte/Rule;
+}
+
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Rule$Email : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Rule$Email$Impl : io/github/nijasc/ktor/svelte/Rule$Email {
+	public fun <init> ()V
+}
+
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Rule$Phone : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Rule$Phone$Impl : io/github/nijasc/ktor/svelte/Rule$Phone {
+	public fun <init> ()V
+}
+
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Rule$Slug : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Rule$Slug$Impl : io/github/nijasc/ktor/svelte/Rule$Slug {
+	public fun <init> ()V
+}
+
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Rule$StrongPassword : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Rule$StrongPassword$Impl : io/github/nijasc/ktor/svelte/Rule$StrongPassword {
+	public fun <init> ()V
+}
+
+public abstract interface annotation class io/github/nijasc/ktor/svelte/Rule$WebAddress : java/lang/annotation/Annotation {
+}
+
+public final synthetic class io/github/nijasc/ktor/svelte/Rule$WebAddress$Impl : io/github/nijasc/ktor/svelte/Rule$WebAddress {
+	public fun <init> ()V
+}
+
 public abstract interface annotation class io/github/nijasc/ktor/svelte/Sensitive : java/lang/annotation/Annotation {
 }
 

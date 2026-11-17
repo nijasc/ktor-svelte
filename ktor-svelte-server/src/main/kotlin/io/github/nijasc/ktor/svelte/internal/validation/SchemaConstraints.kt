@@ -3,6 +3,7 @@ package io.github.nijasc.ktor.svelte.internal.validation
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.ValidationException
 import io.github.nijasc.ktor.svelte.Validator
+import io.github.nijasc.ktor.svelte.presetOf
 import io.ktor.openapi.JsonSchema
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -87,6 +88,11 @@ internal class SchemaConstraints {
                 is JsonSchema.Pattern ->
                     if (!patterns.computeIfAbsent(annotation.value, ::Regex).containsMatchIn(text)) {
                         validator.fail(field, ConstraintMessages.pattern(annotation.value))
+                    }
+                else ->
+                    presetOf(annotation)?.let { preset ->
+                        val passes = preset.checks.all { patterns.computeIfAbsent(it.pattern, ::Regex).containsMatchIn(text) }
+                        if (!passes) validator.fail(field, preset.message)
                     }
             }
         }

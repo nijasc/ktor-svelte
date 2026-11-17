@@ -36,6 +36,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 110 | Typed request headers | #341 |
 | 111 | Per-route timeout | #342 |
 | 114 | Totals for lists | #343 |
+| 115 | Rule presets | #344 |
 
 ### Next up
 
@@ -173,7 +174,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 115 | Rule presets | Small | 14 |
 | 116 | Read-only computed fields | Small | 14 |
 | 117 | Created and updated stamps | Small | 14 |
 | 118 | Owner checks | Small | 14 |
