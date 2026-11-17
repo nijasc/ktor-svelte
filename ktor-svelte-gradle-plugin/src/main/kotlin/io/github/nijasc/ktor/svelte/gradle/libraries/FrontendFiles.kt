@@ -203,6 +203,7 @@ internal fun componentFiles(
         buildMap {
             if (daisy) put("$COMPONENTS_DIR/ThemeToggle.svelte", renderTemplate("components/ThemeToggle.svelte"))
             if (spec.i18n != null) {
+                put("$COMPONENTS_DIR/TimeAgo.svelte", renderTemplate("components/TimeAgo.svelte"))
                 val classes = mapOf("select" to if (daisy) "select select-sm" else "ktor-svelte-locale-switch")
                 put("$COMPONENTS_DIR/LocaleSwitch.svelte", renderTemplate("components/LocaleSwitch.svelte", classes))
             }

@@ -21,6 +21,7 @@
     import { m } from '#i18n';
     import { routes } from '#routes';
     import FileDrop from '#components/FileDrop.svelte';
+    import TimeAgo from '#components/TimeAgo.svelte';
     import TaskForm from '#lib/components/TaskForm.svelte';
     import { formatBytes, formatDate, formatDateTime } from '#lib/format.ts';
     import { confirmed } from '#lib/ktor-svelte/confirm.ts';
@@ -252,7 +253,7 @@
     <ul id="comments" class="grid gap-2">
         {#each comments as entry (entry.id)}
             <li class="bg-base-200 rounded-box p-3">
-                <p class="text-sm font-semibold">{entry.author.name} <time class="font-normal" datetime={entry.createdAt}>{formatDateTime(entry.createdAt)}</time></p>
+                <p class="text-sm font-semibold">{entry.author.name} <TimeAgo class="font-normal" value={entry.createdAt} /></p>
                 <p class="whitespace-pre-wrap">{entry.body}</p>
             </li>
         {:else}

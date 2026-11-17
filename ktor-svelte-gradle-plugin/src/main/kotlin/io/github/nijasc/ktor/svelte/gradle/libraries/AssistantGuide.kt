@@ -78,6 +78,9 @@ internal fun assistantGuide(
             ) {
                 appendLine("- `ThemeToggle.svelte`: lets the visitor pick one of the configured themes and remembers it.")
             }
+            if (spec.i18n != null) {
+                appendLine("- `TimeAgo.svelte`: a time as \"3 minutes ago\" in the visitor's language, which keeps itself current.")
+            }
             if (spec.i18n != null) appendLine("- `LocaleSwitch.svelte`: lets the visitor pick one of the configured languages.")
             appendLine("- `NavigationProgress.svelte`: a bar at the top while a page loads. It belongs in the root layout, once.")
             appendLine(

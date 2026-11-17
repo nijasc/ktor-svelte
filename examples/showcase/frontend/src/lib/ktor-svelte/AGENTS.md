@@ -34,6 +34,7 @@ Ready-made components are in `#components/`. Use them before writing the same ma
 - `DateInput.svelte` and `DateTimeInput.svelte`: the same for `IsoDate` and `IsoDateTime` values, without converting text by hand.
 - `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.
 - `ThemeToggle.svelte`: lets the visitor pick one of the configured themes and remembers it.
+- `TimeAgo.svelte`: a time as "3 minutes ago" in the visitor's language, which keeps itself current.
 - `LocaleSwitch.svelte`: lets the visitor pick one of the configured languages.
 - `NavigationProgress.svelte`: a bar at the top while a page loads. It belongs in the root layout, once.
 - `FileDrop.svelte`: a drop area and file input for an upload route, with previews, progress and the route's refusals, such as `<FileDrop label="Files" rules={uploadRules['files.create']} upload={(file, options) => api.files.create({ file }, options)} />`.

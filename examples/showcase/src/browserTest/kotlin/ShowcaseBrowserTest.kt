@@ -316,6 +316,10 @@ class ShowcaseBrowserTest {
         page.getByLabel("Add a comment").fill("Looks fine from here.")
         page.button("Comment").click()
         assertThat(page.locator("#comments")).containsText("Looks fine from here.")
+        val written = page.locator("#comments time").last()
+        assertThat(written).hasText("now")
+        assertThat(written).hasAttribute("title", Pattern.compile("^[A-Z][a-z]{2} \\d{1,2}, \\d{4}, \\d{1,2}:\\d{2}.[AP]M$"))
+        assertThat(written).hasAttribute("datetime", Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T"))
         assertThat(page.locator("#activity")).containsText("Ada Lovelace commented: Looks fine from here.")
 
         page.getByLabel("Attach files").setInputFiles(FilePayload("pixel.png", "image/png", PNG_PIXEL))
