@@ -769,7 +769,7 @@ function sendErrorReport(path: string, error: unknown): void {
 }
 
 export function reportErrors(path: string): void {
-    const host = globalThis as { addEventListener?: (name: string, listener: (event: never) => void) => void; __ktorSvelteReportError?: unknown };
+    const host = globalThis as unknown as { addEventListener?: (name: string, listener: (event: never) => void) => void; __ktorSvelteReportError?: unknown };
     host.__ktorSvelteReportError = (error: unknown) => sendErrorReport(path, error);
     if (typeof host.addEventListener !== 'function') return;
     host.addEventListener('error', (event: { error?: unknown; message?: string }) => sendErrorReport(path, event.error ?? event.message));
