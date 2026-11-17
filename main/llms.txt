@@ -37,6 +37,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 - [Languages (i18n)](https://nijasc.github.io/ktor-svelte/main/features/i18n)
 - [Components](https://nijasc.github.io/ktor-svelte/main/features/components)
 - [Installable app](https://nijasc.github.io/ktor-svelte/main/features/installable-app)
+- [Emails](https://nijasc.github.io/ktor-svelte/main/features/emails)
 
 ## Users and security
 
