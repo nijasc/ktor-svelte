@@ -157,6 +157,7 @@ A short name that your build or another plugin already uses is left alone, and t
 | `svelteAdd` | [Creates a page](../features/routes.md#a-new-page) with a typed load: `svelteAdd --page=notes/[id]`. With `--route` also a Kotlin route to start from. `svelteAdd --crud=Note` writes [list, detail and form pages for a class](../features/routes.md#pages-for-a-class) |
 | `svelteApiChanges` | Lists [what changed in the API for callers](../features/typescript.md#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. With `--strict` it fails on a change that can break them |
 | `browserTest` | Yours: a test suite with this name gets [the browser test kit](../guide/browser-tests.md), the packaged app and the browser from `-Pbrowser` |
+| `svelteVerifyA11y` | Packages the app, opens its prerendered pages in a browser in light and dark, and fails on [accessibility problems](../guide/browser-tests.md#accessibility) that axe finds. Not part of `check` |
 | `svelteSmokeTest` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](../guide/deployment.md#smoke-test). Not part of `check` |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](../features/routes.md#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
 | `svelteCheck` | Runs your `check` script |
