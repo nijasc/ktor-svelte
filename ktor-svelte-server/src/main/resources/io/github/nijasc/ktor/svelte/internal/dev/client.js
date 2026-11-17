@@ -449,6 +449,54 @@ function runtimeView(root) {
     });
 }
 
+function slowestRoutes(root) {
+    const section = root.querySelector('.slowest');
+    const rows = root.querySelector('.slowest-rows');
+    const note = root.querySelector('.slowest-note');
+
+    function millis(ms) {
+        return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms.toFixed(ms < 10 ? 1 : 0)} ms`;
+    }
+
+    async function load() {
+        try {
+            const response = await plainFetch('/_ktor-svelte/dev/slowest', { headers: { accept: 'application/json' } });
+            const ranking = await response.json();
+            note.textContent =
+                ranking.routes === 0
+                    ? 'No API route was called since the app started.'
+                    : `The routes that took the most time in all since the app started, of ${ranking.routes} called.`;
+            rows.replaceChildren(
+                ...ranking.slowest.map((route) => {
+                    const row = document.createElement('div');
+                    row.className = 'slowest-row';
+                    const method = document.createElement('span');
+                    method.textContent = route.method;
+                    const path = document.createElement('span');
+                    path.className = 'path';
+                    path.textContent = route.path;
+                    const total = document.createElement('span');
+                    total.className = 'ms';
+                    total.textContent = millis(route.totalMs);
+                    const about = document.createElement('span');
+                    about.className = 'slowest-about';
+                    const failed = route.failed ? `, ${route.failed} failed` : '';
+                    about.textContent = `${route.calls} calls, ${millis(route.averageMs)} on average, slowest ${millis(route.slowestMs)}${failed}`;
+                    row.append(method, path, total, about);
+                    return row;
+                })
+            );
+        } catch {
+            note.textContent = 'The slowest routes could not be loaded.';
+        }
+    }
+
+    section.addEventListener('toggle', () => {
+        if (section.open) void load();
+    });
+    root.querySelector('.slowest-refresh').addEventListener('click', () => void load());
+}
+
 function statusView(root) {
     const section = root.querySelector('.status');
     const rows = root.querySelector('.status-rows');
@@ -943,6 +991,13 @@ button.routes-file:hover { text-decoration: underline; }
 .runtime-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 8px; padding: 2px 10px; }
 .runtime-row span:first-child { color: #aaa; }
 .runtime-row.bad span:last-child { color: #ff7b72; }
+.slowest { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
+.slowest summary { padding: 6px 10px; cursor: pointer; }
+.slowest-tools { display: flex; gap: 8px; align-items: center; padding: 2px 10px 6px; color: #aaa; }
+.slowest-tools button { padding: 2px 8px; border: 1px solid #4a447a; border-radius: 4px; background: none; color: #ccc; font: inherit; cursor: pointer; }
+.slowest-rows { padding-bottom: 6px; }
+.slowest-row { display: grid; grid-template-columns: 52px 1fr 64px; gap: 2px 8px; padding: 2px 10px; font-family: ui-monospace, monospace; }
+.slowest-about { grid-column: 2 / -1; color: #aaa; font-family: system-ui, sans-serif; }
 .theme { border-top: 1px solid #2b2650; font-family: system-ui, sans-serif; }
 .theme[hidden] { display: none; }
 .theme summary { padding: 6px 10px; cursor: pointer; }
@@ -1292,6 +1347,11 @@ function startPanel() {
                 </div>
                 <div class="runtime-rows"></div>
             </details>
+            <details class="slowest">
+                <summary>Slowest routes</summary>
+                <div class="slowest-tools"><button type="button" class="slowest-refresh">Refresh</button><span class="slowest-note"></span></div>
+                <div class="slowest-rows"></div>
+            </details>
             <details class="theme" hidden>
                 <summary>Theme colors</summary>
                 <div class="theme-rows"></div>
@@ -1410,6 +1470,7 @@ function startPanel() {
     cookieInspector(root);
     routeMap(root);
     statusView(root);
+    slowestRoutes(root);
     runtimeView(root);
     migrationsView(root);
     environmentView(root);

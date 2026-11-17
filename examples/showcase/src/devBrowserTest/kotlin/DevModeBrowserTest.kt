@@ -655,6 +655,18 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel ranks the routes that took the most time`() {
+        assertTrue(reachBoard(page))
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".slowest summary").click()
+        assertThat(panel.locator(".slowest-note")).containsText("since the app started")
+        val first = panel.locator(".slowest-row").first()
+        assertThat(first).containsText(Pattern.compile("\\d+ calls?, .* on average, slowest "))
+        assertThat(panel.locator(".slowest-row .path").first()).hasText(Pattern.compile("^/api/"))
+    }
+
+    @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))

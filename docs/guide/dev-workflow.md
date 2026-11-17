@@ -193,6 +193,7 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 | [Server errors](#server-errors-in-the-browser) | The Kotlin exception of a failed call, as an overlay |
 | [Save fixtures](#save-fixtures) | The calls of this page as JSON for frontend tests |
 | [Clear site data](#clear-site-data) | This browser as a first-time visitor, in one click |
+| [Slowest routes](#slowest-routes) | The API routes that took the most time since the app started |
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
 | [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
 | [Migrations](#migrations) | Which Flyway migrations ran, which are pending, and whether the last one failed |
@@ -267,6 +268,16 @@ When an API call from the page fails with an exception on the server, the browse
 - It signs you out, and it also forgets the [Public config](#public-config) values you changed in this browser.
 
 To end only some cookies, use the [Cookies](#cookie-inspector) section instead.
+
+### Slowest routes
+
+The **Slowest routes** section ranks the API routes by the time the server spent on them in all since the app started, the 20 slowest first. Calls to one route count together, so `GET /api/tasks/{id}` is one line for every task that was opened.
+
+- Each line shows the route, the total time, how often it was called, the average, the slowest single call and how many calls failed with a server error.
+- A route at the top is where speeding up pays most: a route that is a little slow and called on every page often costs more than one that is very slow once.
+- **Refresh** updates it. A restart, such as after a Kotlin change, starts the count again.
+
+It counts every API call the server answered, also those from other tabs. For the calls of one page, look at the [request log](#request-log).
 
 ### Status
 
