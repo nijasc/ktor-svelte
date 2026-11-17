@@ -3,7 +3,12 @@
 # "when <path>:" shows a note only to projects that have that file or folder; {frontend} is the frontend folder.
 
 ## 1.4.0
-- when {frontend}/src/lib/components: New generated components: Breadcrumbs, Sidebar (collapses to icons, a drawer on small screens) and FocusHeading (moves the focus to the new page's heading). svelteSync wrote them; nothing changes until you import them.
-- pageLoads { page("/tasks/[id]") { data("task", "tasks.get") } } can now write a page's +page.ts for you, and pageLoads { inline = true } puts the answers into the HTML of a page opened directly. Existing hand-written loads are never touched.
-- In development, application.mailer keeps outgoing emails and shows them in the dev panel instead of sending them. Set dev { catchEmails = false } to send for real while developing.
+- when {frontend}/src/lib/components: New generated components: Breadcrumbs, Sidebar (collapses to icons, a drawer on small screens) and FocusHeading (focuses the new page's heading after a navigation). svelteSync wrote them; nothing changes until you import them.
+- when {frontend}/src/lib/components: The generated DataTable can sort, open rows with a click or Enter, show empty states and placeholder rows, and scroll long lists. Existing tables look and work as before.
+- A page's load can now be generated: pageLoad(FrontendRoutes.Patterns.tasksId) { data("task", taskRoute) } inside routing { }. With install(Svelte) { pageLoads { inline = true } } a page opened directly arrives with its data. Hand-written +page.ts files are never touched.
+- In development, application.mailer keeps outgoing emails and shows them in the dev panel instead of sending them. Outside development, sending needs install(Svelte) { mailer = ... }. Set dev { catchEmails = false } to send for real while developing.
+- Email templates can be Svelte components in {frontend}/src/emails; the build renders them and generates a typed Kotlin function per email.
 - The dev panel gained payload sizes, an environment view with secrets hidden, migration state, memory and threads, clear site data and the slowest routes. Nothing to change.
+- svelteMetrics now also records latency and errors per route template and page.
+- New and opt-in: warmUp(...) calls a few routes before the health endpoint reports up; svelte { nodeVersion = "22.12.0" } pins Node for npm and pnpm; svelte { frontend("admin") { } } serves a second SvelteKit project; svelteDoctor checks the package registry and proxy.
+- Builds that run the frontend end with a short table of step times. Turn it off with svelte { timingSummary = false }.

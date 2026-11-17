@@ -311,6 +311,8 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteRun` | `--script`, `--args` | Runs any `package.json` script: `svelteRun --script=lint --args="--fix --quiet"`. Quote an argument that contains spaces |
 | `svelteOutdated` | | Lists outdated frontend dependencies |
 | `svelteUpdateDependencies` | | Updates frontend dependencies and the lockfile |
+| `svelteUpgrade` | `--to`, `--bump-only` | Upgrades ktor-svelte itself. See [Upgrade ktor-svelte](../guide/checks-and-tooling.md#svelteupgrade) |
+| `svelteUpgradeNotes` | `--since` | Prints the upgrade notes since a version that apply to this project |
 | `svelteClean` | | Deletes `node_modules`, `.svelte-kit` and the build output |
 | `deepClean` | | Runs `clean`, then also deletes the project's `.gradle` and `.kotlin` directories, `node_modules`, `.svelte-kit`, `.vite`, `.turbo`, `.cache`, `.eslintcache` and the build output. Lockfiles and generated files are kept. Files a running Gradle daemon or IDE still holds, which happens on Windows, are skipped with a warning |
 
