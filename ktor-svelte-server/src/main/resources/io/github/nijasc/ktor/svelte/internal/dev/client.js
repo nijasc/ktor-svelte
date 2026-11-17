@@ -1174,6 +1174,39 @@ function rowTools(entry) {
     return tools;
 }
 
+async function clearSiteData() {
+    const quietly = async (work) => {
+        try {
+            await work();
+        } catch {
+            return;
+        }
+    };
+    await quietly(() => plainFetch('/_ktor-svelte/dev/clear-site-data', { method: 'POST', headers: { 'X-Ktor-Svelte-Dev': '1' } }));
+    await quietly(() => localStorage.clear());
+    await quietly(() => sessionStorage.clear());
+    await quietly(async () => Promise.all((await caches.keys()).map((name) => caches.delete(name))));
+    await quietly(async () => Promise.all((await navigator.serviceWorker.getRegistrations()).map((worker) => worker.unregister())));
+    await quietly(async () =>
+        Promise.all(
+            (await indexedDB.databases()).map(
+                (database) =>
+                    new Promise((resolve) => {
+                        const request = indexedDB.deleteDatabase(database.name);
+                        request.onsuccess = request.onerror = request.onblocked = resolve;
+                    })
+            )
+        )
+    );
+    await quietly(() =>
+        document.cookie.split(';').forEach((cookie) => {
+            const name = cookie.split('=')[0].trim();
+            if (name) document.cookie = `${name}=; Max-Age=0; path=/`;
+        })
+    );
+    location.reload();
+}
+
 function openInEditor(source) {
     return fetch(`/_ktor-svelte/dev/open?file=${encodeURIComponent(source.path)}&line=${source.line}`).catch(() => undefined);
 }
@@ -1208,7 +1241,8 @@ function startPanel() {
             <div class="head">
                 <strong>API requests</strong>
                 <span><button type="button" class="save" title="Save the calls this page made, with their answers, as fixtures for frontend tests">Save fixtures</button>
-                <button type="button" class="clear">Clear</button></span>
+                <button type="button" class="clear">Clear</button>
+                <button type="button" class="clear-site" title="Clear the cookies, storage, caches and service workers of this app in this browser, then reload">Clear site data</button></span>
             </div>
             <details class="config">
                 <summary>Public config<span class="config-count"></span></summary>
@@ -1368,6 +1402,10 @@ function startPanel() {
         draw();
     });
     root.querySelector('.save').addEventListener('click', () => void saveFixtures());
+    root.querySelector('.clear-site').addEventListener('click', (event) => {
+        event.currentTarget.textContent = 'Clearing...';
+        void clearSiteData();
+    });
     configEditor(root);
     cookieInspector(root);
     routeMap(root);
