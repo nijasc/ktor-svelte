@@ -38,6 +38,7 @@ public class SvelteConfig internal constructor() {
     internal val constantHolders: MutableList<Any> = mutableListOf()
     internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
     internal val guardsConfig: SvelteGuardsConfig = SvelteGuardsConfig()
+    internal val frontendErrorsConfig: SvelteFrontendErrorsConfig = SvelteFrontendErrorsConfig()
     internal val typedCookies: MutableList<TypedCookie<*>> = mutableListOf()
     internal var errorCodeSet: ErrorCodeSet? = null
         private set
@@ -247,6 +248,17 @@ public class SvelteConfig internal constructor() {
             )
     }
 
+    public fun frontendErrors(configure: SvelteFrontendErrorsConfig.() -> Unit = {}) {
+        frontendErrorsConfig.enabled = true
+        frontendErrorsConfig.configure()
+        require(frontendErrorsConfig.perClientPerMinute >= 1) {
+            "frontendErrors: perClientPerMinute must be at least 1, but is ${frontendErrorsConfig.perClientPerMinute}."
+        }
+        require(frontendErrorsConfig.maxBodyBytes in 256..MAX_ERROR_REPORT_BYTES) {
+            "frontendErrors: maxBodyBytes must be between 256 and $MAX_ERROR_REPORT_BYTES, but is ${frontendErrorsConfig.maxBodyBytes}."
+        }
+    }
+
     public fun guards(configure: SvelteGuardsConfig.() -> Unit) {
         guardsConfig.configure()
     }
@@ -321,6 +333,15 @@ public class SvelteConfig internal constructor() {
         publicConfigProvider = provider
         publicConfigSchema = Json.encodeToString(JsonSchema.serializer(), schema)
     }
+}
+
+internal const val MAX_ERROR_REPORT_BYTES = 64 * 1024
+
+@KtorDsl
+public class SvelteFrontendErrorsConfig internal constructor() {
+    internal var enabled: Boolean = false
+    public var perClientPerMinute: Int = 10
+    public var maxBodyBytes: Int = 8 * 1024
 }
 
 @KtorDsl

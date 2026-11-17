@@ -191,6 +191,21 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `uncaught errors are reported once each, without the query string, and only so many`() {
+        val reports = runHarness().getValue("errorReports").jsonObject
+
+        fun text(name: String) = reports.getValue(name).jsonPrimitive.content
+        assertEquals("10", text("sent"))
+        assertEquals(
+            "POST /_ktor-svelte/errors {\"message\":\"TypeError: x is not a function\"," +
+                "\"stack\":\"TypeError: x is not a function\\n    at save (app.js:1:2)\",\"page\":\"/board\"}",
+            text("first"),
+        )
+        assertEquals("POST /_ktor-svelte/errors {\"message\":\"plain text\",\"page\":\"/board\"}", text("second"))
+        assertContains(text("third"), "\"requestId\":\"req-503\"")
+    }
+
+    @Test
     fun `GET requests are retried with backoff only when asked to`() {
         val results = runHarness()
 

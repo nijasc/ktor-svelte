@@ -4,6 +4,7 @@ import io.github.nijasc.ktor.svelte.internal.AccessLog
 import io.github.nijasc.ktor.svelte.internal.BUILD_HEADER
 import io.github.nijasc.ktor.svelte.internal.BuildFingerprint
 import io.github.nijasc.ktor.svelte.internal.DocLink
+import io.github.nijasc.ktor.svelte.internal.FRONTEND_ERRORS_PATH
 import io.github.nijasc.ktor.svelte.internal.HEALTH_DOWN_JSON
 import io.github.nijasc.ktor.svelte.internal.HEALTH_UP_JSON
 import io.github.nijasc.ktor.svelte.internal.HealthReport
@@ -40,6 +41,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.routeTable
 import io.github.nijasc.ktor.svelte.internal.dev.statusJson
 import io.github.nijasc.ktor.svelte.internal.dev.toHtml
 import io.github.nijasc.ktor.svelte.internal.dev.toJson
+import io.github.nijasc.ktor.svelte.internal.frontendErrorRoute
 import io.github.nijasc.ktor.svelte.internal.installApiCompression
 import io.github.nijasc.ktor.svelte.internal.installConfigReport
 import io.github.nijasc.ktor.svelte.internal.installIdempotency
@@ -228,6 +230,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             loginPage,
             pluginConfig.permissionSet?.names.orEmpty(),
             pluginConfig.guardsConfig.rules.map { GuardSpec(it.page, it.permission?.name) },
+            FRONTEND_ERRORS_PATH.takeIf { pluginConfig.frontendErrorsConfig.enabled },
             pluginConfig.preferencesSpec?.let {
                 PreferencesType(
                     it.typeName,
@@ -419,6 +422,9 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 catchAll(handler)
             }
             if (currentUser != null && currentUserPath != null) currentUserRoute(currentUserPath, currentUser)
+            if (pluginConfig.frontendErrorsConfig.enabled) {
+                frontendErrorRoute(pluginConfig.frontendErrorsConfig.perClientPerMinute, pluginConfig.frontendErrorsConfig.maxBodyBytes)
+            }
             if (preferences != null && preferencesPath != null) preferencesRoutes(preferencesPath, preferences)
             if (devProxy != null) devClientRoutes(compileErrorsFile(), allowRemote)
             if (devProxy != null && pluginConfig.devConfig.browserLogs) browserLogRoute(allowRemote)

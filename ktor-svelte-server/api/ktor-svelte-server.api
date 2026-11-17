@@ -360,6 +360,8 @@ public final class io/github/nijasc/ktor/svelte/SvelteConfig {
 	public final fun constants ([Ljava/lang/Object;)V
 	public final fun cookies ([Lio/github/nijasc/ktor/svelte/TypedCookie;)V
 	public final fun dev (Lkotlin/jvm/functions/Function1;)V
+	public final fun frontendErrors (Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun frontendErrors$default (Lio/github/nijasc/ktor/svelte/SvelteConfig;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun getAccessLog ()Z
 	public final fun getApiCompression ()Z
 	public final fun getApiDocs ()Z
@@ -449,6 +451,13 @@ public final class io/github/nijasc/ktor/svelte/SvelteDevConfig {
 	public final fun setSlowApiCall-BwNAW2A (Lkotlin/time/Duration;)V
 	public final fun setStartupTiming (Z)V
 	public final fun setUrl (Ljava/lang/String;)V
+}
+
+public final class io/github/nijasc/ktor/svelte/SvelteFrontendErrorsConfig {
+	public final fun getMaxBodyBytes ()I
+	public final fun getPerClientPerMinute ()I
+	public final fun setMaxBodyBytes (I)V
+	public final fun setPerClientPerMinute (I)V
 }
 
 public final class io/github/nijasc/ktor/svelte/SvelteGuardsConfig {

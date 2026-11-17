@@ -9,6 +9,7 @@ import {
     fixtureFetch,
     typedCookie,
     userStore,
+    reportErrors,
     preferenceStore,
     type PreferenceStore,
     matchGuard,
@@ -832,5 +833,25 @@ apiConfig.fetch = undefined;
 Reflect.deleteProperty(settingsHost, 'document');
 Reflect.deleteProperty(settingsHost, 'localStorage');
 Reflect.deleteProperty(pageHost, 'location');
+
+const errorHost = globalThis as unknown as { location?: unknown; __ktorSvelteReportError?: (error: unknown) => void };
+errorHost.location = { pathname: '/board', href: 'https://app.example/board?token=secret', origin: 'https://app.example' };
+const errorReports: string[] = [];
+apiConfig.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    errorReports.push(`${init?.method} ${String(input)} ${String(init?.body)}`);
+    return new Response(null, { status: 204 });
+}) as typeof fetch;
+reportErrors('/_ktor-svelte/errors');
+const failure = new TypeError('x is not a function');
+failure.stack = 'TypeError: x is not a function\n    at save (app.js:1:2)';
+errorHost.__ktorSvelteReportError?.(failure);
+errorHost.__ktorSvelteReportError?.(failure);
+errorHost.__ktorSvelteReportError?.('plain text');
+errorHost.__ktorSvelteReportError?.(new ApiError(404, {}, '/api/notes/9', 'notes.get', 'req-404'));
+errorHost.__ktorSvelteReportError?.(new ApiError(503, {}, '/api/notes', 'notes.list', 'req-503'));
+for (let count = 0; count < 20; count++) errorHost.__ktorSvelteReportError?.(new Error(`flood ${count}`));
+results.errorReports = { sent: errorReports.length, first: errorReports[0], second: errorReports[1], third: errorReports[2] };
+apiConfig.fetch = undefined;
+Reflect.deleteProperty(errorHost, 'location');
 
 console.log(JSON.stringify(results));
