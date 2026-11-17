@@ -7,7 +7,7 @@ export const ssr = false;
 
 export const load: PageLoad = async (event) => {
     try {
-        return { note: await apiWith(event).notes.get(event.params.id) };
+        return { note: await apiWith(event).notes.get(Number(event.params.id)) };
     } catch (failure) {
         if (isApiError(failure, 'notes.get')) error(failure.status, failure.body.message);
         throw failure;

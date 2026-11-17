@@ -217,7 +217,7 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
@@ -236,21 +236,6 @@
                     }
                 },
                 "responses": {
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Problem"
-                                }
-                            },
-                            "application/xml": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Problem"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "",
                         "content": {
@@ -265,6 +250,21 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            },
+                            "application/xml": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -276,7 +276,7 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
@@ -309,26 +309,11 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Problem"
-                                }
-                            },
-                            "application/xml": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Problem"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "",
                         "content": {
@@ -340,6 +325,21 @@
                             "application/xml": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Note"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            },
+                            "application/xml": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
                                 }
                             }
                         }
@@ -4659,21 +4659,6 @@
                     }
                 }
             },
-            "NotesExport": {
-                "type": "object",
-                "title": "NotesExport",
-                "required": [
-                    "notes"
-                ],
-                "properties": {
-                    "notes": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Note"
-                        }
-                    }
-                }
-            },
             "Problem": {
                 "type": "object",
                 "title": "Problem",
@@ -4765,6 +4750,21 @@
                     "mapping": {
                         "archived": "#/components/schemas/Archived",
                         "created": "#/components/schemas/Created"
+                    }
+                }
+            },
+            "NotesExport": {
+                "type": "object",
+                "title": "NotesExport",
+                "required": [
+                    "notes"
+                ],
+                "properties": {
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Note"
+                        }
                     }
                 }
             },

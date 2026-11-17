@@ -36,6 +36,12 @@ data class Note(
 )
 
 @Serializable
+data class NoteQuery(
+    val search: String? = null,
+    val tag: String? = null,
+)
+
+@Serializable
 data class NoteInput(
     @JsonSchema.MinLength(1)
     @JsonSchema.MaxLength(MAX_TITLE_LENGTH)

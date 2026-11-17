@@ -1,6 +1,7 @@
 package notes
 
 import io.github.nijasc.ktor.svelte.getPage
+import io.github.nijasc.ktor.svelte.resource
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
@@ -20,20 +21,19 @@ import io.ktor.server.routing.route
 import io.github.nijasc.ktorsvelte.messages
 import io.github.nijasc.ktorsvelte.theme
 
+private const val MISSING_NOTE = "That note does not exist."
+
 fun Route.noteRoutes(store: NoteStore) {
+    resource<Note, Int>("/api/notes") {
+        missing<Problem> { Problem(MISSING_NOTE) }
+        list<NoteQuery> { query -> store.list(query.search, query.tag) }
+        create<NoteInput> { input -> store.create(input) }
+        get { id -> store.find(id) }
+        update<NoteInput> { id, input -> store.update(id, input) }
+        delete { id -> store.delete(id) }
+    }
+
     route("/api/notes") {
-        get {
-            val search = call.queryParameters["search"]
-            val tag = call.queryParameters["tag"]
-            val notes: List<Note> = store.list(search, tag)
-            call.respond(notes)
-        }
-
-        post {
-            val input = call.receive<NoteInput>()
-            call.respond(HttpStatusCode.Created, store.create(input))
-        }
-
         getPage<Note>("/feed", defaultLimit = 20) { request -> store.page(request.cursor, request.limit) }
 
         get("/export") {
@@ -41,21 +41,6 @@ fun Route.noteRoutes(store: NoteStore) {
         }
 
         route("/{id}") {
-            get {
-                val note: Note? = store.find(call.noteId())
-                if (note == null) call.respondMissing() else call.respond(note)
-            }
-
-            put {
-                val input = call.receive<NoteInput>()
-                val note: Note? = store.update(call.noteId(), input)
-                if (note == null) call.respondMissing() else call.respond(note)
-            }
-
-            delete {
-                if (store.delete(call.noteId())) call.respond(HttpStatusCode.NoContent) else call.respondMissing()
-            }
-
             post("/attachments") {
                 if (store.find(call.noteId()) == null) return@post call.respondMissing()
                 var received = 0L
@@ -102,5 +87,5 @@ fun Route.noteRoutes(store: NoteStore) {
 private fun ApplicationCall.noteId(): Int = parameters["id"]?.toIntOrNull() ?: -1
 
 private suspend fun ApplicationCall.respondMissing() {
-    respond(HttpStatusCode.NotFound, Problem("That note does not exist."))
+    respond(HttpStatusCode.NotFound, Problem(MISSING_NOTE))
 }
