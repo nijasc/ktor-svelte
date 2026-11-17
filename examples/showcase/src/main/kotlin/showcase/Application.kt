@@ -6,6 +6,7 @@ import io.github.nijasc.ktor.svelte.SvelteRouting
 import io.github.nijasc.ktor.svelte.environment
 import io.github.nijasc.ktor.svelte.startupStep
 import io.github.nijasc.ktor.svelte.svelte
+import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -94,6 +95,7 @@ fun Application.module() {
             }
         }
         siteUrl = env.siteUrl
+        loginPage = FrontendRoutes.login
         maxApiBodySize = MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES
         paramRoutes("/tasks/[id]")
         publicConfig(
