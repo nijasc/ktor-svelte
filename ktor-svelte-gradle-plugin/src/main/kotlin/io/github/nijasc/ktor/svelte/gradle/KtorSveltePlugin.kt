@@ -651,6 +651,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.devPort.set(extension.dev.port)
             task.outputDir.set(extension.outputDir)
             task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/resources"))
+            task.offline.set(project.gradle.startParameter.isOffline)
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
         project.tasks.register("svelteLiveTemplates", SvelteLiveTemplatesTask::class.java) { task ->
