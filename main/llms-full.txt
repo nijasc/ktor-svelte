@@ -6910,6 +6910,59 @@ With `chooser`, a "Columns" menu above the table lets people hide columns and ch
 - The move buttons say which column they move, such as "Up: Status", for screen readers.
 - A [custom `row`](#cells-with-markup) gets the visible columns as its second argument, `{#snippet row(task, columns)}`, so its cells can follow the choice.
 
+### Selecting rows and acting on them
+
+Give the table `actions`, and every row gets a checkbox. A bar above the table shows how many are chosen and a button per action, which calls your function for each chosen row:
+
+```svelte
+<DataTable
+    load={api.tasks.list}
+    key={(task) => task.id}
+    {columns}
+    actions={[
+        { label: 'Mark as done', run: (task) => api.tasks.status(task.id, { status: 'DONE' }) },
+        { label: 'Delete', run: (task) => api.tasks.delete(task.id), confirm: 'Delete the chosen tasks?' }
+    ]}
+/>
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `actions` | `[]` | `{ label, run, confirm? }` per action; `run` is called once per chosen row, one after the other |
+| `key` | | Needed to keep choices across pages and for "Select every page" |
+| `selectRow` | `Select all on this page: <first column>` | The accessible name of a row's checkbox |
+| `selectPage`, `selectEverything`, `clearSelection` | `Select all on this page`, `Select every page`, `Clear` | Button and checkbox texts |
+| `selectedText`, `workingText`, `doneText` | `2 selected`, `Working: 1 of 2`, `Done: 2 of 2 worked.` | Functions that build the status texts, for other languages |
+
+- The checkbox in the header chooses every row on the page, and shows a mixed state when only some are chosen.
+- "Select every page" loads the remaining pages and chooses everything, so an action can run over the whole list, not only what is visible.
+- While an action runs, the bar counts up and the checkboxes are locked. When it ends, the bar says how many calls worked, the choice is cleared and the table reloads.
+- A failing call does not stop the others; with [toasts](https://nijasc.github.io/ktor-svelte/main/features/components#toasts) on, each failure is shown too.
+- `confirm` asks with the browser's dialog before the action starts.
+
+### Sorting by a click on the header
+
+Mark a column with `sort`, and its header becomes a button. The first click sorts ascending, the second descending, the third goes back to the order of the route:
+
+```svelte
+<DataTable
+    load={api.tasks.list}
+    columns={[
+        { key: 'title', label: 'Title', sort: true },
+        { key: 'createdAt', label: 'Created', sort: 'created' }
+    ]}
+    sortParam="sort"
+/>
+```
+
+| | What happens |
+| --- | --- |
+| With `sortParam` | The table asks the route again with `?sort=title` or `?sort=-title` (a leading `-` for descending), from the first page. Use this for lists with many pages; the route decides how to sort. `sort: 'created'` sends that name instead of the column's key |
+| Without `sortParam` | The rows that are loaded are sorted in the browser, numbers as numbers and text in the visitor's language. This suits short lists that fit on one page; on a list with more pages, only the loaded rows are sorted |
+
+- The header gets `aria-sort` (`ascending` or `descending`), and a small `^` or `v` shows the direction.
+- With `sortParam`, the route reads the value like any other query parameter, such as `call.queryParameters["sort"]`; list it in `describe` to have it typed.
+
 ### Cells with markup
 
 For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
