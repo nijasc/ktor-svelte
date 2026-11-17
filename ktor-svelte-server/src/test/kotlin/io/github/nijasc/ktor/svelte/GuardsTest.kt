@@ -144,8 +144,7 @@ class GuardsTest {
                     "    const guard = matchGuard(pageGuards, event.url.pathname);\n" +
                     "    if (!guard || typeof document === 'undefined') return;\n" +
                     "    await signedInUser(event.url);\n" +
-                    "    if (guard.permission && !currentUser.can(guard.permission)) " +
-                    "error(403, 'You are not allowed to see this page.');\n" +
+                    "    if (guard.permission && !currentUser.can(guard.permission)) error(403, 'Forbidden');\n" +
                     "}\n",
                 api.resolve("guards.ts").readText(),
             )
@@ -162,7 +161,7 @@ class GuardsTest {
             assertContains(guards, "import { matchGuard, type PageGuard } from './client.js';\n")
             assertContains(guards, "import type { CurrentUser } from './types.js';\n")
             assertContains(guards, "export const pageGuards: readonly PageGuard<never>[] = [\n    { page: '/board' },\n];\n")
-            assertContains(guards, "    if (!user) error(401, 'Sign in first.');\n")
+            assertContains(guards, "    if (!user) error(401, 'Unauthorized');\n")
             assertFalse("guard.permission" in guards)
         }
 

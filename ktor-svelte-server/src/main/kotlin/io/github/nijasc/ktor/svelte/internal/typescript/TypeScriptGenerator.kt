@@ -273,7 +273,7 @@ internal class TypeScriptGenerator(
                 "    { page: ${quoted(guard.page)}$permission },\n"
             }
         val turnedAway =
-            if (loginPage != null) "redirect(307, loginPath(url))" else "error(401, 'Sign in first.')"
+            if (loginPage != null) "redirect(307, loginPath(url))" else "error(401, 'Unauthorized')"
         return "import { error${if (loginPage != null) ", redirect" else ""} } from '@sveltejs/kit';\n" +
             "import { ${if (loginPage != null) "loginPath, " else ""}matchGuard, type PageGuard } from './client.js';\n" +
             "import { $CURRENT_USER_STORE } from './${CURRENT_USER_FILE.removeSuffix(".ts")}.js';\n" +
@@ -290,7 +290,7 @@ internal class TypeScriptGenerator(
             "    await signedInUser(event.url);\n" +
             (
                 if (withPermissions) {
-                    "    if (guard.permission && !$CURRENT_USER_STORE.can(guard.permission)) error(403, 'You are not allowed to see this page.');\n"
+                    "    if (guard.permission && !$CURRENT_USER_STORE.can(guard.permission)) error(403, 'Forbidden');\n"
                 } else {
                     ""
                 }
