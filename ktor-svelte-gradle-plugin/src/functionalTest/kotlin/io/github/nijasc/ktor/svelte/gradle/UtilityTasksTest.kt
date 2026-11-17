@@ -919,4 +919,41 @@ class UtilityTasksTest {
 
         assertEquals(null, result.task(":svelteVerifyTs"))
     }
+
+    private fun pluginVersion(): String =
+        TestProject(dir, "bun", "bun.lock")
+            .apply { buildScript(javaBuild) }
+            .run("svelteUpgradeNotes", "--since=0.0.1")
+            .output
+            .substringAfter("ktor-svelte 0.0.1 -> ")
+            .substringBefore(":")
+
+    @Test
+    fun `svelteUpgrade changes the version in the catalog and says what to run next`() {
+        val project = project()
+        val current = pluginVersion()
+        dir.resolve("gradle").mkdirs()
+        dir.resolve("gradle/libs.versions.toml").writeText("[versions]\nktor-svelte = \"$current\"\n")
+
+        val result = project.run("svelteUpgrade", "--to=99.0.0", "--bump-only")
+
+        assertEquals("[versions]\nktor-svelte = \"99.0.0\"\n", dir.resolve("gradle/libs.versions.toml").readText())
+        assertContains(result.output, "ktor-svelte $current -> 99.0.0 in gradle")
+        assertContains(result.output, "Now run: ./gradlew :svelteSync :svelteUpgradeNotes --since=$current")
+        assertContains(project.run("svelteUpgrade", "--to=0.1.0").output, "Nothing to upgrade.")
+    }
+
+    @Test
+    fun `svelteUpgrade without a version to change says where to set it`() {
+        val failure = project().runAndFail("svelteUpgrade", "--to=99.0.0", "--bump-only")
+        assertContains(failure.output, "svelteUpgrade found no ktor-svelte ${pluginVersion()}")
+    }
+
+    @Test
+    fun `svelteUpgradeNotes prints the notes since a version that apply to the project`() {
+        val project = project()
+        val all = project.run("svelteUpgradeNotes", "--since=1.3.0").output
+        assertContains(all, "ktor-svelte 1.3.0 -> ${pluginVersion()}")
+        assertContains(project.run("svelteUpgradeNotes", "--since=999.0.0").output, "nothing in this upgrade needs your attention")
+    }
 }

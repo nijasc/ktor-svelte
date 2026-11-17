@@ -692,6 +692,26 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpdateDepe
 	public final fun update ()V
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpgradeNotesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getFrontendDirectory ()Lorg/gradle/api/provider/Property;
+	public abstract fun getPluginVersion ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getSince ()Lorg/gradle/api/provider/Property;
+	public final fun print ()V
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteUpgradeTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getBumpOnly ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFollowUpTasks ()Lorg/gradle/api/provider/ListProperty;
+	public abstract fun getPluginVersion ()Lorg/gradle/api/provider/Property;
+	public abstract fun getProjectPath ()Lorg/gradle/api/provider/Property;
+	public abstract fun getRootDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getTo ()Lorg/gradle/api/provider/Property;
+	public final fun upgrade ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteVerifyA11yTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getBrowser ()Lorg/gradle/api/provider/Property;

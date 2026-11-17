@@ -371,6 +371,40 @@ Moves a page and rewrites its typed route calls in the frontend and in Kotlin:
 
 It stops before it changes anything when a file it would rewrite has uncommitted changes, so the rename stays one clean diff. `--force` renames anyway. Details: [Renaming a page](../features/routes.md#renaming-a-page).
 
+### svelteUpgrade
+
+One task moves the project to a new ktor-svelte:
+
+```bash
+./gradlew svelteUpgrade
+```
+
+```text
+ktor-svelte 1.3.0 -> 1.4.0 in gradle/libs.versions.toml
+Running the new version: gradlew.bat --console=plain :svelteSync :svelteGenerateTs :svelteUpgradeNotes --since=1.3.0
+...
+ktor-svelte 1.3.0 -> 1.4.0: what to know
+
+1.4.0
+  - New generated components: Breadcrumbs, Sidebar and FocusHeading. ...
+```
+
+It does three things:
+
+1. Changes the version where your build declares it: `ktor-svelte = "..."` in `gradle/*.versions.toml`, `id("io.github.nijasc.ktor-svelte") version "..."` and `io.github.nijasc:ktor-svelte-...:...` coordinates in the build and settings files. Other versions that happen to be the same number stay as they are.
+2. Runs a new build through the Gradle wrapper, which now loads the new plugin, with `svelteSync` and `svelteGenerateTs`, so the generated files match the new version.
+3. Prints the upgrade notes of every version between the old and the new one, only those that apply to your project.
+
+| Option | What it does |
+| --- | --- |
+| `--to=1.4.0` | The version to upgrade to. Without it, the latest release on Maven Central |
+| `--bump-only` | Only change the version, and print the command to run next |
+
+- Without a version to change, for example when the plugin comes from an included build, it fails and says where to set the version and what to run after.
+- If the build with the new version fails, the version is already changed: fix what it says and run the printed command again.
+- `./gradlew svelteUpgradeNotes --since=1.3.0` prints the notes again at any time.
+- Review the changes with `git diff` before you commit: the version, the regenerated files, nothing else.
+
 ### svelteLiveTemplates
 
 Installs IntelliJ live templates such as `ksget`, `kspost` and `ksload`:

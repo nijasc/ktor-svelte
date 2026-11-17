@@ -40,6 +40,8 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSmokeTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpgradeNotesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpgradeTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyA11yTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyApiRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLeaksTask
@@ -668,6 +670,21 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.projectDirectory.set(project.layout.projectDirectory)
             task.hookTasks.set(listOf("formatCheck", "svelteVerifySync"))
             task.regenerateTasks.set(project.provider { listOf("svelteSync", "svelteGenerateTs").filter { it in project.tasks.names } })
+        }
+        project.tasks.register("svelteUpgrade", SvelteUpgradeTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Upgrades ktor-svelte: changes the version, regenerates the frontend files and prints what to know."
+            task.pluginVersion.set(pluginVersion())
+            task.rootDirectory.set(project.rootDir)
+            task.projectPath.set(project.path)
+            task.followUpTasks.set(project.provider { listOf("svelteSync", "svelteGenerateTs").filter { it in project.tasks.names } })
+        }
+        project.tasks.register("svelteUpgradeNotes", SvelteUpgradeNotesTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Prints the upgrade notes since a version: svelteUpgradeNotes --since=1.3.0"
+            task.pluginVersion.set(pluginVersion())
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.frontendDirectory.set(extension.frontendDir.map { it.asFile.relativeTo(project.projectDir).invariantSeparatorsPath })
         }
         project.tasks.register("svelteCheck", SvelteCheckTask::class.java) { task ->
             configureToolTask(task, extension)
