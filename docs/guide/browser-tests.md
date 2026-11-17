@@ -67,6 +67,33 @@ class NotesBrowserTest : BrowserTest() {
 
 The app is started once and shared by all tests of the run. It is started the way production starts it, without the development flag, on a free port.
 
+## Record a test
+
+The slow part of a browser test is finding the right way to name each element. Let the browser tell you: click through the app once, and the steps are written down.
+
+```bash
+./gradlew svelteRecordTest --name=SignIn
+```
+
+The task packages and starts the app and opens it in a browser, with Playwright's recorder next to it. Do what the test should do. The recorder's toolbar can also add assertions: that an element is visible, or has a text. Close the browser, and the steps are in `src/browserTest/kotlin/SignInBrowserTest.kt`:
+
+```kotlin no-check
+class SignInBrowserTest : BrowserTest() {
+    @Test
+    fun `sign in`() {
+        page.navigate(FrontendRoutes.login)
+        page.getByLabel("Email").fill("ada@example.com")
+        page.getByLabel("Password").fill("secret")
+        page.getByRole(AriaRole.BUTTON, Page.GetByRoleOptions().setName("Sign in")).click()
+        assertThat(page.locator("#signed-in-as")).containsText("Ada Lovelace")
+    }
+}
+```
+
+An address of your app is written as its typed route, `FrontendRoutes.tasksId("12")` for `/tasks/12`, so the test breaks at compile time when the page moves. An address with a query string stays a path.
+
+It is a starting point to edit, and the file is yours. What it typed in is in the file as you typed it, passwords too, so replace those before you commit. The task never replaces a test that is already there. Add `-Pbrowser=firefox` to record in another browser.
+
 ## The API with your own classes
 
 `api` sends and reads JSON with kotlinx.serialization, so a request body and an answer are your classes:
