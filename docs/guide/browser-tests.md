@@ -170,7 +170,7 @@ assertEquals(emptyList(), problems)
 
 Browser contexts block service workers by default. In WebKit, a page controlled by a service worker sends its requests past `page.route` and `context.route`, so a request you stubbed would not be stubbed. Blocking the worker keeps stubs working in every browser.
 
-To test the [installable app](../features/installable-app.md)'s worker or its offline page, let them run in that test class:
+To test the [installable app](../features/installable-app.md)'s worker or its offline page, let them run in that test class. The worker controls a page only from the next load after it is ready, so reload once before you go offline:
 
 ```kotlin no-check
 class OfflineBrowserTest : BrowserTest() {
@@ -179,9 +179,10 @@ class OfflineBrowserTest : BrowserTest() {
     @Test
     fun `the offline page shows without a network`() {
         page.navigate("/")
-        page.waitForFunction("navigator.serviceWorker.controller !== null")
-        context.setOffline(true)
+        page.evaluate("navigator.serviceWorker.ready")
         page.reload()
+        context.setOffline(true)
+        page.navigate("/about")
         assertThat(page.getByText("You are offline")).isVisible()
     }
 }
@@ -223,16 +224,6 @@ While you build a page, the [dev panel](./dev-workflow.md#accessibility-check) r
 ::: warning What a clean run means
 A machine finds about a third of what makes a page hard to use. A clean run means the easy mistakes are gone, not that the page is accessible.
 :::
-
-## Service workers
-
-Tests start with service workers blocked. A page that a service worker controls can send its requests past `page.route` and `context.route` in WebKit, so requests a test stubs would reach the app instead. To test the worker of an [installable app](../features/frontend-libraries.md#installable-app), such as its offline page, allow them in that test class:
-
-```kotlin no-check
-class OfflineBrowserTest : BrowserTest() {
-    override val serviceWorkers = true
-}
-```
 
 ## Browsers
 
