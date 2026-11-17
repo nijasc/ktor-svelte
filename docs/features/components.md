@@ -174,6 +174,29 @@ A text field that formats while you type, for values people read in groups: phon
 - When you leave the field, a complete value is shown in its tidy form. An incomplete date stays as typed, with `null` as the value, so the form's validation can say it is required.
 - For another format, pass an object with `show(clean)`, `retype(typed)`, `clean(typed)`, `keeps(character)` and `inputMode`, the same shape `masks.ts` exports for the four built-in ones.
 
+## ErrorSummary
+
+A box that lists every error of a form, each a link that moves focus to its field. Put it above or below the submit button of a long form:
+
+```svelte no-check
+<script lang="ts">
+    import ErrorSummary from '#components/ErrorSummary.svelte';
+</script>
+
+<ErrorSummary errors={form.errors} labels={{ name: 'Name', email: 'Email', password: 'Password' }} />
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `errors` | required | The errors per field, usually `form.errors` |
+| `labels` | `{}` | The text to show for each field; the field name when there is none |
+| `title` | `Please check these fields:` | The heading of the box; pass a message for other languages |
+| `class` | | More classes for the box |
+
+- It shows nothing while there are no errors, and is announced as an alert when it appears.
+- A link finds its field by `id` first, then by `name`, so give the fields an `id` or `name` equal to the property, as `<Field id="email" ...>` does.
+- With DaisyUI it is an `alert alert-error`; without, it has a small style of its own.
+
 ## EnumSelect
 
 A `<select>` over a generated enum object:

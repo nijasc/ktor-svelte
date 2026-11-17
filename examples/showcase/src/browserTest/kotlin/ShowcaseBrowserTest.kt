@@ -146,6 +146,7 @@ class ShowcaseBrowserTest {
         page.register(name, password = "short")
         assertThat(page.getByRole(AriaRole.ALERT)).hasText("Must be at least 10 characters.")
         assertThat(page.getByLabel("Password")).hasAttribute("aria-invalid", "true")
+        assertThat(page.getByLabel("Password")).isFocused()
 
         page.getByLabel("Password").fill("registered-password")
         page.button("Create account").click()

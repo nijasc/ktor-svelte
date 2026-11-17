@@ -291,11 +291,21 @@ Every form needs the same few variables: the values being edited, whether they c
 | `resetOnSuccess` | `false` | Empties the form after a successful submit |
 | `checks` | none | [Check routes](#checks-only-the-server-can-make) per field |
 | `checkDelay` | `300` | Milliseconds of quiet typing before a check is asked |
+| `focusErrors` | `true` | After a submit that fails validation, in the browser or with a 422, moves focus to the first invalid field |
 
 - After a successful submit the sent values are the saved ones, so the form is no longer dirty. That suits an edit form. For a form that creates something, `resetOnSuccess: true` empties it again.
 - `submit` never throws: a failed call ends up in `errors` or `error`. The failure still reaches `apiConfig.onError`, so with [toasts](calling-the-api.md#show-errors-automatically) on, the user sees it without any markup of yours.
 - The helper uses runes, so it is a module of its own and not part of `#api`.
 - The draft should be plain data, the kind that goes into a JSON body. `dirty` compares it as JSON.
+
+### Focus the first error
+
+When a submit fails validation, `formState` waits for the error messages to appear and then moves focus to the first field marked invalid, scrolled to the middle of the screen. Keyboard and screen reader users land right on the problem, and on a long form nobody has to scroll to find it.
+
+- It works with every field that uses `use:field` or the generated [components](./components.md), since they mark invalid fields with `aria-invalid="true"`.
+- It happens for the browser's own `validate()` and for a 422 from the server alike.
+- Turn it off with `focusErrors: false`, and call `form.focusFirstError()` yourself when you want it at another moment.
+- For long forms, add an [ErrorSummary](./components.md#errorsummary) above the button: a list of every problem, each a link that jumps to its field.
 
 ### An edit form
 
