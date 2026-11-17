@@ -42,7 +42,7 @@ internal fun kotlinFiles(
         if (hasRuntimeDependency && (spec.daisy != null || spec.i18n != null)) {
             put("CallExtensions.kt", callExtensions(spec))
         }
-    }
+    }.withDocLinks()
 
 internal fun runtimeProperties(spec: LibrarySpec): String =
     buildString {

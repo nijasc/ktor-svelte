@@ -145,7 +145,7 @@ class EmailsTest {
 
         val source = emailsKotlin("app.generated", templates)
 
-        assertContains(source, "// $GENERATED_MARKER\npackage app.generated\n")
+        assertContains(source, "// $GENERATED_MARKER\n// See https://nijasc.github.io/ktor-svelte/features/emails\npackage app.generated\n")
         assertContains(source, "    public fun keyword(\n        `in`: String,\n    ): RenderedEmail =\n")
         assertContains(source, "renderEmail(\"Keyword\", \"default\", mapOf(\"in\" to `in`))")
         assertContains(source, "    public fun ping(): RenderedEmail = renderEmail(\"Ping\", \"default\", emptyMap())")

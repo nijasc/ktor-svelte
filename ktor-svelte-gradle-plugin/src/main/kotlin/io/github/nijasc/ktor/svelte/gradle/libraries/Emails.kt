@@ -353,8 +353,16 @@ internal fun emailsKotlin(
                 "    }\n}\n" +
                 if (withCall) "\npublic val ApplicationCall.emails: Emails get() = Emails.forLocale(svelteLocale)\n" else ""
         }
-    return fileHeader(generatedPackage) +
-        renderTemplate("Emails.kt.template", mapOf("imports" to imports, "emails" to emails.trimEnd(), "resources" to EMAIL_RESOURCES))
+    val source =
+        renderTemplate(
+            "Emails.kt.template",
+            mapOf(
+                "imports" to imports,
+                "emails" to emails.trimEnd(),
+                "resources" to EMAIL_RESOURCES,
+            ),
+        )
+    return withDocLink("Emails.kt", fileHeader(generatedPackage) + source)
 }
 
 internal fun emailResources(templates: List<EmailTemplate>): Map<String, String> =

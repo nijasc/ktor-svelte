@@ -63,7 +63,7 @@ class AssistantGuideTest {
                 false,
                 listOf(routeOf("/")),
             )
-        assertEquals(assistantGuide(full, listOf(routeOf("/"))), files.getValue(ASSISTANT_GUIDE))
+        assertEquals(withDocLink(ASSISTANT_GUIDE, assistantGuide(full, listOf(routeOf("/")))), files.getValue(ASSISTANT_GUIDE))
         assertEquals("$GENERATED_DIR/AGENTS.md", ASSISTANT_GUIDE)
         val imagesOnly = LibrarySpec(null, null, false, null, 5173, "app.generated", images = true)
         assertFalse(ASSISTANT_GUIDE in frontendFiles(imagesOnly, null, false))
