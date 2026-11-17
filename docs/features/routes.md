@@ -176,7 +176,7 @@ export const load: PageLoad = async (event) => {
 };
 ```
 
-Without such a route the load returns the page's parameters, and you fill in the rest. The `+page.svelte` shows a title and the loaded data, so the page works before you have designed it. With [typed routes](#typed-routes) on, `routes.ts` is updated in the same run.
+Without such a route the load returns the page's parameters, and you fill in the rest. The `+page.svelte` shows a title and the loaded data, so the page works before you have designed it. With `routes()` on, `routes.ts` is updated in the same run.
 
 Add `--route` and the task also writes a Kotlin file with a route to start from, at the API path of the page:
 
