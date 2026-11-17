@@ -716,6 +716,18 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `after a navigation in the app the new page's heading has the focus`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigationLink("Settings").click()
+        assertThat(page).hasURL(Pattern.compile(".*/settings$"))
+        assertThat(page.heading()).isFocused()
+        page.navigationLink("Board").click()
+        assertThat(page).hasURL(BOARD)
+        assertThat(page.heading()).isFocused()
+        assertThat(page.heading()).hasAttribute("tabindex", "-1")
+    }
+
+    @Test
     fun `the generated error page shows the status and message of what failed`() {
         val heading = page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
