@@ -496,9 +496,11 @@ class DevModeBrowserTest {
                 flagged.count() > 0
             }
             val calls = panel.locator(".row").filter(Locator.FilterOptions().setHasText("/api/greeting?name=twice"))
-            val flags = flagged.count()
-            val before = calls.count()
-            assertEquals(before / 2, flags, "one of every two calls is the repeat")
+            waitFor("both calls of every load to be listed", 10) {
+                val listed = calls.count()
+                listed > 0 && listed % 2 == 0 && flagged.count() == listed / 2
+            }
+            assertEquals(calls.count() / 2, flagged.count(), "one of every two calls is the repeat")
             assertThat(flagged.first()).containsText(
                 Pattern.compile(
                     "asked for twice within \\d+ ms, from src/routes/about/\\+page\\.svelte:\\d+ and from src/routes/about/\\+page\\.svelte:\\d+",
