@@ -26,6 +26,7 @@ class ComponentsTest {
                 "DateTimeInput.svelte",
                 "EnumSelect.svelte",
                 "ErrorPage.svelte",
+                "ErrorSummary.svelte",
                 "Field.svelte",
                 "FileDrop.svelte",
                 "MaskedInput.svelte",

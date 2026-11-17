@@ -119,6 +119,26 @@ private fun fileDrop(daisy: Boolean): String =
         ),
     )
 
+private const val PLAIN_SUMMARY_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-error-summary {\n        padding: 0.75rem 1rem;\n        border: 2px solid currentColor;\n" +
+        "        border-radius: 0.5rem;\n    }\n\n" +
+        "    .ktor-svelte-error-summary-title {\n        margin: 0 0 0.5rem;\n        font-weight: 600;\n    }\n\n" +
+        "    .ktor-svelte-error-summary-list {\n        margin: 0;\n        padding-left: 1.25rem;\n    }\n" +
+        "</style>\n"
+
+private fun errorSummary(daisy: Boolean): String =
+    renderTemplate(
+        "components/ErrorSummary.svelte",
+        mapOf(
+            "wrapper" to if (daisy) "alert alert-error grid gap-1 text-left" else "ktor-svelte-error-summary",
+            "title" to if (daisy) "font-semibold" else "ktor-svelte-error-summary-title",
+            "list" to if (daisy) "list-inside list-disc" else "ktor-svelte-error-summary-list",
+            "link" to if (daisy) "link" else "ktor-svelte-error-summary-link",
+            "style" to if (daisy) "" else PLAIN_SUMMARY_STYLE,
+        ),
+    )
+
 private fun dataTable(daisy: Boolean): String =
     renderTemplate(
         "components/DataTable.svelte",
@@ -222,6 +242,7 @@ internal fun componentFiles(
             "$COMPONENTS_DIR/DateInput.svelte" to renderTemplate("components/DateInput.svelte", input),
             "$COMPONENTS_DIR/DateTimeInput.svelte" to renderTemplate("components/DateTimeInput.svelte", input),
             "$COMPONENTS_DIR/MaskedInput.svelte" to renderTemplate("components/MaskedInput.svelte", input),
+            "$COMPONENTS_DIR/ErrorSummary.svelte" to errorSummary(daisy),
             "$COMPONENTS_DIR/masks.ts" to renderTemplate("components/masks.ts"),
             "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
             "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
