@@ -1149,8 +1149,16 @@ internal class TypeScriptGenerator(
 
         val urlSource = if (pathParameters.isEmpty()) quoted(path) else urlTemplate(path)
         val upload = operation.objectAt(UPLOAD_EXTENSION)?.let(::uploadRulesLiteral)
+        val timeout =
+            operation[TIMEOUT_EXTENSION]
+                ?.jsonPrimitive
+                ?.contentOrNull
+                ?.toDoubleOrNull()
+                ?.toLong()
+                ?.takeIf { it > 0 }
         val extras =
             buildList {
+                if (timeout != null) add("timeout: $timeout")
                 add("...options")
                 if (queryParameters.isNotEmpty()) add("query")
                 if (headerParameters.isNotEmpty()) add("typedHeaders: headers")
@@ -1411,6 +1419,7 @@ internal const val GIT_ATTRIBUTES_FILE = ".gitattributes"
 private const val BRAND_SYMBOL = "declare const brand: unique symbol;\n"
 private val BRANDED_TYPES = setOf("string", "integer", "number")
 internal const val UPLOAD_EXTENSION = "x-ktor-svelte-upload"
+internal const val TIMEOUT_EXTENSION = "x-ktor-svelte-timeout"
 private const val ERROR_CODE_TYPE = "ErrorCode"
 private val ERROR_CODE_HELPERS =
     """

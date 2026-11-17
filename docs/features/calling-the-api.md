@@ -806,6 +806,30 @@ try {
 - There is no timeout unless you set one.
 - Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
 
+#### A time limit per route
+
+When a route knows how long it may take, say so on the route. The generated function then uses that as its timeout, and the server stops the handler when the time is up:
+
+```kotlin
+import kotlin.time.Duration.Companion.seconds
+
+get("/api/reports/summary") {
+    call.respond(listOf("Summary"))
+}.timeout(30.seconds)
+```
+
+```ts no-check
+const summary = await api.reports.summary();
+const patient = await api.reports.summary({ timeout: 120_000 });
+```
+
+| Where | What happens |
+| --- | --- |
+| Generated function | Calls get `timeout: 30000` unless the call passes its own `timeout`. It wins over `apiConfig.timeout` like any per-call timeout. |
+| Server | When the handler is still running after the limit, it is cancelled and the route answers `503` with `{"message": "This request took longer than its limit of 30s."}`. An answer that has already started is left alone. |
+
+`timeout` takes a positive, finite `Duration`. Use it for slow reports, exports and calls to other services, so a stuck request fails in the same, known time on both sides.
+
 ### Retries
 
 A GET that fails because the network dropped, the request timed out, or a proxy answered 502, 503 or 504 often works a moment later. Turn retries on once, and the client tries again by itself:
