@@ -13575,6 +13575,7 @@ svelte {
     addRuntimeDependency = true
     includeSourceMaps = false
     shortTaskNames = true
+    timingSummary = true
     precompress = true
     verifyLeaks = true
     dev {
@@ -13603,6 +13604,7 @@ svelte {
 | `addRuntimeDependency` | `true` | Adds `ktor-svelte-server` to `implementation`, at the plugin's own version, and `ktor-svelte-test` to a `browserTest` suite |
 | `includeSourceMaps` | `false` | Ships `.map` files in the JAR, where anyone can download them |
 | `shortTaskNames` | `true` | Registers `dev`, `sync`, `doctor` and `gen` as [short names](#short-task-names) for the tasks used most |
+| `timingSummary` | `true` | Ends a build that ran the frontend with a short table of how long each step took. See [Build times](#build-times) |
 | `precompress` | `true` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10% |
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](https://nijasc.github.io/ktor-svelte/main/features/runtime-config#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
@@ -13700,6 +13702,23 @@ svelte {
 - With `packageManager = AUTO`, Bun becomes the package manager. Bun runs Vite itself, so Node is not needed.
 - It works on Windows, macOS and Linux, including Alpine, on x64 and arm64.
 - Behind a proxy, set Java's `https.proxyHost` and `https.proxyPort` in `gradle.properties` with the `systemProp.` prefix.
+
+## Build times
+
+A build that installed or built the frontend ends with how long each step took, so you can see where a slow build spends its time:
+
+```text
+ktor-svelte build times:
+  install          0.2s  up to date
+  frontend build  12.4s
+  bundling         0.3s
+  Kotlin compile   4.1s  from cache
+  total           17.0s
+```
+
+- It lists the steps of this project that were part of the build: `svelteInstall`, `svelteBuild`, `svelteBundle` and `compileKotlin`. A step that did no work says why: `up to date`, `from cache`, `skipped` or `failed`.
+- A build where no frontend step ran, such as a second `./gradlew build` with nothing changed, prints nothing.
+- It works with the configuration cache. Turn it off with `svelte { timingSummary = false }`.
 
 ## Format both sides
 
