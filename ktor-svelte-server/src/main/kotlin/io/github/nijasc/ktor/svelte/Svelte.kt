@@ -393,6 +393,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
                 respondJsonMessage(call, HttpStatusCode.Forbidden, permissions?.refusedMessage?.invoke(call) ?: REFUSED_MESSAGE)
                 return@on
             }
+            if (cause is RecordNotFoundException && !call.response.isCommitted) {
+                respondJsonMessage(call, HttpStatusCode.NotFound, NOT_FOUND_MESSAGE)
+                return@on
+            }
             if (cause is ApiException && !call.response.isCommitted) {
                 call.respondError(cause.code, cause.status, cause.message.takeUnless { it == cause.code.name })
                 return@on

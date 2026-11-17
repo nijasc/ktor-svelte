@@ -193,6 +193,19 @@ public final class io/github/nijasc/ktor/svelte/NavigationKt {
 	public static final fun navigateTo (Lio/ktor/server/application/ApplicationCall;Ljava/lang/String;)V
 }
 
+public final class io/github/nijasc/ktor/svelte/OtherOwner : java/lang/Enum {
+	public static final field Forbidden Lio/github/nijasc/ktor/svelte/OtherOwner;
+	public static final field NotFound Lio/github/nijasc/ktor/svelte/OtherOwner;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/nijasc/ktor/svelte/OtherOwner;
+	public static fun values ()[Lio/github/nijasc/ktor/svelte/OtherOwner;
+}
+
+public final class io/github/nijasc/ktor/svelte/OwnersKt {
+	public static final fun checkOwner (Ljava/lang/Object;Ljava/lang/Object;Lio/github/nijasc/ktor/svelte/OtherOwner;Lkotlin/jvm/functions/Function2;)Ljava/lang/Object;
+	public static final fun ownerChecked (Lio/ktor/server/routing/Route;)Lio/ktor/server/routing/Route;
+}
+
 public final class io/github/nijasc/ktor/svelte/Page {
 	public static final field Companion Lio/github/nijasc/ktor/svelte/Page$Companion;
 	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
