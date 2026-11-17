@@ -1579,6 +1579,35 @@ Properties with [validation annotations](https://nijasc.github.io/ktor-svelte/ma
 
 `required: true` is added only where the server would reject an empty field too, so the browser is never stricter than the server: strings with a minimum length of at least 1, and numbers that are required and not nullable, because an empty number input gives `null`. Nullable properties, booleans, lists, objects and enums never get it. A property with only `required` still gets a `bounds` entry.
 
+#### Autocomplete and input types from names
+
+Text properties whose names say what they hold also get `autocomplete`, and where it helps a `type`, so browsers and password managers fill them in and phones show the right keyboard. You write nothing:
+
+| Property names (any case, `_` and `-` ignored) | `autocomplete` | `type` |
+| --- | --- | --- |
+| `email`, `emailAddress`, `mail` | `email` | `email` |
+| `password`, `currentPassword` | `current-password` | `password` |
+| `newPassword`, `repeatPassword`, `confirmPassword`, `passwordRepeat`, `passwordConfirmation` | `new-password` | `password` |
+| `name`, `fullName`, `displayName` | `name` | |
+| `givenName`, `firstName`, `forename` | `given-name` | |
+| `familyName`, `lastName`, `surname` | `family-name` | |
+| `username`, `login`, `loginName` | `username` | |
+| `phone`, `phoneNumber`, `tel`, `telephone`, `mobile`, `mobilePhone` | `tel` | `tel` |
+| `street`, `streetAddress`, `address`, `addressLine` | `street-address` | |
+| `postalCode`, `postcode`, `zip`, `zipCode` | `postal-code` | |
+| `city`, `town`, `locality` | `address-level2` | |
+| `country`, `countryName` | `country-name` | |
+| `organization`, `organisation`, `company` | `organization` | |
+| `birthday`, `birthdate`, `dateOfBirth` | `bday` | |
+| `url`, `website`, `homepage` | `url` | `url` |
+| `oneTimeCode`, `otp`, `verificationCode` | `one-time-code` | |
+
+[Rule presets](https://nijasc.github.io/ktor-svelte/main/features/validation#ready-made-rules) add the same: `@Rule.Email` gives `email`, `@Rule.WebAddress` `url`, `@Rule.Phone` `tel`, and `@Rule.StrongPassword` `new-password` with `type: 'password'`, whatever the property is called. A preset wins over the name, so a `password` with `@Rule.StrongPassword` is a new password.
+
+- `use:field` and the generated components only add `autocomplete` and `type` when the input does not set its own, so `<Field autocomplete="username" ...>` keeps yours.
+- `type` is only set on `<input>`, never on a `<textarea>` or `<select>`.
+- Only text properties get hints; a `homepageVisits: Int` gets none.
+
 ### Checking in the browser
 
 Every object type that the server checks against annotations, directly or through a nested object or list, also gets `validate()`. It runs the same checks in the browser and returns errors in the same shape as `fields` of a 422:
