@@ -1,6 +1,7 @@
 package io.github.nijasc.ktor.svelte.gradle
 
 import org.gradle.api.Action
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
@@ -26,6 +27,19 @@ public abstract class SvelteExtension {
 
     @get:Nested
     public abstract val libraries: SvelteLibraries
+
+    public abstract val frontends: NamedDomainObjectContainer<SvelteFrontend>
+
+    public fun frontend(
+        name: String,
+        action: Action<SvelteFrontend>,
+    ) {
+        action.execute(frontends.maybeCreate(name))
+    }
+
+    public fun frontend(name: String) {
+        frontends.maybeCreate(name)
+    }
 
     public fun dev(action: Action<SvelteDevSettings>) {
         action.execute(dev)
