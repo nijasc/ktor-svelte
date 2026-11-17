@@ -34,6 +34,9 @@ export function handleError(input: { error: unknown; kind?: string; status?: num
         : input.kind === undefined
           ? (input.status ?? 500) >= 500
           : input.kind === 'unknown';
-    if (unexpected) console.error(input.error);
+    if (unexpected) {
+        console.error(input.error);
+        (globalThis as { __ktorSvelteReportError?: (error: unknown) => void }).__ktorSvelteReportError?.(input.error);
+    }
     return details;
 }
