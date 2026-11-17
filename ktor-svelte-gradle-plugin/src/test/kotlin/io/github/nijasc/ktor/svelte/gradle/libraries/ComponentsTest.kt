@@ -108,11 +108,11 @@ class ComponentsTest {
         )
         assertContains(table, "<th scope=\"col\" class={column.class} aria-sort={ariaSort(column)}>")
         assertContains(table, "export function reload(): Promise<void> {")
-        assertContains(table, "<table class=\"table\" aria-busy={busy}>")
+        assertContains(table, "<table class=\"table\" aria-busy={busy} aria-rowcount={virtual ? rows.length + 1 : undefined}>")
         assertContains(table, "<p class=\"text-error py-2 text-sm\" role=\"alert\">")
         assertFalse("<style>" in table)
         val plain = componentFiles(spec(components = true)).getValue("$COMPONENTS_DIR/DataTable.svelte")
-        assertContains(plain, "<table class=\"ktor-svelte-table\" aria-busy={busy}>")
+        assertContains(plain, "<table class=\"ktor-svelte-table\" aria-busy={busy} aria-rowcount={virtual ? rows.length + 1 : undefined}>")
         assertContains(plain, ".ktor-svelte-table-pager {")
         assertFalse("{{" in plain)
     }
