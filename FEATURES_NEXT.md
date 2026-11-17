@@ -65,6 +65,8 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 141 | Memory and threads | #374 |
 | 145 | Timing summary | #372 |
 | 146 | Network check in doctor | #375 |
+| 28 | Generated page loads | #377 |
+| 142 | Clear site data | #376 |
 
 ### Next up
 
@@ -202,7 +204,6 @@ Features of this plan that are merged:
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |
-| 142 | Clear site data | Small | 14 |
 | 143 | Slowest routes of the session | Small | 14 |
 | 144 | Catch outgoing email | Medium | 14 |
 | 147 | Pinned Node download | Medium | 14 |
@@ -244,7 +245,6 @@ Features of this plan that are merged:
 | 25 | Server-sent toasts | Server and generated client | Small | |
 | 26 | Server-directed navigation | Server and generated client | Small | |
 | 27 | Upload rules shared | Server and generated client | Medium | |
-| 28 | Generated page loads | Server and Gradle plugin | Large | |
 | 29 | Frontend errors in the server log | Server and generated files | Medium | |
 | 30 | Kotlin browser test kit | New module | Large | |
 | 31 | Branded ID types | Generated client | Medium | |
