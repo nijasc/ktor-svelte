@@ -131,6 +131,7 @@ export function errorMessage(error: unknown): string {
 
 interface InternalOptions extends RequestOptions {
     query?: Record<string, unknown>;
+    typedHeaders?: Record<string, string | number | boolean | undefined>;
     body?: unknown;
     operation?: string;
     upload?: UploadRules;
@@ -362,6 +363,7 @@ function timeZone(): string | undefined {
 function prepare(method: string, path: string, options: InternalOptions, accept: string, streaming = false) {
     const {
         query,
+        typedHeaders,
         body: given,
         operation,
         upload,
@@ -392,6 +394,7 @@ function prepare(method: string, path: string, options: InternalOptions, accept:
     }
     const zone = apiConfig.sendTimeZone === false || !isSameOrigin(url) ? undefined : timeZone();
     if (zone && !merged.has('X-Time-Zone')) merged.set('X-Time-Zone', zone);
+    for (const [key, value] of Object.entries(typedHeaders ?? {})) if (value !== undefined) merged.set(key, String(value));
     new Headers(headers).forEach((value, key) => merged.set(key, value));
     let payload: BodyInit | undefined;
     if (body !== undefined) {

@@ -1504,6 +1504,40 @@ get("/api/notes/{id}/summary") {
 }
 ```
 
+## Typed request headers
+
+A route that reads a header can say so, and the generated function then takes it as a typed argument instead of a loose `headers` object you have to remember:
+
+```kotlin
+get("/api/reports") {
+    val tenant = call.request.headers["X-Tenant"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+    call.respond(listOf("Report for $tenant"))
+}.describe {
+    parameters {
+        header("X-Tenant") { required = true }
+        header("X-Report-Rows") { schema = jsonSchema<Int>() }
+    }
+}
+```
+
+```ts
+import { api } from '#api';
+
+const reports = await api.reports.list({ 'X-Tenant': 'acme', 'X-Report-Rows': 50 });
+```
+
+| In `describe` | In the generated function |
+| --- | --- |
+| `header("X-Tenant") { required = true }` | `headers: { 'X-Tenant': string }`, required |
+| `header("X-Report-Rows") { schema = jsonSchema<Int>() }` | `'X-Report-Rows'?: number`, optional |
+| Only optional headers | The whole `headers` argument is optional |
+
+- The argument comes after the path parameters, the body and `query`, and before `options`.
+- Values are sent as text; a header you leave `undefined` is not sent.
+- Headers in `options.headers` win over the typed ones, so one call can still override a value.
+- Headers the client sets by itself are left out of the argument even if a route lists them: `Accept`, `Content-Type`, `Content-Length`, `Cookie`, `X-Request-Id`, `Idempotency-Key` and `X-Time-Zone`.
+- Headers that every call needs, such as `Authorization`, still belong in `apiConfig.headers`.
+
 ## Types and forms
 
 ### Empty objects
