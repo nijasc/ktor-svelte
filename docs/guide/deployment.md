@@ -160,6 +160,41 @@ method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8
 
 Each line has the method, the path without its query string, the status, how long the app took in milliseconds, and the request ID that the browser also shows for a failed call. The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again. Requests for build assets under `/_app/` are not logged.
 
+## Errors from the browser
+
+An error in the browser happens on someone else's computer, and in production nobody tells you about it. Turn reporting on and it reaches the log of your app:
+
+```kotlin
+install(Svelte) {
+    frontendErrors()
+}
+```
+
+```text
+WARN  ktor-svelte.frontend Frontend error on /board: TypeError: x is not a function (at save (app.js:1:2))
+WARN  ktor-svelte.frontend Frontend error on /notes: ApiError: Request to /api/notes failed with status 503, after the API call with request ID 9f2c41
+```
+
+The generated client then reports every error that nothing caught: uncaught exceptions, promises that were rejected and never handled, and errors SvelteKit caught while loading or rendering a page. Each line names the page, the first place in the stack, and for a failed API call its [request ID](../features/calling-the-api.md#request-ids), so you can find the same request in the server's own log. Failed calls that the server answered with a 4xx are left out: those are answers, not faults.
+
+It is off by default, because it adds an endpoint that anyone can post to. That endpoint is kept small:
+
+- One browser reports an error once, and at most ten different errors per page load.
+- One client address may send ten reports a minute. Set `perClientPerMinute` for another number. The rest get a 429.
+- A report may be 8 KB. Set `maxBodyBytes` for another size.
+- What is logged is cut to one line of limited length, so a report cannot write lines of its own into your log.
+- The page is logged without its query string.
+
+```kotlin
+install(Svelte) {
+    frontendErrors {
+        perClientPerMinute = 30
+    }
+}
+```
+
+The lines go to the logger `ktor-svelte.frontend` at `WARN`, so your logging setup decides where they end up. In development the browser's console already reaches the dev log, and this works there too.
+
 ## Build info
 
 Every build knows what it is. The Gradle plugin writes the project's `version`, the git commit and the time of that commit into the JAR, and the app reads them without any setup:
