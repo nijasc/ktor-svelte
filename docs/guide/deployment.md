@@ -2,23 +2,26 @@
 
 A ktor-svelte app is one JVM process. The frontend is inside the JAR, so there is no Node, no second server and no CORS setup in production.
 
+<Badge type="info" text="Gradle" /> <Badge type="tip" text="Ktor plugin" />
+
+## Quick start
+
+```bash
+./gradlew buildFatJar
+java -jar build/libs/my-app-all.jar
+```
+
+Before the first deploy, run the [smoke test](#smoke-test) and go through the [checklist](#checklist). To watch the app once it runs, see [Monitoring](./monitoring.md).
+
 ## Build the JAR
 
 Any of Gradle's usual ways to package a Ktor app works, and each one builds the frontend first:
 
-```bash
-./gradlew buildFatJar
-```
-
-```bash
-./gradlew shadowJar
-```
-
-```bash
-./gradlew installDist
-```
-
-`buildFatJar` comes with the Ktor Gradle plugin and `shadowJar` with Shadow. Both write one runnable JAR to `build/libs/`. `installDist` from the `application` plugin writes a folder with start scripts and every dependency as its own JAR.
+| Task | Comes with | Writes |
+|---|---|---|
+| `./gradlew buildFatJar` | The Ktor Gradle plugin | One runnable JAR in `build/libs/` |
+| `./gradlew shadowJar` | Shadow | One runnable JAR in `build/libs/` |
+| `./gradlew installDist` | The `application` plugin | A folder with start scripts and every dependency as its own JAR |
 
 Run it:
 
@@ -26,17 +29,24 @@ Run it:
 java -jar build/libs/my-app-all.jar
 ```
 
-The app starts in production mode unless you pass `-Dio.ktor.development=true`. In production, a missing frontend build stops the app at startup, the dev proxy is off, error details are hidden, and every page gets its Content-Security-Policy.
+The app starts in production mode unless you pass `-Dio.ktor.development=true`. In production:
+
+- a missing frontend build stops the app at startup,
+- the dev proxy is off,
+- error details are hidden,
+- every page gets its Content-Security-Policy.
 
 At startup the app logs which ktor-svelte version and which frontend build it serves:
 
-```
+```text
 ktor-svelte 0.9.0 serves frontend build b3f58012c3ff with 19 files
 ```
 
 The fingerprint is a hash of every file in the build, so two servers with the same fingerprint serve exactly the same frontend. The status endpoint reports the full fingerprint.
 
-Keep secrets in environment variables, never in `publicConfig` or the frontend. Projects from the setup script read them in `Env.kt` and list them in `.env.example`.
+::: warning Secrets
+Keep secrets in environment variables, never in `publicConfig` or the frontend. Projects from the setup script read them in `Env.kt` and list them in `.env.example`. [`svelteVerifyLeaks`](../features/runtime-config.md#secrets-in-the-frontend-build) fails the build when a secret value ends up in the frontend.
+:::
 
 ## Docker
 
@@ -62,7 +72,17 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app.jar"]
 ```
 
-The `RUN npm install -g bun` line installs the package manager the project uses. Keep `node_modules`, `.svelte-kit`, `build` and `.env` out of the image with a `.dockerignore`.
+The `RUN npm install -g bun` line installs the package manager the project uses. Keep `node_modules`, `.svelte-kit`, `build` and `.env` out of the image with a `.dockerignore`:
+
+```text
+**/node_modules
+**/.svelte-kit
+**/build
+.gradle
+.env
+```
+
+Build and run it:
 
 ```bash
 docker build -t my-app .
@@ -71,7 +91,11 @@ docker run -p 8080:8080 --env-file .env my-app
 
 ## Railway
 
-`./gradlew svelteDeploy` writes `.railway/railway.ts`, Railway's infrastructure-as-code file, from what the project already knows:
+`svelteDeploy` writes the deploy configuration for a host from what the project already knows. For [Railway](https://railway.com) it writes `.railway/railway.ts`, Railway's infrastructure-as-code file:
+
+```bash
+./gradlew svelteDeploy
+```
 
 ```ts no-check
 import { defineRailway, github, preserve, project, service } from "railway/iac";
@@ -105,7 +129,12 @@ export default defineRailway(() => {
 
 The file is written once and is yours from then on: add a database, replicas or domains to it as Railway's reference describes. Running the task again refuses to replace it unless you pass `--force`.
 
-To use it, install Railway's package where the file is (`npm install railway`), then `railway login`, `railway link`, `railway config plan` to see what would change and `railway config apply` to do it. Set the listed variables in Railway before the first deploy.
+To use it:
+
+1. Install Railway's package where the file is: `npm install railway`.
+2. `railway login`, then `railway link`.
+3. Set the listed variables in Railway before the first deploy.
+4. `railway config plan` shows what would change, and `railway config apply` does it.
 
 Railway is the only host so far. `--host` exists for the ones to come, and another value says so.
 
@@ -128,6 +157,11 @@ Restart=on-failure
 WantedBy=multi-user.target
 ```
 
+```bash
+sudo systemctl enable --now my-app
+journalctl -u my-app -f
+```
+
 ## Behind a reverse proxy
 
 Most deployments put nginx, Caddy, a cloud load balancer or a platform router in front of the app to terminate TLS. Then:
@@ -135,7 +169,67 @@ Most deployments put nginx, Caddy, a cloud load balancer or a platform router in
 - **Install `XForwardedHeaders` or `ForwardedHeaders`** from `ktor-server-forwarded-header`. The rate limit tells clients apart by their address, and without these plugins every user shares the proxy's address and one limit. The origin check also compares hosts through them.
 - **Send HSTS from the proxy**, since only the proxy knows about TLS.
 - **Do not compress twice.** The app already compresses API responses and serves precompressed files. Let the proxy pass `Content-Encoding` through.
-- **Point health checks at the health endpoint.** Turn it on with `healthEndpoint = true`, and check `GET /_ktor-svelte/health`. See [Built-in endpoints](../features/endpoints.md).
+- **Point health checks at the health endpoint.** Turn it on with `healthEndpoint = true`, and check `GET /_ktor-svelte/health`. See [Built-in endpoints](../features/endpoints.md#health-endpoint).
+
+```kotlin
+import io.ktor.server.plugins.forwardedheaders.XForwardedHeaders
+
+install(XForwardedHeaders)
+install(Svelte) {
+    healthEndpoint = true
+}
+```
+
+Only install `XForwardedHeaders` when a proxy really sits in front and sets those headers. Otherwise any client can claim another address.
+
+### Caddy
+
+Caddy gets a certificate by itself and sends the `X-Forwarded-*` headers by default:
+
+```text
+shop.example.com {
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    reverse_proxy localhost:8080
+}
+```
+
+There is no `encode` line on purpose: the app compresses its own responses.
+
+### nginx
+
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name shop.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/shop.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/shop.example.com/privkey.pem;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+
+        # Server-sent events and WebSockets
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_buffering off;
+    }
+}
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+```
+
+Leave nginx's `gzip` off for this server, which is its default, so responses are not compressed twice. `proxy_buffering off` matters only when your app [streams live updates](../recipes/live-updates.md).
 
 ## Faster responses
 
@@ -145,125 +239,19 @@ Most deployments put nginx, Caddy, a cloud load balancer or a platform router in
 
 ## Request log
 
-To see every request in your production logs, turn the access log on:
-
-```kotlin
-install(Svelte) {
-    accessLog = true
-}
-```
-
-```text
-method=GET path=/api/notes status=200 ms=12 id=8b0c6a52-5f0e-4a51-9a7e-0e5d6f0c1a2b
-method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8d70
-```
-
-Each line has the method, the path without its query string, the status, how long the app took in milliseconds, and the request ID that the browser also shows for a failed call. The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again. Requests for build assets under `/_app/` are not logged.
+The production access log moved to [Monitoring](./monitoring.md#request-log).
 
 ## Errors from the browser
 
-An error in the browser happens on someone else's computer, and in production nobody tells you about it. Turn reporting on and it reaches the log of your app:
-
-```kotlin
-install(Svelte) {
-    frontendErrors()
-}
-```
-
-```text
-WARN  ktor-svelte.frontend Frontend error on /board: TypeError: x is not a function (at save (app.js:1:2))
-WARN  ktor-svelte.frontend Frontend error on /notes: ApiError: Request to /api/notes failed with status 503, after the API call with request ID 9f2c41
-```
-
-The generated client then reports every error that nothing caught: uncaught exceptions, promises that were rejected and never handled, and errors SvelteKit caught while loading or rendering a page. Each line names the page, the first place in the stack, and for a failed API call its [request ID](../features/calling-the-api.md#request-ids), so you can find the same request in the server's own log. Failed calls that the server answered with a 4xx are left out: those are answers, not faults.
-
-It is off by default, because it adds an endpoint that anyone can post to. That endpoint is kept small:
-
-- One browser reports an error once, and at most ten different errors per page load.
-- One client address may send ten reports a minute. Set `perClientPerMinute` for another number. The rest get a 429.
-- A report may be 8 KB. Set `maxBodyBytes` for another size.
-- What is logged is cut to one line of limited length, so a report cannot write lines of its own into your log.
-- The page is logged without its query string.
-
-```kotlin
-install(Svelte) {
-    frontendErrors {
-        perClientPerMinute = 30
-    }
-}
-```
-
-The lines go to the logger `ktor-svelte.frontend` at `WARN`, so your logging setup decides where they end up. In development the browser's console already reaches the dev log, and this works there too.
+Reporting frontend errors to the server log moved to [Monitoring](./monitoring.md#errors-from-the-browser).
 
 ## Page timings
 
-Your API's slow calls show in the server's log. A slow page does not: its time is spent in the browser. `webVitals` has browsers report it:
-
-```kotlin
-install(Svelte) {
-    webVitals()
-}
-```
-
-One page load in ten then measures the usual five timings and sends them once, when the page is left:
-
-| Name | What it measures | Good up to | Poor above |
-| --- | --- | --- | --- |
-| `TTFB` | Time until the first byte of the page arrived | 800 ms | 1800 ms |
-| `FCP` | Time until something was painted | 1800 ms | 3000 ms |
-| `LCP` | Time until the largest element was painted | 2500 ms | 4000 ms |
-| `INP` | The slowest reaction to a click or a key | 200 ms | 500 ms |
-| `CLS` | How much the layout moved while loading | 0.1 | 0.25 |
-
-The app adds them to its metrics, per page:
-
-```kotlin no-check
-application.svelteMetrics.webVitals.forEach { vital ->
-    println("${vital.page} ${vital.name}: ${vital.count} loads, average ${vital.average}, ${vital.poor} poor")
-}
-```
-
-Each entry has the `page`, the `name`, a `count`, the `average`, and how many loads were `good`, `needsImprovement` and `poor`. Hand them to your metrics system from there. The [status endpoint](../features/endpoints.md#status-endpoint) lists them too, under `webVitals`.
-
-Pages are grouped by route and not by address: `/notes/my-first-note` counts for `/notes/[slug]` when that is one of your `paramRoutes`, and a segment that is a number or an id becomes `[id]`. At most 100 pages are kept, and the rest are counted together.
-
-Like error reporting, this is off by default, because it adds an endpoint anyone can post to:
-
-- `sampleRate` is the share of page loads that report, `0.1` unless you set it.
-- One client address may send ten reports a minute, or `perClientPerMinute`.
-- A report may be 2 KB, only the five names are accepted, and only values that a real page could have.
-
-The timings are measured with the browser's own `PerformanceObserver`, with no extra package. They are close to what the `web-vitals` library reports, not identical: `INP` here is the slowest interaction of the page load. The numbers are kept in memory and start again when the app restarts.
+Web vitals from real browsers moved to [Monitoring](./monitoring.md#page-timings).
 
 ## Build info
 
-Every build knows what it is. The Gradle plugin writes the project's `version`, the git commit and the time of that commit into the JAR, and the app reads them without any setup:
-
-```kotlin
-get("/api/about") {
-    val build = call.application.buildInfo
-    call.respondText("Version ${build.version} (${build.shortCommit})")
-}
-```
-
-`buildInfo.version`, `commit` and `time` are `null` when the build could not know them: no `version` in `build.gradle.kts`, or no git repository. The time is the commit's, not the clock's, so building the same commit twice gives the same JAR.
-
-The browser can read the same values once you allow it:
-
-```kotlin
-install(Svelte) {
-    publicBuildInfo = true
-}
-```
-
-```ts
-import { loadBuildInfo } from '#api';
-
-const build = await loadBuildInfo();
-const label = `${build.version ?? 'dev'} (${build.commit?.slice(0, 7) ?? 'no commit'})`;
-```
-
-It is off by default, because it tells every visitor which version and commit is running. For values only signed-in users or admins should see, leave it off and return `buildInfo` from a route of your own.
+The version and commit of a build, on the server and in the browser, moved to [Monitoring](./monitoring.md#build-info).
 
 ## Smoke test
 
@@ -293,20 +281,41 @@ The task packages the app the way you do, with `buildFatJar` or `shadowJar` when
 
 Then it stops the app. If anything was answered wrongly, or the app did not start, the build fails and says what happened. The app's output is in `build/ktor-svelte/smoke-test.log`.
 
+| Option | What it does |
+|---|---|
+| `--path=/_ktor-svelte/health` | Adds a path that must answer with a status below 400. Can be given more than once |
+| `--skip=/api/export` | Leaves an API route out, for a `GET` route that is slow or does something. Can be given more than once |
+| `--start-seconds=120` | Gives a slow app more than the 60 seconds it has to start |
+
 ```bash
 ./gradlew svelteSmokeTest --path=/_ktor-svelte/health --skip=/api/export
 ```
 
-`--path` adds a path that must answer with a status below 400, and `--skip` leaves an API route out, for a `GET` route that is slow or does something. Both can be given more than once. `--start-seconds` gives a slow app more than the 60 seconds it has to start.
-
 The app gets the environment of the build, so it needs what it needs in production, such as a database. That is why the task is not part of `check`: run it in the pipeline, where that environment exists. The port is passed as the `PORT` variable and as `-port`, which `EngineMain` reads, so an app that takes its port from somewhere else cannot be tested this way.
+
+In GitHub Actions, as a step before the deploy:
+
+```yaml
+- name: Smoke test the production JAR
+  env:
+    DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+    SESSION_SIGN_KEY: ${{ secrets.SESSION_SIGN_KEY }}
+  run: ./gradlew svelteSmokeTest --path=/_ktor-svelte/health
+```
+
+More checks for the pipeline are in [Checks and tooling](./checks-and-tooling.md#full-example).
 
 ## Checklist
 
 - `./gradlew svelteSmokeTest` passes.
-
 - The JAR was built without `-Psvelte.skip=true` or `-Psvelte.dev=true`.
 - The app runs without `-Dio.ktor.development=true`.
 - Secrets come from the environment.
 - `XForwardedHeaders` is installed when a proxy sits in front.
 - `GET /_ktor-svelte/health` answers 200 if your platform checks health.
+- Logs reach you: see [Monitoring](./monitoring.md).
+
+## Good to know
+
+- A page that shows a blank screen after a deploy usually means something in front of the app caches HTML. See [Troubleshooting](../reference/troubleshooting.md#a-page-shows-a-blank-screen-after-a-deploy).
+- `./gradlew svelteConfig` scores your setup for security and operations and suggests what to turn on. See [Review your configuration](../reference/gradle.md#review-your-configuration).
