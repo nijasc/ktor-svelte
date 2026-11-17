@@ -447,6 +447,18 @@ An empty table is either a fresh start or a filter that matches nothing, and peo
 
 The block carries `data-empty="none"` or `data-empty="filtered"`, handy for tests and styles.
 
+### Placeholder rows while loading
+
+While the first page loads, the table shows a few grey rows shaped like its columns instead of an empty box, so the page does not jump when the data arrives. Later loads keep the rows you already see.
+
+```svelte no-check
+<DataTable load={api.tasks.list} {columns} skeletonRows={5} />
+```
+
+- `skeletonRows` sets how many, `3` by default, and `0` turns them off.
+- The rows are `aria-hidden`; screen readers still hear the `loading` text.
+- With DaisyUI they use its `skeleton` class; without, a small pulsing bar of their own. Each carries `data-skeleton`.
+
 ### Cells with markup
 
 For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
