@@ -32,6 +32,29 @@ install(Svelte) {
 
 Outside development, a frontend without a build stops the start, like the main frontend does. In development it is a warning.
 
+## In Gradle
+
+Declare the frontend in `build.gradle.kts`, under the same name the server derives from its prefix:
+
+```kotlin
+svelte {
+    frontend("admin") {
+        frontendDir = layout.projectDirectory.dir("admin")
+    }
+}
+```
+
+| Setting | Default | What it does |
+|---|---|---|
+| `frontendDir` | the folder named like the frontend, such as `admin` | Directory of its SvelteKit project |
+| `outputDir` | `outputDir` of the main frontend, `"build"` | Adapter output, a folder inside its `frontendDir` |
+| `buildScript` | `buildScript` of the main frontend, `"build"` | `package.json` script that builds it |
+| `basePath` | `"/"` and the name, such as `"/admin"` | The path prefix it is built for. Set it for a nested prefix, such as `"/admin/reports"` for the frontend `admin-reports` |
+
+Each frontend gets its own tasks, named after it: `svelteInstallAdmin`, `svelteBuildAdmin` and `svelteBundleAdmin`. They run with the main frontend's tasks when the JAR is built, and `svelteBundleAdmin` puts the build under `ktor-svelte/frontends/admin/`, where `install(Svelte) { frontend("/admin") }` reads it. The settings that are not per frontend, such as `packageManager`, `bunVersion`, `precompress` and `includeSourceMaps`, apply to every frontend.
+
+When no page of the build loads its files from `/admin/_app/`, `svelteBundleAdmin` warns: the base path is missing from the frontend's Vite config.
+
 ## In the frontend project
 
 A second frontend is a SvelteKit project with `adapter-static` like the main one, built for its prefix. Set the base path in its Vite config, so its links and its `_app` files carry the prefix:
@@ -55,3 +78,4 @@ These parts of ktor-svelte know only the main frontend for now:
 - The sitemap and `robots.txt`, the default favicon and the language redirect of i18n.
 - The startup warning about Ktor routes that hide a page, the route table and the route map of the dev panel.
 - The build fingerprint in `X-Ktor-Svelte-Build` and in the status endpoint.
+- In Gradle, `libraries { }` with `svelteSync`, the `svelteVerify...` checks, `svelteVerifyLeaks`, `svelteCheck` and the other frontend tools work on the main frontend. Another frontend is installed, built and packaged; add what it needs to its own `package.json`.
