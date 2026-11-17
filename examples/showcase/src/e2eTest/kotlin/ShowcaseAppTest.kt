@@ -208,7 +208,7 @@ class ShowcaseAppTest {
         val browser = anonymous()
         val nobody = browser.send("GET", "/api/current-user")
         assertEquals(200, nobody.statusCode())
-        assertEquals("""{"user":null,"sessionSeconds":null}""", nobody.body())
+        assertEquals("""{"user":null,"sessionSeconds":null,"permissions":[]}""", nobody.body())
         assertEquals("no-store", nobody.headers().firstValue("Cache-Control").orElse(""))
 
         val signedIn = browser.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
@@ -217,9 +217,11 @@ class ShowcaseAppTest {
         assertContains(known, """{"user":{"id":""")
         assertContains(known, ADMIN_EMAIL)
         assertFalse(known.contains("password", ignoreCase = true))
+        assertContains(known, """"permissions":["DeleteAnyFile","DeleteAnyTask","ManageUsers"]""")
+        assertContains(member.send("GET", "/api/current-user").body(), """"permissions":[]""")
 
         assertEquals("changed", browser.send("DELETE", "/api/session").headers().firstValue("X-Ktor-Svelte-User").orElse(""))
-        assertEquals("""{"user":null,"sessionSeconds":null}""", browser.send("GET", "/api/current-user").body())
+        assertEquals("""{"user":null,"sessionSeconds":null,"permissions":[]}""", browser.send("GET", "/api/current-user").body())
     }
 
     @Test

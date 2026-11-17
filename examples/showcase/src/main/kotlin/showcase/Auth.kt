@@ -3,18 +3,16 @@ package showcase
 import io.github.nijasc.ktor.svelte.currentUserChanged
 import io.github.nijasc.ktor.svelte.fieldCheck
 import io.github.nijasc.ktor.svelte.requireUser
+import io.github.nijasc.ktor.svelte.requires
 import io.github.nijasc.ktor.svelte.respondError
 import io.github.nijasc.ktor.svelte.respondLoginRedirect
-import io.github.nijasc.ktor.svelte.user
 import io.github.nijasc.ktorsvelte.messages
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.createRouteScopedPlugin
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.auth.Authentication
-import io.ktor.server.auth.AuthenticationChecked
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.session
 import io.ktor.server.plugins.ratelimit.RateLimitName
@@ -158,41 +156,34 @@ fun Route.sessionRoutes(
 
 fun Route.adminRoutes(users: UserStore) {
     authenticate(SESSION_AUTH) {
-        route("/api/admin") {
-            install(
-                createRouteScopedPlugin("AdminOnly") {
-                    on(AuthenticationChecked) { call ->
-                        val user = call.user<User>()
-                        if (user?.role != Role.ADMIN) call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemAdminsOnly()))
+        requires(Permission.ManageUsers) {
+            route("/api/admin") {
+                get("/users") {
+                    val all: List<User> = users.all()
+                    call.respond(all)
+                }
+
+                put("/users/{id}/role") {
+                    val change = call.receive<RoleChange>()
+                    val target = users.find(call.userId())
+                    if (target == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
+                    if (target.role == Role.ADMIN && change.role != Role.ADMIN && target.active && users.admins() <= 1) {
+                        return@put call.respondError(AccountError.LastAdmin, HttpStatusCode.Conflict)
                     }
-                },
-            )
-
-            get("/users") {
-                val all: List<User> = users.all()
-                call.respond(all)
-            }
-
-            put("/users/{id}/role") {
-                val change = call.receive<RoleChange>()
-                val target = users.find(call.userId())
-                if (target == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
-                if (target.role == Role.ADMIN && change.role != Role.ADMIN && target.active && users.admins() <= 1) {
-                    return@put call.respondError(AccountError.LastAdmin, HttpStatusCode.Conflict)
+                    val user: User? = users.setRole(target.id, change.role)
+                    if (user == null) call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser())) else call.respond(user)
                 }
-                val user: User? = users.setRole(target.id, change.role)
-                if (user == null) call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser())) else call.respond(user)
-            }
 
-            put("/users/{id}/active") {
-                val change = call.receive<ActiveChange>()
-                val target = users.find(call.userId())
-                if (target == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
-                if (target.role == Role.ADMIN && target.active && !change.active && users.admins() <= 1) {
-                    return@put call.respondError(AccountError.LastAdmin, HttpStatusCode.Conflict)
+                put("/users/{id}/active") {
+                    val change = call.receive<ActiveChange>()
+                    val target = users.find(call.userId())
+                    if (target == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
+                    if (target.role == Role.ADMIN && target.active && !change.active && users.admins() <= 1) {
+                        return@put call.respondError(AccountError.LastAdmin, HttpStatusCode.Conflict)
+                    }
+                    val user: User? = users.setActive(target.id, change.active)
+                    if (user == null) call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser())) else call.respond(user)
                 }
-                val user: User? = users.setActive(target.id, change.active)
-                if (user == null) call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser())) else call.respond(user)
             }
         }
     }

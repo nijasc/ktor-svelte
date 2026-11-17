@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import { cookieConsent, currentUser, loadPublicConfig, Role } from '#api';
+    import { can, cookieConsent, currentUser, loadPublicConfig, Permission } from '#api';
     import LocaleSwitch from '#components/LocaleSwitch.svelte';
     import NavigationProgress from '#components/NavigationProgress.svelte';
     import ThemeToggle from '#components/ThemeToggle.svelte';
@@ -20,7 +20,7 @@
             ? [
                   { to: routes.board, label: m.navBoard(), icon: 'LayoutDashboard' as const },
                   { to: routes.tasksNew, label: m.navNewTask(), icon: 'Plus' as const },
-                  ...(currentUser.user.role === Role.ADMIN ? [{ to: routes.admin, label: m.navAdmin(), icon: 'ShieldCheck' as const }] : []),
+                  ...(can(Permission.ManageUsers) ? [{ to: routes.admin, label: m.navAdmin(), icon: 'ShieldCheck' as const }] : []),
                   { to: routes.settings, label: m.navSettings(), icon: 'Settings' as const }
               ]
             : [{ to: routes.about, label: m.navAbout(), icon: 'Info' as const }]

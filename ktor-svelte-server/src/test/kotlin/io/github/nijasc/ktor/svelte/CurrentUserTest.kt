@@ -119,13 +119,13 @@ class CurrentUserTest {
             val browser = createClient { install(HttpCookies) }
             val nobody = browser.get("/api/current-user")
             assertEquals(HttpStatusCode.OK, nobody.status)
-            assertEquals("""{"user":null,"sessionSeconds":null}""", nobody.bodyAsText())
+            assertEquals("""{"user":null,"sessionSeconds":null,"permissions":null}""", nobody.bodyAsText())
             assertEquals("no-store", nobody.headers[HttpHeaders.CacheControl])
 
             val signedIn = browser.post("/api/session") { header(HttpHeaders.Origin, "http://localhost") }
             assertEquals(listOf("changed"), signedIn.headers.getAll("X-Ktor-Svelte-User"))
             assertEquals(
-                """{"user":{"id":7,"name":"Ada","role":"Admin"},"sessionSeconds":null}""",
+                """{"user":{"id":7,"name":"Ada","role":"Admin"},"sessionSeconds":null,"permissions":null}""",
                 browser.get("/api/current-user").bodyAsText(),
             )
 
@@ -133,7 +133,7 @@ class CurrentUserTest {
                 "changed",
                 browser.delete("/api/session") { header(HttpHeaders.Origin, "http://localhost") }.headers["X-Ktor-Svelte-User"],
             )
-            assertEquals("""{"user":null,"sessionSeconds":null}""", browser.get("/api/current-user").bodyAsText())
+            assertEquals("""{"user":null,"sessionSeconds":null,"permissions":null}""", browser.get("/api/current-user").bodyAsText())
             assertEquals(null, browser.get("/api/members").headers["X-Ktor-Svelte-User"])
         }
 
@@ -244,7 +244,7 @@ class CurrentUserTest {
     fun `the endpoint and every API response say how long the session still lasts`() =
         timedApp {
             val browser = createClient { install(HttpCookies) }
-            assertEquals("""{"user":null,"sessionSeconds":null}""", browser.get("/api/current-user").bodyAsText())
+            assertEquals("""{"user":null,"sessionSeconds":null,"permissions":null}""", browser.get("/api/current-user").bodyAsText())
             assertEquals(null, browser.get("/api/notes").headers["X-Ktor-Svelte-Session"], "a visitor has no session to end")
 
             val signedIn = browser.post("/api/session") { header(HttpHeaders.Origin, "http://localhost") }
@@ -259,7 +259,7 @@ class CurrentUserTest {
         timedApp { extended ->
             val browser = createClient { install(HttpCookies) }
             val visitor = browser.post("/api/current-user/extend") { header(HttpHeaders.Origin, "http://localhost") }
-            assertEquals("""{"user":null,"sessionSeconds":null}""", visitor.bodyAsText())
+            assertEquals("""{"user":null,"sessionSeconds":null,"permissions":null}""", visitor.bodyAsText())
             assertEquals(0, extended(), "there is nothing to extend for a visitor")
 
             browser.post("/api/session") { header(HttpHeaders.Origin, "http://localhost") }
@@ -280,7 +280,7 @@ class CurrentUserTest {
     @Test
     fun `the path follows the first API prefix unless one is given`() {
         app(configure = { apiPrefixes("/backend", "/api") }) {
-            assertEquals("""{"user":null,"sessionSeconds":null}""", client.get("/backend/current-user").bodyAsText())
+            assertEquals("""{"user":null,"sessionSeconds":null,"permissions":null}""", client.get("/backend/current-user").bodyAsText())
         }
         assertFailsWith<IllegalStateException> {
             app(configure = { currentUser<Member> { null } }) { startApplication() }
@@ -296,7 +296,7 @@ class CurrentUserTest {
                 "import { userStore, type UserState } from './client.js';\n" +
                     "import type { CurrentUser } from './types.js';\n\n" +
                     "const state = \$state<UserState<CurrentUser>>(" +
-                    "{ user: null, ready: false, sessionEnds: null, sessionEnding: false });\n\n" +
+                    "{ user: null, ready: false, sessionEnds: null, sessionEnding: false, permissions: [] });\n\n" +
                     "export const currentUser = userStore<CurrentUser>('/api/current-user', state);\n",
                 api.resolve("current-user.svelte.ts").readText(),
             )

@@ -29,6 +29,8 @@ private val prettyJson = Json { prettyPrint = true }
 internal const val CURRENT_USER_FILE = "current-user.svelte.ts"
 private const val CURRENT_USER_TYPE = "CurrentUser"
 private const val CURRENT_USER_STORE = "currentUser"
+private const val PERMISSION_TYPE = "Permission"
+private const val CAN_FUNCTION = "can"
 
 internal class CurrentUserType(
     val typeName: String,
@@ -47,6 +49,7 @@ internal class TypeScriptGenerator(
     cookies: List<CookieSpec> = emptyList(),
     private val currentUser: CurrentUserType? = null,
     private val loginPage: String? = null,
+    private val permissions: List<String> = emptyList(),
 ) {
     private val declaredCookies = cookies
     private val sideSchemas = listOfNotNull(publicConfigSchema, currentUser?.schema).map { Json.parseToJsonElement(it) }
@@ -92,6 +95,11 @@ internal class TypeScriptGenerator(
             "currentUser exports '$CURRENT_USER_STORE' and '$CURRENT_USER_TYPE', and the generated client already uses one of the names. " +
                 "Rename the class or the route that takes it."
         }
+        check(permissions.isEmpty() || currentUser != null) { "permissions needs currentUser, which says who the permissions belong to." }
+        check(permissions.isEmpty() || (PERMISSION_TYPE !in taken && CAN_FUNCTION !in taken)) {
+            "permissions exports '$PERMISSION_TYPE' and '$CAN_FUNCTION', and the generated client already uses one of the names. " +
+                "Rename the class or the route that takes it."
+        }
         check(cookies.isEmpty() || "cookies" !in taken) {
             "cookies(...) would be exported as 'cookies', which the generated client already uses for the routes under /cookies."
         }
@@ -115,9 +123,10 @@ internal class TypeScriptGenerator(
             "form.ts" to typeScriptTemplate("form.ts"),
             FORM_STATE_FILE to typeScriptTemplate(FORM_STATE_FILE),
             "types.ts" to
-                (if (errorCodes.isEmpty()) types else types.removeSuffix("export {};\n")) +
+                (if (errorCodes.isEmpty() && permissions.isEmpty()) types else types.removeSuffix("export {};\n")) +
                 validationHelpers.sorted().joinToString("") { "\n" + it.source } +
-                errorCodeType(),
+                errorCodeType() +
+                constantUnion(PERMISSION_TYPE, permissions),
             "services.ts" to
                 servicesSource(
                     filtered.objectAt("paths").orEmpty(),
@@ -248,12 +257,20 @@ internal class TypeScriptGenerator(
         return "\n" + declaration(CURRENT_USER_TYPE, Json.parseToJsonElement(user.schema).jsonObject, mutableSetOf(), schemas)
     }
 
-    private fun currentUserSource(user: CurrentUserType): String =
-        "import { userStore, type UserState } from './client.js';\n" +
-            "import type { $CURRENT_USER_TYPE } from './types.js';\n\n" +
-            "const state = \$state<UserState<$CURRENT_USER_TYPE>>(" +
-            "{ user: null, ready: false, sessionEnds: null, sessionEnding: false });\n\n" +
-            "export const $CURRENT_USER_STORE = userStore<$CURRENT_USER_TYPE>('${user.path}', state);\n"
+    private fun currentUserSource(user: CurrentUserType): String {
+        val withPermissions = permissions.isNotEmpty()
+        val types = if (withPermissions) "$CURRENT_USER_TYPE, $PERMISSION_TYPE" else CURRENT_USER_TYPE
+        return "import { userStore, type UserState } from './client.js';\n" +
+            "import type { $types } from './types.js';\n\n" +
+            "const state = \$state<UserState<$types>>(" +
+            "{ user: null, ready: false, sessionEnds: null, sessionEnding: false, permissions: [] });\n\n" +
+            "export const $CURRENT_USER_STORE = userStore<$types>('${user.path}', state);\n" +
+            if (withPermissions) {
+                "\nexport const $CAN_FUNCTION = (permission: $PERMISSION_TYPE): boolean => $CURRENT_USER_STORE.can(permission);\n"
+            } else {
+                ""
+            }
+    }
 
     private fun isApiPath(path: String): Boolean =
         excludedPaths.none { path == it || path.startsWith("$it/") } &&
@@ -920,11 +937,16 @@ internal class TypeScriptGenerator(
         return "{ ${parts.joinToString()} }"
     }
 
-    private fun errorCodeType(): String {
-        if (errorCodes.isEmpty()) return ""
-        val union = errorCodes.joinToString(" | ") { quoted(it) }
-        val members = errorCodes.joinToString("") { "    ${propertyKey(it)}: ${quoted(it)},\n" }
-        return "\nexport type $ERROR_CODE_TYPE = $union;\n\nexport const $ERROR_CODE_TYPE = {\n$members} as const;\n"
+    private fun errorCodeType(): String = constantUnion(ERROR_CODE_TYPE, errorCodes)
+
+    private fun constantUnion(
+        name: String,
+        values: List<String>,
+    ): String {
+        if (values.isEmpty()) return ""
+        val union = values.joinToString(" | ") { quoted(it) }
+        val members = values.joinToString("") { "    ${propertyKey(it)}: ${quoted(it)},\n" }
+        return "\nexport type $name = $union;\n\nexport const $name = {\n$members} as const;\n"
     }
 
     private fun errorsSource(errors: List<ErrorEntry>): String {

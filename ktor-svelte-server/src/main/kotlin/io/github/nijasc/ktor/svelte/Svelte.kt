@@ -224,9 +224,20 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             pluginConfig.typedCookies.map { it.spec() },
             currentUser?.let { CurrentUserType(it.typeName, it.schema, currentUserPath.orEmpty()) },
             loginPage,
+            pluginConfig.permissionSet?.names.orEmpty(),
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
         currentUser?.let { application.attributes.put(CurrentUserKey, it) }
+        val permissions = pluginConfig.permissionSet
+        if (permissions != null) {
+            checkNotNull(currentUser) {
+                "permissions says what a user may do, so it needs the user: add currentUser<${permissions.userType.simpleName}> { ... }."
+            }
+            check(permissions.userType.java.isAssignableFrom(currentUser.type.java)) {
+                "permissions takes a ${permissions.userType.simpleName}, but currentUser is declared as ${currentUser.typeName}."
+            }
+            application.attributes.put(PermissionsKey, permissions)
+        }
         if (currentUser?.sessionEnds != null) {
             onCallRespond { call, _ ->
                 if (call.response.headers[SESSION_HEADER] == null && resolver.isApiPath(decodedPathOrRaw(call))) {
@@ -331,6 +342,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             }
             if (cause is SignInRequiredException && !call.response.isCommitted) {
                 respondJsonMessage(call, HttpStatusCode.Unauthorized, currentUser?.signInMessage?.invoke(call) ?: SIGN_IN_MESSAGE)
+                return@on
+            }
+            if (cause is PermissionDeniedException && !call.response.isCommitted) {
+                respondJsonMessage(call, HttpStatusCode.Forbidden, permissions?.refusedMessage?.invoke(call) ?: REFUSED_MESSAGE)
                 return@on
             }
             if (cause is ApiException && !call.response.isCommitted) {

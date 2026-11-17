@@ -42,6 +42,8 @@ public class SvelteConfig internal constructor() {
         private set
     internal var currentUserSpec: CurrentUserSpec? = null
         private set
+    internal var permissionSet: PermissionSet? = null
+        private set
     internal var publicConfigProvider: (() -> String)? = null
         private set
     internal var publicConfigSchema: String? = null
@@ -166,6 +168,28 @@ public class SvelteConfig internal constructor() {
                 extendSession,
                 find,
             )
+    }
+
+    public inline fun <reified P : Enum<P>, reified U : Any> permissions(
+        noinline refusedMessage: ((ApplicationCall) -> String)? = null,
+        noinline of: suspend ApplicationCall.(U) -> Set<P>,
+    ) {
+        setPermissions(P::class.java, enumValues<P>().map { it.name }, U::class, refusedMessage) { user -> of(user as U) }
+    }
+
+    @PublishedApi
+    internal fun setPermissions(
+        type: Class<*>,
+        names: List<String>,
+        userType: KClass<*>,
+        refusedMessage: ((ApplicationCall) -> String)?,
+        of: suspend ApplicationCall.(Any) -> Set<Enum<*>>,
+    ) {
+        require(names.isNotEmpty()) { "permissions needs an enum with at least one permission." }
+        check(
+            permissionSet == null,
+        ) { "permissions is already set to ${permissionSet?.type?.simpleName}. An app has one enum of permissions." }
+        permissionSet = PermissionSet(type, names, userType, refusedMessage, of)
     }
 
     public fun cookies(vararg cookies: TypedCookie<*>) {

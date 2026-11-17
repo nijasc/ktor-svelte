@@ -159,6 +159,61 @@ The end stays right without extra requests. The answer of the current user endpo
 
 When the time is up, the store asks the server once. If the session is really over, `currentUser.user` becomes `null` and the page shows it at that moment, not at the next click.
 
+## Permissions
+
+A "Delete" button that the API then refuses is a bug, and so is a hidden button for something the API would allow. Both come from writing the rule twice. Write it once, as an enum and one function from the user to what they may do:
+
+```kotlin no-check
+enum class Permission { NotesRead, NotesDelete, UsersManage }
+
+install(Svelte) {
+    currentUser<User> { sessions.get<UserSession>()?.let { users.find(it.userId) } }
+    permissions<Permission, User> { user ->
+        if (user.role == Role.Admin) Permission.entries.toSet() else setOf(Permission.NotesRead)
+    }
+}
+```
+
+On the server, check it where it matters:
+
+```kotlin no-check
+requires(Permission.UsersManage) {
+    route("/api/admin") {
+        get("/users") { call.respond(users.all()) }
+    }
+}
+
+delete("/api/notes/{id}") {
+    call.requirePermission(Permission.NotesDelete)
+    notes.delete(call.parameters["id"])
+    call.respond(HttpStatusCode.NoContent)
+}
+```
+
+| | |
+| --- | --- |
+| `requires(...) { }` | Every route inside needs the permissions |
+| `call.requirePermission(...)` | The same check inside one route |
+| `call.can(permission)` | `true` or `false`, for a rule with more to it, such as "admins, or the author" |
+
+A visitor gets a 401 and a signed-in user without the permission a 403 with `{"message": "You are not allowed to do that."}`. Pass `refusedMessage = { call -> ... }` to `permissions` for your own words. The permissions of a user are worked out once per call.
+
+The frontend gets the same enum and a `can` function:
+
+```svelte no-check
+<script lang="ts">
+    import { can, Permission } from '#api';
+</script>
+
+{#if can(Permission.NotesDelete)}
+    <button onclick={remove}>Delete</button>
+{/if}
+```
+
+`can('NotesDelete')` works too, and a name that is not in the enum does not compile. The answer is reactive and comes with the current user, so it changes when someone signs in or out, with no request of its own. Rename a permission in Kotlin and every `can` that used the old name fails `svelteCheck`.
+
+`can` in the browser decides what is shown. What is allowed is decided by the check on the route, so every hidden button needs one.
+
 ## The login page
 
 Someone opens a link to a page that needs a session, or their session ends while they fill in a form. Both should end the same way: at the login page, and after signing in, back where they were. Say where the login page is:
