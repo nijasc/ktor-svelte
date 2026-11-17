@@ -397,6 +397,29 @@ Give the table `actions`, and every row gets a checkbox. A bar above the table s
 - A failing call does not stop the others; with [toasts](./components.md#toasts) on, each failure is shown too.
 - `confirm` asks with the browser's dialog before the action starts.
 
+### Sorting by a click on the header
+
+Mark a column with `sort`, and its header becomes a button. The first click sorts ascending, the second descending, the third goes back to the order of the route:
+
+```svelte no-check
+<DataTable
+    load={api.tasks.list}
+    columns={[
+        { key: 'title', label: 'Title', sort: true },
+        { key: 'createdAt', label: 'Created', sort: 'created' }
+    ]}
+    sortParam="sort"
+/>
+```
+
+| | What happens |
+| --- | --- |
+| With `sortParam` | The table asks the route again with `?sort=title` or `?sort=-title` (a leading `-` for descending), from the first page. Use this for lists with many pages; the route decides how to sort. `sort: 'created'` sends that name instead of the column's key |
+| Without `sortParam` | The rows that are loaded are sorted in the browser, numbers as numbers and text in the visitor's language. This suits short lists that fit on one page; on a list with more pages, only the loaded rows are sorted |
+
+- The header gets `aria-sort` (`ascending` or `descending`), and a small `^` or `v` shows the direction.
+- With `sortParam`, the route reads the value like any other query parameter, such as `call.queryParameters["sort"]`; list it in `describe` to have it typed.
+
 ### Cells with markup
 
 For cells with markup, such as a link or a button, pass a `row` snippet. It renders the cells of one row, and `columns` then only gives the headers:
