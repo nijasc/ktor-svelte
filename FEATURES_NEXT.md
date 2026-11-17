@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 22 | Shared permissions |  |
+| 23 | Page guards declared once |  |
 
 ### In review
 
@@ -44,6 +44,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 87 | `call.user` in routes | #303 |
 | 24 | Login redirect with return | #304 |
 | 67 | Session expiry warning | #305 |
+| 22 | Shared permissions | #306 |
 
 ### Next up
 
@@ -148,7 +149,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 23 | Page guards declared once | Large | 8 |
 | 41 | Synced user preferences | Large | 8 |
 | 34 | Resource routes DSL | Medium | 9 |
 | 15 | Page scaffolding task | Medium | 9 |
