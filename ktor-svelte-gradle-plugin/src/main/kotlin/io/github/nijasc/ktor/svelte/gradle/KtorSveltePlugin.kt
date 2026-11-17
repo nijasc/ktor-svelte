@@ -64,6 +64,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.PathSensitivity
@@ -168,6 +169,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         project.pluginManager.withPlugin("application") {
             project.tasks.named("run", JavaExec::class.java) { run ->
                 run.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
+                run.jvmArgumentProviders.add(FrontendDirectoriesArgument(frontendDirectoryArguments(project, extension)))
                 if (devMode) run.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
             }
             registerGenerateTs(project, extension)
@@ -916,7 +918,23 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         task.classpath = developmentClasspath(project)
         task.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
         task.jvmArgumentProviders.add(FrontendDirArgument(extension.frontendDir))
+        task.jvmArgumentProviders.add(FrontendDirectoriesArgument(frontendDirectoryArguments(project, extension)))
     }
+
+    private fun frontendDirectoryArguments(
+        project: Project,
+        extension: SvelteExtension,
+    ): Provider<List<String>> =
+        project.provider {
+            extension.frontends
+                .map { frontend ->
+                    serverFrontendName(frontend.basePath.get()) to
+                        frontend.frontendDir
+                            .get()
+                            .asFile.absolutePath
+                }.sortedBy { it.first }
+                .map { (name, path) -> "-D$FRONTEND_DIR_SYSTEM_PROPERTY.$name=$path" }
+        }
 
     private fun serializeFrontendTasks(project: Project) {
         val lock =
@@ -1303,6 +1321,13 @@ internal fun isFolderInsideFrontend(output: String): Boolean {
     }
     val segments = output.split('/', '\\').filter { it.isNotEmpty() && it != "." }
     return segments.isNotEmpty() && ".." !in segments
+}
+
+private class FrontendDirectoriesArgument(
+    @get:Input
+    val arguments: Provider<List<String>>,
+) : CommandLineArgumentProvider {
+    override fun asArguments(): Iterable<String> = arguments.get()
 }
 
 private class FrontendDirArgument(
