@@ -1,8 +1,50 @@
 # Generated TypeScript
 
-Types, services and validation helpers generated from your Ktor routes, with no npm dependencies.
+ktor-svelte reads your Ktor routes and DTOs and writes a typed TypeScript client for them: types, one function per route, validation helpers and a few small utilities, with no npm dependencies. Change a field in Kotlin, and the frontend code that uses it stops compiling.
 
-Set `generateTs = true`. Each time the app starts in development mode, it reads your routing tree, builds an OpenAPI document and writes this to `frontend/src/lib/api`:
+<Badge type="tip" text="Ktor plugin" /> <Badge type="info" text="Gradle" /> <Badge type="warning" text="Generated client" />
+
+## Quick start
+
+Turn it on in `install(Svelte)`:
+
+```kotlin
+install(Svelte) {
+    generateTs = true
+}
+```
+
+Start the app in development mode, and call your routes from the frontend:
+
+```ts
+import { api } from '#api';
+
+const notes = await api.notes.list({ search: 'milk' });
+const note = await api.notes.get(notes[0].id);
+```
+
+To see the output for your own API before installing anything, paste its OpenAPI document into the [generator playground](./playground).
+
+## What you get
+
+| You write in Kotlin | You get in TypeScript | Section |
+|---|---|---|
+| A route | A typed function, such as `api.notes.list()` | [Service names](#service-names) |
+| A `@Serializable` class | An interface, `empty()`, and `bounds` and `validate()` where it has rules | [Types and forms](#types-and-forms) |
+| An enum | A `const` object and a type of the same name | [Enums](#enums) |
+| `LocalDate`, `Instant`, ... | `IsoDate`, `IsoDateTime`, ... with helpers | [Dates](#dates) |
+| `describe { summary }`, `@JsonSchema.Description` | JSDoc in the editor | [Documentation in the editor](#documentation-in-the-editor) |
+| An object passed to `constants()` | The same values in `constants.ts` | [Shared constants](#shared-constants) |
+| A value class | A branded type that cannot be mixed up | [IDs that cannot be mixed up](#ids-that-cannot-be-mixed-up) |
+| `Decimal`, `Duration` | `Decimal`, `IsoDuration` with exact helpers | [Money and durations](#money-and-durations) |
+| A sealed class | A union with an exhaustive `match` | [Sealed classes](#sealed-classes) |
+| `resource<Note, Int>(...)` | `list`, `get`, `create`, `update`, `delete` | [Resource routes](#resource-routes) |
+
+How to call the functions, handle errors, retry, stream and upload is on [Calling the API](./calling-the-api.md).
+
+## The generated files
+
+Each time the app starts in development mode, ktor-svelte reads your routing tree, builds an OpenAPI document and writes this to `frontend/src/lib/api`:
 
 | File | Contents |
 |---|---|
@@ -13,23 +55,101 @@ Set `generateTs = true`. Each time the app starts in development mode, it reads 
 | `openapi.json` | The OpenAPI document itself |
 | `.gitattributes` | Marks these files as generated and keeps their line endings the same on every machine, so Git on Windows does not warn about them and GitHub folds them in diffs |
 
-To see the output for your own API before installing anything, paste its OpenAPI document into the [generator playground](./playground).
+Depending on what you use, a few more files appear next to them, such as `constants.ts` for [shared constants](#shared-constants) and `form-state.svelte.ts` for the [form helper](./validation.md#form-state).
 
-Commit these files. That way a frontend build never needs your app to run first. Unchanged files are not rewritten, so Vite does not reload for nothing. Nothing is generated in production.
+| Setting in `install(Svelte)` | Default | What it does |
+|---|---|---|
+| `generateTs` | `false` | Writes the client each time the app starts in development mode |
+| `generateTsOutput` | `null` | Output directory. `null` means `src/lib/api` in your frontend |
 
-With the `application` plugin, `check` runs `svelteVerifyTs`. It starts your app once, generates the TypeScript in memory and fails if the committed files differ, so a changed DTO or route can't drift away from the frontend unnoticed. Line endings are ignored. It passes when `generateTs` is off. To fix a failure, run `svelteGenerateTs`, or start the app in development mode, and commit the result. To leave it out of `check`, set `svelte.verifyTs=false` in `gradle.properties` or pass `-Psvelte.verifyTs=false`.
+### Commit the files
 
-Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
+Commit these files. That way a frontend build never needs your app to run first.
 
-```ts
-import { Status } from '#api';
+- Unchanged files are not rewritten, so Vite does not reload for nothing.
+- Nothing is generated in production.
+- To refresh the files without your dev server, for example in CI, run the task below and check for a diff. It starts your app once, so the app's port must be free.
 
-const archived = notes.filter((note) => note.status === Status.ARCHIVED);
+```bash
+./gradlew svelteGenerateTs
 ```
 
-Enums that appear in several classes with the same values share one generated name. The name comes from the property, such as `status` becoming `Status`. When two different enums would get the same name, the owning class is added in front, such as `NoteStatus`.
+### Keeping it in sync
 
-Every object type also gets an `empty()` factory, handy as the initial state of a form:
+With the `application` plugin, `check` runs `svelteVerifyTs`. It starts your app once, generates the TypeScript in memory and fails if the committed files differ, so a changed DTO or route can't drift away from the frontend unnoticed.
+
+- Line endings are ignored.
+- It passes when `generateTs` is off.
+- To fix a failure, run `svelteGenerateTs`, or start the app in development mode, and commit the result.
+- To leave it out of `check`, set `svelte.verifyTs=false` in `gradle.properties` or pass `-Psvelte.verifyTs=false`.
+
+### The #api import
+
+`svelteInit` also sets up the short `#api` import. For a frontend you already have, add it to `frontend/package.json`:
+
+```json
+{
+  "imports": {
+    "#api": "./src/lib/api/index.ts"
+  }
+}
+```
+
+## Service names
+
+Every route becomes a function on `api`, grouped by resource. The names follow your routes:
+
+| Route | Function |
+|---|---|
+| `GET /api/notes` | `api.notes.list()` |
+| `GET /api/notes/{id}` | `api.notes.get(id)` |
+| `POST /api/notes` | `api.notes.create(body)` |
+| `PUT /api/notes/{id}` | `api.notes.update(id, body)` |
+| `DELETE /api/notes/{id}` | `api.notes.delete(id)` |
+| `POST /api/notes/{id}/archive` | `api.notes.archive(id)` |
+
+Set `operationId` in `describe` to choose your own name.
+
+A function takes its arguments in this order: the path parameters, the body, the query, and last the [request options](./calling-the-api.md#request-options). Every function is also exported on its own, named after its group and service, such as `notesList` or `notesGet`, so a page can [import only what it uses](./calling-the-api.md#import-single-functions).
+
+## Typed path parameters
+
+A path parameter is typed from the route's description. A [resource](#resource-routes) describes its id for you, so `api.notes.get` takes a `number` there. A parameter without a described type accepts `string | number`.
+
+On the server, `call.pathParameter<T>(name)` reads a path parameter in the type you ask for:
+
+```kotlin
+get("/api/notes/{id}/summary") {
+    val id = call.pathParameter<Int>("id")
+    call.respondText("Note $id")
+}
+```
+
+| Type | Accepts |
+|---|---|
+| `String` | Any text |
+| `Int`, `Long` | A whole number that fits the type |
+| `java.util.UUID` | A UUID in its usual 36 character form |
+| An enum | One of its names, in any letter case |
+
+- A value that does not fit, such as `/api/notes/abc`, is answered with 404 before the route does any work, because nothing is at that address.
+- Asking for a name the path does not have, or for another type such as `Double`, is a mistake in the route and fails with a 500.
+
+To give the generated function the exact type, describe the parameter:
+
+```kotlin no-check
+get("/api/notes/{id}/summary") {
+    call.respondText("Note ${call.pathParameter<Int>("id")}")
+}.describe {
+    parameters { path("id") { schema = jsonSchema<Int>() } }
+}
+```
+
+## Types and forms
+
+### Empty objects
+
+Every object type gets an `empty()` factory, handy as the initial state of a form:
 
 ```ts
 import { NoteInput } from '#api';
@@ -37,7 +157,22 @@ import { NoteInput } from '#api';
 let draft = $state(NoteInput.empty());
 ```
 
-Every property is filled in, optional ones included: strings become `''`, numbers `0`, booleans `false`, lists `[]`, maps `{}`, nullable properties `null`, enums their first value, and nested objects their own `empty()`. Each call returns a fresh object.
+Every property is filled in, optional ones included:
+
+| Property | Starts as |
+|---|---|
+| Text | `''` |
+| Number | `0` |
+| Boolean | `false` |
+| List | `[]` |
+| Map | `{}` |
+| Nullable | `null` |
+| Enum | Its first value |
+| Nested object | Its own `empty()` |
+
+Each call returns a fresh object.
+
+### Bounds for inputs
 
 Properties with [validation annotations](validation.md) also appear under `bounds`, named like the HTML attributes, so you can spread them onto an input:
 
@@ -45,11 +180,21 @@ Properties with [validation annotations](validation.md) also appear under `bound
 <input bind:value={draft.title} {...NoteInput.bounds.title} />
 ```
 
-Strings get `minlength`, `maxlength` and `pattern`, numbers get `min` and `max`. A strict bound on an integer moves by one, and on a decimal it is left out, because HTML has no strict bounds. The browser matches `pattern` against the whole value, while the server only looks for a match inside it, so write patterns with `^` and `$` to get the same result in both.
+- Strings get `minlength`, `maxlength` and `pattern`, numbers get `min` and `max`.
+- A strict bound on an integer moves by one, and on a decimal it is left out, because HTML has no strict bounds.
+- The browser matches `pattern` against the whole value, while the server only looks for a match inside it, so write patterns with `^` and `$` to get the same result in both.
 
 `required: true` is added only where the server would reject an empty field too, so the browser is never stricter than the server: strings with a minimum length of at least 1, and numbers that are required and not nullable, because an empty number input gives `null`. Nullable properties, booleans, lists, objects and enums never get it. A property with only `required` still gets a `bounds` entry.
 
-Every object type that the server checks against annotations, directly or through a nested object or list, also gets `validate()`. It runs the same checks in the browser and returns errors in the same shape as `fields` of a 422, with the same messages and paths such as `lines[1].sku`, plus `Required.` for an empty required number. An empty object means valid. Types without annotations get no `validate()`, just as the server skips them. One error display then covers both instant feedback and the server answer:
+### Checking in the browser
+
+Every object type that the server checks against annotations, directly or through a nested object or list, also gets `validate()`. It runs the same checks in the browser and returns errors in the same shape as `fields` of a 422:
+
+- the same messages, and paths such as `lines[1].sku`
+- `Required.` for an empty required number
+- an empty object when the value is valid
+
+Types without annotations get no `validate()`, just as the server skips them. One error display then covers both instant feedback and the server answer:
 
 ```svelte stackblitz
 <script lang="ts">
@@ -77,9 +222,31 @@ Every object type that the server checks against annotations, directly or throug
 </form>
 ```
 
-Rules in `Validated.rules()` and in `validate { }` inside a route only run on the server, so their errors arrive with the 422.
+Rules in `Validated.rules()` and in `validate { }` inside a route only run on the server, so their errors arrive with the 422. See [Validation](./validation.md) for the rules themselves, and for `formState`, which does this bookkeeping for you.
 
-Dates arrive as strings, but not as plain `string`. A `LocalDate` becomes `IsoDate`, a `LocalTime` becomes `IsoTime`, and an `Instant` or `LocalDateTime` becomes `IsoDateTime`, so a date can't be mixed up with ordinary text. Helpers convert them safely:
+### Enums
+
+Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
+
+```ts
+import { Status } from '#api';
+
+const archived = notes.filter((note) => note.status === Status.ARCHIVED);
+```
+
+Enums that appear in several classes with the same values share one generated name. The name comes from the property, such as `status` becoming `Status`. When two different enums would get the same name, the owning class is added in front, such as `NoteStatus`.
+
+### Dates
+
+Dates arrive as strings, but not as plain `string`, so a date can't be mixed up with ordinary text:
+
+| Kotlin | TypeScript |
+|---|---|
+| `LocalDate` | `IsoDate` |
+| `LocalTime` | `IsoTime` |
+| `Instant`, `LocalDateTime` | `IsoDateTime` |
+
+Helpers convert them safely:
 
 ```ts
 import { IsoDate, IsoDateTime } from '#api';
@@ -89,17 +256,10 @@ const created = IsoDateTime.parse(note.createdAt).toLocaleString();
 const input = { due: IsoDate.today(), remindAt: IsoDateTime.now() };
 ```
 
-`IsoDate.parse` returns local midnight. `new Date('2026-11-10')` would give UTC midnight instead, which shows the previous day west of Greenwich. For an `Instant` use `IsoDateTime.from(date)`, which writes UTC. For a `LocalDateTime` use `IsoDateTime.fromLocal(date)`, which writes no offset. Both share one OpenAPI format, so the type can't tell them apart. The values of `<input type="date">`, `type="time"` and `type="datetime-local"` already have the right shape for `LocalDate`, `LocalTime` and `LocalDateTime`. The helpers are only generated when your API uses a date.
-
-`svelteInit` also sets up the short `#api` import. For a frontend you already have, add it to `frontend/package.json`:
-
-```json
-{
-  "imports": {
-    "#api": "./src/lib/api/index.ts"
-  }
-}
-```
+- `IsoDate.parse` returns local midnight. `new Date('2026-11-10')` would give UTC midnight instead, which shows the previous day west of Greenwich.
+- For an `Instant` use `IsoDateTime.from(date)`, which writes UTC. For a `LocalDateTime` use `IsoDateTime.fromLocal(date)`, which writes no offset. Both share one OpenAPI format, so the type can't tell them apart.
+- The values of `<input type="date">`, `type="time"` and `type="datetime-local"` already have the right shape for `LocalDate`, `LocalTime` and `LocalDateTime`.
+- The helpers are only generated when your API uses a date.
 
 ## Documentation in the editor
 
@@ -121,7 +281,13 @@ post("/api/notes/{id}/attachments") { /* ... */ }.describe {
 export const notesAttachments = (id: string | number, body: FormData, options?: RequestOptions) => ...
 ```
 
-Types and their fields are documented the same way. Put Ktor's `@JsonSchema.Description` on a class or a property, and it becomes JSDoc on the interface or the field. `@JsonSchema.DeprecatedSchema` on a property, or `deprecated = true` in `describe { }` on a route, becomes `@deprecated`, which editors show struck through at every use:
+Types and their fields are documented the same way:
+
+| On the Kotlin side | In TypeScript |
+|---|---|
+| `@JsonSchema.Description` on a class or property | JSDoc on the interface or the field |
+| `@JsonSchema.DeprecatedSchema` on a property | `@deprecated`, which editors show struck through at every use |
+| `deprecated = true` in `describe { }` on a route | `@deprecated` on the function |
 
 ```kotlin no-check
 @Serializable
@@ -148,6 +314,8 @@ export interface Note {
 
 Kotlin's own documentation comments and `@Deprecated` do not exist at runtime, where the schema is read, so they cannot be picked up. The annotations are the way to say it once for both sides.
 
+### Where a route is declared
+
 Every generated function also names the Kotlin file its route is declared in, as an `@see` line, whether you describe the route or not:
 
 ```ts no-check
@@ -155,7 +323,7 @@ Every generated function also names the Kotlin file its route is declared in, as
 export const notesCreate = (body: NoteInput, options?: RequestOptions) => ...
 ```
 
-The path is the file's package folder and name, so it is the same on every machine. The line number is left out on purpose: it would change the generated file every time you edit above a route. To jump to the exact line, use the route list at `/_ktor-svelte/routes` while the app runs in development.
+The path is the file's package folder and name, so it is the same on every machine. The line number is left out on purpose: it would change the generated file every time you edit above a route. To jump to the exact line, use the route list at `/_ktor-svelte/routes` while the app runs in development, or [`routes.json`](./calling-the-api.md#find-the-kotlin-route-of-a-call).
 
 ## Routes nothing calls
 
@@ -169,7 +337,9 @@ A call to a route that no longer exists does not compile. The other direction ne
 GET /api/notes/export  ->  nothing in the frontend calls api.notes.export
 ```
 
-A route counts as called when `api.notes.export`, a client from `apiWith`, the `notes` object or the `notesExport` function is used anywhere outside the generated folders, even when it is only passed along. The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service. Add `--strict` to fail the build instead.
+- A route counts as called when `api.notes.export`, a client from `apiWith`, the `notes` object or the `notesExport` function is used anywhere outside the generated folders, even when it is only passed along.
+- The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service.
+- Add `--strict` to fail the build instead.
 
 ## What changed for callers
 
@@ -198,6 +368,11 @@ It compares with `origin/main` unless you name another revision, such as the las
 ./gradlew svelteApiChanges --against=v1.1.0
 ```
 
+| Option | What it does |
+|---|---|
+| `--against=<revision>` | The git revision to compare with. Defaults to `origin/main` |
+| `--strict` | Fails the build on a change that can break callers, which is what you want in a pipeline for an API with callers you do not control |
+
 What counts as able to break a caller:
 
 - A route that is gone.
@@ -206,9 +381,11 @@ What counts as able to break a caller:
 
 A new route, a new response field, a new optional request field and a request field that is no longer read are listed under the other changes.
 
-The task reads the committed file and never starts your app, so run it after `svelteGenerateTs`. It only reports. Add `--strict` to fail the build on a change that can break callers, which is what you want in a pipeline for an API with callers you do not control.
-
-Two limits. It compares the type as the OpenAPI document states it, so a query parameter that was a plain string and is now an enum is listed as changed, even when every old call still works. And it looks at the first successful response of a route, not at the error responses.
+::: warning Limits
+- The task reads the committed file and never starts your app, so run it after `svelteGenerateTs`. Without `--strict` it only reports.
+- It compares the type as the OpenAPI document states it, so a query parameter that was a plain string and is now an enum is listed as changed, even when every old call still works.
+- It looks at the first successful response of a route, not at the error responses.
+:::
 
 ## Shared constants
 
@@ -245,9 +422,11 @@ export const Limits = {
 } as const;
 ```
 
-Every public `const val` and `val` of the object is shared, under the name it has in Kotlin. Private and internal ones stay out, so the object can hold more than it shares. The values can be text, numbers, booleans, enums (by name), `Regex` (as its pattern text), and lists, sets and maps of those. Because the object is `as const`, TypeScript knows the exact values: `Limits.PLANS[number]` is `'free' | 'team'`.
-
-A value of another type stops generation with a message that names the property. That includes a `Duration` property, whose type is not visible from outside the object: share `timeout.inWholeMilliseconds` instead.
+- Every public `const val` and `val` of the object is shared, under the name it has in Kotlin. Private and internal ones stay out, so the object can hold more than it shares.
+- `constants()` takes several objects at once.
+- The values can be text, numbers, booleans, enums (by name), `Regex` (as its pattern text), and lists, sets and maps of those.
+- Because the object is `as const`, TypeScript knows the exact values: `Limits.PLANS[number]` is `'free' | 'team'`.
+- A value of another type stops generation with a message that names the property. That includes a `Duration` property, whose type is not visible from outside the object: share `timeout.inWholeMilliseconds` instead.
 
 Like the rest of the client, `constants.ts` is checked by `svelteVerifyTs`, so a changed constant with a stale client fails `check`.
 
@@ -291,7 +470,9 @@ const fromUrl = NoteId(Number(page.params.id));
 - A branded ID is still a number or text to everything that only reads it: it can be printed, compared and passed to a path parameter.
 - This applies to a value class over `Int`, `Long`, `Double` or `String`, wherever it appears in a DTO: alone, optional, in a list or as the values of a map. Value classes over anything else, or with validation annotations on the property, are generated as their underlying type, as before.
 
+::: warning Upgrading
 When you turn an existing `Long` field into a value class, or update to this version with value classes already in your DTOs, the frontend stops compiling where it builds such a value from a plain number. Wrap those places in the function, as above.
+:::
 
 ## Money and durations
 
@@ -305,7 +486,10 @@ import kotlin.time.Duration
 data class Invoice(val total: Decimal, val payWithin: Duration)
 ```
 
-`Decimal` is `java.math.BigDecimal` with a serializer that writes it as text, `"1234.50"`, so no digit is lost on the way. A `kotlin.time.Duration` is written as ISO text, `"PT1H30M"`, as kotlinx.serialization does by default. In the generated client both have their own type and a few helpers:
+- `Decimal` is `java.math.BigDecimal` with a serializer that writes it as text, `"1234.50"`, so no digit is lost on the way.
+- A `kotlin.time.Duration` is written as ISO text, `"PT1H30M"`, as kotlinx.serialization does by default.
+
+In the generated client both have their own type and a few helpers:
 
 ```ts no-check
 import { Decimal, IsoDuration, type Invoice } from '#api';
@@ -334,9 +518,12 @@ IsoDuration.format(invoice.payWithin); // '1:30:00'
 | `IsoDuration.add` | The sum of two. |
 | `IsoDuration.format` | A clock text such as `1:30:00`. |
 
-The helpers are only in `types.ts` when the API uses one of the two types. A `BigDecimal` with your own serializer is recognised too, when the serializer writes text and its descriptor is named `BigDecimal` or `java.math.BigDecimal`.
+- The helpers are only in `types.ts` when the API uses one of the two types.
+- A `BigDecimal` with your own serializer is recognised too, when the serializer writes text and its descriptor is named `BigDecimal` or `java.math.BigDecimal`.
 
+::: warning Upgrading
 A `Duration` field used to be generated as `string`. It is `IsoDuration` now, so code that assigns plain text to one needs `as IsoDuration`, or better `IsoDuration.fromMillis(...)`.
+:::
 
 ## Sealed classes
 
@@ -366,6 +553,12 @@ const lines = (await api.notes.getActivity(id)).map((item) =>
 );
 ```
 
+| Generated | What it is |
+|---|---|
+| `Activity` (type) | The union of `Archived` and `Created`, narrowed by `item.type` |
+| `Activity.types` | The type names, such as `['archived', 'created']` |
+| `Activity.match(value, cases)` | Calls the case for the value's type. Every type needs a case |
+
 Use `@SerialName` for short type names. Without it, the type name is the fully qualified class name.
 
 ## Resource routes
@@ -393,13 +586,20 @@ routing {
 | `update<Input> { id, input -> }` | `PUT /api/notes/{id}` | The changed item, or `null` for a 404 | `api.notes.update(id, input)` |
 | `delete { id -> }` | `DELETE /api/notes/{id}` | `true`, or `false` for a 404. A 204 is sent | `api.notes.delete(id)` |
 
-Each block returns its answer and does not call `respond`. That is what lets the types line up without anything being inferred: `Note` is the type of every answer, the type you name on `create` and `update` is the body, and the second type of `resource` is the type of the id, so `api.notes.get` takes a `number` here. Leave the second type out and the id is a string. An id that is not of that type is a 404.
+Each block returns its answer and does not call `respond`. That is what lets the types line up without anything being inferred:
+
+- `Note` is the type of every answer.
+- The type you name on `create` and `update` is the body.
+- The second type of `resource` is the type of the id, so `api.notes.get` takes a `number` here. Leave the second type out and the id is a string. The id is read like [`pathParameter`](#typed-path-parameters), and an id that is not of that type is a 404.
 
 These are ordinary Ktor routes. Every block is optional, a block that is left out is no route, and `call` is there in each block for anything else you need. Nothing is stored or generated for you: the blocks are your code.
 
-- `list<NoteQuery> { query -> }` reads the query string into a `@Serializable` class, and the client gets the same fields as a typed query.
+- `list<NoteQuery> { query -> }` reads the query string into a `@Serializable` class, and the client gets the same fields as a typed query. See [Query parameters as a class](./calling-the-api.md#query-parameters-as-a-class).
 - `missing<Problem> { ... }` says what a 404 looks like. It comes first in the block, and the client then knows the type of that error for `get`, `update` and `delete`. Without it a 404 has no body of yours.
+- Each block can be declared once. Declaring one twice, or `missing` after `get`, `update` or `delete`, fails with a message when the routes are set up.
 - Other routes of the same thing, such as `POST /api/notes/{id}/archive`, go next to the resource in a normal `route("/api/notes") { }`.
+
+`svelteAdd --crud` writes the first version of the pages for a resource. See [Pages for a class](./routes.md#pages-for-a-class).
 
 ## Getting exact types
 
@@ -428,3 +628,130 @@ get("/api/todos") { call.respond(todos) }.describe {
     }
 }
 ```
+
+## Full example
+
+A notes app end to end: a resource with a typed query and a shared constant on the server, and a component that uses the generated types, enums, dates and the sealed `Activity` union.
+
+::: code-group
+
+```kotlin no-check [Model.kt]
+object NoteLimits {
+    const val PAGE_SIZE = 20
+    const val MAX_TAGS = 5
+}
+
+enum class NoteStatus { ACTIVE, ARCHIVED }
+
+@Serializable
+@JsonSchema.Description("A note with its tags and its icon.")
+data class Note(
+    val id: Int,
+    val title: String,
+    val body: String,
+    val tags: List<String>,
+    val status: NoteStatus,
+    val createdAt: Instant,
+)
+
+@Serializable
+data class NoteInput(
+    @Trim
+    @JsonSchema.MinLength(1)
+    @JsonSchema.MaxLength(80)
+    val title: String,
+    val body: String = "",
+    val tags: List<String> = emptyList(),
+)
+
+@Serializable
+data class NoteQuery(val search: String? = null, val tag: String? = null)
+
+@Serializable
+sealed interface Activity
+
+@Serializable
+@SerialName("created")
+data class Created(val at: Instant) : Activity
+
+@Serializable
+@SerialName("archived")
+data class Archived(val at: Instant, val title: String) : Activity
+```
+
+```kotlin no-check [Routes.kt]
+fun Application.module(store: NoteStore) {
+    install(Svelte) {
+        generateTs = true
+        constants(NoteLimits)
+    }
+    routing {
+        resource<Note, Int>("/api/notes") {
+            missing<Problem> { Problem("That note does not exist.") }
+            list<NoteQuery> { query -> store.list(query.search, query.tag) }
+            get { id -> store.find(id) }
+            create<NoteInput> { input -> store.create(input) }
+            update<NoteInput> { id, input -> store.update(id, input) }
+            delete { id -> store.delete(id) }
+        }
+        get("/api/notes/{id}/activity") {
+            val note = store.find(call.pathParameter<Int>("id")) ?: throw NotFoundException()
+            val activity: List<Activity> = store.activity(note)
+            call.respond(activity)
+        }
+    }
+}
+```
+
+```svelte [NoteCard.svelte]
+<script lang="ts">
+    import { Activity, api, IsoDateTime, Status, type Note } from '#api';
+
+    let { note }: { note: Note } = $props();
+
+    let lines = $state<string[]>([]);
+
+    async function showActivity() {
+        const activity = await api.notes.getActivity(note.id);
+        lines = activity.map((item) =>
+            Activity.match(item, {
+                created: (created) => `Created ${IsoDateTime.parse(created.at).toLocaleString()}`,
+                archived: (archived) => `Archived as "${archived.title}"`
+            })
+        );
+    }
+</script>
+
+<article class:opacity-60={note.status === Status.ARCHIVED}>
+    <h2>{note.title}</h2>
+    <time datetime={note.createdAt}>{IsoDateTime.parse(note.createdAt).toLocaleDateString()}</time>
+    <p>{note.body}</p>
+    <button onclick={showActivity}>Show activity</button>
+    <ul>
+        {#each lines as line, index (index)}
+            <li>{line}</li>
+        {/each}
+    </ul>
+</article>
+```
+
+:::
+
+Rename `title` in `Note`, restart the app, and `NoteCard.svelte` no longer compiles. Add a third `Activity` subtype, and every `Activity.match` that does not handle it fails too.
+
+## Use cases
+
+- A frontend and a backend in one repository that should never drift: commit the client and let `check` run [`svelteVerifyTs`](#keeping-it-in-sync).
+- Forms that show the server's rules before sending: [bounds and `validate()`](#types-and-forms), or the [form helper](./validation.md#form-state).
+- Values both sides need, such as page sizes: [shared constants](#shared-constants).
+- Prices and durations: [money and durations](#money-and-durations).
+- Feeds of different kinds of events: [sealed classes](#sealed-classes).
+- A public API with outside callers: run [`svelteApiChanges --strict`](#what-changed-for-callers) in CI.
+- Cleaning up an old API: [`svelteVerifyApiRoutes`](#routes-nothing-calls).
+
+## Good to know
+
+- Only paths under the API prefix are generated. See `apiPrefixes` in the [Ktor reference](../reference/ktor.md).
+- The client is written in development mode only, never in production. When it seems stale, see [troubleshooting](../reference/troubleshooting.md).
+- With `lucide()` on, an icon property becomes the `LucideIcon` type, and with `publicConfig` set, the client gets [`readPublicConfig()`](./runtime-config.md).
+- How to call the functions is on [Calling the API](./calling-the-api.md).
