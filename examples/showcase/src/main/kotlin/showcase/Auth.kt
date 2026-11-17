@@ -2,7 +2,9 @@ package showcase
 
 import io.github.nijasc.ktor.svelte.currentUserChanged
 import io.github.nijasc.ktor.svelte.fieldCheck
+import io.github.nijasc.ktor.svelte.requireUser
 import io.github.nijasc.ktor.svelte.respondError
+import io.github.nijasc.ktor.svelte.user
 import io.github.nijasc.ktorsvelte.FrontendRoutes
 import io.github.nijasc.ktorsvelte.messages
 import io.ktor.http.HttpStatusCode
@@ -14,7 +16,6 @@ import io.ktor.server.application.log
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.AuthenticationChecked
 import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.principal
 import io.ktor.server.auth.session
 import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.plugins.ratelimit.rateLimit
@@ -84,9 +85,6 @@ private fun Application.temporarySignKey(): ByteArray {
     return ByteArray(SIGN_KEY_BYTES).also(SecureRandom()::nextBytes)
 }
 
-suspend fun ApplicationCall.currentUser(users: UserStore): User =
-    principal<UserSession>()?.let { users.findActive(it.userId) } ?: error("This route needs authenticate(\"$SESSION_AUTH\").")
-
 fun Route.sessionRoutes(
     users: UserStore,
     registrationOpen: Boolean,
@@ -122,13 +120,13 @@ fun Route.sessionRoutes(
     authenticate(SESSION_AUTH) {
         route("/api/me") {
             get {
-                val user: User = call.currentUser(users)
+                val user: User = call.requireUser<User>()
                 call.respond(user)
             }
 
             put {
                 val input = call.receive<ProfileInput>()
-                val user: User? = users.rename(call.currentUser(users).id, input.name)
+                val user: User? = users.rename(call.requireUser<User>().id, input.name)
                 if (user == null) return@put call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingUser()))
                 call.currentUserChanged()
                 call.respond(user)
@@ -136,7 +134,7 @@ fun Route.sessionRoutes(
 
             put("/password") {
                 val change = call.receive<PasswordChange>()
-                if (users.changePassword(call.currentUser(users).id, change.current, change.next)) {
+                if (users.changePassword(call.requireUser<User>().id, change.current, change.next)) {
                     call.respond(HttpStatusCode.NoContent)
                 } else {
                     call.respondError(AccountError.WrongPassword, HttpStatusCode.Forbidden)
@@ -152,7 +150,7 @@ fun Route.adminRoutes(users: UserStore) {
             install(
                 createRouteScopedPlugin("AdminOnly") {
                     on(AuthenticationChecked) { call ->
-                        val user = call.principal<UserSession>()?.let { users.findActive(it.userId) }
+                        val user = call.user<User>()
                         if (user?.role != Role.ADMIN) call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemAdminsOnly()))
                     }
                 },

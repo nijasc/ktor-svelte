@@ -220,6 +220,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             currentUser?.let { CurrentUserType(it.typeName, it.schema, currentUserPath.orEmpty()) },
         )
         pluginConfig.errorCodeSet?.let { application.attributes.put(ErrorCodesKey, it) }
+        currentUser?.let { application.attributes.put(CurrentUserKey, it) }
         application.attributes.put(TypedCookiesKey, pluginConfig.typedCookies.toList())
         if (securityHeaders.enabled) installSecurityHeaders(securityHeaders, devProxy != null)
         if (pluginConfig.buildHeader) {
@@ -313,6 +314,10 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
             if (cause is ValidationException) {
                 devRequests?.validationFailed(call, cause.fields)
                 respondJsonMessage(call, HttpStatusCode.UnprocessableEntity, "Validation failed", cause.fields)
+                return@on
+            }
+            if (cause is SignInRequiredException && !call.response.isCommitted) {
+                respondJsonMessage(call, HttpStatusCode.Unauthorized, currentUser?.signInMessage?.invoke(call) ?: SIGN_IN_MESSAGE)
                 return@on
             }
             if (cause is ApiException && !call.response.isCommitted) {

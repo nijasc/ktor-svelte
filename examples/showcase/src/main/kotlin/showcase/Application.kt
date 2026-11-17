@@ -83,7 +83,9 @@ fun Application.module() {
         constants(BoardLimits)
         idempotency()
         cookies(OnlyMineCookie)
-        currentUser<User> { sessions.get<UserSession>()?.let { users.findActive(it.userId) } }
+        currentUser<User>(signInMessage = { it.messages.problemSignIn() }) {
+            sessions.get<UserSession>()?.let { users.findActive(it.userId) }
+        }
         errorCodes<AccountError> { call, code ->
             when (code) {
                 AccountError.EmailTaken -> call.messages.problemEmailTaken()

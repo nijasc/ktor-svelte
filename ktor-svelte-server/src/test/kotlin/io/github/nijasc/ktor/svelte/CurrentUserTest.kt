@@ -54,6 +54,8 @@ class CurrentUserTest {
     @TempDir
     lateinit var dir: Path
 
+    private var asked = 0
+
     private fun app(
         otherRoute: Boolean = true,
         configure: SvelteConfig.() -> Unit = {},
@@ -70,7 +72,10 @@ class CurrentUserTest {
                 generateTs = true
                 generateTsOutput = dir.resolve("src/lib/api").toString()
                 transport { json() }
-                currentUser<Member> { sessions.get<MemberSession>()?.let { Member(it.id, "Ada", MemberRole.Admin) } }
+                currentUser<Member> {
+                    asked++
+                    sessions.get<MemberSession>()?.let { Member(it.id, "Ada", MemberRole.Admin) }
+                }
                 configure()
             }
             routing {
@@ -86,6 +91,22 @@ class CurrentUserTest {
                     call.respond(HttpStatusCode.NoContent)
                 }
                 if (otherRoute) get("/api/members") { call.respond(listOf(Member(1, "Grace"))) }.describeMembers()
+                get("/api/whoami") {
+                    val first: Member? = call.user()
+                    val second = call.user<Member>()
+                    call.respond(listOf(first?.name ?: "nobody", second?.name ?: "nobody", "asked $asked time(s)"))
+                }
+                get("/api/mine") {
+                    val member: Member = call.requireUser()
+                    call.respond(listOf(member.name))
+                }
+                post("/api/switch") {
+                    val before = call.user<Member>()?.name ?: "nobody"
+                    call.sessions.set(MemberSession(9))
+                    call.currentUserChanged()
+                    call.respond(listOf(before, call.requireUser<Member>().id.toString()))
+                }
+                get("/api/wrong") { call.respond(listOf(call.user<MemberSession>().toString())) }
             }
         }
         block()
@@ -111,6 +132,70 @@ class CurrentUserTest {
             assertEquals("""{"user":null}""", browser.get("/api/current-user").bodyAsText())
             assertEquals(null, browser.get("/api/members").headers["X-Ktor-Svelte-User"])
         }
+
+    @Test
+    fun `any route can ask for the user, who is looked up once per call`() =
+        app {
+            val browser = createClient { install(HttpCookies) }
+            assertEquals("""["nobody","nobody","asked 1 time(s)"]""", browser.get("/api/whoami").bodyAsText())
+            browser.post("/api/session") { header(HttpHeaders.Origin, "http://localhost") }
+            assertEquals("""["Ada","Ada","asked 2 time(s)"]""", browser.get("/api/whoami").bodyAsText())
+            assertEquals("""["Ada"]""", browser.get("/api/mine").bodyAsText())
+        }
+
+    @Test
+    fun `a route that requires a user answers 401 to a visitor, in the words the app chose`() {
+        app {
+            val refused = client.get("/api/mine")
+            assertEquals(HttpStatusCode.Unauthorized, refused.status)
+            assertEquals("""{"message":"Sign in first."}""", refused.bodyAsText())
+            assertContains(refused.headers[HttpHeaders.ContentType].orEmpty(), "application/json")
+        }
+        testApplication {
+            val build = fixtureBuild()
+            application {
+                install(Svelte) {
+                    source = SvelteSource.Directory(build)
+                    dev { mode = DevMode.Never }
+                    currentUser<Member>(signInMessage = { call -> "Bitte anmelden: ${call.request.local.uri}" }) { null }
+                }
+                routing {
+                    get("/api/mine") { call.respond(call.requireUser<Member>().name) }
+                }
+            }
+            assertEquals("""{"message":"Bitte anmelden: /api/mine"}""", client.get("/api/mine").bodyAsText())
+        }
+    }
+
+    @Test
+    fun `the user is looked up again after the route changed who is signed in`() =
+        app {
+            val browser = createClient { install(HttpCookies) }
+            browser.post("/api/session") { header(HttpHeaders.Origin, "http://localhost") }
+            assertEquals("""["Ada","9"]""", browser.post("/api/switch") { header(HttpHeaders.Origin, "http://localhost") }.bodyAsText())
+        }
+
+    @Test
+    fun `asking without a declared user, or for another class, says what to do`() {
+        app {
+            assertEquals(HttpStatusCode.InternalServerError, client.get("/api/wrong").status)
+        }
+        testApplication {
+            val build = fixtureBuild()
+            application {
+                install(Svelte) {
+                    source = SvelteSource.Directory(build)
+                    dev { mode = DevMode.Never }
+                    hideErrorDetails = false
+                }
+                routing {
+                    get("/api/mine") { call.respond(call.requireUser<Member>().name) }
+                }
+            }
+            val failure = client.get("/api/mine")
+            assertEquals(HttpStatusCode.InternalServerError, failure.status)
+        }
+    }
 
     @Test
     fun `the path follows the first API prefix unless one is given`() {
