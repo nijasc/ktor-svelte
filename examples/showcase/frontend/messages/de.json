@@ -159,5 +159,8 @@
   "error-home": "Zur Startseite",
   "session-ending": "Du wirst bald abgemeldet.",
   "session-extend": "Angemeldet bleiben",
-  "saving": "Wird gespeichert..."
+  "saving": "Wird gespeichert...",
+  "table-columns": "Spalten",
+  "table-move-up": "Nach oben",
+  "table-move-down": "Nach unten"
 }

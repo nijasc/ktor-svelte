@@ -536,6 +536,18 @@ class ShowcaseBrowserTest {
         assertThat(rows.first()).containsText("$token 6")
         assertThat(rows).hasCount(5)
         assertThat(previous).isDisabled()
+
+        table.getByText("Columns").click()
+        table.getByRole(AriaRole.CHECKBOX, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Status")).uncheck()
+        assertThat(table.locator("thead th")).hasText(arrayOf("Title", "Created by"))
+        assertThat(rows.first().locator("td")).hasCount(2)
+        val up = table.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Up: Created by"))
+        up.click()
+        assertThat(table.locator("thead th")).hasText(arrayOf("Title", "Created by"))
+        up.click()
+        assertThat(table.locator("thead th")).hasText(arrayOf("Created by", "Title"))
+        page.reload()
+        assertThat(page.locator("#all-tasks thead th")).hasText(arrayOf("Created by", "Title"))
     }
 
     @Test
