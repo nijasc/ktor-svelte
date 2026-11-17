@@ -3,8 +3,8 @@
     import { errorMessage, type PageOf } from '#api';
 
     type Column =
-        | { key: keyof T & string; label: string; text?: (item: T) => string; class?: string }
-        | { id: string; label: string; text: (item: T) => string; class?: string };
+        | { key: keyof T & string; label: string; text?: (item: T) => string; class?: string; sort?: boolean | string }
+        | { id: string; label: string; text: (item: T) => string; class?: string; sort?: boolean | string };
 
     interface TableAction<Item> {
         label: string;
@@ -27,6 +27,8 @@
         moveUp?: string;
         moveDown?: string;
         actions?: TableAction<T>[];
+        sortParam?: string;
+        sortedBy?: string;
         selectRow?: (item: T) => string;
         selectPage?: string;
         selectEverything?: string;
@@ -58,6 +60,8 @@
         moveUp = 'Up',
         moveDown = 'Down',
         actions = [],
+        sortParam,
+        sortedBy = 'Sorted by',
         selectRow,
         selectPage = 'Select all on this page',
         selectEverything = 'Select every page',
@@ -121,6 +125,46 @@
     }
 
     let items = $state.raw<T[]>(untrack(() => first?.items ?? []));
+    let sorting = $state<{ id: string; descending: boolean } | null>(null);
+
+    function sortName(column: Column): string {
+        return typeof column.sort === 'string' ? column.sort : columnId(column);
+    }
+
+    function compare(left: string, right: string): number {
+        const a = Number(left);
+        const b = Number(right);
+        if (left !== '' && right !== '' && !Number.isNaN(a) && !Number.isNaN(b)) return a - b;
+        return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+    }
+
+    const rows = $derived.by(() => {
+        if (!sorting || sortParam) return items;
+        const column = columns.find((candidate) => columnId(candidate) === sorting?.id);
+        if (!column) return items;
+        const direction = sorting.descending ? -1 : 1;
+        return [...items].sort((left, right) => direction * compare(cellText(left, column), cellText(right, column)));
+    });
+
+    function ariaSort(column: Column): 'ascending' | 'descending' | undefined {
+        if (!column.sort || sorting?.id !== columnId(column)) return undefined;
+        return sorting.descending ? 'descending' : 'ascending';
+    }
+
+    function sortBy(column: Column) {
+        const id = columnId(column);
+        if (sorting?.id !== id) sorting = { id, descending: false };
+        else if (!sorting.descending) sorting = { id, descending: true };
+        else sorting = null;
+        if (sortParam) void reload();
+    }
+
+    function withSort(base: Record<string, unknown>): Record<string, unknown> {
+        if (!sortParam) return base;
+        const column = sorting ? columns.find((candidate) => columnId(candidate) === sorting?.id) : undefined;
+        if (!column || !sorting) return base;
+        return { ...base, [sortParam]: (sorting.descending ? '-' : '') + sortName(column) };
+    }
     const selectable = $derived(actions.length > 0);
     let chosen = $state.raw<Map<string | number, T>>(new Map());
     let working = $state<{ done: number; total: number } | null>(null);
@@ -130,7 +174,7 @@
         return key ? key(item) : index;
     }
 
-    const pageKeys = $derived(items.map((item, index) => keyOf(item, index)));
+    const pageKeys = $derived(rows.map((item, index) => keyOf(item, index)));
     const pageChosen = $derived(pageKeys.filter((id) => chosen.has(id)).length);
 
     function toggleRow(item: T, index: number) {
@@ -144,8 +188,8 @@
 
     function togglePage() {
         const next = new Map(chosen);
-        const all = pageChosen === items.length;
-        items.forEach((item, index) => {
+        const all = pageChosen === rows.length;
+        rows.forEach((item, index) => {
             if (all) next.delete(keyOf(item, index));
             else next.set(keyOf(item, index), item);
         });
@@ -205,7 +249,7 @@
         busy = true;
         problem = '';
         try {
-            const page = await load({ ...query, ...(from === undefined ? {} : { cursor: from }) } as Q);
+            const page = await load(withSort({ ...query, ...(from === undefined ? {} : { cursor: from }) }) as Q);
             if (mine !== run) return;
             items = append ? [...items, ...page.items] : page.items;
             cursor = page.next ?? null;
@@ -323,12 +367,20 @@
                     </th>
                 {/if}
                 {#each shown as column (columnId(column))}
-                    <th scope="col" class={column.class}>{column.label}</th>
+                    <th scope="col" class={column.class} aria-sort={ariaSort(column)}>
+                        {#if column.sort}
+                            <button type="button" class="link link-hover font-semibold" onclick={() => sortBy(column)}>
+                                {column.label}<span aria-hidden="true">{ariaSort(column) === 'ascending' ? ' ^' : ariaSort(column) === 'descending' ? ' v' : ''}</span>
+                            </button>
+                        {:else}
+                            {column.label}
+                        {/if}
+                    </th>
                 {/each}
             </tr>
         </thead>
         <tbody>
-            {#each items as item, index (key ? key(item) : index)}
+            {#each rows as item, index (key ? key(item) : index)}
                 <tr>
                     {#if selectable}
                         <td class="w-8">
