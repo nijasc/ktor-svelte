@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 87 | `call.user` in routes |  |
+| 24 | Login redirect with return |  |
 
 ### In review
 
@@ -41,6 +41,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 48 | API change report | #300 |
 | 81 | Production smoke test | #301 |
 | 21 | Typed current user | #302 |
+| 87 | `call.user` in routes | #303 |
 
 ### Next up
 
@@ -145,7 +146,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 24 | Login redirect with return | Small | 8 |
 | 67 | Session expiry warning | Small | 8 |
 | 22 | Shared permissions | Large | 8 |
 | 23 | Page guards declared once | Large | 8 |
