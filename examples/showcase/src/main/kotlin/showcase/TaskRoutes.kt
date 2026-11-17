@@ -1,13 +1,14 @@
 package showcase
 
 import io.github.nijasc.ktor.svelte.Page
-import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.Patch
+import io.github.nijasc.ktor.svelte.ToastKind
+import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.query
 import io.github.nijasc.ktor.svelte.queryOf
 import io.github.nijasc.ktor.svelte.receiveForm
+import io.github.nijasc.ktor.svelte.requireUser
 import io.github.nijasc.ktor.svelte.respondIfStale
-import io.github.nijasc.ktor.svelte.ToastKind
 import io.github.nijasc.ktor.svelte.toast
 import io.github.nijasc.ktor.svelte.uploadForm
 import io.github.nijasc.ktor.svelte.validate
@@ -52,7 +53,7 @@ fun Route.taskRoutes(
     users: UserStore,
 ) {
     get("/api/stats") {
-        val stats: BoardStats = tasks.stats(call.currentUser(users))
+        val stats: BoardStats = tasks.stats(call.requireUser<User>())
         call.respond(stats)
     }
 
@@ -63,7 +64,7 @@ fun Route.taskRoutes(
 
     route("/api/tasks") {
         get {
-            val viewer = call.currentUser(users)
+            val viewer = call.requireUser<User>()
             val query = call.query<TaskQuery>()
             val filter = TaskFilter(query.search, query.status, query.label, viewer.id.takeIf { query.mine })
             val page: Page<Task> = tasks.page(filter, query.cursor, query.limit)
@@ -73,7 +74,7 @@ fun Route.taskRoutes(
         post {
             val input = call.receive<TaskInput>()
             call.checkAssignee(users, input)
-            val task: Task = tasks.create(input, call.currentUser(users))
+            val task: Task = tasks.create(input, call.requireUser<User>())
             call.toast(call.messages.taskCreated(), ToastKind.Success)
             call.navigateTo(FrontendRoutes.tasksId(task.id.toString()))
             call.respond(HttpStatusCode.Created, task)
@@ -107,7 +108,7 @@ fun Route.taskRoutes(
 
             delete {
                 val task = tasks.find(call.id()) ?: return@delete call.respondMissingTask()
-                val viewer = call.currentUser(users)
+                val viewer = call.requireUser<User>()
                 if (task.creator.id != viewer.id && viewer.role != Role.ADMIN) {
                     return@delete call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemNotYours()))
                 }
@@ -137,7 +138,7 @@ fun Route.taskRoutes(
             post("/comments") {
                 val input = call.receive<CommentInput>()
                 val task = tasks.find(call.id()) ?: return@post call.respondMissingTask()
-                val comment: Comment = tasks.comment(task.id, call.currentUser(users), input.body)
+                val comment: Comment = tasks.comment(task.id, call.requireUser<User>(), input.body)
                 call.respond(HttpStatusCode.Created, comment)
             }
 
@@ -149,7 +150,7 @@ fun Route.taskRoutes(
 
             post("/attachments") {
                 val task = tasks.find(call.id()) ?: return@post call.respondMissingTask()
-                val uploader = call.currentUser(users)
+                val uploader = call.requireUser<User>()
                 val file = call.receiveForm().file("file")
                 val attachments: List<Attachment> =
                     listOf(tasks.attach(task.id, uploader, cleanFileName(file.fileName), file.contentType, file.bytes))
@@ -175,7 +176,7 @@ fun Route.taskRoutes(
 
         delete {
             val file = tasks.file(call.id()) ?: return@delete call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingFile()))
-            val viewer = call.currentUser(users)
+            val viewer = call.requireUser<User>()
             if (file.attachment.uploader.id != viewer.id && viewer.role != Role.ADMIN) {
                 return@delete call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemNotYours()))
             }
