@@ -281,6 +281,7 @@ Besides the settings, the plugin gives your routes these helpers:
 | `call.toast(...)` | Sends a toast with the answer | [Toasts from the server](../features/calling-the-api.md#toasts-from-the-server) |
 | `call.navigateTo(path)` | Tells the client to go to a page after the call | [Navigation from the server](../features/calling-the-api.md#navigation-from-the-server) |
 | `call.respondIfStale(sent, current) { record }` | Answers 409 with the current record when the write was based on an old version | [Two people, one record](../features/calling-the-api.md#two-people-one-record) |
+| `call.requireOwner(record) { user: User, record -> ... }` | Returns the record when it belongs to the caller, answers 404, 401 or 403 otherwise; `route.ownerChecked()` describes those answers | [Owner checks](../features/auth.md#owner-checks) |
 | `call.respondLoginRedirect()` | Redirects to `loginPage`, carrying the current page | [The login page](../features/auth.md#the-login-page) |
 | `route.timeout(30.seconds)` | Cancels the handler after the limit with a 503, and makes the generated call use it as its timeout | [A time limit per route](../features/calling-the-api.md#a-time-limit-per-route) |
 | `getPage<T>(path) { }` | A paged `GET` route with `cursor` and `limit` | [Page through long lists](../recipes/pagination.md) |

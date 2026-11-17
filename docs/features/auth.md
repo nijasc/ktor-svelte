@@ -314,6 +314,32 @@ The frontend gets the same enum and a `can` function:
 `can` in the browser decides what is shown. What is allowed is decided by the check on the route, so every hidden button needs one.
 :::
 
+## Owner checks
+
+Permissions say what someone may do in general; an owner check says whether one record is theirs. `requireOwner` takes the record you looked up and a rule, and answers for you when it is not theirs:
+
+```kotlin no-check
+get("/api/drafts/{id}") {
+    val draft = call.requireOwner(drafts.find(call.pathParameter<Int>("id"))) { user: User, draft ->
+        draft.ownerId == user.id
+    }
+    call.respond(draft)
+}.ownerChecked()
+```
+
+| The call | Answer |
+| --- | --- |
+| No record (`null`) | `404` `{"message": "This does not exist."}` |
+| Nobody signed in | `401`, the same as everywhere else, including your `signInMessage` |
+| Somebody else's record | `404`, so a stranger cannot tell that it exists |
+| Somebody else's record, with `OtherOwner.Forbidden` | `403` with your `refusedMessage` |
+| The owner | the record, and your route goes on |
+
+- The user type is the one you gave `currentUser<User> { }`; write it on the rule's first parameter, as above, and Kotlin works out the rest.
+- Pass `OtherOwner.Forbidden` as the second argument when a 403 is more helpful than hiding the record, for example inside a team where everybody sees the list anyway.
+- `.ownerChecked()` describes the 401, 403 and 404 answers for the generated client, so `isApiError(error, 'drafts.get')` knows them. The compiler plugin cannot see answers that the plugin sends for you.
+- Use it together with [permissions](#permissions): a permission for what a role may do at all, an owner check for the one record.
+
 ## Page guards
 
 Which pages need a signed-in user, and which a permission, is one more rule that both sides have to agree on. Declare it once, by page:
