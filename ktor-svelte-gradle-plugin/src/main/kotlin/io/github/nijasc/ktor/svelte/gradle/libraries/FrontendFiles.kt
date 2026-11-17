@@ -356,6 +356,7 @@ internal fun componentFiles(
             if (daisy) put("$COMPONENTS_DIR/ThemeToggle.svelte", renderTemplate("components/ThemeToggle.svelte"))
             if (spec.routes) put("$COMPONENTS_DIR/Breadcrumbs.svelte", breadcrumbs(daisy))
             put("$COMPONENTS_DIR/Sidebar.svelte", sidebar(daisy, spec.lucide))
+            put("$COMPONENTS_DIR/FocusHeading.svelte", renderTemplate("components/FocusHeading.svelte"))
             if (spec.i18n != null) {
                 put("$COMPONENTS_DIR/TimeAgo.svelte", renderTemplate("components/TimeAgo.svelte"))
                 val classes = mapOf("select" to if (daisy) "select select-sm" else "ktor-svelte-locale-switch")
