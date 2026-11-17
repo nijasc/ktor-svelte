@@ -54,6 +54,7 @@ svelte {
 | `precompress` | `true` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10% |
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](../features/runtime-config.md#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
+| `frontend(name) { }` | none | Another SvelteKit project served under its own path prefix, with `frontendDir`, `outputDir`, `buildScript` and `basePath`. See [Multiple frontends](../guide/multiple-frontends.md) |
 
 The package manager must already be installed unless you set `bunVersion`, or `nodeVersion` with npm.
 
@@ -249,6 +250,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 | `svelteBuild` | Builds the frontend with `buildScript` |
 | `svelteVerifyLeaks` | Fails when a secret value from the environment or a `.env` file is in the frontend build. Runs after `svelteBuild` while `verifyLeaks` is on. See [Secrets in the frontend build](../features/runtime-config.md#secrets-in-the-frontend-build) |
 | `svelteBundle` | Copies the build into the JAR's resources with its manifest, and precompresses files |
+| `svelteInstallAdmin`, `svelteBuildAdmin`, `svelteBundleAdmin` | The same for each [other frontend](../guide/multiple-frontends.md), named after it |
 | `svelteSync` | Installs configured libraries and writes their generated files. Short name `sync` |
 | `svelteVerifySync` | Fails if libraries don't match your config. Runs before every frontend build |
 | `svelteGenerateSources` | Generates Kotlin for your libraries. Runs before compiling |

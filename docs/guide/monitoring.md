@@ -6,7 +6,7 @@ What a running ktor-svelte app tells you in production: one log line per request
 
 ## Quick start
 
-Everything on this page is off by default. Turn on what you need:
+Everything on this page except the [route metrics](#latency-and-errors-per-route) is off by default. Turn on what you need:
 
 ```kotlin
 install(Svelte) {
@@ -22,6 +22,7 @@ install(Svelte) {
 | `accessLog = true` | [One line per request](#request-log) | Logger `ktor-svelte.access` |
 | `frontendErrors()` | [Uncaught errors from browsers](#errors-from-the-browser) | Logger `ktor-svelte.frontend` |
 | `webVitals()` | [Page timings from real visits](#page-timings) | `svelteMetrics.webVitals`, status endpoint |
+| always on | [Latency and errors per route](#latency-and-errors-per-route) | `svelteMetrics.routes`, status endpoint |
 | `healthEndpoint = true` | [Up or down for load balancers](#health-and-status-endpoints) | `GET /_ktor-svelte/health` |
 | `statusEndpoint = true` | [Build, proxy and refusal details](#health-and-status-endpoints) | `GET /_ktor-svelte/status` |
 | `publicBuildInfo = true` | [Version and commit in the browser](#build-info) | `loadBuildInfo()` |
@@ -149,6 +150,34 @@ install(Svelte) {
 A report may be 2 KB, only the five names are accepted, and only values that a real page could have.
 
 The timings are measured with the browser's own `PerformanceObserver`, with no extra package. They are close to what the `web-vitals` library reports, not identical: `INP` here is the slowest interaction of the page load. The numbers are kept in memory and start again when the app restarts.
+
+## Latency and errors per route
+
+The app measures every API call and every page it serves, from the first byte of the request to the last byte of the response, and keeps a histogram and the error counts per route:
+
+```kotlin no-check
+application.svelteMetrics.routes.forEach { route ->
+    println("${route.method} ${route.route}: ${route.count} calls, p95 ${route.percentileMillis(0.95)} ms, ${route.serverErrors} errors")
+}
+```
+
+Routes are named by their template and not by the address that was asked for, so `/api/notes/1` and `/api/notes/2` both count for `GET /api/notes/{id}`, and dashboards do not fill up with one line per id. Pages are grouped the way [page timings](#page-timings) are: by your `paramRoutes`, with numbers and ids as `[id]`.
+
+| Property | What it is |
+|---|---|
+| `kind` | `RouteKind.Api` for a Ktor route, `RouteKind.Page` for a page of the frontend |
+| `method`, `route` | `GET` and `/api/notes/{id}`, or `/notes/[id]` for a page |
+| `count` | Calls answered |
+| `serverErrors`, `clientErrors` | Answers with a 5xx and with a 4xx status |
+| `errorRate` | `serverErrors` divided by `count` |
+| `averageMillis`, `maxMillis` | Average and slowest call |
+| `buckets` | The histogram: how many calls took at most `upToMillis`, for 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000 and 10000 ms, and a last bucket with `upToMillis = null` for slower ones. Each call counts in one bucket |
+| `percentileMillis(0.95)` | The bucket bound that 95% of calls stay within, or `null` when that is above 10 seconds |
+
+- A call to an API path that no route answers counts as `(no route)`. Files such as scripts and images are not counted, and neither are ktor-svelte's own endpoints or the [warm-up](../features/endpoints.md#warm-up-before-ready) calls.
+- At most 200 routes are kept, and the rest are counted together as `(other routes)` or `(other pages)`.
+- The status endpoint lists them under `routes`, with the count, the errors, the average and the 95th percentile.
+- The numbers are kept in memory and start again when the app restarts. To keep them, read them into your metrics system, for example as a Micrometer gauge per route or by copying `buckets` into a histogram of your own.
 
 ## Refused requests
 
