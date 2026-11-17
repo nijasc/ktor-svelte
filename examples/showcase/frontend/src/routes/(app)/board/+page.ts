@@ -6,3 +6,5 @@ export const load: PageLoad = async (event) => {
     const [first, stats] = await Promise.all([api.tasks.list({ limit: BoardLimits.PAGE_SIZE, mine: cookies.boardMine.get() }), api.stats.list()]);
     return { first, stats };
 };
+
+export const _nav = { title: 'nav-board', icon: 'LayoutDashboard', order: 1 };

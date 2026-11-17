@@ -1,14 +1,14 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import { can, cookieConsent, currentUser, loadPublicConfig, Permission } from '#api';
+    import { can, cookieConsent, currentUser, loadPublicConfig, matchGuard, pageGuards } from '#api';
     import LocaleSwitch from '#components/LocaleSwitch.svelte';
     import NavigationProgress from '#components/NavigationProgress.svelte';
     import ThemeToggle from '#components/ThemeToggle.svelte';
     import Icon from '#icon';
     import '#lib/ktor-svelte/app.css';
     import { m } from '#i18n';
-    import { routes } from '#routes';
+    import { nav, routes } from '#routes';
     import { signOut } from '#lib/session.svelte.ts';
 
     let { children } = $props();
@@ -16,14 +16,11 @@
     let appName = $state(m.appTitle());
 
     const links = $derived(
-        currentUser.user
-            ? [
-                  { to: routes.board, label: m.navBoard(), icon: 'LayoutDashboard' as const },
-                  { to: routes.tasksNew, label: m.navNewTask(), icon: 'Plus' as const },
-                  ...(can(Permission.ManageUsers) ? [{ to: routes.admin, label: m.navAdmin(), icon: 'ShieldCheck' as const }] : []),
-                  { to: routes.settings, label: m.navSettings(), icon: 'Settings' as const }
-              ]
-            : [{ to: routes.about, label: m.navAbout(), icon: 'Info' as const }]
+        nav.filter((item) => {
+            const guard = matchGuard(pageGuards, item.to());
+            if (!guard) return !currentUser.user;
+            return currentUser.user !== null && (!guard.permission || can(guard.permission));
+        })
     );
 
     onMount(async () => {
@@ -43,7 +40,7 @@
         {#each links as link (link.to.id)}
             <a class="btn btn-ghost btn-sm" href={link.to()} aria-current={link.to.ariaCurrent(page)}>
                 <Icon name={link.icon} size={16} />
-                {link.label}
+                {link.title()}
             </a>
         {/each}
     </nav>
