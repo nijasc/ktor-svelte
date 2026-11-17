@@ -28,6 +28,7 @@ internal const val EXTEND_ROUTE = "extend"
 public class CurrentUserAnswer<T>(
     public val user: T?,
     public val sessionSeconds: Long? = null,
+    public val permissions: List<String>? = null,
 )
 
 internal const val SIGN_IN_MESSAGE = "Sign in first."
@@ -55,6 +56,7 @@ private class FoundUser(
 )
 
 internal val CurrentUserKey = AttributeKey<CurrentUserSpec>("KtorSvelteCurrentUser")
+internal val GrantedPermissionsKey = AttributeKey<Set<Enum<*>>>("KtorSvelteGrantedPermissions")
 private val FoundUserKey = AttributeKey<FoundUser>("KtorSvelteFoundUser")
 
 @PublishedApi
@@ -81,6 +83,7 @@ public suspend inline fun <reified T : Any> ApplicationCall.requireUser(): T = f
 
 public fun ApplicationCall.currentUserChanged() {
     attributes.remove(FoundUserKey)
+    attributes.remove(GrantedPermissionsKey)
     if (response.headers[USER_HEADER] == null) response.header(USER_HEADER, USER_CHANGED)
 }
 
@@ -92,7 +95,9 @@ internal fun Route.currentUserRoute(
     suspend fun answer(call: ApplicationCall) {
         val user = call.findUser(spec.type)
         call.response.header(HttpHeaders.CacheControl, "no-store")
-        call.respond(CurrentUserAnswer(user, if (user == null) null else spec.secondsLeft(call)), spec.answerType)
+        val permissions =
+            if (call.application.attributes.contains(PermissionsKey)) call.grantedPermissions().map { it.name }.sorted() else null
+        call.respond(CurrentUserAnswer(user, if (user == null) null else spec.secondsLeft(call), permissions), spec.answerType)
     }
     get(path) { answer(call) }.hide()
     post("$path/$EXTEND_ROUTE") {

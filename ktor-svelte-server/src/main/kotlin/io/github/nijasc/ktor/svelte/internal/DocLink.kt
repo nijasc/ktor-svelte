@@ -12,6 +12,7 @@ internal enum class DocLink(
     DAISYUI("features/frontend-libraries", "daisyui"),
     DEV_WORKFLOW("guide/dev-workflow", null),
     CURRENT_USER("features/auth", "the-current-user"),
+    PERMISSIONS("features/auth", "permissions"),
     LOGIN_PAGE("features/auth", "the-login-page"),
     GENERATED_TYPESCRIPT("features/typescript", null),
     I18N("features/frontend-libraries", "i18n"),

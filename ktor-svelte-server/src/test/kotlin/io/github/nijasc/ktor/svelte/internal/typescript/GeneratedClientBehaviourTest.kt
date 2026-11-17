@@ -122,6 +122,24 @@ class GeneratedClientBehaviourTest {
     }
 
     @Test
+    fun `the user store answers what the user may do`() {
+        val steps =
+            runHarness().getValue("permissions").jsonArray.map { step ->
+                step.jsonArray.joinToString(" | ") { it.jsonPrimitive.content }
+            }
+        assertEquals(
+            listOf(
+                "before loading | false | false",
+                "a member | true | false",
+                "an admin | true | true",
+                "after a 401 | false | false",
+                "a visitor, whatever the answer lists | false | false",
+            ),
+            steps,
+        )
+    }
+
+    @Test
     fun `GET requests are retried with backoff only when asked to`() {
         val results = runHarness()
 

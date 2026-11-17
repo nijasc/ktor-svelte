@@ -596,6 +596,31 @@ sessionStep('the time ran out, so the store asked and the server said nobody');
 await request('GET', '/api/notes');
 sessionStep('nothing is planned for a visitor');
 results.session = { steps: sessionSteps, calls: sessionCalls };
+
+type HarnessPermission = 'NotesRead' | 'NotesDelete';
+let grantedNow: HarnessPermission[] | null = ['NotesRead'];
+apiConfig.fetch = (async (input: RequestInfo | URL) => {
+    if (String(input).endsWith('/api/secret')) return new Response('{}', { status: 401 });
+    const user = grantedNow === null ? null : { name: 'Ada' };
+    return new Response(JSON.stringify({ user, permissions: grantedNow ?? ['NotesRead'] }), { headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+const allowedState: UserState<HarnessMember, HarnessPermission> = { user: null, ready: false, permissions: [] };
+const allowed = userStore<HarnessMember, HarnessPermission>('/api/current-user', allowedState);
+const canSteps: unknown[] = [];
+const canStep = (what: string) => canSteps.push([what, allowed.can('NotesRead'), allowed.can('NotesDelete')]);
+canStep('before loading');
+await allowed.load();
+canStep('a member');
+grantedNow = ['NotesRead', 'NotesDelete'];
+await allowed.reload();
+canStep('an admin');
+await request('GET', '/api/secret').catch(() => undefined);
+canStep('after a 401');
+grantedNow = null;
+await allowed.reload();
+canStep('a visitor, whatever the answer lists');
+results.permissions = canSteps;
+allowed.clear();
 apiConfig.sessionWarning = undefined;
 apiConfig.fetch = undefined;
 
