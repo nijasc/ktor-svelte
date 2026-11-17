@@ -29,6 +29,9 @@ data class Entry(
 
 class PagedRoutesTest {
     private val entries = (1..250).map { Entry(it, "Entry $it") }
+    private val counted =
+        java.util.concurrent.atomic
+            .AtomicInteger()
 
     private fun pageAfter(request: PageRequest): Page<Entry> {
         val after = request.cursor?.toIntOrNull() ?: 0
@@ -64,6 +67,11 @@ class PagedRoutesTest {
                         seen += request
                         pageAfter(request)
                     }
+                    getPage<Entry>("/counted") { request ->
+                        seen += request
+                        val page = pageAfter(request)
+                        Page(page.items, page.next, request.total { counted.incrementAndGet().let { entries.size.toLong() } })
+                    }
                 }
             }
         }
@@ -81,6 +89,21 @@ class PagedRoutesTest {
                 client.get("/api/entries?cursor=249").bodyAsText().replace(""","next":null""", ""),
             )
             assertEquals(listOf(PageRequest(null, 2), PageRequest("249", 50)), seen.toList())
+        }
+
+    @Test
+    fun `the total is only counted when the client asks for it`() =
+        pagedApp { seen ->
+            val plain = client.get("/api/entries/counted?limit=1").bodyAsText()
+            assertEquals(false, "total" in plain)
+            assertEquals(0, counted.get())
+            assertEquals(false, seen.last().wantsTotal)
+            val counting = client.get("/api/entries/counted?limit=1&total=true").bodyAsText()
+            assertContains(counting, "\"total\":250")
+            assertEquals(1, counted.get())
+            assertEquals(true, seen.last().wantsTotal)
+            client.get("/api/entries/counted?limit=1&total=no")
+            assertEquals(1, counted.get())
         }
 
     @Test
@@ -120,7 +143,7 @@ class PagedRoutesTest {
         val services = output.resolve("services.ts").readText()
         assertContains(
             services,
-            "export const entriesList = (query?: { cursor?: string; limit?: string }, options?: RequestOptions) => request<",
+            "export const entriesList = (query?: { cursor?: string; limit?: string; total?: boolean }, options?: RequestOptions) => request<",
         )
         assertContains(services, "items: Entry[];")
         assertContains(output.resolve("types.ts").readText(), "export interface Entry {")

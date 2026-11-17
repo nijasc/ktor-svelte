@@ -56,6 +56,8 @@ object store {
         cursor: String?,
         limit: Int,
     ): Page<Note> = Page(emptyList(), cursor)
+
+    fun count(): Int = 0
 }
 
 class Users {

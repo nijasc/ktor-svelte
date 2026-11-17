@@ -1029,6 +1029,7 @@ export function matchGuard<P extends string>(guards: readonly PageGuard<P>[], pa
 export interface PageOf<T> {
     items: T[];
     next?: string | null;
+    total?: number | null;
 }
 
 export async function* pages<Q extends { cursor?: string }, T>(

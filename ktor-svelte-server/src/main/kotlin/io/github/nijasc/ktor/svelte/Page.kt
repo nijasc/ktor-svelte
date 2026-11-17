@@ -11,6 +11,8 @@ import io.ktor.server.routing.openapi.describe
 import io.ktor.util.reflect.TypeInfo
 import io.ktor.util.reflect.typeInfo
 import io.ktor.utils.io.ExperimentalKtorApi
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
 public const val DEFAULT_PAGE_LIMIT: Int = 50
@@ -20,19 +22,35 @@ public const val LARGEST_PAGE_LIMIT: Int = 100
 public data class Page<T>(
     val items: List<T>,
     val next: String? = null,
-)
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val total: Long? = null,
+) {
+    public constructor(items: List<T>, next: String?) : this(items, next, null)
+}
 
 public data class PageRequest(
     val cursor: String?,
     val limit: Int,
-)
+    val wantsTotal: Boolean = false,
+) {
+    public constructor(cursor: String?, limit: Int) : this(cursor, limit, false)
+
+    public inline fun total(count: () -> Long): Long? = if (wantsTotal) count() else null
+}
+
+private val TOTAL_ASKED = setOf("true", "1")
 
 private fun ApplicationCall.pageRequest(
     defaultLimit: Int,
     maxLimit: Int,
 ): PageRequest {
     val asked = request.queryParameters["limit"]?.toIntOrNull() ?: defaultLimit
-    return PageRequest(request.queryParameters["cursor"]?.takeIf { it.isNotEmpty() }, asked.coerceIn(1, maxLimit))
+    return PageRequest(
+        request.queryParameters["cursor"]?.takeIf { it.isNotEmpty() },
+        asked.coerceIn(1, maxLimit),
+        request.queryParameters["total"]?.lowercase() in TOTAL_ASKED,
+    )
 }
 
 @PublishedApi
@@ -58,6 +76,10 @@ public inline fun <reified T : Any> Route.getPage(
         parameters {
             query("cursor") { required = false }
             query("limit") { required = false }
+            query("total") {
+                required = false
+                schema = jsonSchema<Boolean>()
+            }
         }
         responses {
             HttpStatusCode.OK { schema = jsonSchema<Page<T>>() }
