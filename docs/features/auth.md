@@ -88,6 +88,39 @@ delete("/api/session") {
 
 How it works: the plugin serves `GET /api/current-user`, under your first API prefix, which answers `{"user": ...}` and is never cached. Pass `path = "/api/whoami"` to `currentUser` to move it. The endpoint is open to everyone and answers `{"user": null}` to a visitor. It runs outside any `authenticate` block, so the block that finds the user reads the session or checks the token itself, and `call.principal()` is empty there.
 
+### In routes
+
+The same declaration gives every route the user, typed:
+
+```kotlin no-check
+get("/api/tasks") {
+    val user: User = call.requireUser()
+    call.respond(tasks.visibleTo(user))
+}
+
+get("/api/greeting") {
+    val user = call.user<User>()
+    call.respond(Greeting(if (user == null) "Hello" else "Hello, ${user.name}"))
+}
+```
+
+| | |
+| --- | --- |
+| `call.user<User>()` | The signed-in user, or `null` |
+| `call.requireUser<User>()` | The signed-in user. For a visitor the route ends there with a 401 and `{"message": "Sign in first."}` |
+
+Both work in any route, inside or outside `authenticate`, and need no user store passed along. The user is looked up once per call, however often a route and its helpers ask. `currentUserChanged()` forgets that answer, so a route that signs someone in can ask again and gets the new user.
+
+The 401 message is yours to set, for example to translate it:
+
+```kotlin no-check
+currentUser<User>(signInMessage = { call -> call.messages.signInFirst() }) {
+    sessions.get<UserSession>()?.let { users.find(it.userId) }
+}
+```
+
+To have the 401 in the generated types of your routes, declare it once with `errorResponse<YourError>(HttpStatusCode.Unauthorized)`.
+
 ## Expired sessions
 
 In the browser, react to expired sessions in one place:
