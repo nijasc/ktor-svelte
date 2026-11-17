@@ -596,6 +596,23 @@ class DevModeBrowserTest {
     }
 
     @Test
+    fun `the dev panel shows the environment the app sees, with secrets hidden`() {
+        page.navigate("/about")
+        assertThat(page.getByRole(AriaRole.HEADING, Page.GetByRoleOptions().setLevel(1))).hasText("About this showcase")
+        val panel = page.locator("[data-ktor-svelte-panel]")
+        panel.locator(".toggle").click()
+        panel.locator(".environment summary").click()
+        panel.locator(".environment-filter").fill("SHOWCASE_")
+        val rows = panel.locator(".environment-row")
+
+        fun row(name: String) = rows.filter(Locator.FilterOptions().setHasText(Pattern.compile("^$name"))).first()
+        assertThat(row("SHOWCASE_DATA")).containsText("data")
+        assertThat(row("SHOWCASE_ADMIN_PASSWORD")).hasText("SHOWCASE_ADMIN_PASSWORD***")
+        assertThat(row("SHOWCASE_ADMIN_PASSWORD")).hasClass(Pattern.compile("\\bhidden\\b"))
+        assertFalse(ADMIN_PASSWORD in panel.innerText())
+    }
+
+    @Test
     fun `the dev panel lists this browser's cookies as the server reads them and clears them`() {
         page.navigate("/board")
         assertThat(page).hasURL(Pattern.compile(".*/login(\\?next=.*)?$"))
