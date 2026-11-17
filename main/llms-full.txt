@@ -1646,6 +1646,40 @@ export const ticketsCreate = (body: Omit<Ticket, 'id' | 'createdAt'>, options?: 
 - Give read-only fields a default in Kotlin, as above, so `call.receive<Ticket>()` works on a body without them, and set the real values on the server.
 - Only the fields of the class that is the body itself are left out, not those of nested classes, lists or upload forms.
 
+### Created and updated stamps
+
+Most records want to know when they were made and changed, and by whom. `Stamps` is a small ready type for that, filled on the server and typed on the client:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.Stamps
+import io.ktor.openapi.JsonSchema
+
+@Serializable
+data class Article(
+    val title: String,
+    @JsonSchema.ReadOnly val stamps: Stamps? = null,
+)
+
+fun newArticle(title: String, author: String): Article {
+    return Article(title, Stamps.created(by = author))
+}
+
+fun renamed(article: Article, title: String, editor: String): Article {
+    return article.copy(title = title, stamps = article.stamps?.touched(by = editor))
+}
+```
+
+| Field | Set by | Type in TypeScript |
+| --- | --- | --- |
+| `createdAt` | `Stamps.created()` | `IsoDateTime` |
+| `updatedAt` | `Stamps.created()`, then every `touched()` | `IsoDateTime` |
+| `createdBy` | `Stamps.created(by = ...)`, optional | `string` |
+| `updatedBy` | the last `touched(by = ...)`, optional | `string` |
+
+- `Stamps.created()` and `touched()` use the current time; pass `at = ...` to choose it, for example in tests.
+- `by` is whatever names a person in your app, such as `call.requireUser<User>().email`.
+- Mark the property `@JsonSchema.ReadOnly`, as above, so the browser never sends it back and the server stays the one that sets it. Show it with `IsoDateTime.parse(article.stamps.updatedAt)` or the [relative time](https://nijasc.github.io/ktor-svelte/main/features/i18n) helpers.
+
 ### Enums
 
 Every Kotlin enum with two or more values becomes a `const` object plus a type of the same name, so you can use the values in code and not only in types:
