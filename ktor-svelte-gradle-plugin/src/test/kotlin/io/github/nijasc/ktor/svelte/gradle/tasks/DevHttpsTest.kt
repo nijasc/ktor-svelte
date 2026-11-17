@@ -85,6 +85,21 @@ class DevHttpsTest {
     }
 
     @Test
+    fun `the certificate for localhost is renewed before it runs out, by the same authority`() {
+        val first = devCertificate(dir, keytool, "ada@laptop")
+        val authorityBefore = first.authority.readBytes()
+        val serverBefore = first.keyStore.readBytes()
+        val expiry = serverCertificateExpiry(first.keyStore)!!
+        val renewed = devCertificate(dir, keytool, "ada@laptop", now = expiry.minus(java.time.Duration.ofDays(10)))
+        assertFalse(renewed.created)
+        val serverAfter = renewed.keyStore.readBytes()
+        assertFalse(serverBefore.contentEquals(serverAfter))
+        assertTrue(authorityBefore.contentEquals(renewed.authority.readBytes()))
+        val untouched = devCertificate(dir, keytool, "ada@laptop")
+        assertTrue(serverAfter.contentEquals(untouched.keyStore.readBytes()))
+    }
+
+    @Test
     fun `requests reach the app with the note that they came over HTTPS`() {
         val certificate = devCertificate(dir, keytool, "test")
         val app = echoServer()

@@ -10,6 +10,9 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.security.KeyStore
+import java.security.cert.X509Certificate
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
@@ -22,6 +25,7 @@ private const val CA_CERTIFICATE = "ca.crt"
 private const val SERVER_FILE = "server.p12"
 private const val CA_DAYS = "3650"
 private const val SERVER_DAYS = "397"
+private const val RENEW_DAYS_BEFORE = 30L
 private const val KEYTOOL_SECONDS = 60L
 private const val LARGEST_HEAD = 64 * 1024
 private const val BUFFER = 16 * 1024
@@ -47,28 +51,44 @@ private fun keytool(
     }
 }
 
+private val STORE = arrayOf("-storetype", "PKCS12", "-storepass", DEV_STORE_PASSWORD)
+private val KEY = arrayOf("-keyalg", "RSA", "-keysize", "2048")
+
+internal fun serverCertificateExpiry(keyStore: File): Instant? =
+    runCatching {
+        val keys = KeyStore.getInstance("PKCS12")
+        keyStore.inputStream().use { keys.load(it, DEV_STORE_PASSWORD.toCharArray()) }
+        (keys.getCertificate("server") as X509Certificate).notAfter.toInstant()
+    }.getOrNull()
+
 internal fun devCertificate(
     directory: File,
     keytool: File,
     owner: String,
+    now: Instant = Instant.now(),
 ): DevCertificate {
     val keyStore = directory.resolve(SERVER_FILE)
     val authority = directory.resolve(CA_CERTIFICATE)
-    if (keyStore.isFile && authority.isFile) return DevCertificate(keyStore, authority, created = false)
+    val hasAuthority = authority.isFile && directory.resolve(CA_FILE).isFile
+    if (hasAuthority) {
+        val expiry = serverCertificateExpiry(keyStore)
+        if (expiry != null && expiry.isAfter(now.plus(Duration.ofDays(RENEW_DAYS_BEFORE)))) {
+            return DevCertificate(keyStore, authority, created = false)
+        }
+        issueServerCertificate(directory, keytool)
+        return DevCertificate(keyStore, authority, created = false)
+    }
     directory.mkdirs()
     listOf(CA_FILE, CA_CERTIFICATE, SERVER_FILE, "server.csr", "server.crt").forEach { directory.resolve(it).delete() }
-    val store = arrayOf("-storetype", "PKCS12", "-storepass", DEV_STORE_PASSWORD)
-    val key = arrayOf("-keyalg", "RSA", "-keysize", "2048")
-    val name = "CN=ktor-svelte development CA ($owner)"
     keytool(
         keytool,
         directory,
         "-genkeypair",
         "-alias",
         "ca",
-        *key,
+        *KEY,
         "-dname",
-        name,
+        "CN=ktor-svelte development CA ($owner)",
         "-ext",
         "bc:c=ca:true",
         "-ext",
@@ -77,24 +97,34 @@ internal fun devCertificate(
         CA_DAYS,
         "-keystore",
         CA_FILE,
-        *store,
+        *STORE,
     )
+    keytool(keytool, directory, "-exportcert", "-alias", "ca", "-keystore", CA_FILE, *STORE, "-rfc", "-file", CA_CERTIFICATE)
+    issueServerCertificate(directory, keytool)
+    return DevCertificate(keyStore, authority, created = true)
+}
+
+private fun issueServerCertificate(
+    directory: File,
+    keytool: File,
+) {
+    listOf(SERVER_FILE, "server.csr", "server.crt").forEach { directory.resolve(it).delete() }
     keytool(
         keytool,
         directory,
         "-genkeypair",
         "-alias",
         "server",
-        *key,
+        *KEY,
         "-dname",
         "CN=localhost",
         "-validity",
         SERVER_DAYS,
         "-keystore",
         SERVER_FILE,
-        *store,
+        *STORE,
     )
-    keytool(keytool, directory, "-certreq", "-alias", "server", "-keystore", SERVER_FILE, *store, "-file", "server.csr")
+    keytool(keytool, directory, "-certreq", "-alias", "server", "-keystore", SERVER_FILE, *STORE, "-file", "server.csr")
     keytool(
         keytool,
         directory,
@@ -103,7 +133,7 @@ internal fun devCertificate(
         "ca",
         "-keystore",
         CA_FILE,
-        *store,
+        *STORE,
         "-infile",
         "server.csr",
         "-outfile",
@@ -118,11 +148,9 @@ internal fun devCertificate(
         SERVER_DAYS,
         "-rfc",
     )
-    keytool(keytool, directory, "-exportcert", "-alias", "ca", "-keystore", CA_FILE, *store, "-rfc", "-file", CA_CERTIFICATE)
-    keytool(keytool, directory, "-importcert", "-alias", "ca", "-keystore", SERVER_FILE, *store, "-file", CA_CERTIFICATE, "-noprompt")
-    keytool(keytool, directory, "-importcert", "-alias", "server", "-keystore", SERVER_FILE, *store, "-file", "server.crt", "-noprompt")
+    keytool(keytool, directory, "-importcert", "-alias", "ca", "-keystore", SERVER_FILE, *STORE, "-file", CA_CERTIFICATE, "-noprompt")
+    keytool(keytool, directory, "-importcert", "-alias", "server", "-keystore", SERVER_FILE, *STORE, "-file", "server.crt", "-noprompt")
     listOf("server.csr", "server.crt").forEach { directory.resolve(it).delete() }
-    return DevCertificate(keyStore, authority, created = true)
 }
 
 internal fun trustInstructions(
