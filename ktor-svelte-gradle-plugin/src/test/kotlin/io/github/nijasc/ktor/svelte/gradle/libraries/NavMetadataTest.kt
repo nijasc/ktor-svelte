@@ -1,8 +1,12 @@
 package io.github.nijasc.ktor.svelte.gradle.libraries
 
+import groovy.json.JsonSlurper
+import io.github.nijasc.ktor.svelte.gradle.locateExecutable
 import org.gradle.api.GradleException
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -80,6 +84,54 @@ class NavMetadataTest {
         assertContains(source, "    { id: '/login', title: () => 'Sign in' }\n];\n")
         assertContains(source, "export function pageTitle(page: CurrentPage): string | undefined {")
         assertContains(source, "export function breadcrumbs(page: OpenPage): Crumb[] {")
+    }
+
+    @Test
+    fun `titles and breadcrumbs follow the open page`() {
+        val bun = locateExecutable("bun")
+        assumeTrue(bun != null, "bun is not on PATH")
+        page("", "export const _nav = { title: 'Home' };")
+        page("(app)/notes", "export const _nav = { title: 'Notes' };")
+        page("(app)/notes/[id]", "export const _nav = { title: 'One note' };")
+        page("(app)/notes/[id]/files", "export const _nav = { title: 'Files' };")
+        page("notes-archive", "export const _nav = { title: 'Archive' };")
+        page("about", null)
+        val source =
+            routesSource(scanRoutes(dir.resolve("routes")), null)
+                .replace(
+                    "import { resolve } from '\$app/paths';",
+                    "const resolve = (id: string, params: Record<string, string> = {}) =>\n" +
+                        "    id.replace(/\\/\\([^/]+\\)/g, '').replace(/\\[(\\w+)\\]/g, (_, name: string) => params[name] ?? '?') || '/';",
+                ).replace(
+                    "import type { RouteId, RouteParams } from '\$app/types';",
+                    "type RouteId = string;\ntype RouteParams<T> = Record<string, string>;",
+                )
+        dir.resolve("routes.ts").writeText(source)
+        val script =
+            """
+            import { breadcrumbs, nav, pageTitle } from './routes.ts';
+            const open = { route: { id: '/(app)/notes/[id]/files' }, params: { id: '7' } };
+            console.log(JSON.stringify({
+                crumbs: breadcrumbs(open).map((crumb) => crumb.title + ' ' + crumb.href + (crumb.current ? ' current' : '')),
+                title: pageTitle(open),
+                untitled: pageTitle({ route: { id: '/about' } }) ?? null,
+                nowhere: breadcrumbs({ route: { id: null } }),
+                archive: breadcrumbs({ route: { id: '/notes-archive' } }).map((crumb) => crumb.title),
+                menu: nav.map((item) => item.title() + ' ' + item.to()),
+            }));
+            """.trimIndent()
+        val file = dir.resolve("script.ts").apply { writeText(script) }
+        val process = ProcessBuilder(bun!!.path, file.path).directory(dir).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertEquals(true, process.waitFor(60, TimeUnit.SECONDS), output)
+        assertEquals(0, process.exitValue(), output)
+        val result = JsonSlurper().parseText(output.lines().last { it.startsWith("{") }) as Map<*, *>
+        assertEquals(listOf("Home /", "Notes /notes", "One note /notes/7", "Files /notes/7/files current"), result["crumbs"])
+        assertEquals("Files", result["title"])
+        assertNull(result["untitled"])
+        assertEquals(emptyList<Any>(), result["nowhere"])
+        assertEquals(listOf("Home", "Archive"), result["archive"], "a page whose name only starts the same is no parent")
+        assertEquals(listOf("Home /", "Notes /notes", "Archive /notes-archive"), result["menu"])
     }
 
     @Test
