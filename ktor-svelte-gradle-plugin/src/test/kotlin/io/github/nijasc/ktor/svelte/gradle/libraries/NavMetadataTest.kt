@@ -135,6 +135,64 @@ class NavMetadataTest {
     }
 
     @Test
+    fun `a page with a description or an image gets its sharing tags into the prerendered page`() {
+        val bun = locateExecutable("bun")
+        assumeTrue(bun != null, "bun is not on PATH")
+        page(
+            "",
+            "export const _nav = { title: 'Team \"board\" & more', description: 'about-text', image: 'https://example.com/share.png' };",
+        )
+        page("about", "export const _nav = { title: 'About', description: 'Who we are' };")
+        page("plain", "export const _nav = { title: 'Plain' };")
+        val routes = scanRoutes(dir.resolve("routes"))
+        assertEquals(true, sharesPages(routes))
+        val source = routesSource(routes, null, setOf("about-text"))
+        assertContains(source, "description: () => m.aboutText(), image: 'https://example.com/share.png' }")
+        dir.resolve("i18n.js").writeText("export const m = { aboutText: () => 'One <JAR>' };\n")
+        dir.resolve("routes.ts").writeText(
+            source
+                .replace("import { resolve } from '\$app/paths';", "const resolve = (id: string) => id;")
+                .replace(
+                    "import type { RouteId, RouteParams } from '\$app/types';",
+                    "type RouteId = string;\ntype RouteParams<T> = Record<string, string>;",
+                ),
+        )
+        val script =
+            """
+            import { shareTags } from './routes.ts';
+            console.log(JSON.stringify(['/', '/about', '/plain', '/other', null].map((id) => shareTags({ route: { id } }))));
+            """.trimIndent()
+        val file = dir.resolve("script.ts").apply { writeText(script) }
+        val process = ProcessBuilder(bun!!.path, file.path).directory(dir).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertEquals(true, process.waitFor(60, TimeUnit.SECONDS), output)
+        assertEquals(0, process.exitValue(), output)
+        val tags = JsonSlurper().parseText(output.lines().last { it.startsWith("[") }) as List<*>
+        assertEquals(
+            "<meta property=\"og:type\" content=\"website\">" +
+                "<meta property=\"og:title\" content=\"Team &quot;board&quot; &amp; more\">" +
+                "<meta name=\"description\" content=\"One &lt;JAR&gt;\">" +
+                "<meta property=\"og:description\" content=\"One &lt;JAR&gt;\">" +
+                "<meta property=\"og:image\" content=\"https://example.com/share.png\">" +
+                "<meta name=\"twitter:card\" content=\"summary_large_image\">",
+            tags[0],
+        )
+        assertContains(tags[1].toString(), "<meta name=\"description\" content=\"Who we are\">")
+        assertFalse("og:image" in tags[1].toString())
+        assertEquals(listOf("", "", ""), tags.drop(2))
+
+        val spec = LibrarySpec(null, null, false, null, 5173, "app.generated", routes = true)
+        val files = frontendFiles(spec, null, false, routes)
+        val hooks = files.getValue("$GENERATED_DIR/server-hooks.ts")
+        assertContains(hooks, "import { shareTags } from './routes.js';")
+        assertContains(hooks, "html.replace('</head>', () => `\${shareTags(event)}</head>`)")
+        assertContains(files.getValue("src/hooks.server.ts"), "ktorSvelteHandle as handle")
+        assertFalse("$GENERATED_DIR/server-hooks.ts" in frontendFiles(spec, null, false, routes.map { it.copy(nav = null) }))
+        val wrong = assertFailsWith<GradleException> { navMeta("export const _nav = { title: 'A', image: 'share.png' };", "f") }
+        assertContains(wrong.message.orEmpty(), "needs an address for image")
+    }
+
+    @Test
     fun `without any page metadata the routes file is as before`() {
         page("about", "export const prerender = true;")
         val source = routesSource(scanRoutes(dir.resolve("routes")), null, setOf("nav-home"))

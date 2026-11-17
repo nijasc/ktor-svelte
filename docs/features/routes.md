@@ -157,6 +157,7 @@ export const _nav = { title: 'Board', icon: 'LayoutDashboard', order: 1 };
 | `icon` | Optional. With `lucide()` on, the name of an icon |
 | `order` | Optional. Where the page stands in the menu. Pages without it come last, in the order of their paths |
 | `menu` | Optional. `false` keeps the page out of the menu, with its title still known |
+| `description`, `image` | Optional. For [link previews](#link-previews) |
 
 The name starts with an underscore because SvelteKit refuses other exports from a page file. Keep the values plain: text, numbers, `true` and `false`. The plugin reads the file without running it, so a function call or a variable there fails `svelteSync` with the name of the file.
 
@@ -200,6 +201,38 @@ const links = $derived(
     })
 );
 ```
+
+## Link previews
+
+When someone pastes a link to your site into a chat, the preview comes from tags in the page's HTML. Add what the preview should say to the same `_nav`:
+
+```ts no-check
+export const _nav = {
+    title: 'home-title',
+    description: 'home-lead',
+    image: 'https://example.com/share/home.png'
+};
+```
+
+| | |
+| --- | --- |
+| `description` | One or two sentences. Like `title`, the key of a message when `i18n` is on |
+| `image` | The preview image. Give its full address: most services do not follow a path. A path that starts with `/` is accepted and written as it is |
+
+Every prerendered page that has a `description` or an `image` then gets these tags in its `<head>`, at build time:
+
+```html
+<meta property="og:type" content="website">
+<meta property="og:title" content="A team board in one JAR">
+<meta name="description" content="This example uses every ktor-svelte feature.">
+<meta property="og:description" content="This example uses every ktor-svelte feature.">
+<meta property="og:image" content="https://example.com/share/home.png">
+<meta name="twitter:card" content="summary_large_image">
+```
+
+They are written by the generated server hooks, so there is nothing to add to a layout. With `LocaleStrategy.UrlPrefix` each language's pages get the tags in that language. With the cookie strategy a page is prerendered once, so its tags are in the default language.
+
+This is for pages that are prerendered. A page with a parameter, such as `/notes/[id]`, is not: the server never renders pages, so such a page sets its own title when it runs, and a link to it previews without these tags.
 
 ## A new page
 

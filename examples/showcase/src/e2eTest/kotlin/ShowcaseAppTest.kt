@@ -244,6 +244,20 @@ class ShowcaseAppTest {
     }
 
     @Test
+    fun `prerendered pages carry what they say about themselves for link previews`() {
+        val home = anonymous().send("GET", "/", null, html).body()
+        assertContains(home, """<meta property="og:title" content="A team board in one JAR">""")
+        assertContains(home, """<meta name="description" content="This example uses every ktor-svelte feature""")
+        assertContains(home, """<meta property="og:image" content="https://nijasc.github.io/ktor-svelte/logo.svg">""")
+        assertContains(home, """<meta name="twitter:card" content="summary_large_image">""")
+        val about = anonymous().send("GET", "/about", null, html).body()
+        assertContains(about, """<meta property="og:title" content="About">""")
+        assertContains(about, """<meta property="og:description" content="The showcase is a small team board.""")
+        assertFalse("og:image" in about)
+        assertFalse("og:title" in anonymous().send("GET", "/login", null, html).body())
+    }
+
+    @Test
     fun `a forged session cookie is refused`() {
         val response = anonymous().send("GET", "/api/me", null, "Cookie" to "showcase_session=userId%3D%2523i1")
         assertEquals(401, response.statusCode())
