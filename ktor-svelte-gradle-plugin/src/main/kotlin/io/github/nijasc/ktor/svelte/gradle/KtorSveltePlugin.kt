@@ -30,14 +30,18 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInstallTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteLiveTemplatesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteOutdatedTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteReadmeTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRecordTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRenameTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRoutesDiagramTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunConfigurationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteRunScriptTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSmokeTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpgradeNotesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpgradeTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyA11yTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyApiRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLeaksTask
@@ -409,6 +413,13 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.description = "Lists API routes that nothing in the frontend calls. Add --strict to fail on them."
             task.frontendDir.set(extension.frontendDir)
         }
+        project.tasks.register("svelteRoutesDiagram", SvelteRoutesDiagramTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Writes a Mermaid diagram of which page calls which API route. Add --output=docs/routes.md to pick the file."
+            task.frontendDir.set(extension.frontendDir)
+            task.routesDirectory.set(routes)
+            task.projectDirectory.set(project.layout.projectDirectory)
+        }
         project.tasks.register("svelteVerifyLoads", SvelteVerifyLoadsTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Fails if an API call inside a load function uses neither apiWith(event) nor { fetch }."
@@ -662,6 +673,21 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.hookTasks.set(listOf("formatCheck", "svelteVerifySync"))
             task.regenerateTasks.set(project.provider { listOf("svelteSync", "svelteGenerateTs").filter { it in project.tasks.names } })
         }
+        project.tasks.register("svelteUpgrade", SvelteUpgradeTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Upgrades ktor-svelte: changes the version, regenerates the frontend files and prints what to know."
+            task.pluginVersion.set(pluginVersion())
+            task.rootDirectory.set(project.rootDir)
+            task.projectPath.set(project.path)
+            task.followUpTasks.set(project.provider { listOf("svelteSync", "svelteGenerateTs").filter { it in project.tasks.names } })
+        }
+        project.tasks.register("svelteUpgradeNotes", SvelteUpgradeNotesTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Prints the upgrade notes since a version: svelteUpgradeNotes --since=1.3.0"
+            task.pluginVersion.set(pluginVersion())
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.frontendDirectory.set(extension.frontendDir.map { it.asFile.relativeTo(project.projectDir).invariantSeparatorsPath })
+        }
         project.tasks.register("svelteCheck", SvelteCheckTask::class.java) { task ->
             configureToolTask(task, extension)
             task.description = "Runs the frontend's check script."
@@ -697,6 +723,22 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             task.offline.set(project.gradle.startParameter.isOffline)
         }
         val hasApplicationPlugin = project.provider { project.pluginManager.hasPlugin("application") }
+        project.tasks.register("svelteReadme", SvelteReadmeTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description =
+                "Writes the commands, addresses and environment variables of the app between the markers in README.md. " +
+                "Add --check to fail when it is out of date."
+            task.readmeFile.set(project.layout.projectDirectory.file("README.md"))
+            task.environmentExample.set(project.layout.projectDirectory.file(".env.example"))
+            task.taskPrefix.set(if (project == project.rootProject) "" else "${project.path}:")
+            task.taskNames.set(project.provider { project.tasks.names.toSet() })
+            task.appUrl.set(hasApplicationPlugin.flatMap { if (it) project.provider { DEFAULT_APP_URL } else project.provider { null } })
+            task.devPort.set(extension.dev.port)
+            task.debugPort.set(extension.dev.debugPort)
+            task.https.set(extension.dev.https)
+            task.httpsPort.set(extension.dev.httpsPort)
+            task.buildEnv.set(extension.buildEnv.map { it.toList() })
+        }
         project.tasks.register("svelteLiveTemplates", SvelteLiveTemplatesTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Writes IntelliJ live templates for routes, DTOs and client calls. Add --install to copy them into the IDE."

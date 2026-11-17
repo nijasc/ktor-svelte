@@ -467,6 +467,38 @@ GET /api/notes/export  ->  nothing in the frontend calls api.notes.export
 - The task only lists what it finds, because a route can also be called from outside the frontend, such as a webhook or another service.
 - Add `--strict` to fail the build instead.
 
+### Which page calls which route
+
+`svelteRoutesDiagram` draws the same knowledge the other way round: every page, and the API routes it calls. It is a Mermaid diagram in a Markdown file, which GitHub, GitLab, IntelliJ and VitePress show as a picture:
+
+```bash
+./gradlew svelteRoutesDiagram
+```
+
+````text
+```mermaid
+flowchart LR
+    page0["/ (layout)"]
+    page1["/notes"]
+    page2["/notes/[id]"]
+    api0(["GET /api/notes"])
+    api1(["GET /api/notes/{id}"])
+    api2(["GET /api/me"])
+    api3(["GET /api/notes/export"])
+    page0 --> api2
+    page1 --> api0
+    page2 --> api1
+    class api3 uncalled
+    classDef uncalled stroke-dasharray: 4 4
+```
+````
+
+- A page is a folder of `src/routes` with a `+page` file, named by its address with route groups left out. A `+layout` file is its own node, marked `(layout)`, because its calls happen on every page below it.
+- The calls of a page are found the way `svelteVerifyApiRoutes` finds them, in its `+page` files and in every component and module they import, through relative imports and the `#` imports of `package.json`. The generated folders are left out.
+- Routes no page calls are drawn dashed and listed below the diagram, which also has the same as a table.
+- It writes `build/ktor-svelte/pages-to-routes.md`. To keep it with the project, write it to a file you commit: `./gradlew svelteRoutesDiagram --output=docs/pages-to-routes.md`.
+- It needs the generated client, so turn on `generateTs` first.
+
 ## What changed for callers
 
 The frontend in the same repository is checked by the compiler. A mobile app, another service or a webhook sender is not, and for them a renamed field is an outage. `svelteApiChanges` compares the committed `openapi.json` with the one on another git revision and lists what a caller would notice:

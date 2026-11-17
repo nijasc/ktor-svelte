@@ -284,6 +284,33 @@ Suggestions
 
 A suggestion is advice, not an error, and the task never fails on one. Details: [Review your configuration](../reference/gradle.md#review-your-configuration).
 
+### svelteReadme
+
+**Writes:** the part of the project's `README.md` that says how to run this app: the commands, the addresses in development and the environment variables. It takes them from the build, so the README does not go stale when a port or a variable changes.
+
+Put two marker lines where the section belongs, then run the task:
+
+```text
+## Development
+
+<!-- ktor-svelte:start -->
+<!-- ktor-svelte:end -->
+```
+
+```bash
+./gradlew svelteReadme
+```
+
+Everything between the markers is replaced, and nothing outside them is touched. Without the markers, or without a `README.md`, the task writes nothing and says how to add them. The section has three tables:
+
+| Table | Comes from |
+|---|---|
+| Commands | The tasks of the project: `svelteDevAll`, `build`, `shadowJar` or `buildFatJar` when there is one, `run`, `check`, `svelteSync svelteGenerateTs` and `svelteDoctor`. In a subproject they carry its path, such as `./gradlew :web:build` |
+| Addresses in development | The app at `http://localhost:8080`, Vite at `dev.port`, the HTTPS address when `dev.https` is on, and the debugger at `dev.debugPort` |
+| Environment variables | The variables the app declares, read from the [`.env.example`](../features/runtime-config.md#env-example) the app writes, and the names in `svelte { buildEnv }` |
+
+**Strict:** `./gradlew svelteReadme --check` fails when the section differs from what the task would write, so CI can catch a README that someone forgot to update. Add it to `check` the way [any other check](#make-a-check-part-of-check) is added.
+
 ### format and formatCheck
 
 One command formats Kotlin and the frontend, and one checks them:
@@ -343,6 +370,40 @@ Moves a page and rewrites its typed route calls in the frontend and in Kotlin:
 ```
 
 It stops before it changes anything when a file it would rewrite has uncommitted changes, so the rename stays one clean diff. `--force` renames anyway. Details: [Renaming a page](../features/routes.md#renaming-a-page).
+
+### svelteUpgrade
+
+One task moves the project to a new ktor-svelte:
+
+```bash
+./gradlew svelteUpgrade
+```
+
+```text
+ktor-svelte 1.3.0 -> 1.4.0 in gradle/libs.versions.toml
+Running the new version: gradlew.bat --console=plain :svelteSync :svelteGenerateTs :svelteUpgradeNotes --since=1.3.0
+...
+ktor-svelte 1.3.0 -> 1.4.0: what to know
+
+1.4.0
+  - New generated components: Breadcrumbs, Sidebar and FocusHeading. ...
+```
+
+It does three things:
+
+1. Changes the version where your build declares it: `ktor-svelte = "..."` in `gradle/*.versions.toml`, `id("io.github.nijasc.ktor-svelte") version "..."` and `io.github.nijasc:ktor-svelte-...:...` coordinates in the build and settings files. Other versions that happen to be the same number stay as they are.
+2. Runs a new build through the Gradle wrapper, which now loads the new plugin, with `svelteSync` and `svelteGenerateTs`, so the generated files match the new version.
+3. Prints the upgrade notes of every version between the old and the new one, only those that apply to your project.
+
+| Option | What it does |
+| --- | --- |
+| `--to=1.4.0` | The version to upgrade to. Without it, the latest release on Maven Central |
+| `--bump-only` | Only change the version, and print the command to run next |
+
+- Without a version to change, for example when the plugin comes from an included build, it fails and says where to set the version and what to run after.
+- If the build with the new version fails, the version is already changed: fix what it says and run the printed command again.
+- `./gradlew svelteUpgradeNotes --since=1.3.0` prints the notes again at any time.
+- Review the changes with `git diff` before you commit: the version, the regenerated files, nothing else.
 
 ### svelteLiveTemplates
 

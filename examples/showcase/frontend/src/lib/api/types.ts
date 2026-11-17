@@ -150,6 +150,20 @@ export const CommentInput = {
     },
 };
 
+export interface EmailPreview {
+    subject: string;
+    html: string;
+    text: string;
+}
+
+export const EmailPreview = {
+    empty: (): EmailPreview => ({
+        subject: '',
+        html: '',
+        text: '',
+    }),
+};
+
 export interface FieldCheckAnswer {
     message?: string | null;
 }
