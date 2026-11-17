@@ -1,5 +1,5 @@
 <script lang="ts" generics="T, Q extends { cursor?: string } = { cursor?: string }">
-    import { untrack, type Snippet } from 'svelte';
+    import { tick, untrack, type Snippet } from 'svelte';
     import { errorMessage, type PageOf } from '#api';
 
     type Column =
@@ -37,6 +37,7 @@
         workingText?: (done: number, total: number) => string;
         doneText?: (worked: number, total: number) => string;
         empty?: string;
+        onopen?: (item: T) => void;
         virtual?: { rowHeight: number; height?: string; overscan?: number };
         skeletonRows?: number;
         noResults?: string;
@@ -75,6 +76,7 @@
         workingText = (done: number, total: number) => `Working: ${done} of ${total}`,
         doneText = (worked: number, total: number) => `Done: ${worked} of ${total} worked.`,
         empty = 'Nothing here yet.',
+        onopen,
         virtual,
         skeletonRows = 3,
         noResults = 'Nothing matches this filter.',
@@ -135,6 +137,8 @@
     }
 
     let items = $state.raw<T[]>(untrack(() => first?.items ?? []));
+    let active = $state(0);
+    let body = $state<HTMLTableSectionElement>();
     let scrollTop = $state(0);
     let viewport = $state(0);
     const PAGING_KEYS = ['cursor', 'limit'];
@@ -185,6 +189,46 @@
         scrollTop = box.scrollTop;
         viewport = box.clientHeight;
         if (cursor && !busy && !problem && box.scrollTop + box.clientHeight * 2 >= box.scrollHeight) void fetchPage(cursor, true);
+    }
+
+    function focusRow(index: number) {
+        if (rows.length === 0) return;
+        active = Math.max(0, Math.min(rows.length - 1, index));
+        const box = body?.closest<HTMLElement>('[data-virtual]');
+        if (virtual && box) {
+            const top = active * virtual.rowHeight;
+            if (top < box.scrollTop || top + virtual.rowHeight > box.scrollTop + box.clientHeight) {
+                box.scrollTop = Math.max(0, top - box.clientHeight / 2);
+                scrollTop = box.scrollTop;
+                viewport = box.clientHeight;
+            }
+        }
+        void tick().then(() => body?.querySelector<HTMLElement>(`tr[data-row="${active}"]`)?.focus());
+    }
+
+    function clicked(event: MouseEvent, item: T) {
+        if ((event.target as Element | null)?.closest('input, button, a, label, select, textarea')) return;
+        onopen?.(item);
+    }
+
+    function keyed(event: KeyboardEvent) {
+        if (!onopen || event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return;
+        const step = virtual ? Math.max(1, Math.floor((viewport || virtual.rowHeight * 10) / virtual.rowHeight)) : 10;
+        const moves: Record<string, number> = {
+            ArrowDown: active + 1,
+            ArrowUp: active - 1,
+            Home: 0,
+            End: rows.length - 1,
+            PageDown: active + step,
+            PageUp: active - step
+        };
+        if (event.key in moves) {
+            event.preventDefault();
+            focusRow(moves[event.key]);
+        } else if (event.key === 'Enter' && rows[active] !== undefined) {
+            event.preventDefault();
+            onopen(rows[active]);
+        }
     }
 
     function ariaSort(column: Column): 'ascending' | 'descending' | undefined {
@@ -426,7 +470,7 @@
                 {/each}
             </tr>
         </thead>
-        <tbody>
+        <tbody bind:this={body}>
             {#if busy && items.length === 0}
                 {#each Array.from({ length: skeletonRows }, (_, index) => index) as placeholder (placeholder)}
                     <tr aria-hidden="true" data-skeleton>
@@ -442,7 +486,16 @@
             {/if}
             {#each visible as item, offset (key ? key(item) : windowed.start + offset)}
                 {@const index = windowed.start + offset}
-                <tr aria-rowindex={virtual ? index + 2 : undefined} style={virtual ? `height: ${virtual.rowHeight}px;` : undefined}>
+                <tr
+                    aria-rowindex={virtual ? index + 2 : undefined}
+                    style={virtual ? `height: ${virtual.rowHeight}px;` : undefined}
+                    data-row={index}
+                    tabindex={onopen ? (index === active ? 0 : -1) : undefined}
+                    class={onopen ? '{{openRow}}' : undefined}
+                    onclick={onopen ? (event) => clicked(event, item) : undefined}
+                    onfocus={onopen ? () => (active = index) : undefined}
+                    onkeydown={onopen ? keyed : undefined}
+                >
                     {#if selectable}
                         <td class="{{selectCell}}">
                             <input

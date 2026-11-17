@@ -86,6 +86,8 @@ private const val PLAIN_TABLE_STYLE =
         "    .ktor-svelte-table-wrap {\n        overflow-x: auto;\n    }\n\n" +
         "    .ktor-svelte-table {\n        width: 100%;\n        border-collapse: collapse;\n        text-align: left;\n    }\n\n" +
         "    .ktor-svelte-table-pager {\n        display: flex;\n        gap: 0.5rem;\n    }\n\n" +
+        "    .ktor-svelte-table-open {\n        cursor: pointer;\n    }\n\n" +
+        "    .ktor-svelte-table-open:focus-visible {\n        outline: 2px solid currentColor;\n        outline-offset: -2px;\n    }\n\n" +
         "    .ktor-svelte-table-skeleton {\n        display: block;\n        height: 1em;\n        border-radius: 0.25rem;\n" +
         "        background: currentColor;\n        opacity: 0.12;\n" +
         "        animation: ktor-svelte-pulse 1.2s ease-in-out infinite;\n    }\n\n" +
@@ -188,6 +190,7 @@ private fun dataTable(daisy: Boolean): String =
             "pager" to if (daisy) "flex gap-2 py-2" else "ktor-svelte-table-pager",
             "chooser" to if (daisy) "mb-2" else "ktor-svelte-table-chooser",
             "selectCell" to if (daisy) "w-8" else "ktor-svelte-table-select",
+            "openRow" to if (daisy) "hover cursor-pointer focus:outline-primary" else "ktor-svelte-table-open",
             "scroller" to if (daisy) "rounded-box border border-base-300" else "ktor-svelte-table-scroller",
             "skeleton" to if (daisy) "skeleton block h-4 w-full" else "ktor-svelte-table-skeleton",
             "emptyState" to if (daisy) "grid justify-items-center gap-2 py-6 text-center" else "ktor-svelte-table-empty",
