@@ -118,6 +118,7 @@ fun Application.module() {
             permission(Permission.ManageUsers, FrontendRoutes.admin)
         }
         pageLoads {
+            inline = true
             page("/tasks/[id]") {
                 data("task", "tasks.get")
                 data("comments", "tasks.getComments")
