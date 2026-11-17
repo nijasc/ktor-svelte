@@ -102,6 +102,12 @@ class GenerateTsTest {
                         HttpStatusCode.NoContent { description = "Deleted" }
                     }
                 }
+                get("/api/reports") { call.respond(call.request.headers["X-Tenant"].orEmpty()) }.describe {
+                    parameters {
+                        header("X-Tenant") { required = true }
+                        header("X-Report-Rows") { schema = jsonSchema<Int>() }
+                    }
+                }
                 get("/health") { call.respond("ok") }
             }
         }
@@ -138,8 +144,12 @@ class GenerateTsTest {
             services,
             "export const todosCreate = (body: NewTodo, options?: RequestOptions) => request<Todo>('POST', '/api/todos'",
         )
+        assertContains(
+            services,
+            "export const reportsList = (headers: { 'X-Tenant': string; 'X-Report-Rows'?: number }, options?: RequestOptions)",
+        )
         assertContains(services, "export const todosDelete = (id: string | number, options?: RequestOptions) => request<void>('DELETE'")
-        assertContains(services, "export const api = { todos };")
+        assertContains(services, "export const api = { reports, todos };")
         assertFalse(services.contains("health"))
 
         assertNotNull(output.resolve("client.ts").readText())

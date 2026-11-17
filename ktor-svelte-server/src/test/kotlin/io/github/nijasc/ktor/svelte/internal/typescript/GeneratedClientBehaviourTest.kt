@@ -450,4 +450,13 @@ class GeneratedClientBehaviourTest {
         assertEquals("""["mine"]""", idempotency.getValue("ownKey").toString())
         assertEquals("""["503",[null]]""", idempotency.getValue("switchedOff").toString())
     }
+
+    @Test
+    fun `typed headers are sent as text, unset ones are left out, and headers in the options win`() {
+        val sent = runHarness().getValue("typedHeaders").jsonArray.map { it.jsonObject }
+        assertEquals("acme", sent[0].getValue("tenant").jsonPrimitive.content)
+        assertEquals("50", sent[0].getValue("rows").jsonPrimitive.content)
+        assertEquals(kotlinx.serialization.json.JsonNull, sent[0].getValue("skipped"))
+        assertEquals("chosen", sent[1].getValue("tenant").jsonPrimitive.content)
+    }
 }

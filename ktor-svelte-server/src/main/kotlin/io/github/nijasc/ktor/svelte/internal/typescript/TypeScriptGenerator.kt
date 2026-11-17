@@ -1132,6 +1132,19 @@ internal class TypeScriptGenerator(
             val anyRequired = queryParameters.any { it["required"]?.jsonPrimitive?.contentOrNull == "true" }
             signature += "query${if (anyRequired) "" else "?"}: { $fields }"
         }
+        val headerParameters =
+            declared.filter { it.stringAt("in") == "header" && it.stringAt("name").orEmpty().lowercase() !in MANAGED_HEADERS }
+        if (headerParameters.isNotEmpty()) {
+            val fields =
+                headerParameters.joinToString("; ") { parameter ->
+                    val required = parameter["required"]?.jsonPrimitive?.contentOrNull == "true"
+                    val type =
+                        parameter.objectAt("schema")?.let { tsType(it, references) }?.takeUnless { it == "unknown" } ?: "string"
+                    "${quoted(parameter.stringAt("name").orEmpty())}${if (required) "" else "?"}: $type"
+                }
+            val anyRequired = headerParameters.any { it["required"]?.jsonPrimitive?.contentOrNull == "true" }
+            signature += "headers${if (anyRequired) "" else "?"}: { $fields }"
+        }
         signature += "options?: RequestOptions"
 
         val urlSource = if (pathParameters.isEmpty()) quoted(path) else urlTemplate(path)
@@ -1140,6 +1153,7 @@ internal class TypeScriptGenerator(
             buildList {
                 add("...options")
                 if (queryParameters.isNotEmpty()) add("query")
+                if (headerParameters.isNotEmpty()) add("typedHeaders: headers")
                 if (requestBody != null) add("body")
                 if (upload != null) add("upload: $upload")
                 if (formFields != null) add("multipart: true")
@@ -1426,7 +1440,9 @@ private val SERVICES_MODULE_NAMES =
         "hasErrorCode",
         "setCodeMessages",
     )
-private val ENDPOINT_ARGUMENTS = setOf("body", "query", "options", "encodeURIComponent")
+private val ENDPOINT_ARGUMENTS = setOf("body", "query", "headers", "options", "encodeURIComponent")
+private val MANAGED_HEADERS =
+    setOf("accept", "content-type", "content-length", "cookie", "x-request-id", "idempotency-key", "x-time-zone")
 private val RESERVED_WORDS =
     setOf(
         "arguments",

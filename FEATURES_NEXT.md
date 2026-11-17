@@ -33,6 +33,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | # | Feature | Pull request |
 |---|---|---|
 | 52 | Installable app (PWA) | #338 |
+| 110 | Typed request headers | #341 |
 
 ### Next up
 
@@ -168,7 +169,6 @@ Features of this plan that are merged:
 | 61 | Emails from Svelte components | Large | 11 |
 | 60 | Multiple frontends | Large | 12 |
 | 17 | One-step `svelteUpgrade` | Medium | 13 |
-| 110 | Typed request headers | Small | 14 |
 | 111 | Per-route timeout | Small | 14 |
 | 112 | Sparse fields | Large | 14 |
 | 113 | Included relations | Large | 14 |

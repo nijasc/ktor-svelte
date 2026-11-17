@@ -448,6 +448,31 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `header parameters become a typed headers argument and headers the client sets itself are left out`() {
+        val source =
+            services(
+                """{"/api/s":{"get":{"parameters":[{"name":"X-Tenant","in":"header","required":true,"schema":{"type":"string"}},
+                {"name":"X-Page-Size","in":"header","schema":{"type":"integer"}},
+                {"name":"Accept","in":"header","schema":{"type":"string"}},
+                {"name":"q","in":"query","schema":{"type":"string"}}]}}}""",
+            )
+        assertContains(
+            source,
+            "(query?: { q?: string }, headers: { 'X-Tenant': string; 'X-Page-Size'?: number }, options?: RequestOptions)",
+        )
+        assertContains(source, "{ ...options, query, typedHeaders: headers, operation: ")
+        assertFalse("'Accept'" in source)
+    }
+
+    @Test
+    fun `optional header parameters make the headers argument optional, and a path parameter named headers is renamed`() {
+        val source =
+            services("""{"/api/s/{headers}":{"get":{"parameters":[{"name":"If-Match","in":"header","schema":{"type":"string"}}]}}}""")
+        assertContains(source, "headers?: { 'If-Match'?: string }")
+        assertFalse("(headers: string" in source)
+    }
+
+    @Test
     fun `required query parameters make the query argument required`() {
         val source =
             services(
