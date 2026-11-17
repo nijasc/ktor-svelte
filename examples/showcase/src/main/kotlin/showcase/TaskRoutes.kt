@@ -112,7 +112,7 @@ fun Route.taskRoutes(
                     return@delete call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemNotYours()))
                 }
                 tasks.delete(task.id)
-                call.toast(call.messages.taskDeleted(), ToastKind.Success)
+                call.toast(call.messages.taskDeleted(task.comments), ToastKind.Success)
                 call.respond(HttpStatusCode.NoContent)
             }
 

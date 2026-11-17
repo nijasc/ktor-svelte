@@ -361,7 +361,21 @@ class ShowcaseAppTest {
         val english = createTask(admin, unique("Toast"))
         val answer = admin.send("DELETE", "/api/tasks/$english")
         assertEquals(204, answer.statusCode())
-        assertEquals("success:Task%20deleted.", answer.headers().firstValue("X-Ktor-Svelte-Toast").orElse(null))
+        assertEquals("success:Task%20deleted.%20It%20had%20no%20comments.", answer.headers().firstValue("X-Ktor-Svelte-Toast").orElse(null))
+
+        fun deletedWith(
+            comments: Int,
+            language: String,
+        ): String {
+            val id = createTask(admin, unique("Counted"))
+            repeat(comments) { assertEquals(201, admin.send("POST", "/api/tasks/$id/comments", """{"body":"Comment $it"}""").statusCode()) }
+            val deleted = admin.send("DELETE", "/api/tasks/$id", null, "Accept-Language" to language)
+            return java.net.URLDecoder.decode(deleted.headers().firstValue("X-Ktor-Svelte-Toast").orElse(""), Charsets.UTF_8)
+        }
+        assertEquals("success:Task deleted. Its 1 comment went with it.", deletedWith(1, "en"))
+        assertEquals("success:Task deleted. Its 2 comments went with it.", deletedWith(2, "en"))
+        assertEquals("success:Aufgabe gel\u00f6scht. Ihr 1 Kommentar ist mit weg.", deletedWith(1, "de"))
+        assertEquals("success:Aufgabe gel\u00f6scht. Sie hatte keine Kommentare.", deletedWith(0, "de"))
     }
 
     @Test

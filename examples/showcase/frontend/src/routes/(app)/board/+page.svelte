@@ -127,6 +127,7 @@
     {/if}
 </div>
 
+{#if tasks.length > 0}<p id="shown" class="mb-2 text-sm opacity-70">{m.boardShown({ count: tasks.length })}</p>{/if}
 <ul id="tasks" class="grid gap-3">
     {#each tasks as task (task.id)}
         <li class="card bg-base-200 p-4" class:opacity-70={task.status === Status.DONE}>
