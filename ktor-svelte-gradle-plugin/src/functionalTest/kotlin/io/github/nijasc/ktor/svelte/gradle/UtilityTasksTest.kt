@@ -570,6 +570,82 @@ class UtilityTasksTest {
         )
     }
 
+    private fun servingApp(brokenRoute: Boolean): TestProject {
+        val project = project()
+        project.buildScript(applicationBuild)
+        val source = dir.resolve("src/main/java/Main.java")
+        source.parentFile.mkdirs()
+        source.writeText(
+            """
+            import com.sun.net.httpserver.HttpServer;
+            import java.net.InetSocketAddress;
+
+            public class Main {
+                public static void main(String[] args) throws Exception {
+                    String port = System.getenv("PORT");
+                    if (port == null) { System.out.println("no port given"); System.exit(7); }
+                    System.out.println("development=" + System.getProperty("io.ktor.development"));
+                    HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", Integer.parseInt(port)), 0);
+                    server.createContext("/", exchange -> {
+                        String path = exchange.getRequestURI().getPath();
+                        int status = 404;
+                        if (path.equals("/")) { status = 200; exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8"); }
+                        if (path.equals("/_app/immutable/app.js") || path.equals("/health")) status = 200;
+                        if (path.equals("/api/notes")) status = 401;
+                        if (path.equals("/api/stats")) status = ${if (brokenRoute) 500 else 200};
+                        byte[] body = "answer".getBytes();
+                        exchange.sendResponseHeaders(status, body.length);
+                        exchange.getResponseBody().write(body);
+                        exchange.close();
+                    });
+                    server.start();
+                }
+            }
+            """.trimIndent(),
+        )
+        val routes = listOf("/api/notes", "/api/stats").joinToString(",") { "\"$it\":{\"get\":{\"responses\":{}}}" }
+        val api = project.frontend.resolve("src/lib/api/openapi.json").apply { parentFile.mkdirs() }
+        api.writeText("""{"openapi":"3.1.1","paths":{$routes,"/api/notes/{id}":{"get":{"responses":{}}}}}""")
+        return project
+    }
+
+    @Test
+    fun `svelteSmokeTest starts the packaged app and asks for its pages, an asset and the API routes`() {
+        val result = servingApp(brokenRoute = false).run("svelteSmokeTest", "--path=/health")
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":installDist")?.outcome)
+        assertContains(result.output, "Main runs in production mode on port ")
+        assertContains(result.output, "  200  /\n".replace("\n", System.lineSeparator()))
+        assertContains(result.output, "  200  /_app/immutable/app.js")
+        assertContains(result.output, "  401  GET /api/notes")
+        assertContains(result.output, "  200  /health")
+        assertContains(result.output, "the production build answered 1 page, 1 asset, 2 API routes, 1 path correctly.")
+        assertContains(dir.resolve("build/ktor-svelte/smoke-test.log").readText(), "development=null")
+        assertFalse(":svelteSmokeTest" in servingApp(brokenRoute = false).run("check", "--dry-run").output)
+    }
+
+    @Test
+    fun `svelteSmokeTest fails on a route that answers with a server error, unless it is skipped`() {
+        val project = servingApp(brokenRoute = true)
+        val output = project.runAndFail("svelteSmokeTest").output
+
+        assertContains(output, "The production build did not answer 1 of 4 requests correctly:")
+        assertContains(output, "  500  GET /api/stats  expected anything but 404 and a server error")
+        assertContains(output, "The app's output is in build/ktor-svelte/smoke-test.log.")
+        assertContains(project.run("svelteSmokeTest", "--skip=/api/stats").output, "answered 1 page, 1 asset, 1 API route correctly.")
+    }
+
+    @Test
+    fun `svelteSmokeTest shows the app's output when it does not start`() {
+        val project = servingApp(brokenRoute = false)
+        val source = dir.resolve("src/main/java/Main.java")
+        source.writeText(source.readText().replace("System.getenv(\"PORT\")", "null"))
+        val output = project.runAndFail("svelteSmokeTest").output
+
+        assertContains(output, "The app stopped with exit code 7 before it listened on port ")
+        assertContains(output, "  no port given")
+    }
+
     @Test
     fun `svelteVerifyTs exists only with the application plugin`() {
         val project = project()
