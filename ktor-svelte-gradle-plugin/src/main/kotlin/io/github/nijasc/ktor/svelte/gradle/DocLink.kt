@@ -19,6 +19,7 @@ internal enum class DocLink(
     GRADLE("reference/gradle", null),
     EMAILS("features/emails", null),
     I18N("features/frontend-libraries", "i18n"),
+    NAMING("guide/checks-and-tooling", "svelteverifynaming"),
     ROUTES("features/routes", null),
     MULTIPLE_FRONTENDS("guide/multiple-frontends", null),
     ;
