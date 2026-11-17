@@ -29,6 +29,7 @@ class ComponentsTest {
                 "ErrorSummary.svelte",
                 "Field.svelte",
                 "FileDrop.svelte",
+                "FocusHeading.svelte",
                 "MaskedInput.svelte",
                 "NavigationProgress.svelte",
                 "NumberInput.svelte",
