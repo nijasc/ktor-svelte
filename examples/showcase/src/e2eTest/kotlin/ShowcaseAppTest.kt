@@ -501,7 +501,8 @@ class ShowcaseAppTest {
         val services = File("frontend/src/lib/api/services.ts").readText()
         assertContains(
             services,
-            "query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string }",
+            "query?: { search?: string; status?: Status; label?: string; mine?: boolean; limit?: number; cursor?: string; " +
+                "fields?: readonly F[]; include?: readonly I[] }",
         )
         assertContains(admin.send("GET", "/api/stats").body(), """"$token":3""")
     }
