@@ -105,6 +105,7 @@ fun Application.module() {
         }
         siteUrl = env.siteUrl
         loginPage = FrontendRoutes.login
+        permissions<Permission, User>(refusedMessage = { it.messages.problemAdminsOnly() }) { user -> permissionsOf(user) }
         maxApiBodySize = MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES
         paramRoutes("/tasks/[id]")
         publicConfig(

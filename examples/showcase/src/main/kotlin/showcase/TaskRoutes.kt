@@ -3,6 +3,7 @@ package showcase
 import io.github.nijasc.ktor.svelte.Page
 import io.github.nijasc.ktor.svelte.Patch
 import io.github.nijasc.ktor.svelte.ToastKind
+import io.github.nijasc.ktor.svelte.can
 import io.github.nijasc.ktor.svelte.navigateTo
 import io.github.nijasc.ktor.svelte.query
 import io.github.nijasc.ktor.svelte.queryOf
@@ -109,7 +110,7 @@ fun Route.taskRoutes(
             delete {
                 val task = tasks.find(call.id()) ?: return@delete call.respondMissingTask()
                 val viewer = call.requireUser<User>()
-                if (task.creator.id != viewer.id && viewer.role != Role.ADMIN) {
+                if (task.creator.id != viewer.id && !call.can(Permission.DeleteAnyTask)) {
                     return@delete call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemNotYours()))
                 }
                 tasks.delete(task.id)
@@ -177,7 +178,7 @@ fun Route.taskRoutes(
         delete {
             val file = tasks.file(call.id()) ?: return@delete call.respond(HttpStatusCode.NotFound, Problem(call.messages.problemMissingFile()))
             val viewer = call.requireUser<User>()
-            if (file.attachment.uploader.id != viewer.id && viewer.role != Role.ADMIN) {
+            if (file.attachment.uploader.id != viewer.id && !call.can(Permission.DeleteAnyFile)) {
                 return@delete call.respond(HttpStatusCode.Forbidden, Problem(call.messages.problemNotYours()))
             }
             tasks.detach(file.attachment.id.value)

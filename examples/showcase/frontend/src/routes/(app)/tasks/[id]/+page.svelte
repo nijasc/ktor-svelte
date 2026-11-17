@@ -3,13 +3,14 @@
     import {
         Activity,
         api,
+        can,
         CommentInput,
         field,
         isValidationError,
         isVersionConflict,
         errorMessage,
         isUploadError,
-        Role,
+        Permission,
         Status,
         TaskInput,
         uploadRules,
@@ -45,7 +46,7 @@
     let busy = $state(false);
 
     const statusLabels: Record<Status, () => string> = { TODO: m.statusTodo, DOING: m.statusDoing, DONE: m.statusDone };
-    const canDelete = $derived(data.user.role === Role.ADMIN || data.user.id === task.creator.id);
+    const canDelete = $derived(can(Permission.DeleteAnyTask) || data.user.id === task.creator.id);
 
     function describe(entry: Activity): string {
         return Activity.match(entry, {
@@ -225,7 +226,7 @@
                 {/if}
                 <a class="link flex-1" href="/api/attachments/{attachment.id}" download={attachment.name}>{attachment.name}</a>
                 <span class="text-sm">{formatBytes(attachment.size)}, {attachment.uploader.name}</span>
-                {#if data.user.role === Role.ADMIN || data.user.id === attachment.uploader.id}
+                {#if can(Permission.DeleteAnyFile) || data.user.id === attachment.uploader.id}
                     <button class="btn btn-xs" type="button" aria-label={m.attachmentsRemove({ file: attachment.name })} onclick={() => detach(attachment)}>
                         <Icon name="Trash" size={12} />
                     </button>

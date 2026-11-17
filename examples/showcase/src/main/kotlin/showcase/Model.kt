@@ -47,6 +47,10 @@ data class AppConfig(
 @Serializable
 enum class Role { ADMIN, MEMBER }
 
+enum class Permission { ManageUsers, DeleteAnyTask, DeleteAnyFile }
+
+fun permissionsOf(user: User): Set<Permission> = if (user.role == Role.ADMIN) Permission.entries.toSet() else emptySet()
+
 @Serializable
 enum class TaskStatus { TODO, DOING, DONE }
 
