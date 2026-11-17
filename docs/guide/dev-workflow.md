@@ -187,12 +187,17 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 
 | Part | What it gives you |
 |---|---|
-| [Request log](#request-log) | The last 100 API calls, with status, timing, validation errors, SQL cost and duplicates |
+| [Request log](#request-log) | The last 100 API calls, with status, timing, size, validation errors, SQL cost and duplicates |
 | [Replay and curl](#replay-and-copy-as-curl) | Send a call again, or copy it as a `curl` command |
 | [Open route in your editor](#open-the-route-in-your-editor) | Click a path to open the Kotlin route that answered it |
 | [Server errors](#server-errors-in-the-browser) | The Kotlin exception of a failed call, as an overlay |
 | [Save fixtures](#save-fixtures) | The calls of this page as JSON for frontend tests |
+| [Clear site data](#clear-site-data) | This browser as a first-time visitor, in one click |
+| [Slowest routes](#slowest-routes) | The API routes that took the most time since the app started |
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
+| [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
+| [Migrations](#migrations) | Which Flyway migrations ran, which are pending, and whether the last one failed |
+| [Memory and threads](#memory-and-threads) | Heap, garbage collection and threads of the running app, live |
 | [Cookies](#cookie-inspector) | What this browser sends, as the server reads it, with Clear buttons |
 | [Routes](#route-map) | Every page and API route with the file behind it |
 | [Accessibility](#accessibility-check) | An axe check of the page you are looking at |
@@ -201,13 +206,21 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 
 ### Request log
 
-The panel lists the last 100 API calls the app answered: method, path, status, how long the server took, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. **Clear** empties the list.
+The panel lists the last 100 API calls the app answered: method, path, status, how long the server took, how big the answer was, and the `X-Request-Id` on hover. Calls that failed validation show the message for each field, and the button turns red while any call failed. **Clear** empties the list.
 
 **Database cost.** When your app uses [Exposed](https://www.jetbrains.com/exposed/), each call also shows what it cost in the database, such as `7 SQL, 12 ms`: the number of statements it ran and the time they took together. When one statement ran five times or more in a single call, the line says so in yellow, with the statement on hover. That is the usual sign of a query inside a loop, the kind that is fast with ten rows and slow with ten thousand.
 
 - No setup and no code: ktor-svelte registers itself with Exposed when both are in the app.
 - Statements count for the call that started them, also when they run on another thread or in a child coroutine.
 - It works with Exposed 1.0 and newer, and only measures while the dev panel is on.
+
+**Payload size.** Each call shows how big its answer was, such as `48.2 KB`, measured before compression, so it is what the server had to build and the browser has to parse. Hover the size to see the three largest fields of a JSON answer:
+
+- A field of the answer counts with the size of its JSON, such as `items 47.9 KB (120 items)`.
+- For a list of objects the fields of all its items add up, such as `items[].description 31.0 KB`, so a field that is small once but repeated in every row stands out.
+- From 100 KB on the size turns yellow and the largest fields are written under the call, since that is usually a list that should be paged or a field the page does not need.
+
+Streamed answers, such as server-sent events, have no size.
 
 **Asked for twice.** When a page asks for the same thing twice, the second call is marked: `asked for twice within 12 ms, from src/routes/+layout.svelte:33 and from src/routes/board/+page.svelte:18`. That happens easily when a layout and a page both load the same data, and it costs a second trip to the server and the database for nothing. The two files tell you where to remove one, or to share the result.
 
@@ -246,6 +259,26 @@ When an API call from the page fails with an exception on the server, the browse
 
 **Save fixtures** in the panel's header downloads the calls this page made, with their answers, as a JSON file that [frontend tests can replay](../features/calling-the-api.md#fixtures-for-frontend-tests) without a backend.
 
+### Clear site data
+
+**Clear site data** in the panel's header gives you this browser as a first-time visitor in one click: it clears the cookies, the local and session storage, IndexedDB, the Cache Storage and the service workers of the app, then reloads the page.
+
+- The server answers with a [`Clear-Site-Data`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Clear-Site-Data) header, so `HttpOnly` cookies and the HTTP cache go too. The panel also clears what it can reach from the page, for browsers that do not act on the header fully.
+- Storage and caches are cleared for the app's address only, such as `localhost:8080`. Cookies do not tell ports apart, so other apps on `localhost` lose their cookies too.
+- It signs you out, and it also forgets the [Public config](#public-config) values you changed in this browser.
+
+To end only some cookies, use the [Cookies](#cookie-inspector) section instead.
+
+### Slowest routes
+
+The **Slowest routes** section ranks the API routes by the time the server spent on them in all since the app started, the 20 slowest first. Calls to one route count together, so `GET /api/tasks/{id}` is one line for every task that was opened.
+
+- Each line shows the route, the total time, how often it was called, the average, the slowest single call and how many calls failed with a server error.
+- A route at the top is where speeding up pays most: a route that is a little slow and called on every page often costs more than one that is very slow once.
+- **Refresh** updates it. A restart, such as after a Kotlin change, starts the count again.
+
+It counts every API call the server answered, also those from other tabs. For the calls of one page, look at the [request log](#request-log).
+
 ### Status
 
 The **Status** section shows what the app is running with, in plain rows:
@@ -257,6 +290,51 @@ The **Status** section shows what the app is running with, in plain rows:
 - the settings in effect, such as the API prefixes, the body limit and the rate limits.
 
 It is what the [status endpoint](../features/endpoints.md#status-endpoint) and the startup log tell you, without `statusEndpoint = true` and without reading JSON. Open it again to refresh it.
+
+### Environment
+
+The **Environment** section shows what the running app sees, so you can answer "which database is it talking to" or "did my variable arrive" without a debugger:
+
+- **Config**: every value of the Ktor config the app runs with (`application.yaml` or `application.conf`, after substitutions), as dotted names such as `ktor.deployment.port`.
+- **Environment variables**: what the app process got, which is not always what your terminal has, for example when the IDE starts it.
+- **System properties**: the `-D` values, without the JVM's own ones such as `java.version`.
+
+Type into the filter to narrow it down by name or value.
+
+Secrets are hidden as `***`:
+
+- a value whose name has a word such as `password`, `secret`, `token`, `key`, `auth`, `session` or `salt` in it, such as `DATABASE_PASSWORD`, `apiKey` or `jwt.secret`,
+- a value whose name is a field you marked [`@Sensitive`](../features/validation.md#sensitive-fields),
+- the password inside a URL, such as `postgres://app:***@db/app`, and `password=` or `token=` parameters in a connection string.
+
+The hiding goes by names, so a secret in a variable with a plain name, such as `DB=...`, is shown. Like the rest of the panel, it only answers this machine unless `allowRemote` is on.
+
+### Migrations
+
+The **Migrations** section shows the state of the database schema, when your app runs [Flyway](https://documentation.red-gate.com/flyway) migrations with Exposed:
+
+- every migration with its version, description, state and when it ran,
+- how many are pending, which happens when you added a migration file and the app has not run it yet,
+- whether the last one that ran failed, in red.
+
+A pending or failed migration is usually why a new column "does not exist". The section asks Flyway each time you open it, through the database your app connected with `Database.connect`, and changes nothing.
+
+- It needs `flyway-core` and Exposed in the app. Without Flyway on the classpath the section says so; ktor-svelte itself does not depend on it.
+- It reads Flyway's default setup: migrations in `src/main/resources/db/migration` and the history in `flyway_schema_history`. With other `locations` or another `table`, the list may not match what your app runs.
+
+### Memory and threads
+
+The **Memory and threads** section shows how the running app is doing, refreshed every two seconds while it is open:
+
+- a bar of the heap in use against the limit, and the heap in numbers: used, taken from the system, and the `-Xmx` limit,
+- memory outside the heap, such as loaded classes,
+- each garbage collector with how often it ran and how long it took in all,
+- the threads: live, daemon, the peak, how many were started since the start, and how many are running, waiting or blocked,
+- the processors the JVM sees, and how long the app has been up.
+
+**Collect garbage** asks the JVM for a full collection. What is still in use afterwards is what the app really holds, so a heap that keeps growing after each collection while you click through a page points to a leak. A thread count that only goes up points to threads or coroutines that never end.
+
+The numbers come from the JVM's standard management beans, so they need no agent and no library.
 
 ### Cookie inspector
 

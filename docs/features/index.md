@@ -183,7 +183,7 @@ The dev loop, the dev panel and the tools around them.
 | [Setup script](../guide/getting-started.md) | One command creates a project with everything wired up | Script |
 | [Configurator](../guide/configurator.md) | Tick options and copy the settings | This site |
 | [Dev workflow](../guide/dev-workflow.md) | `svelteDevAll` runs Vite, the compiler and your app with hot reload on one port, in one readable log | Gradle |
-| [Dev panel](../guide/dev-workflow.md) | Every API call with replay, curl, SQL counts and duplicates, plus status, cookies, routes, public config, accessibility and a theme editor | Ktor plugin |
+| [Dev panel](../guide/dev-workflow.md) | Every API call with replay, curl, payload size, SQL counts and duplicates, plus status, slowest routes, environment, migrations, memory and threads, cookies, clear site data, routes, public config, accessibility and a theme editor | Ktor plugin |
 | [Server error overlay](../guide/dev-workflow.md) | A failed call shows the exception and a link to your code in the browser | Ktor plugin |
 | [Browser logs in your console](../guide/dev-workflow.md) | `console.log` and browser errors land in the dev log | Ktor plugin |
 | [Restart summary and startup timing](../guide/dev-workflow.md) | What caused a restart, how long it took, and where startup time went | Gradle, Ktor plugin |

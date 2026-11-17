@@ -15,6 +15,7 @@ import io.ktor.server.application.call
 import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.uri
+import io.ktor.server.response.ApplicationSendPipeline
 import io.ktor.server.response.header
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
@@ -22,6 +23,7 @@ import io.ktor.server.routing.RoutingNode
 import io.ktor.server.routing.RoutingRoot
 import io.ktor.server.routing.get
 import io.ktor.util.AttributeKey
+import io.ktor.util.pipeline.PipelinePhase
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -38,6 +40,7 @@ internal const val DEV_OPEN_PATH = "/_ktor-svelte/dev/open"
 internal const val DEV_ROUTE_MAP_PATH = "/_ktor-svelte/dev/routes"
 internal const val DEV_STATUS_PATH = "/_ktor-svelte/dev/status"
 internal const val DEV_SENSITIVE_PATH = "/_ktor-svelte/dev/sensitive"
+internal const val DEV_SLOWEST_PATH = "/_ktor-svelte/dev/slowest"
 private const val KEPT_REQUESTS = 100
 
 private val RequestStartedAt = AttributeKey<Long>("KtorSvelteDevRequestStartedAt")
@@ -45,6 +48,7 @@ private val RequestFields = AttributeKey<Map<String, List<String>>>("KtorSvelteD
 private val RequestRoute = AttributeKey<RoutingNode>("KtorSvelteDevRequestRoute")
 private val RequestError = AttributeKey<JsonObject>("KtorSvelteDevRequestError")
 private val RequestListed = AttributeKey<Boolean>("KtorSvelteDevRequestListed")
+private val MeasurePayload = PipelinePhase("KtorSvelteDevMeasurePayload")
 
 internal class DevRequestLog(
     private val resolver: RequestResolver,
@@ -54,7 +58,9 @@ internal class DevRequestLog(
     val sensitive: SensitiveFields = SensitiveFields(),
 ) {
     private val sources = ConcurrentHashMap<RoutingNode, Any>()
+    private val routeKeys = ConcurrentHashMap<RoutingNode, String>()
     private val unknown = Any()
+    val routeTimes = RouteTimes()
     private val recent = ArrayDeque<String>()
     private val updates = MutableSharedFlow<String>(extraBufferCapacity = KEPT_REQUESTS, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
@@ -78,6 +84,14 @@ internal class DevRequestLog(
             val sql = RequestSql()
             call.attributes.put(RequestSqlKey, sql)
             withContext(RequestSqlElement(sql)) { proceed() }
+        }
+    }
+
+    fun measurePayloads(application: Application) {
+        application.sendPipeline.insertPhaseAfter(ApplicationSendPipeline.Render, MeasurePayload)
+        application.sendPipeline.intercept(MeasurePayload) { content ->
+            if (!resolver.isApiPath(decodedPathOrRaw(call))) return@intercept
+            payloadSummary(content)?.let { call.attributes.put(RequestPayloadKey, it) }
         }
     }
 
@@ -106,12 +120,21 @@ internal class DevRequestLog(
         val startedAt = call.attributes.getOrNull(RequestStartedAt) ?: return
         if (!resolver.isApiPath(decodedPathOrRaw(call)) || call.attributes.contains(RequestListed)) return
         call.attributes.put(RequestListed, true)
+        val ms = (clock() - startedAt) / 1_000_000.0
+        call.attributes.getOrNull(RequestRoute)?.let { node ->
+            routeKeys
+                .getOrPut(
+                    node,
+                ) { routeKey(node).orEmpty() }
+                .takeIf { it.isNotEmpty() }
+                ?.let { routeTimes.record(it, ms, status.value) }
+        }
         val entry =
             buildJsonObject {
                 put("method", call.request.httpMethod.value)
                 put("path", sensitive.maskQuery(call.request.uri))
                 put("status", status.value)
-                put("ms", (clock() - startedAt) / 1_000_000.0)
+                put("ms", ms)
                 put("at", wallClock())
                 (call.request.header(HttpHeaders.XRequestId) ?: call.response.headers[HttpHeaders.XRequestId])?.let { put("id", it) }
                 call.attributes.getOrNull(RequestRoute)?.let(::sourceFor)?.let { source ->
@@ -125,6 +148,7 @@ internal class DevRequestLog(
                     )
                 }
                 call.attributes.getOrNull(RequestError)?.let { put("error", it) }
+                call.attributes.getOrNull(RequestPayloadKey)?.let { put("size", it) }
                 call.attributes
                     .getOrNull(RequestSqlKey)
                     ?.summary()
@@ -173,6 +197,14 @@ internal fun Route.devRequestRoutes(
             ).toString(),
             ContentType.Application.Json,
         )
+    }
+    get(DEV_SLOWEST_PATH) {
+        if (!allowRemote && !isLocalCall(call)) {
+            call.respondText("The ktor-svelte dev client only answers this machine.", status = HttpStatusCode.Forbidden)
+            return@get
+        }
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        call.respondText(log.routeTimes.ranking().toString(), ContentType.Application.Json)
     }
     get(DEV_STATUS_PATH) {
         if (!allowRemote && !isLocalCall(call)) {
