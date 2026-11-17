@@ -45,6 +45,11 @@ data class BookQuery(
 )
 
 @Serializable
+data class Gone(
+    val message: String,
+)
+
+@Serializable
 data class Tag(
     val name: String,
 )
@@ -79,8 +84,10 @@ class ResourceRoutesTest {
                         delete { id -> books.remove(id) != null }
                     }
                     resource<Tag>("/api/tags") {
+                        missing<Gone> { Gone("No tag is called ${call.parameters["id"]}.") }
                         list { listOf(Tag("fiction")) }
                         get { name -> Tag(name).takeIf { name == "fiction" } }
+                        delete { false }
                     }
                 }
             }
@@ -118,7 +125,11 @@ class ResourceRoutesTest {
             assertEquals(HttpStatusCode.NotFound, client.get("/api/books/abc").status)
             assertEquals(HttpStatusCode.NotFound, client.put("/api/books/9") { json("""{"title":"x"}""") }.status)
             assertEquals(HttpStatusCode.NotFound, client.delete("/api/books/9") { header(HttpHeaders.Origin, "http://localhost") }.status)
-            assertEquals(HttpStatusCode.NotFound, client.get("/api/tags/poetry").status)
+            val own = client.get("/api/tags/poetry")
+            assertEquals(HttpStatusCode.NotFound, own.status)
+            assertEquals("""{"message":"No tag is called poetry."}""", own.bodyAsText(), "the app's own answer for what is missing")
+            val kept = client.delete("/api/tags/fiction") { header(HttpHeaders.Origin, "http://localhost") }
+            assertEquals("""{"message":"No tag is called fiction."}""", kept.bodyAsText())
             assertEquals("""{"name":"fiction"}""", client.get("/api/tags/fiction").bodyAsText())
         }
 
@@ -155,6 +166,9 @@ class ResourceRoutesTest {
             )
             assertContains(services, "export const tagsGet = (id: string | number, options?: RequestOptions) => request<Tag>(")
             assertFalse("Resources.kt" in services, "every function points at the app's own file")
+            assertContains(services, "    'tags.get': Gone;\n")
+            assertContains(services, "    'tags.delete': Gone;\n")
+            assertFalse("'books.get':" in services)
             assertFalse("tagsCreate" in services)
             val types = dir.resolve("src/lib/api/types.ts").readText()
             assertContains(types, "export interface Book {\n    id: number;\n    title: string;\n}")
@@ -176,6 +190,10 @@ class ResourceRoutesTest {
                             resource<Tag>("/api/tags") {
                                 list { emptyList() }
                                 list { emptyList() }
+                            }
+                            resource<Tag>("/api/late") {
+                                get { null }
+                                missing<Gone> { Gone("late") }
                             }
                         }
                     }

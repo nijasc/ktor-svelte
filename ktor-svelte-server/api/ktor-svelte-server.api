@@ -327,6 +327,7 @@ public final class io/github/nijasc/ktor/svelte/ResourceShape {
 	public final fun get (Lio/ktor/server/routing/Route;Lkotlin/jvm/functions/Function3;)V
 	public final fun list (Lio/ktor/server/routing/Route;Lkotlin/jvm/functions/Function2;)V
 	public final fun listBy (Lio/ktor/server/routing/Route;Lkotlinx/serialization/KSerializer;Lkotlin/jvm/functions/Function3;)V
+	public final fun missing (Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function2;)V
 	public final fun update (Lio/ktor/server/routing/Route;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function4;)V
 }
 

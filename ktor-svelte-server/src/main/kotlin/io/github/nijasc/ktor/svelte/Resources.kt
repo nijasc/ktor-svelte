@@ -35,6 +35,24 @@ internal class ResourceShape(
     private val listType: TypeInfo,
     private val listSchema: JsonSchema,
 ) {
+    private var missing: (suspend RoutingContext.() -> Any)? = null
+    private var missingType: TypeInfo? = null
+    private var missingSchema: JsonSchema? = null
+
+    fun missing(
+        type: TypeInfo,
+        schema: JsonSchema,
+        body: suspend RoutingContext.() -> Any,
+    ) {
+        check(missing == null) { "resource: missing is declared twice." }
+        check(declared.none { it in setOf("get", "update", "delete") }) {
+            "resource: missing comes before get, update and delete, which answer with it."
+        }
+        missing = body
+        missingType = type
+        missingSchema = schema
+    }
+
     private val declared = mutableSetOf<String>()
 
     private fun once(name: String) {
@@ -43,7 +61,17 @@ internal class ResourceShape(
 
     private fun RoutingContext.id(): Any = call.pathParameter(ID, idType)
 
-    private fun RoutingContext.missing(): Nothing = throw NotFoundException("Nothing is at ${call.request.path()}.")
+    private suspend fun RoutingContext.found(
+        item: Any?,
+        status: HttpStatusCode = HttpStatusCode.OK,
+    ) {
+        val own = missing
+        when {
+            item != null -> call.respond(status, item, itemType)
+            own != null -> call.respond(HttpStatusCode.NotFound, own(), checkNotNull(missingType))
+            else -> throw NotFoundException("Nothing is at ${call.request.path()}.")
+        }
+    }
 
     @OptIn(ExperimentalKtorApi::class)
     fun list(
@@ -74,9 +102,12 @@ internal class ResourceShape(
         handler: suspend RoutingContext.(Any) -> Any?,
     ) {
         once("get")
-        route.get("{$ID}") { call.respond(handler(id()) ?: missing(), itemType) }.describe {
+        route.get("{$ID}") { found(handler(id())) }.describe {
             parameters { path(ID) { schema = idSchema } }
-            responses { HttpStatusCode.OK { schema = itemSchema } }
+            responses {
+                HttpStatusCode.OK { schema = itemSchema }
+                missingSchema?.let { known -> HttpStatusCode.NotFound { schema = known } }
+            }
         }
     }
 
@@ -88,7 +119,7 @@ internal class ResourceShape(
         handler: suspend RoutingContext.(Any) -> Any,
     ) {
         once("create")
-        route.post { call.respond(HttpStatusCode.Created, handler(call.receive(inputType)), itemType) }.describe {
+        route.post { found(handler(call.receive(inputType)), HttpStatusCode.Created) }.describe {
             requestBody { schema = inputSchema }
             responses { HttpStatusCode.Created { schema = itemSchema } }
         }
@@ -102,10 +133,13 @@ internal class ResourceShape(
         handler: suspend RoutingContext.(Any, Any) -> Any?,
     ) {
         once("update")
-        route.put("{$ID}") { call.respond(handler(id(), call.receive(inputType)) ?: missing(), itemType) }.describe {
+        route.put("{$ID}") { found(handler(id(), call.receive(inputType))) }.describe {
             parameters { path(ID) { schema = idSchema } }
             requestBody { schema = inputSchema }
-            responses { HttpStatusCode.OK { schema = itemSchema } }
+            responses {
+                HttpStatusCode.OK { schema = itemSchema }
+                missingSchema?.let { known -> HttpStatusCode.NotFound { schema = known } }
+            }
         }
     }
 
@@ -115,9 +149,12 @@ internal class ResourceShape(
         handler: suspend RoutingContext.(Any) -> Boolean,
     ) {
         once("delete")
-        route.delete("{$ID}") { if (handler(id())) call.respond(HttpStatusCode.NoContent) else missing() }.describe {
+        route.delete("{$ID}") { if (handler(id())) call.respond(HttpStatusCode.NoContent) else found(null) }.describe {
             parameters { path(ID) { schema = idSchema } }
-            responses { HttpStatusCode.NoContent {} }
+            responses {
+                HttpStatusCode.NoContent {}
+                missingSchema?.let { known -> HttpStatusCode.NotFound { schema = known } }
+            }
         }
     }
 }
@@ -129,6 +166,10 @@ public class ResourceScope<T : Any, ID : Any>
         @PublishedApi internal val route: Route,
         @PublishedApi internal val shape: ResourceShape,
     ) {
+        public inline fun <reified E : Any> missing(noinline body: suspend RoutingContext.() -> E) {
+            shape.missing(typeInfo<E>(), KotlinxJsonSchemaInference.buildSchema(typeOf<E>()), body)
+        }
+
         public fun list(handler: suspend RoutingContext.() -> List<T>) {
             shape.list(route, handler)
         }
