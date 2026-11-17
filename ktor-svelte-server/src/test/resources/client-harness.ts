@@ -912,4 +912,14 @@ await request('GET', '/api/reports', { typedHeaders: { 'X-Tenant': 'acme', 'X-Ro
 await request('GET', '/api/reports', { typedHeaders: { 'X-Tenant': 'acme' }, headers: { 'X-Tenant': 'chosen' } });
 results.typedHeaders = typedHeaderLog;
 
+const omittedBodies: string[] = [];
+apiConfig.fetch = (async (_url: string, init?: RequestInit) => {
+    omittedBodies.push(String(init?.body));
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+}) as typeof fetch;
+const draft = { id: 7, title: 'Milk', createdAt: 'yesterday' };
+await request('POST', '/api/notes', { body: draft, omit: ['id', 'createdAt'] });
+await request('POST', '/api/notes', { body: [draft], omit: ['id'] });
+results.omitted = { bodies: omittedBodies, draftKept: JSON.stringify(draft) };
+
 console.log(JSON.stringify(results));

@@ -459,4 +459,13 @@ class GeneratedClientBehaviourTest {
         assertEquals(kotlinx.serialization.json.JsonNull, sent[0].getValue("skipped"))
         assertEquals("chosen", sent[1].getValue("tenant").jsonPrimitive.content)
     }
+
+    @Test
+    fun `read-only fields are taken out of the body that is sent, and the object passed in is left alone`() {
+        val omitted = runHarness().getValue("omitted").jsonObject
+        val bodies = omitted.getValue("bodies").jsonArray.map { it.jsonPrimitive.content }
+        assertEquals("{\"title\":\"Milk\"}", bodies[0])
+        assertEquals("[{\"id\":7,\"title\":\"Milk\",\"createdAt\":\"yesterday\"}]", bodies[1])
+        assertEquals("{\"id\":7,\"title\":\"Milk\",\"createdAt\":\"yesterday\"}", omitted.getValue("draftKept").jsonPrimitive.content)
+    }
 }
