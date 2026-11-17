@@ -1301,7 +1301,7 @@ The dev loop, the dev panel and the tools around them.
 | [Setup script](https://nijasc.github.io/ktor-svelte/main/guide/getting-started) | One command creates a project with everything wired up | Script |
 | [Configurator](https://nijasc.github.io/ktor-svelte/main/guide/configurator) | Tick options and copy the settings | This site |
 | [Dev workflow](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | `svelteDevAll` runs Vite, the compiler and your app with hot reload on one port, in one readable log | Gradle |
-| [Dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | Every API call with replay, curl, payload size, SQL counts and duplicates, plus status, slowest routes, environment, migrations, memory and threads, cookies, clear site data, routes, public config, accessibility and a theme editor | Ktor plugin |
+| [Dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | Every API call with replay, curl, payload size, SQL counts and duplicates, plus status, slowest routes, environment, migrations, memory and threads, caught emails, cookies, clear site data, routes, public config, accessibility and a theme editor | Ktor plugin |
 | [Server error overlay](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | A failed call shows the exception and a link to your code in the browser | Ktor plugin |
 | [Browser logs in your console](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | `console.log` and browser errors land in the dev log | Ktor plugin |
 | [Restart summary and startup timing](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow) | What caused a restart, how long it took, and where startup time went | Gradle, Ktor plugin |
@@ -9536,6 +9536,7 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 | [Save fixtures](#save-fixtures) | The calls of this page as JSON for frontend tests |
 | [Clear site data](#clear-site-data) | This browser as a first-time visitor, in one click |
 | [Slowest routes](#slowest-routes) | The API routes that took the most time since the app started |
+| [Emails](#emails) | Emails the app sent in development, caught instead of sent |
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
 | [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
 | [Migrations](#migrations) | Which Flyway migrations ran, which are pending, and whether the last one failed |
@@ -9619,6 +9620,49 @@ The **Slowest routes** section ranks the API routes by the time the server spent
 - **Refresh** updates it. A restart, such as after a Kotlin change, starts the count again.
 
 It counts every API call the server answered, also those from other tabs. For the calls of one page, look at the [request log](#request-log).
+
+### Emails
+
+In development the app sends no email. Emails go to the **Emails** section of the panel instead, so you can click through "invite a colleague" or "reset my password" without a mail server and without writing to real addresses.
+
+Send email through `application.mailer`:
+
+```kotlin
+post("/api/invites") {
+    val address = call.receiveText()
+    call.application.mailer.send(
+        Email(
+            to = address,
+            subject = "You are invited",
+            text = "Open the app to join the team.",
+            html = "<p>Open the app to join the <b>team</b>.</p>",
+        ),
+    )
+    call.respond(HttpStatusCode.Accepted)
+}
+```
+
+And give the plugin the mailer that really sends, for production. `Mailer` is a one-method interface, so wrap the library or the email service you use:
+
+```kotlin
+install(Svelte) {
+    mailer = Mailer { email -> smtp.send(email.from ?: "team@example.com", email.to, email.subject, email.html ?: email.text) }
+}
+```
+
+| `Email` field | What it is |
+|---|---|
+| `to` | One address, or a list. At least one |
+| `subject` | The subject line |
+| `text`, `html` | The plain text and the HTML body. At least one of them |
+| `from` | The sender. `null` leaves it to the mailer |
+| `cc`, `bcc`, `replyTo` | Copies and the reply address |
+
+In the panel each caught email shows its subject, recipients and time. Open one to see its headers and the HTML as the mail client would render it, with scripts off, and the text version below it. The list updates after each API call, keeps the last 50 and **Clear** empties it. The log also gets a line for each caught email.
+
+- Emails are caught whenever Ktor runs in development mode, also without Vite. Outside development, `application.mailer` is the mailer you set.
+- In development no mailer is needed. Outside development, sending without one fails with "ktor-svelte has no mailer to send ... with: set mailer = ... in install(Svelte)".
+- To send real emails while developing, for example to test a mail server, set `dev { catchEmails = false }`.
 
 ### Status
 
@@ -9952,6 +9996,7 @@ Everything on this page that you can turn on or off, in one place. Gradle settin
 | `refreshAfterRestart` | Ktor | `true` | Open pages rerun their `load` after a restart |
 | `slowApiCall` | Ktor | `500.milliseconds` | Logs slower API calls. `null` turns it off |
 | `startupTiming` | Ktor | `true` | Logs what the startup time was spent on |
+| `catchEmails` | Ktor | `true` | Shows emails in the dev panel instead of sending them |
 
 ## Full example
 
@@ -13405,6 +13450,7 @@ install(Svelte) {
     originCheck = true
     hideErrorDetails = true
     apiCompression = true
+    mailer = null
     inlinePublicConfig = true
     buildHeader = true
     requestIds = true
@@ -13444,6 +13490,7 @@ install(Svelte) {
         refreshAfterRestart = true
         errorOverlay = true
         startupTiming = true
+        catchEmails = true
     }
 
     rateLimit {
@@ -13587,6 +13634,7 @@ See [API request guards](https://nijasc.github.io/ktor-svelte/main/security#api-
 |---|---|---|
 | `apiCompression` | `true` | Compresses API responses of 1 KiB or more with gzip, deflate or zstd. See [API compression](https://nijasc.github.io/ktor-svelte/main/features/transport#api-compression) |
 | `transport { }` | nothing installed | JSON, XML and compression: `json { }`, `xml()`, `negotiation { }`, `compression { }`. See [Transport](https://nijasc.github.io/ktor-svelte/main/features/transport) |
+| `mailer` | `null` | The `Mailer` that sends `application.mailer` emails outside development. See [Emails](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#emails) |
 | `buildHeader` | `true` | Sends the frontend build fingerprint on API responses as `X-Ktor-Svelte-Build`, so the client can notice a deploy |
 | `requestIds` | `true` | Gives every request an `X-Request-Id`, keeps one sent by the client and logs it with unhandled errors |
 
@@ -13626,6 +13674,7 @@ See [Dev workflow](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow)
 | `dev.browserLogs` | `true` | Sends browser console output, uncaught errors and unhandled rejections from pages proxied from Vite to the app's log |
 | `dev.refreshAfterRestart` | `true` | After the app restarts in development, open pages rerun their `load` functions, so a Kotlin change shows up without a manual reload |
 | `dev.errorOverlay` | `true` | Shows the Kotlin exception of a failed API call in the browser, in development. Needs `dev.panel` |
+| `dev.catchEmails` | `true` | In development, `application.mailer` keeps emails for the [dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#emails) instead of sending them |
 | `dev.startupTiming` | `true` | Logs what the startup time was spent on in development, with the parts you wrapped in [`startupStep`](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#startup-timing) |
 
 ## Route.svelte()
@@ -13665,6 +13714,7 @@ Besides the settings, the plugin gives your routes these helpers:
 | `getPage<T>(path) { }` | A paged `GET` route with `cursor` and `limit` | [Page through long lists](https://nijasc.github.io/ktor-svelte/main/recipes/pagination) |
 | `resource<T, ID>(path) { }` | The routes of one class, declared in one block | [Resource routes](https://nijasc.github.io/ktor-svelte/main/features/typescript#resource-routes) |
 | `application.buildInfo` | Version, commit and commit time of the build | [Build info](https://nijasc.github.io/ktor-svelte/main/guide/monitoring#build-info) |
+| `application.mailer.send(Email(...))` | Sends an email through `mailer`, or catches it for the dev panel in development | [Emails](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#emails) |
 | `application.svelteMetrics` | Refusal counters and web vitals | [Monitoring](https://nijasc.github.io/ktor-svelte/main/guide/monitoring) |
 | `startupStep(name) { }` | Names a part of startup for the dev startup log | [Startup timing](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#startup-timing) |
 
