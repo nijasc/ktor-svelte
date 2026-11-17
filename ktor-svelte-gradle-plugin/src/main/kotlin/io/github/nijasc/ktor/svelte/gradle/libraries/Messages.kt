@@ -5,7 +5,6 @@ import io.github.nijasc.ktor.svelte.gradle.DocLink
 import org.gradle.api.GradleException
 import java.io.File
 
-private val PLACEHOLDER = Regex("\\{([A-Za-z_][A-Za-z0-9_]*)}")
 private val MESSAGE_KEY = Regex("[A-Za-z][A-Za-z0-9_-]*")
 
 internal data class MessageCatalog(
@@ -17,12 +16,11 @@ internal data class MessageCatalog(
             .keys
             .sorted()
 
-    public fun placeholders(key: String): List<String> =
-        PLACEHOLDER
-            .findAll(locales.values.first().getValue(key))
-            .map { it.groupValues[1] }
-            .distinct()
-            .toList()
+    public fun placeholders(key: String): List<String> = messageShape(locales.values.first().getValue(key)).names
+
+    public fun counts(key: String): Set<String> = messageShape(locales.values.first().getValue(key)).counts
+
+    val usesPlurals: Boolean get() = keys.any { counts(it).isNotEmpty() }
 }
 
 internal fun propertyName(key: String): String {
@@ -69,9 +67,21 @@ private fun validateCatalog(catalog: MessageCatalog) {
         (first.value.keys - messages.keys).forEach { problems += "$locale is missing '$it'." }
         (messages.keys - first.value.keys).forEach { problems += "$locale has '$it', which ${first.key} does not." }
         (first.value.keys intersect messages.keys).forEach { key ->
-            val expected = PLACEHOLDER.findAll(first.value.getValue(key)).map { it.value }.toSet()
-            val actual = PLACEHOLDER.findAll(messages.getValue(key)).map { it.value }.toSet()
+            val wanted = messageShape(first.value.getValue(key))
+            val shape = messageShape(messages.getValue(key))
+            val expected = wanted.names.map { "{$it}" }.toSet()
+            val actual = shape.names.map { "{$it}" }.toSet()
             if (expected != actual) problems += "$locale '$key' uses $actual, but ${first.key} uses $expected."
+            if (expected == actual && wanted.counts != shape.counts) {
+                val here = shape.counts.ifEmpty { "nothing" }
+                val there = wanted.counts.ifEmpty { "nothing" }
+                problems += "$locale '$key' has a plural for $here, but ${first.key} has one for $there."
+            }
+            shape.problems.forEach { problems += "$locale '$key' $it." }
+            val unused = unusedPluralForms(messages.getValue(key), locale).joinToString { "'$it'" }
+            if (unused.isNotEmpty() && shape.problems.isEmpty()) {
+                problems += "$locale '$key' has the plural form $unused, which $locale never uses."
+            }
         }
     }
     if (problems.isNotEmpty()) {

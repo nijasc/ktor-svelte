@@ -331,11 +331,12 @@ private fun i18nSource(
     val functions =
         catalog.keys.joinToString("\n") { key ->
             val placeholders = catalog.placeholders(key)
+            val counts = catalog.counts(key)
             val signature =
                 if (placeholders.isEmpty()) {
                     "()"
                 } else {
-                    "(values: { " + placeholders.joinToString("; ") { "$it: string | number" } + " })"
+                    "(values: { " + placeholders.joinToString("; ") { "$it: ${if (it in counts) "number" else "string | number"}" } + " })"
                 }
             val argument = if (placeholders.isEmpty()) "" else ", values"
             "    ${propertyName(key)}: $signature => translate(${json(key).replace('"', '\'')}$argument),"
