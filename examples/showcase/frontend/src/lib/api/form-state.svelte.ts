@@ -5,6 +5,12 @@ export type FieldErrors = Record<string, string[]>;
 
 export type FieldCheckRoute = (query: { value: string }, options?: RequestOptions) => Promise<{ message?: string | null }>;
 
+export interface FieldChange {
+    field: string;
+    from: unknown;
+    to: unknown;
+}
+
 export interface FormStateOptions<T> {
     validate?: (draft: T) => FieldErrors | null | undefined;
     resetOnSuccess?: boolean;
@@ -16,6 +22,8 @@ export interface FormStateOptions<T> {
 export interface FormState<T> {
     draft: T;
     readonly dirty: boolean;
+    readonly changes: FieldChange[];
+    changed(field: keyof T & string): boolean;
     readonly submitting: boolean;
     readonly checking: boolean;
     readonly errors: FieldErrors;
@@ -30,7 +38,7 @@ export interface FormState<T> {
 }
 
 export function formState<T extends object>(initial: T, options: FormStateOptions<T> = {}): FormState<T> {
-    let saved = $state.snapshot(initial) as T;
+    let saved = $state.raw($state.snapshot(initial) as T);
     let draft = $state($state.snapshot(initial) as T);
     let baseline = $state(JSON.stringify(initial));
     let submitting = $state(false);
@@ -40,6 +48,14 @@ export function formState<T extends object>(initial: T, options: FormStateOption
     let conflict = $state.raw<unknown>(undefined);
     let checking = $state(0);
     const dirty = $derived(JSON.stringify(draft) !== baseline);
+    const changes = $derived.by(() => {
+        const before = saved as Record<string, unknown>;
+        const after = draft as Record<string, unknown>;
+        const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+        return fields
+            .filter((name) => JSON.stringify(before[name] ?? null) !== JSON.stringify(after[name] ?? null))
+            .map((name) => ({ field: name, from: before[name], to: $state.snapshot(after[name]) }));
+    });
     const shown = $derived.by(() => {
         const merged: FieldErrors = { ...errors };
         for (const [name, messages] of Object.entries(checked)) merged[name] = [...(merged[name] ?? []), ...messages];
@@ -161,6 +177,12 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         },
         get dirty() {
             return dirty;
+        },
+        get changes() {
+            return changes;
+        },
+        changed(name: keyof T & string) {
+            return changes.some((change) => change.field === name);
         },
         get submitting() {
             return submitting;

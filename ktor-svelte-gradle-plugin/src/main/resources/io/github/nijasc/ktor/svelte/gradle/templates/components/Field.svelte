@@ -10,6 +10,7 @@
         errors?: string[];
         hint?: string;
         multiline?: boolean;
+        changed?: boolean | string;
         class?: string;
         control?: Snippet<[{ id: string; options: FieldOptions }]>;
     }
@@ -21,6 +22,7 @@
         errors,
         hint,
         multiline = false,
+        changed = false,
         id,
         class: className = '',
         control,
@@ -35,7 +37,10 @@
 </script>
 
 <div class={['{{wrapper}}', className]}>
-    <label class="{{label}}" for={inputId}>{label}</label>
+    <label class="{{label}}" for={inputId}>
+        {label}
+        {#if changed}<span class="{{changed}}" role="img" aria-label={typeof changed === 'string' ? changed : 'Changed'}></span>{/if}
+    </label>
     {#if control}
         {@render control({ id: inputId, options })}
     {:else if multiline}
