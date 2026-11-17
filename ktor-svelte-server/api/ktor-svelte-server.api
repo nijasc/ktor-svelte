@@ -331,6 +331,10 @@ public final class io/github/nijasc/ktor/svelte/ResourceShape {
 	public final fun update (Lio/ktor/server/routing/Route;Lio/ktor/util/reflect/TypeInfo;Lio/ktor/openapi/JsonSchema;Lkotlin/jvm/functions/Function4;)V
 }
 
+public final class io/github/nijasc/ktor/svelte/RouteTimeoutKt {
+	public static final fun timeout-HG0u8IE (Lio/ktor/server/routing/Route;J)Lio/ktor/server/routing/Route;
+}
+
 public abstract interface annotation class io/github/nijasc/ktor/svelte/Sensitive : java/lang/annotation/Annotation {
 }
 
