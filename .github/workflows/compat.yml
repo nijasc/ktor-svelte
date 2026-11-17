@@ -19,6 +19,8 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: .bun-version
       - name: Update the example to the newest SvelteKit
         working-directory: examples/basic/frontend
         run: bun update --latest @sveltejs/kit @sveltejs/adapter-static @sveltejs/vite-plugin-svelte svelte vite
@@ -63,6 +65,8 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: .bun-version
       - name: Create a project with svelteInit and build it
         run: |
           project="$(mktemp -d)"
