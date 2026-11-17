@@ -118,7 +118,6 @@ testing {
             dependencies {
                 implementation(project())
                 implementation(libs.kotlin.test.junit5)
-                implementation(libs.axe.playwright)
             }
         }
         register<JvmTestSuite>("devBrowserTest") {

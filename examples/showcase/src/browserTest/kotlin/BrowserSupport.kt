@@ -1,4 +1,3 @@
-import com.deque.html.axecore.playwright.AxeBuilder
 import com.microsoft.playwright.Browser
 import com.microsoft.playwright.BrowserContext
 import com.microsoft.playwright.Locator
@@ -7,6 +6,7 @@ import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import com.microsoft.playwright.options.AriaRole
 import com.microsoft.playwright.options.Cookie
+import io.github.nijasc.ktor.svelte.test.accessibilityProblems
 import java.io.File
 import java.net.ServerSocket
 import java.net.URI
@@ -164,11 +164,5 @@ fun Page.problems(): MutableList<String> {
 }
 
 fun Page.expectAccessible() {
-    addStyleTag(Page.AddStyleTagOptions().setContent("*, *::before, *::after { transition: none !important; animation: none !important; }"))
-    val results = AxeBuilder(this).withTags(listOf("wcag2a", "wcag2aa", "wcag21a", "wcag21aa")).analyze()
-    val violations =
-        results.violations.map { violation ->
-            "${violation.id}: ${violation.help} (${violation.nodes.joinToString { it.target.toString() }})"
-        }
-    assertEquals(emptyList(), violations, "Accessibility violations on ${url()}")
+    assertEquals(emptyList(), accessibilityProblems(), "Accessibility violations on ${url()}")
 }

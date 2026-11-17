@@ -32,6 +32,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSmokeTestTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteSyncTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteToolTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteUpdateDependenciesTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyA11yTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyApiRoutesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLeaksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteVerifyLinksTask
@@ -695,6 +696,34 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.compileErrorsFile.set(project.layout.buildDirectory.file("ktor-svelte/compile-errors.json"))
         }
         configureBrowserTests(project, extension, application)
+        val a11yRunner =
+            project.configurations.detachedConfiguration(
+                project.dependencies.create("io.github.nijasc:ktor-svelte-test:${pluginVersion()}"),
+            )
+        project.tasks.register("svelteVerifyA11y", SvelteVerifyA11yTask::class.java) { task ->
+            task.group = TASK_GROUP
+            task.description = "Packages the app, opens its prerendered pages in a browser and fails on accessibility problems axe finds."
+            val names = project.tasks.names
+            if ("shadowJar" in names) {
+                task.dependsOn(if ("buildFatJar" in names) "buildFatJar" else "shadowJar")
+                task.jarFile.set(project.tasks.named("shadowJar", Jar::class.java).flatMap { it.archiveFile })
+            } else {
+                val installed = project.tasks.named("installDist", Sync::class.java)
+                task.dependsOn(installed)
+                task.libDirectory.fileProvider(installed.map { it.destinationDir.resolve("lib") })
+            }
+            task.mainClass.set(application.mainClass)
+            task.javaLauncher.set(toolchains.launcherFor(toolchain))
+            task.runnerClasspath.from(a11yRunner)
+            task.dependsOn(a11yRunner)
+            task.buildOutput.set(extension.frontendDir.dir(extension.outputDir))
+            task.projectDirectory.set(project.layout.projectDirectory)
+            task.reportFile.set(project.layout.buildDirectory.file("ktor-svelte/a11y.txt"))
+            task.browser.set(project.providers.gradleProperty("browser"))
+            val daisy = extension.libraries.daisySettings
+            task.lightTheme.set(daisy.enabled.zip(daisy.defaultThemeName) { on, name -> if (on) name else "" })
+            task.darkTheme.set(daisy.enabled.zip(daisy.prefersDarkName) { on, name -> if (on) name else "" })
+        }
         project.tasks.register("svelteSmokeTest", SvelteSmokeTestTask::class.java) { task ->
             task.group = TASK_GROUP
             task.description = "Packages the app, starts it in production mode and fails unless its pages and API routes are answered."

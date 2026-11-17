@@ -774,6 +774,14 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteVerifyA11y is offered to apps and is not part of check`() {
+        val project = project()
+        project.buildScript(applicationBuild)
+        assertContains(project.run("tasks", "--group=svelte").output, "svelteVerifyA11y")
+        assertFalse(":svelteVerifyA11y" in project.run("check", "--dry-run").output)
+    }
+
+    @Test
     fun `svelteVerifyTs exists only with the application plugin`() {
         val project = project()
         assertContains(project.runAndFail("svelteVerifyTs").output, "not found")

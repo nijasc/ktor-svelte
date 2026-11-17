@@ -7,6 +7,7 @@ internal enum class DocLink(
     val anchor: String?,
 ) {
     ADD_TO_AN_EXISTING_PROJECT("guide/existing-project", null),
+    BROWSER_TESTS("guide/browser-tests", "accessibility"),
     CALLING_THE_API("features/calling-the-api", "in-load-functions"),
     CREATE_A_PROJECT("guide/getting-started", null),
     DAISYUI("features/frontend-libraries", "daisyui"),

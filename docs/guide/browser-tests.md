@@ -102,6 +102,35 @@ Test classes with the same environment share one app. A class with another envir
 
 `page.problems()` collects what went wrong while the test ran: errors in the console, uncaught exceptions and answers of 500 and above. Assert that it is empty at the end of a test, and a broken page fails even when the thing you looked at happened to work.
 
+## Accessibility
+
+Many accessibility problems can be found by a machine: an image without a text, text that is too pale to read, a form field without a label. [axe](https://github.com/dequelabs/axe-core) finds them, and a task runs it on your app with no test to write:
+
+```bash
+./gradlew svelteVerifyA11y
+```
+
+```text
+axe found 2 accessibility problems on 4 pages:
+  /about in the light theme shadcn-light: image-alt: Images must have alternative text ([img])
+  /about in the dark theme dracula: color-contrast: Elements must meet minimum color contrast ratio thresholds ([#content > p])
+```
+
+The task packages the app, starts it, and opens every prerendered page in a browser, twice: once light and once dark. With `daisyUi` it uses your `defaultTheme` and your `prefersDark` theme, because contrast is where themes differ. Without it the browser asks for light and for dark colors. It checks the rules of WCAG 2.1 at levels A and AA.
+
+- `--path=/pricing` adds a page that is not prerendered. Pages behind a login cannot be checked this way, because the task is not signed in: check those in a browser test.
+- `-Pbrowser=firefox` picks another browser.
+- It is not part of `check`. It needs a browser, which is downloaded the first time, and the environment the app needs.
+
+In a browser test the same check is one call, for any page in any state:
+
+```kotlin no-check
+page.navigate(FrontendRoutes.settings)
+assertEquals(emptyList(), page.accessibilityProblems())
+```
+
+A machine finds about a third of what makes a page hard to use. A clean run means the easy mistakes are gone, not that the page is accessible.
+
 ## Browsers
 
 Playwright downloads the browser the first time it is used. A fresh Linux machine, such as a CI runner, also lacks system packages that a browser needs. Playwright's own command line installs both, and it is on the suite's classpath, so a small task runs it:
