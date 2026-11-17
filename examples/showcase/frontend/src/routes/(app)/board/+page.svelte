@@ -1,10 +1,12 @@
 <script lang="ts">
     import { api, BoardLimits, cookies, isAbortError, latest, prefetchOnHover, Status, type BoardStats, type Task } from '#api';
+    import { chartSeries } from '#charts';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { routes } from '#routes';
     import { formatDate } from '#lib/format.ts';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
+    import { BarChart } from 'layerchart';
     import type { PageProps } from './$types';
 
     const PAGE_SIZE = BoardLimits.PAGE_SIZE;
@@ -28,6 +30,18 @@
         label,
         mine
     });
+
+    interface StatusCount {
+        status: string;
+        tasks: number;
+    }
+
+    const counts = $derived<StatusCount[]>([
+        { status: m.statusTodo(), tasks: stats.todo },
+        { status: m.statusDoing(), tasks: stats.doing },
+        { status: m.statusDone(), tasks: stats.done }
+    ]);
+    const countSeries = chartSeries<StatusCount>({ tasks: { label: m.navBoard(), color: 'primary' } });
 
     async function refresh() {
         try {
@@ -90,6 +104,10 @@
     <div class="stat"><dt class="stat-title">{m.statusDone()}</dt><dd class="stat-value text-2xl">{stats.done}</dd></div>
     <div class="stat"><dt class="stat-title">{m.boardMine()}</dt><dd class="stat-value text-2xl">{stats.mine}</dd></div>
 </dl>
+
+<div id="status-chart" class="mb-4 h-40 max-w-md">
+    <BarChart data={counts} x="status" series={countSeries} />
+</div>
 
 <div class="mb-4 grid gap-3">
     <div class="flex flex-wrap items-center gap-3">
