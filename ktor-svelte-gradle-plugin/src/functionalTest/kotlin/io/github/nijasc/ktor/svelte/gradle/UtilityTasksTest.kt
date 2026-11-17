@@ -647,6 +647,33 @@ class UtilityTasksTest {
     }
 
     @Test
+    fun `svelteAdd creates a page and a route stub once, and never overwrites`() {
+        val project = project()
+        project.buildScript(applicationBuild.replace("mainClass = \"Main\"", "mainClass = \"demo.app.MainKt\""))
+        val missing = project.runAndFail("svelteAdd").output
+        assertContains(missing, "Say what to add: svelteAdd --page=notes/[id]")
+
+        val output = project.run("svelteAdd", "--page=notes/[id]", "--route").output
+        assertContains(output, "ktor-svelte added /notes/[id]:")
+        assertContains(output, "  frontend/src/routes/notes/[id]/+page.svelte")
+        assertContains(output, "  src/main/kotlin/demo/app/NotesIdRoutes.kt")
+        assertContains(output, "Add paramRoutes(\"/notes/[id]\") to install(Svelte)")
+        assertContains(output, "Call notesIdRoutes() inside routing { } to turn the new route on.")
+        assertContains(project.frontend.resolve("src/routes/notes/[id]/+page.ts").readText(), "return { id: params.id };")
+        assertContains(dir.resolve("src/main/kotlin/demo/app/NotesIdRoutes.kt").readText(), "package demo.app\n\nimport")
+
+        val again = project.runAndFail("svelteAdd", "--page=notes/[id]").output
+        assertContains(
+            again,
+            "svelteAdd does not overwrite: frontend/src/routes/notes/[id]/+page.svelte, frontend/src/routes/notes/[id]/+page.ts are already there.",
+        )
+
+        project.run("svelteAdd", "--page=about")
+        assertFalse(dir.resolve("src/main/kotlin/demo/app/AboutRoutes.kt").exists())
+        assertContains(project.frontend.resolve("src/routes/about/+page.svelte").readText(), "<h1>About</h1>")
+    }
+
+    @Test
     fun `svelteVerifyTs exists only with the application plugin`() {
         val project = project()
         assertContains(project.runAndFail("svelteVerifyTs").output, "not found")
