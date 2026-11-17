@@ -1,5 +1,5 @@
 import { tick, untrack } from 'svelte';
-import { errorMessage, isValidationError, isVersionConflict, type RequestOptions } from './client.js';
+import { errorMessage, isValidationError, isVersionConflict, patchOf, type Patch, type RequestOptions } from './client.js';
 
 export type FieldErrors = Record<string, string[]>;
 
@@ -34,6 +34,7 @@ export interface FormState<T> {
     takeTheirs(next?: T): void;
     reset(next?: T): void;
     submit<R>(send: (draft: T) => Promise<R>): Promise<R | undefined>;
+    submitChanges<R>(send: (changes: Patch<T>) => Promise<R>): Promise<R | undefined>;
     focusFirstError(): Promise<void>;
 }
 
@@ -168,6 +169,15 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         }
     }
 
+    function submitChanges<R>(send: (changes: Patch<T>) => Promise<R>): Promise<R | undefined> {
+        const before = saved;
+        return submit((sending) => {
+            const changes = patchOf(before, sending);
+            if (Object.keys(changes).length === 0) return Promise.resolve(undefined as R);
+            return send(changes);
+        });
+    }
+
     return {
         get draft() {
             return draft;
@@ -206,6 +216,7 @@ export function formState<T extends object>(initial: T, options: FormStateOption
         takeTheirs,
         reset,
         submit,
+        submitChanges,
         focusFirstError
     };
 }
