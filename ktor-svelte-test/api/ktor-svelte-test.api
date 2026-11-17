@@ -22,6 +22,7 @@ public abstract class io/github/nijasc/ktor/svelte/test/BrowserTest {
 	protected fun getEnvironment ()Ljava/util/Map;
 	protected fun getLocale ()Ljava/lang/String;
 	public final fun getPage ()Lcom/microsoft/playwright/Page;
+	protected fun getServiceWorkers ()Z
 	public final fun newContext ()Lcom/microsoft/playwright/BrowserContext;
 	public final fun openPage ()V
 }

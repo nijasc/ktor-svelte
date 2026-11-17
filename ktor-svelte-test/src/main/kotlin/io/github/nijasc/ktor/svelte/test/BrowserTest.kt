@@ -4,6 +4,7 @@ import com.microsoft.playwright.Browser
 import com.microsoft.playwright.BrowserContext
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
+import com.microsoft.playwright.options.ServiceWorkerPolicy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 
@@ -29,6 +30,8 @@ public abstract class BrowserTest {
 
     protected open val locale: String get() = "en-US"
 
+    protected open val serviceWorkers: Boolean get() = false
+
     public val app: TestApp get() = TestApp.shared(environment)
 
     public lateinit var context: BrowserContext
@@ -40,7 +43,13 @@ public abstract class BrowserTest {
     public val api: TestApi get() = TestApi(context, app.url)
 
     public fun newContext(): BrowserContext =
-        SharedBrowser.browser.newContext(Browser.NewContextOptions().setBaseURL(app.url).setLocale(locale))
+        SharedBrowser.browser.newContext(
+            Browser
+                .NewContextOptions()
+                .setBaseURL(app.url)
+                .setLocale(locale)
+                .setServiceWorkers(if (serviceWorkers) ServiceWorkerPolicy.ALLOW else ServiceWorkerPolicy.BLOCK),
+        )
 
     @BeforeEach
     public fun openPage() {

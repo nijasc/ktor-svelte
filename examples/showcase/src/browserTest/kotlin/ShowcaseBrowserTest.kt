@@ -946,6 +946,8 @@ class ShowcaseBrowserTest {
 
     @Test
     fun `the app can be installed and shows its offline page without a connection`() {
+        val context = session.newContext(serviceWorkers = true)
+        val page = context.newPage()
         val manifest = page.request().get("/ktor-svelte/manifest.webmanifest")
         assertTrue(manifest.headers().getValue("content-type").startsWith("application/manifest+json"))
         assertContains(manifest.text(), "\"short_name\": \"Showcase\"")
@@ -954,7 +956,7 @@ class ShowcaseBrowserTest {
         page.navigate("/")
         assertThat(page.locator("link[rel=manifest]")).hasAttribute("href", "/ktor-svelte/manifest.webmanifest")
         assertThat(page.locator("meta[name=theme-color]")).hasAttribute("content", "#7f52ff")
-        if (session.name != "chromium") return
+        if (session.name != "chromium") return context.close()
 
         assertEquals("activated", page.evaluate(
             "navigator.serviceWorker.ready.then((registration) => new Promise((done) => { const worker = registration.active; " +
@@ -970,5 +972,6 @@ class ShowcaseBrowserTest {
         context.setOffline(false)
         assertThat(page.heading()).not().hasText("You are offline")
         assertThat(page).hasURL(Pattern.compile(".*/about$"))
+        context.close()
     }
 }

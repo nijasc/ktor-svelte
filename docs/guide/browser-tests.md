@@ -158,6 +158,16 @@ assertEquals(emptyList(), page.accessibilityProblems())
 
 A machine finds about a third of what makes a page hard to use. A clean run means the easy mistakes are gone, not that the page is accessible.
 
+## Service workers
+
+Tests start with service workers blocked. A page that a service worker controls can send its requests past `page.route` and `context.route` in WebKit, so requests a test stubs would reach the app instead. To test the worker of an [installable app](../features/frontend-libraries.md#installable-app), such as its offline page, allow them in that test class:
+
+```kotlin no-check
+class OfflineBrowserTest : BrowserTest() {
+    override val serviceWorkers = true
+}
+```
+
 ## Browsers
 
 Playwright downloads the browser the first time it is used. A fresh Linux machine, such as a CI runner, also lacks system packages that a browser needs. Playwright's own command line installs both, and it is on the suite's classpath, so a small task runs it:
