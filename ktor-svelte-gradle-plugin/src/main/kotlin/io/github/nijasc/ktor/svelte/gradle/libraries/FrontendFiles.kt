@@ -76,7 +76,9 @@ internal fun frontendFiles(
 private const val PLAIN_FIELD_STYLE =
     "\n<style>\n" +
         "    .ktor-svelte-field {\n        display: grid;\n        gap: 0.25rem;\n    }\n\n" +
-        "    .ktor-svelte-field-hint {\n        margin: 0;\n        font-size: 0.875em;\n        opacity: 0.7;\n    }\n" +
+        "    .ktor-svelte-field-hint {\n        margin: 0;\n        font-size: 0.875em;\n        opacity: 0.7;\n    }\n\n" +
+        "    .ktor-svelte-field-changed {\n        display: inline-block;\n        width: 0.5em;\n        height: 0.5em;\n" +
+        "        margin-left: 0.4em;\n        border-radius: 50%;\n        background: currentColor;\n        opacity: 0.6;\n    }\n" +
         "</style>\n"
 
 private const val PLAIN_TABLE_STYLE =
@@ -222,6 +224,7 @@ internal fun componentFiles(
                 "textarea" to if (daisy) "textarea w-full" else "ktor-svelte-field-input",
                 "hint" to if (daisy) "text-sm opacity-70" else "ktor-svelte-field-hint",
                 "error" to if (daisy) "text-error text-sm" else "field-error",
+                "changed" to if (daisy) "badge badge-info badge-xs ml-2 align-middle" else "ktor-svelte-field-changed",
                 "style" to if (daisy) "" else PLAIN_FIELD_STYLE,
             ),
         )
