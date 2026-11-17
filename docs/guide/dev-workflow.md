@@ -193,6 +193,7 @@ An **API** button in the bottom right corner of the page opens the dev panel. It
 | [Server errors](#server-errors-in-the-browser) | The Kotlin exception of a failed call, as an overlay |
 | [Save fixtures](#save-fixtures) | The calls of this page as JSON for frontend tests |
 | [Status](#status) | Versions, health, Vite, refusals and the settings in effect |
+| [Environment](#environment) | Config, environment variables and system properties the app sees, secrets hidden |
 | [Cookies](#cookie-inspector) | What this browser sends, as the server reads it, with Clear buttons |
 | [Routes](#route-map) | Every page and API route with the file behind it |
 | [Accessibility](#accessibility-check) | An axe check of the page you are looking at |
@@ -265,6 +266,24 @@ The **Status** section shows what the app is running with, in plain rows:
 - the settings in effect, such as the API prefixes, the body limit and the rate limits.
 
 It is what the [status endpoint](../features/endpoints.md#status-endpoint) and the startup log tell you, without `statusEndpoint = true` and without reading JSON. Open it again to refresh it.
+
+### Environment
+
+The **Environment** section shows what the running app sees, so you can answer "which database is it talking to" or "did my variable arrive" without a debugger:
+
+- **Config**: every value of the Ktor config the app runs with (`application.yaml` or `application.conf`, after substitutions), as dotted names such as `ktor.deployment.port`.
+- **Environment variables**: what the app process got, which is not always what your terminal has, for example when the IDE starts it.
+- **System properties**: the `-D` values, without the JVM's own ones such as `java.version`.
+
+Type into the filter to narrow it down by name or value.
+
+Secrets are hidden as `***`:
+
+- a value whose name has a word such as `password`, `secret`, `token`, `key`, `auth`, `session` or `salt` in it, such as `DATABASE_PASSWORD`, `apiKey` or `jwt.secret`,
+- a value whose name is a field you marked [`@Sensitive`](../features/validation.md#sensitive-fields),
+- the password inside a URL, such as `postgres://app:***@db/app`, and `password=` or `token=` parameters in a connection string.
+
+The hiding goes by names, so a secret in a variable with a plain name, such as `DB=...`, is shown. Like the rest of the panel, it only answers this machine unless `allowRemote` is on.
 
 ### Cookie inspector
 
