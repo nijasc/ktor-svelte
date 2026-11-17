@@ -46,7 +46,11 @@ internal fun frontendFiles(
             put("src/hooks.server.ts", HOOKS_SERVER)
         }
         if (spec.i18n?.strategy == LocaleStrategy.UrlPrefix) put("src/hooks.ts", universalHooks(spec.i18n))
-        if (spec.routes && routes != null) put("$GENERATED_DIR/routes.ts", routesSource(routes, spec.i18n))
+        if (spec.routes &&
+            routes != null
+        ) {
+            put("$GENERATED_DIR/routes.ts", routesSource(routes, spec.i18n, messages?.keys.orEmpty().toSet()))
+        }
         if (spec.toasts) {
             put("$GENERATED_DIR/toasts.ts", renderTemplate("toasts.ts", mapOf("daisy" to (spec.daisy != null).toString())))
         }

@@ -17,10 +17,56 @@ internal sealed interface RoutePart {
     ) : RoutePart
 }
 
+internal data class NavMeta(
+    val title: String,
+    val icon: String? = null,
+    val order: Int = DEFAULT_NAV_ORDER,
+    val menu: Boolean = true,
+)
+
+internal const val DEFAULT_NAV_ORDER = 100
+private val NAV_EXPORT = Regex("""export\s+const\s+_nav\s*=\s*\{([^}]*)}""")
+private val NAV_PROPERTY = Regex("""(\w+)\s*:\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+|true|false)\s*(?:,|$)""")
+private val NAV_FILES = listOf("+page.ts", "+page.js")
+
+internal fun navMeta(
+    source: String,
+    file: String,
+): NavMeta? {
+    val body =
+        NAV_EXPORT
+            .find(source)
+            ?.groupValues
+            ?.get(1)
+            ?.trim() ?: return null
+
+    fun wrong(reason: String): Nothing =
+        throw GradleException(
+            "$file: _nav $reason. Write it as export const _nav = { title: 'Board', icon: 'LayoutDashboard', order: 1 }, " +
+                "with plain text, numbers and true or false." + DocLink.ROUTES.see(),
+        )
+    val found = NAV_PROPERTY.findAll(body).associate { it.groupValues[1] to it.groupValues[2] }
+    val rest = NAV_PROPERTY.replace(body, "").trim()
+    if (rest.isNotEmpty()) wrong("has a part that cannot be read here: $rest")
+    val unknown = found.keys - setOf("title", "icon", "order", "menu")
+    if (unknown.isNotEmpty()) wrong("has no setting called ${unknown.joinToString()}")
+
+    fun text(name: String): String? =
+        found[name]?.let { value ->
+            if (!value.startsWith("'") && !value.startsWith("\"")) wrong("needs text for $name")
+            value.substring(1, value.length - 1).replace(Regex("""\\(.)"""), "$1")
+        }
+    val title = text("title")?.takeIf { it.isNotBlank() } ?: wrong("needs a title")
+    val order = found["order"]?.let { it.toIntOrNull() ?: wrong("needs a whole number for order") } ?: DEFAULT_NAV_ORDER
+    val menu = found["menu"]?.let { it.toBooleanStrictOrNull() ?: wrong("needs true or false for menu") } ?: true
+    return NavMeta(title, text("icon"), order, menu)
+}
+
 internal data class FrontendRoute(
     val id: String,
     val name: String,
     val segments: List<List<RoutePart>>,
+    val nav: NavMeta? = null,
 ) {
     val params: List<RoutePart.Param> get() = segments.flatten().filterIsInstance<RoutePart.Param>()
 }
@@ -72,8 +118,14 @@ internal fun scanRoutes(routesDirectory: File): List<FrontendRoute> {
         routesDirectory
             .walkTopDown()
             .filter { directory -> directory.isDirectory && directory.list().orEmpty().any { PAGE_FILE.matches(it) } }
-            .map { directory -> routeOf("/" + directory.relativeTo(routesDirectory).invariantSeparatorsPath) }
-            .sortedBy { it.id }
+            .map { directory ->
+                val id = "/" + directory.relativeTo(routesDirectory).invariantSeparatorsPath
+                val declared =
+                    NAV_FILES.map(directory::resolve).firstOrNull(File::isFile)?.let { file ->
+                        navMeta(file.readText(), file.relativeTo(routesDirectory.parentFile ?: routesDirectory).invariantSeparatorsPath)
+                    }
+                routeOf(id).copy(nav = declared)
+            }.sortedBy { it.id }
             .toList()
     val clashes = routes.groupBy { it.name }.filterValues { it.size > 1 }
     if (clashes.isNotEmpty()) {
@@ -145,9 +197,67 @@ internal fun encodePathSegment(value: String): String =
         }
     }
 
+private fun quoted(text: String): String = "'" + text.replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+private fun navSource(
+    routes: List<FrontendRoute>,
+    messageKeys: Set<String>,
+): String {
+    val described = routes.filter { it.nav != null }
+    if (described.isEmpty()) return ""
+
+    fun title(nav: NavMeta): String = if (nav.title in messageKeys) "() => m.${propertyName(nav.title)}()" else "() => ${quoted(nav.title)}"
+    val pages = described.joinToString(",\n") { "    { id: ${quoted(it.id)}, title: ${title(it.nav!!)} }" }
+    val menu =
+        described
+            .filter { it.nav!!.menu && it.params.isEmpty() }
+            .sortedWith(compareBy({ it.nav!!.order }, { it.id }))
+            .joinToString(",\n") { route ->
+                val nav = route.nav!!
+                val icon = nav.icon?.let { "${quoted(it)} as const" } ?: "undefined"
+                "    { name: ${quoted(route.name)} as const, to: routes.${route.name}, title: ${title(nav)}, icon: $icon }"
+            }
+    return "\nconst pageTitles: { id: string; title: () => string }[] = [\n$pages\n];\n" +
+        "\nexport const nav = [${if (menu.isEmpty()) "" else "\n$menu\n"}];\n" + NAV_HELPERS
+}
+
+private val NAV_HELPERS =
+    """
+    |
+    |export interface OpenPage extends CurrentPage {
+    |    params?: Record<string, string>;
+    |}
+    |
+    |export interface Crumb {
+    |    title: string;
+    |    href: string;
+    |    current: boolean;
+    |}
+    |
+    |export function pageTitle(page: CurrentPage): string | undefined {
+    |    return pageTitles.find((known) => known.id === page.route.id)?.title();
+    |}
+    |
+    |export function breadcrumbs(page: OpenPage): Crumb[] {
+    |    if (page.route.id === null) return [];
+    |    const here = withoutGroups(page.route.id);
+    |    return pageTitles
+    |        .map((known) => ({ known, path: withoutGroups(known.id) }))
+    |        .filter(({ path }) => path === here || path === '/' || here.startsWith(path + '/'))
+    |        .sort((first, second) => first.path.length - second.path.length)
+    |        .map(({ known, path }) => ({
+    |            title: known.title(),
+    |            href: (route(known.id as RouteId) as (params?: object) => string)(page.params),
+    |            current: path === here
+    |        }));
+    |}
+    |
+    """.trimMargin()
+
 internal fun routesSource(
     routes: List<FrontendRoute>,
     i18n: I18nSpec?,
+    messageKeys: Set<String> = emptySet(),
 ): String {
     val ids = routes.joinToString(",\n") { "    ${it.name}: '${it.id.replace("\\", "\\\\").replace("'", "\'")}'" }
     val builders = routes.joinToString(",\n") { "    ${it.name}: link(routeIds.${it.name})" }
@@ -156,12 +266,15 @@ internal fun routesSource(
         append("// $GENERATED_MARKER\n")
         append("import { resolve } from '\$app/paths';\n")
         append("import type { RouteId, RouteParams } from '\$app/types';\n")
-        if (localized) append("import { getLocale } from './i18n.js';\n")
+        val translated = routes.any { it.nav?.title in messageKeys }
+        val fromI18n = listOfNotNull("getLocale".takeIf { localized }, "m".takeIf { translated })
+        if (fromI18n.isNotEmpty()) append("import { ${fromI18n.joinToString()} } from './i18n.js';\n")
         append("\nexport const routeIds = {\n$ids\n} as const;\n\n")
         append(ROUTE_TYPES)
         append(if (localized) LOCALIZED_ROUTE else PLAIN_ROUTE)
         append(ACTIVE_LINKS)
         append("\nexport const routes = {\n$builders\n};\n")
+        append(navSource(routes, messageKeys))
     }
 }
 
