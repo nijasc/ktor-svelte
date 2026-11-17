@@ -322,6 +322,14 @@ public final class io/github/nijasc/ktor/svelte/gradle/libraries/TailwindSpec : 
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteApiChangesTask : org/gradle/api/DefaultTask {
+	public fun <init> ()V
+	public abstract fun getAgainst ()Lorg/gradle/api/provider/Property;
+	public abstract fun getFrontendDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
+	public final fun report ()V
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteBuildInfoTask : org/gradle/api/DefaultTask {
 	public fun <init> ()V
 	public abstract fun getCommit ()Lorg/gradle/api/provider/Property;

@@ -26,7 +26,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 
 | # | Feature | Pull request |
 |---|---|---|
-| 48 | API change report |  |
+| 81 | Production smoke test |  |
 
 ### In review
 
@@ -38,6 +38,7 @@ The state of every feature. A card moves when work on it starts, when its pull r
 | 96 | Relative time | #297 |
 | 59 | Self-hosted fonts | #298 |
 | 108 | Charts preset | #299 |
+| 48 | API change report | #300 |
 
 ### Next up
 
@@ -142,7 +143,6 @@ Features of this plan that are merged:
 
 | # | Feature | Size | Group |
 |---|---|---|---|
-| 81 | Production smoke test | Medium | 7 |
 | 21 | Typed current user | Medium | 8 |
 | 87 | `call.user` in routes | Small | 8 |
 | 24 | Login redirect with return | Small | 8 |
