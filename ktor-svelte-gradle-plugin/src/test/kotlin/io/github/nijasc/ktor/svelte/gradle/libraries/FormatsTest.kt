@@ -22,6 +22,59 @@ class FormatsTest {
     private val catalog = MessageCatalog(i18n.locales.associateWith { mapOf("hello" to "x") })
 
     @Test
+    fun `a time is told as a distance from now, in the language's own words`() {
+        val bun = locateExecutable("bun")
+        assumeTrue(bun != null, "bun is not on PATH")
+        dir.resolve("i18n.ts").writeText(
+            "export type Locale = 'en' | 'de' | 'fr' | 'en-GB' | 'xx';\nexport const getLocale = (): Locale => 'en';\n",
+        )
+        dir.resolve("format.ts").writeText(formatSource(i18n))
+        val script =
+            """
+            import { timeAgo } from './format.ts';
+            const now = new Date('2026-12-24T12:00:00Z');
+            const at = (seconds) => new Date(now.getTime() + seconds * 1000);
+            const steps = [0, -20, -59, -60, -150, -3600, -7200, -86400, -172800, -700000, -3000000, -40000000, 90, 7200, 86400];
+            console.log(JSON.stringify({
+                en: steps.map((step) => timeAgo(at(step), now, 'en')),
+                de: steps.slice(0, 9).map((step) => timeAgo(at(step), now, 'de')),
+                text: timeAgo('2026-12-24T11:57:00Z', now, 'en'),
+            }));
+            """.trimIndent()
+        val file = dir.resolve("script.ts").apply { writeText(script) }
+        val process = ProcessBuilder(bun!!.path, file.path).directory(dir).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertEquals(true, process.waitFor(60, TimeUnit.SECONDS), output)
+        assertEquals(0, process.exitValue(), output)
+        val result = JsonSlurper().parseText(output.lines().last { it.startsWith("{") }) as Map<*, *>
+        assertEquals(
+            listOf(
+                "now",
+                "now",
+                "now",
+                "1 minute ago",
+                "2 minutes ago",
+                "1 hour ago",
+                "2 hours ago",
+                "yesterday",
+                "2 days ago",
+                "last week",
+                "last month",
+                "last year",
+                "in 1 minute",
+                "in 2 hours",
+                "tomorrow",
+            ),
+            result["en"],
+        )
+        assertEquals(
+            listOf("jetzt", "jetzt", "jetzt", "vor 1 Minute", "vor 2 Minuten", "vor 1 Stunde", "vor 2 Stunden", "gestern", "vorgestern"),
+            result["de"],
+        )
+        assertEquals("3 minutes ago", result["text"])
+    }
+
+    @Test
     fun `a locale takes its own data, then its language's, then English`() {
         assertEquals("de-AT", formatLocale("de-AT"))
         assertEquals("de", formatLocale("de-LU"))

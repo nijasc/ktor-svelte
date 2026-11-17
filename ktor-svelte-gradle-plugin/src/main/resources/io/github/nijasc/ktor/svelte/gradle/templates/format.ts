@@ -115,3 +115,23 @@ export function formatTime(value: string | Date, locale: Locale = getLocale()): 
     const data = formats[locale];
     return fill(data.time, moment(value), data);
 }
+
+const AGO_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+    ['year', 31_536_000],
+    ['month', 2_592_000],
+    ['week', 604_800],
+    ['day', 86_400],
+    ['hour', 3600],
+    ['minute', 60]
+];
+
+export function timeAgo(value: string | Date, now: Date = new Date(), locale: Locale = getLocale()): string {
+    const then = typeof value === 'string' ? new Date(value) : value;
+    const seconds = Math.round((then.getTime() - now.getTime()) / 1000);
+    const words = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    for (const [unit, size] of AGO_STEPS) {
+        if (Math.abs(seconds) >= size) return words.format(Math.trunc(seconds / size), unit);
+    }
+    return words.format(0, 'second');
+}
+
