@@ -34,6 +34,7 @@ public class SvelteConfig internal constructor() {
     internal val rateLimitConfig: SvelteRateLimitConfig = SvelteRateLimitConfig()
     internal val internalAccessConfig: SvelteInternalAccessConfig = SvelteInternalAccessConfig()
     internal val healthCheckList: MutableList<suspend () -> Boolean> = mutableListOf()
+    internal val frontendList: MutableList<SvelteFrontendConfig> = mutableListOf()
     internal val declaredErrorList: MutableList<DeclaredError> = mutableListOf()
     internal val constantHolders: MutableList<Any> = mutableListOf()
     internal val idempotencyConfig: SvelteIdempotencyConfig = SvelteIdempotencyConfig()
@@ -91,6 +92,15 @@ public class SvelteConfig internal constructor() {
 
     public fun paramRoutes(vararg routes: String) {
         paramRouteList = routes.toList()
+    }
+
+    public fun frontend(
+        prefix: String,
+        configure: SvelteFrontendConfig.() -> Unit = {},
+    ) {
+        checkFrontendPrefix(prefix)
+        require(frontendList.none { it.prefix == prefix }) { "The frontend under $prefix is declared twice." }
+        frontendList += SvelteFrontendConfig(prefix).apply(configure)
     }
 
     public fun healthCheck(check: suspend () -> Boolean) {
