@@ -6,6 +6,12 @@
         | { key: keyof T & string; label: string; text?: (item: T) => string; class?: string }
         | { id: string; label: string; text: (item: T) => string; class?: string };
 
+    interface TableAction<Item> {
+        label: string;
+        run: (item: Item) => Promise<unknown>;
+        confirm?: string;
+    }
+
     interface Props {
         load: (query: Q) => Promise<PageOf<T>>;
         columns: Column[];
@@ -20,6 +26,14 @@
         columnsLabel?: string;
         moveUp?: string;
         moveDown?: string;
+        actions?: TableAction<T>[];
+        selectRow?: (item: T) => string;
+        selectPage?: string;
+        selectEverything?: string;
+        clearSelection?: string;
+        selectedText?: (count: number) => string;
+        workingText?: (done: number, total: number) => string;
+        doneText?: (worked: number, total: number) => string;
         empty?: string;
         loading?: string;
         more?: string;
@@ -43,6 +57,14 @@
         columnsLabel = 'Columns',
         moveUp = 'Up',
         moveDown = 'Down',
+        actions = [],
+        selectRow,
+        selectPage = 'Select all on this page',
+        selectEverything = 'Select every page',
+        clearSelection = 'Clear',
+        selectedText = (count: number) => `${count} selected`,
+        workingText = (done: number, total: number) => `Working: ${done} of ${total}`,
+        doneText = (worked: number, total: number) => `Done: ${worked} of ${total} worked.`,
         empty = 'Nothing here yet.',
         loading = 'Loading',
         more = 'Load more',
@@ -99,6 +121,75 @@
     }
 
     let items = $state.raw<T[]>(untrack(() => first?.items ?? []));
+    const selectable = $derived(actions.length > 0);
+    let chosen = $state.raw<Map<string | number, T>>(new Map());
+    let working = $state<{ done: number; total: number } | null>(null);
+    let outcome = $state('');
+
+    function keyOf(item: T, index: number): string | number {
+        return key ? key(item) : index;
+    }
+
+    const pageKeys = $derived(items.map((item, index) => keyOf(item, index)));
+    const pageChosen = $derived(pageKeys.filter((id) => chosen.has(id)).length);
+
+    function toggleRow(item: T, index: number) {
+        const next = new Map(chosen);
+        const id = keyOf(item, index);
+        if (next.has(id)) next.delete(id);
+        else next.set(id, item);
+        chosen = next;
+        outcome = '';
+    }
+
+    function togglePage() {
+        const next = new Map(chosen);
+        const all = pageChosen === items.length;
+        items.forEach((item, index) => {
+            if (all) next.delete(keyOf(item, index));
+            else next.set(keyOf(item, index), item);
+        });
+        chosen = next;
+        outcome = '';
+    }
+
+    async function chooseEverything() {
+        const next = new Map(chosen);
+        items.forEach((item, index) => next.set(keyOf(item, index), item));
+        let from = cursor;
+        busy = true;
+        try {
+            while (from) {
+                const page = await load({ ...query, cursor: from } as Q);
+                page.items.forEach((item) => next.set(key ? key(item) : next.size, item));
+                from = page.next ?? null;
+            }
+            chosen = next;
+        } catch (error) {
+            problem = errorMessage(error);
+        } finally {
+            busy = false;
+        }
+    }
+
+    async function runAction(action: TableAction<T>) {
+        if (action.confirm && typeof window !== 'undefined' && !window.confirm(action.confirm)) return;
+        const targets = [...chosen.values()];
+        let worked = 0;
+        working = { done: 0, total: targets.length };
+        for (const item of targets) {
+            const ok = await action.run(item).then(
+                () => true,
+                () => false
+            );
+            if (ok) worked += 1;
+            working = { done: (working?.done ?? 0) + 1, total: targets.length };
+        }
+        working = null;
+        chosen = new Map();
+        outcome = doneText(worked, targets.length);
+        await reload();
+    }
     let cursor = $state<string | null>(untrack(() => first?.next ?? null));
     let trail = $state.raw<(string | undefined)[]>([]);
     let busy = $state(false);
@@ -197,10 +288,40 @@
             </ul>
         </details>
     {/if}
+    {#if selectable && (chosen.size > 0 || working || outcome)}
+        <div class="bg-base-200 rounded-box mb-2 flex flex-wrap items-center gap-2 p-2" role="status">
+            {#if working}
+                <span>{workingText(working.done, working.total)}</span>
+            {:else if chosen.size > 0}
+                <span>{selectedText(chosen.size)}</span>
+                {#each actions as action (action.label)}
+                    <button type="button" class="btn btn-sm" onclick={() => void runAction(action)}>{action.label}</button>
+                {/each}
+                {#if cursor && key}
+                    <button type="button" class="btn btn-sm" disabled={busy} onclick={() => void chooseEverything()}>{selectEverything}</button>
+                {/if}
+                <button type="button" class="btn btn-sm" onclick={() => (chosen = new Map())}>{clearSelection}</button>
+            {:else}
+                <span>{outcome}</span>
+            {/if}
+        </div>
+    {/if}
     <table class="table" aria-busy={busy}>
         {#if caption}<caption class="text-left font-semibold">{caption}</caption>{/if}
         <thead>
             <tr>
+                {#if selectable}
+                    <th scope="col" class="w-8">
+                        <input
+                            type="checkbox"
+                            aria-label={selectPage}
+                            checked={items.length > 0 && pageChosen === items.length}
+                            indeterminate={pageChosen > 0 && pageChosen < items.length}
+                            disabled={items.length === 0 || working !== null}
+                            onchange={togglePage}
+                        />
+                    </th>
+                {/if}
                 {#each shown as column (columnId(column))}
                     <th scope="col" class={column.class}>{column.label}</th>
                 {/each}
@@ -209,6 +330,17 @@
         <tbody>
             {#each items as item, index (key ? key(item) : index)}
                 <tr>
+                    {#if selectable}
+                        <td class="w-8">
+                            <input
+                                type="checkbox"
+                                aria-label={selectRow ? selectRow(item) : `${selectPage}: ${shown[0] ? cellText(item, shown[0]) : index + 1}`}
+                                checked={chosen.has(keyOf(item, index))}
+                                disabled={working !== null}
+                                onchange={() => toggleRow(item, index)}
+                            />
+                        </td>
+                    {/if}
                     {#if row}
                         {@render row(item, shown)}
                     {:else}

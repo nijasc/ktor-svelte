@@ -520,7 +520,7 @@ class ShowcaseBrowserTest {
         page.navigationLink("Admin").click()
         val table = page.locator("#all-tasks")
         val rows = table.locator("tbody tr")
-        assertThat(table.locator("thead th")).hasText(arrayOf("Title", "Status", "Created by"))
+        assertThat(table.locator("thead th")).hasText(arrayOf("", "Title", "Status", "Created by"))
         assertThat(rows).hasCount(5)
         assertThat(rows.first()).containsText("$token 6")
         assertThat(rows.first()).containsText("To do")
@@ -539,15 +539,34 @@ class ShowcaseBrowserTest {
 
         table.getByText("Columns").click()
         table.getByRole(AriaRole.CHECKBOX, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Status")).uncheck()
-        assertThat(table.locator("thead th")).hasText(arrayOf("Title", "Created by"))
-        assertThat(rows.first().locator("td")).hasCount(2)
+        assertThat(table.locator("thead th")).hasText(arrayOf("", "Title", "Created by"))
+        assertThat(rows.first().locator("td")).hasCount(3)
         val up = table.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Up: Created by"))
         up.click()
-        assertThat(table.locator("thead th")).hasText(arrayOf("Title", "Created by"))
+        assertThat(table.locator("thead th")).hasText(arrayOf("", "Title", "Created by"))
         up.click()
-        assertThat(table.locator("thead th")).hasText(arrayOf("Created by", "Title"))
+        assertThat(table.locator("thead th")).hasText(arrayOf("", "Created by", "Title"))
         page.reload()
-        assertThat(page.locator("#all-tasks thead th")).hasText(arrayOf("Created by", "Title"))
+        assertThat(page.locator("#all-tasks thead th")).hasText(arrayOf("", "Created by", "Title"))
+    }
+
+    @Test
+    fun `rows of the data table can be chosen and an action runs for each of them`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val token = unique("Bulk").replace(" ", "")
+        (1..3).forEach { page.createTask("$token $it") }
+        page.navigationLink("Admin").click()
+        val table = page.locator("#all-tasks")
+        table.getByLabel("Select: $token 3").check()
+        table.getByLabel("Select: $token 2").check()
+        assertThat(table.getByText("2 selected")).isVisible()
+        table.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Mark as done")).click()
+        assertThat(table.getByText("Done: 2 of 2 worked.")).isVisible()
+        val rows = table.locator("tbody tr")
+        assertThat(rows.filter(com.microsoft.playwright.Locator.FilterOptions().setHasText("$token 3"))).containsText("Done")
+        assertThat(rows.filter(com.microsoft.playwright.Locator.FilterOptions().setHasText("$token 2"))).containsText("Done")
+        assertThat(rows.filter(com.microsoft.playwright.Locator.FilterOptions().setHasText("$token 1"))).containsText("To do")
+        assertThat(table.getByLabel("Select: $token 1")).not().isChecked()
     }
 
     @Test
