@@ -464,7 +464,7 @@ Add the plugin to a Kotlin JVM project that uses the `application` plugin, in `b
 <!-- x-release-please-start-version -->
 ```kotlin
 plugins {
-    id("io.github.nijasc.ktor-svelte") version "1.1.0"
+    id("io.github.nijasc.ktor-svelte") version "1.2.0"
 }
 ```
 <!-- x-release-please-end -->
@@ -484,7 +484,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     plugins: [sveltekit({ adapter: adapter({ fallback: '200.html' }) })],
-    server: { hmr: { clientPort: 5173 } }
+    server: { hmr: { clientPort: 5173, protocol: 'ws' } }
 });
 ```
 
@@ -520,7 +520,7 @@ The Gradle plugin adds the runtime for you. If you only want the library, add it
 
 <!-- x-release-please-start-version -->
 ```kotlin
-implementation("io.github.nijasc:ktor-svelte-server:1.1.0")
+implementation("io.github.nijasc:ktor-svelte-server:1.2.0")
 ```
 <!-- x-release-please-end -->
 
@@ -531,7 +531,7 @@ To keep Kotlin, Ktor and ktor-svelte on versions that are tested together, impor
 dependencyResolutionManagement {
     versionCatalogs {
         create("ktorSvelte") {
-            from("io.github.nijasc:ktor-svelte-catalog:1.1.0")
+            from("io.github.nijasc:ktor-svelte-catalog:1.2.0")
         }
     }
 }
@@ -811,7 +811,42 @@ In development mode the runtime proxies to Vite if it is reachable, otherwise se
 
 The proxy only answers requests from this machine, so your frontend source is not open to everyone on your network, even though Ktor listens on all interfaces. Requests from elsewhere get your built files, or a 403 if there are none. It never forwards cookies or `Authorization` headers. It also refuses to start if `dev.url` points at another machine. To test from your phone or use Vite in another container, set `dev { allowRemote = true }`, and only on a network you trust.
 
-The proxy forwards HTTP only. POST, PUT, PATCH and DELETE requests are forwarded too, with their body, so Vite endpoints and SvelteKit form actions work in dev. Paths under your API prefixes are never proxied, whatever the method. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
+The proxy forwards HTTP only. POST, PUT, PATCH and DELETE requests are forwarded too, with their body, so Vite endpoints and SvelteKit form actions work in dev. Paths under your API prefixes are never proxied, whatever the method. `server.hmr.clientPort` in the quick start makes Vite's client connect straight to Vite, and `protocol: 'ws'` keeps that working on a page served over HTTPS. Without it HMR still works, but the browser logs one WebSocket error before Vite falls back. Either way, the browser must be able to reach Vite's port, so a remote machine or container needs that port exposed.
+
+## HTTPS in development
+
+Some things only work on a page served over HTTPS: cookies marked `Secure`, service workers on any host but `localhost`, and sign-in providers that refuse plain HTTP callback URLs. To develop with them, turn HTTPS on:
+
+```kotlin
+svelte {
+    dev {
+        https = true
+        httpsPort = 8443
+    }
+}
+```
+
+`svelteDevAll` then serves the app at `https://localhost:8443` as well as on its usual port, and the ready banner and the browser it opens use the HTTPS address. A small proxy in the Gradle task ends TLS and passes each request on to the app, WebSockets included. Your app keeps listening on plain HTTP, so `application.conf` and `embeddedServer` stay as they are.
+
+The certificate is made on the first run with the JDK's `keytool`: a development certificate authority for your user, and a certificate for `localhost`, `127.0.0.1` and `::1` signed by it. Both live in `~/.ktor-svelte/dev-https`, and every project on your computer shares them. The certificate for `localhost` is renewed after about a year.
+
+Your browser does not trust the authority until you tell it to. The first run prints the command for your system, such as `certutil -addstore -user Root` on Windows. ktor-svelte never runs it for you. Firefox keeps its own list, so import `ca.crt` there under Settings, Certificates, Authorities. Without that step the page still works after you accept the browser's warning, but service workers and some sign-in providers refuse an untrusted certificate.
+
+Anyone who has the files in `~/.ktor-svelte/dev-https` can sign certificates your browser then trusts, so keep that folder to yourself and do not copy it to other machines. When you stop using HTTPS in development, delete the folder and remove the authority from your system's trust store.
+
+In development mode the app treats requests from this proxy as HTTPS: `call.request.origin.scheme` is `https` and the port is the HTTPS port, so redirects, absolute URLs and `Secure` cookies come out right. It only does so for requests from this machine that carry the proxy's mark, and never outside development mode.
+
+Vite's hot reload still talks to Vite over plain `ws` on its own port, which browsers allow from a secure page on `localhost`. Projects from `svelteInit` and the generated `vite.config.ts` set `protocol: 'ws'` for that. A hand-written `vite.config.ts` needs it too:
+
+```ts
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+    plugins: [sveltekit()],
+    server: { hmr: { clientPort: 5173, protocol: 'ws' } }
+});
+```
 
 ## When a port is still in use
 
@@ -996,6 +1031,81 @@ method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8
 
 Each line has the method, the path without its query string, the status, how long the app took in milliseconds, and the request ID that the browser also shows for a failed call. The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again. Requests for build assets under `/_app/` are not logged.
 
+## Errors from the browser
+
+An error in the browser happens on someone else's computer, and in production nobody tells you about it. Turn reporting on and it reaches the log of your app:
+
+```kotlin
+install(Svelte) {
+    frontendErrors()
+}
+```
+
+```text
+WARN  ktor-svelte.frontend Frontend error on /board: TypeError: x is not a function (at save (app.js:1:2))
+WARN  ktor-svelte.frontend Frontend error on /notes: ApiError: Request to /api/notes failed with status 503, after the API call with request ID 9f2c41
+```
+
+The generated client then reports every error that nothing caught: uncaught exceptions, promises that were rejected and never handled, and errors SvelteKit caught while loading or rendering a page. Each line names the page, the first place in the stack, and for a failed API call its [request ID](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#request-ids), so you can find the same request in the server's own log. Failed calls that the server answered with a 4xx are left out: those are answers, not faults.
+
+It is off by default, because it adds an endpoint that anyone can post to. That endpoint is kept small:
+
+- One browser reports an error once, and at most ten different errors per page load.
+- One client address may send ten reports a minute. Set `perClientPerMinute` for another number. The rest get a 429.
+- A report may be 8 KB. Set `maxBodyBytes` for another size.
+- What is logged is cut to one line of limited length, so a report cannot write lines of its own into your log.
+- The page is logged without its query string.
+
+```kotlin
+install(Svelte) {
+    frontendErrors {
+        perClientPerMinute = 30
+    }
+}
+```
+
+The lines go to the logger `ktor-svelte.frontend` at `WARN`, so your logging setup decides where they end up. In development the browser's console already reaches the dev log, and this works there too.
+
+## Page timings
+
+Your API's slow calls show in the server's log. A slow page does not: its time is spent in the browser. `webVitals` has browsers report it:
+
+```kotlin
+install(Svelte) {
+    webVitals()
+}
+```
+
+One page load in ten then measures the usual five timings and sends them once, when the page is left:
+
+| Name | What it measures | Good up to | Poor above |
+| --- | --- | --- | --- |
+| `TTFB` | Time until the first byte of the page arrived | 800 ms | 1800 ms |
+| `FCP` | Time until something was painted | 1800 ms | 3000 ms |
+| `LCP` | Time until the largest element was painted | 2500 ms | 4000 ms |
+| `INP` | The slowest reaction to a click or a key | 200 ms | 500 ms |
+| `CLS` | How much the layout moved while loading | 0.1 | 0.25 |
+
+The app adds them to its metrics, per page:
+
+```kotlin
+application.svelteMetrics.webVitals.forEach { vital ->
+    println("${vital.page} ${vital.name}: ${vital.count} loads, average ${vital.average}, ${vital.poor} poor")
+}
+```
+
+Each entry has the `page`, the `name`, a `count`, the `average`, and how many loads were `good`, `needsImprovement` and `poor`. Hand them to your metrics system from there. The [status endpoint](https://nijasc.github.io/ktor-svelte/main/features/endpoints#status-endpoint) lists them too, under `webVitals`.
+
+Pages are grouped by route and not by address: `/notes/my-first-note` counts for `/notes/[slug]` when that is one of your `paramRoutes`, and a segment that is a number or an id becomes `[id]`. At most 100 pages are kept, and the rest are counted together.
+
+Like error reporting, this is off by default, because it adds an endpoint anyone can post to:
+
+- `sampleRate` is the share of page loads that report, `0.1` unless you set it.
+- One client address may send ten reports a minute, or `perClientPerMinute`.
+- A report may be 2 KB, only the five names are accepted, and only values that a real page could have.
+
+The timings are measured with the browser's own `PerformanceObserver`, with no extra package. They are close to what the `web-vitals` library reports, not identical: `INP` here is the slowest interaction of the page load. The numbers are kept in memory and start again when the app restarts.
+
 ## Build info
 
 Every build knows what it is. The Gradle plugin writes the project's `version`, the git commit and the time of that commit into the JAR, and the app reads them without any setup:
@@ -1071,6 +1181,182 @@ The app gets the environment of the build, so it needs what it needs in producti
 - Secrets come from the environment.
 - `XForwardedHeaders` is installed when a proxy sits in front.
 - `GET /_ktor-svelte/health` answers 200 if your platform checks health.
+
+Source: https://nijasc.github.io/ktor-svelte/main/guide/browser-tests
+
+# Browser tests
+
+Tests that drive a real browser against the packaged app, written in Kotlin.
+
+A unit test cannot tell you that the login page still logs someone in. A browser test can, and with ktor-svelte both halves of the app are in one build, so the test can be Kotlin too: it starts the JAR you ship, opens a browser, and uses your typed routes and your own classes.
+
+## Set up
+
+Add a test suite called `browserTest`:
+
+```kotlin
+plugins {
+    `jvm-test-suite`
+}
+
+testing {
+    suites {
+        register<JvmTestSuite>("browserTest") {
+            useJUnitJupiter()
+            dependencies {
+                implementation(project())
+            }
+        }
+    }
+}
+```
+
+The name is what the ktor-svelte plugin looks for. For that suite it:
+
+- adds `io.github.nijasc:ktor-svelte-test`, which brings [Playwright](https://playwright.dev/java/),
+- packages the app before the tests, with `buildFatJar` or `shadowJar` when the project has them and `installDist` otherwise,
+- tells the tests where the packaged app is,
+- passes the browser on: `./gradlew browserTest -Pbrowser=firefox`. Chromium unless you say so, and `webkit` is the third.
+
+`implementation(project())` gives the tests your typed routes and your classes. Tests go in `src/browserTest/kotlin`.
+
+## A test
+
+```kotlin
+import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
+import io.github.nijasc.ktor.svelte.test.BrowserTest
+import io.github.nijasc.ktor.svelte.test.problems
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class NotesBrowserTest : BrowserTest() {
+    @Test
+    fun `a new note shows up in the list`() {
+        val problems = page.problems()
+        val note: Note = api.post("/api/notes", NoteInput(title = "Written by a test"))
+
+        page.navigate(FrontendRoutes.notes)
+        assertThat(page.getByRole(AriaRole.LINK, Page.GetByRoleOptions().setName(note.title))).isVisible()
+        assertEquals(emptyList(), problems)
+    }
+}
+```
+
+`BrowserTest` gives every test:
+
+| | |
+| --- | --- |
+| `page` | A fresh Playwright page in its own browser context, so tests do not share cookies. Paths are relative to the app |
+| `context` | That context, and `newContext()` for a second visitor in the same test |
+| `api` | The app's API, called from that context: with its cookies, so as whoever the page is signed in as |
+| `app` | The running app, with its `url` and its `log` file |
+
+The app is started once and shared by all tests of the run. It is started the way production starts it, without the development flag, on a free port.
+
+## Record a test
+
+The slow part of a browser test is finding the right way to name each element. Let the browser tell you: click through the app once, and the steps are written down.
+
+```bash
+./gradlew svelteRecordTest --name=SignIn
+```
+
+The task packages and starts the app and opens it in a browser, with Playwright's recorder next to it. Do what the test should do. The recorder's toolbar can also add assertions: that an element is visible, or has a text. Close the browser, and the steps are in `src/browserTest/kotlin/SignInBrowserTest.kt`:
+
+```kotlin
+class SignInBrowserTest : BrowserTest() {
+    @Test
+    fun `sign in`() {
+        page.navigate(FrontendRoutes.login)
+        page.getByLabel("Email").fill("ada@example.com")
+        page.getByLabel("Password").fill("secret")
+        page.getByRole(AriaRole.BUTTON, Page.GetByRoleOptions().setName("Sign in")).click()
+        assertThat(page.locator("#signed-in-as")).containsText("Ada Lovelace")
+    }
+}
+```
+
+An address of your app is written as its typed route, `FrontendRoutes.tasksId("12")` for `/tasks/12`, so the test breaks at compile time when the page moves. An address with a query string stays a path.
+
+It is a starting point to edit, and the file is yours. What it typed in is in the file as you typed it, passwords too, so replace those before you commit. The task never replaces a test that is already there. Add `-Pbrowser=firefox` to record in another browser.
+
+## The API with your own classes
+
+`api` sends and reads JSON with kotlinx.serialization, so a request body and an answer are your classes:
+
+```kotlin
+val user: User = api.post("/api/session", Login("ada@example.com", "secret"))
+val notes: List<Note> = api.get("/api/notes")
+val changed: Note = api.put("/api/notes/${note.id}", NoteInput(title = "Renamed"))
+api.delete("/api/notes/${note.id}")
+```
+
+An answer of 400 or above fails the test with the status and the body. To check a refusal, catch it or ask for the status alone:
+
+```kotlin
+val refused = assertFailsWith<ApiFailure> { api.get<List<Note>>("/api/notes") }
+assertEquals(401, refused.status)
+assertEquals(403, api.status("DELETE", "/api/admin/users/1"))
+```
+
+Because `api` shares the page's cookies, signing in through `api` signs the page in, which is much faster than filling in the login form in every test.
+
+## What the app needs
+
+The app runs with the environment of the build. Override `environment` for what the tests should set, such as a fresh database:
+
+```kotlin
+class NotesBrowserTest : BrowserTest() {
+    override val environment = mapOf("DATABASE_URL" to "jdbc:h2:mem:tests", "ADMIN_PASSWORD" to "secret")
+}
+```
+
+Test classes with the same environment share one app. A class with another environment gets its own.
+
+`page.problems()` collects what went wrong while the test ran: errors in the console, uncaught exceptions and answers of 500 and above. Assert that it is empty at the end of a test, and a broken page fails even when the thing you looked at happened to work.
+
+## Accessibility
+
+Many accessibility problems can be found by a machine: an image without a text, text that is too pale to read, a form field without a label. [axe](https://github.com/dequelabs/axe-core) finds them, and a task runs it on your app with no test to write:
+
+```bash
+./gradlew svelteVerifyA11y
+```
+
+```text
+axe found 2 accessibility problems on 4 pages:
+  /about in the light theme shadcn-light: image-alt: Images must have alternative text ([img])
+  /about in the dark theme dracula: color-contrast: Elements must meet minimum color contrast ratio thresholds ([#content > p])
+```
+
+The task packages the app, starts it, and opens every prerendered page in a browser, twice: once light and once dark. With `daisyUi` it uses your `defaultTheme` and your `prefersDark` theme, because contrast is where themes differ. Without it the browser asks for light and for dark colors. It checks the rules of WCAG 2.1 at levels A and AA.
+
+- `--path=/pricing` adds a page that is not prerendered. Pages behind a login cannot be checked this way, because the task is not signed in: check those in a browser test.
+- `-Pbrowser=firefox` picks another browser.
+- It is not part of `check`. It needs a browser, which is downloaded the first time, and the environment the app needs.
+
+In a browser test the same check is one call, for any page in any state:
+
+```kotlin
+page.navigate(FrontendRoutes.settings)
+assertEquals(emptyList(), page.accessibilityProblems())
+```
+
+A machine finds about a third of what makes a page hard to use. A clean run means the easy mistakes are gone, not that the page is accessible.
+
+## Browsers
+
+Playwright downloads the browser the first time it is used. A fresh Linux machine, such as a CI runner, also lacks system packages that a browser needs. Playwright's own command line installs both, and it is on the suite's classpath, so a small task runs it:
+
+```kotlin
+tasks.register<JavaExec>("installBrowsers") {
+    classpath = sourceSets["browserTest"].runtimeClasspath
+    mainClass = "com.microsoft.playwright.CLI"
+    args("install", "--with-deps", providers.gradleProperty("browser").orElse("chromium").get())
+}
+```
+
+The port goes to the app as the `PORT` variable and as `-port`, as with the [smoke test](https://nijasc.github.io/ktor-svelte/main/guide/deployment#smoke-test), so the app has to read one of them.
 
 Source: https://nijasc.github.io/ktor-svelte/main/examples
 
@@ -1539,6 +1825,39 @@ const lines = (await api.notes.getActivity(id)).map((item) =>
 ```
 
 Use `@SerialName` for short type names. Without it, the type name is the fully qualified class name.
+
+## Resource routes
+
+Most APIs have a few things that can be listed, read, created, changed and deleted, and for each of them the same five routes. `resource` registers them with the paths, statuses and names that the generated client expects:
+
+```kotlin
+routing {
+    resource<Note, Int>("/api/notes") {
+        missing<Problem> { Problem("That note does not exist.") }
+        list<NoteQuery> { query -> store.list(query.search, query.tag) }
+        get { id -> store.find(id) }
+        create<NoteInput> { input -> store.create(input) }
+        update<NoteInput> { id, input -> store.update(id, input) }
+        delete { id -> store.delete(id) }
+    }
+}
+```
+
+| Block | Route | Returns | Client |
+| --- | --- | --- | --- |
+| `list { }` | `GET /api/notes` | The list | `api.notes.list()` |
+| `get { id -> }` | `GET /api/notes/{id}` | The item, or `null` for a 404 | `api.notes.get(id)` |
+| `create<Input> { input -> }` | `POST /api/notes` | The new item, sent with a 201 | `api.notes.create(input)` |
+| `update<Input> { id, input -> }` | `PUT /api/notes/{id}` | The changed item, or `null` for a 404 | `api.notes.update(id, input)` |
+| `delete { id -> }` | `DELETE /api/notes/{id}` | `true`, or `false` for a 404. A 204 is sent | `api.notes.delete(id)` |
+
+Each block returns its answer and does not call `respond`. That is what lets the types line up without anything being inferred: `Note` is the type of every answer, the type you name on `create` and `update` is the body, and the second type of `resource` is the type of the id, so `api.notes.get` takes a `number` here. Leave the second type out and the id is a string. An id that is not of that type is a 404.
+
+These are ordinary Ktor routes. Every block is optional, a block that is left out is no route, and `call` is there in each block for anything else you need. Nothing is stored or generated for you: the blocks are your code.
+
+- `list<NoteQuery> { query -> }` reads the query string into a `@Serializable` class, and the client gets the same fields as a typed query.
+- `missing<Problem> { ... }` says what a 404 looks like. It comes first in the block, and the client then knows the type of that error for `get`, `update` and `delete`. Without it a 404 has no body of yours.
+- Other routes of the same thing, such as `POST /api/notes/{id}/archive`, go next to the resource in a normal `route("/api/notes") { }`.
 
 ## Getting exact types
 
@@ -2637,6 +2956,155 @@ Set `apiConfig.sessionWarning` to another number of milliseconds to warn earlier
 The end stays right without extra requests. The answer of the current user endpoint carries it, and so does every API response, in a header, so a session that grows with each request is known to last longer after each one. The server sends the time that is left and not a clock time, so a wrong clock on the visitor's computer does not matter.
 
 When the time is up, the store asks the server once. If the session is really over, `currentUser.user` becomes `null` and the page shows it at that moment, not at the next click.
+
+## Permissions
+
+A "Delete" button that the API then refuses is a bug, and so is a hidden button for something the API would allow. Both come from writing the rule twice. Write it once, as an enum and one function from the user to what they may do:
+
+```kotlin
+enum class Permission { NotesRead, NotesDelete, UsersManage }
+
+install(Svelte) {
+    currentUser<User> { sessions.get<UserSession>()?.let { users.find(it.userId) } }
+    permissions<Permission, User> { user ->
+        if (user.role == Role.Admin) Permission.entries.toSet() else setOf(Permission.NotesRead)
+    }
+}
+```
+
+On the server, check it where it matters:
+
+```kotlin
+requires(Permission.UsersManage) {
+    route("/api/admin") {
+        get("/users") { call.respond(users.all()) }
+    }
+}
+
+delete("/api/notes/{id}") {
+    call.requirePermission(Permission.NotesDelete)
+    notes.delete(call.parameters["id"])
+    call.respond(HttpStatusCode.NoContent)
+}
+```
+
+| | |
+| --- | --- |
+| `requires(...) { }` | Every route inside needs the permissions |
+| `call.requirePermission(...)` | The same check inside one route |
+| `call.can(permission)` | `true` or `false`, for a rule with more to it, such as "admins, or the author" |
+
+A visitor gets a 401 and a signed-in user without the permission a 403 with `{"message": "You are not allowed to do that."}`. Pass `refusedMessage = { call -> ... }` to `permissions` for your own words. The permissions of a user are worked out once per call.
+
+The frontend gets the same enum and a `can` function:
+
+```svelte
+<script lang="ts">
+    import { can, Permission } from '#api';
+</script>
+
+{#if can(Permission.NotesDelete)}
+    <button onclick={remove}>Delete</button>
+{/if}
+```
+
+`can('NotesDelete')` works too, and a name that is not in the enum does not compile. The answer is reactive and comes with the current user, so it changes when someone signs in or out, with no request of its own. Rename a permission in Kotlin and every `can` that used the old name fails `svelteCheck`.
+
+`can` in the browser decides what is shown. What is allowed is decided by the check on the route, so every hidden button needs one.
+
+## Page guards
+
+Which pages need a signed-in user, and which a permission, is one more rule that both sides have to agree on. Declare it once, by page:
+
+```kotlin
+install(Svelte) {
+    guards {
+        signedIn(FrontendRoutes.board, FrontendRoutes.settings, "/tasks")
+        permission(Permission.UsersManage, FrontendRoutes.admin)
+    }
+}
+```
+
+A guard covers the page and everything below it: `/tasks` also covers `/tasks/4`. When two guards cover a page, the deeper one decides.
+
+**The API below the same name is closed by the server.** With the guards above, every route under `/api/tasks` answers a visitor with a 401, and every route under `/api/admin` answers a user without `UsersManage` with a 403. This is the part that protects your data, and it needs no `authenticate` or `requires` around those routes. A route with another name, such as `/api/stats` for the board page, is not covered and keeps its own check.
+
+**The pages are guarded in the browser by one generated function.** Use it in the layout of the route group that holds the pages:
+
+```ts
+// src/routes/(app)/+layout.ts
+import { signedInUser } from '#api';
+
+export const ssr = false;
+
+export const load = async ({ url }) => ({ user: await signedInUser(url) });
+```
+
+`signedInUser(url)` resolves to the user, typed and never `null`. A visitor is sent to [the login page](#the-login-page) with the way back, and a user without the permission that the page's guard asks for gets your error page with a 403. `guardPages` does the same for a layout that has no use for the user: `export const load = guardPages;`. It only acts on pages that a guard covers.
+
+Do not put either in the root `+layout.ts`. SvelteKit cannot show your error page for an error from the root layout, and the visitor would see a bare "Forbidden".
+
+The guard in the browser is a convenience: it spares the visitor a page that would only fail. Anyone can skip it, so what must stay private is kept private by the API.
+
+## User preferences
+
+A theme, a language, a compact list: small choices that people expect to find again on their phone after making them on their laptop. Declare them as a class, and say how you keep them:
+
+```kotlin
+@Serializable
+data class Preferences(
+    val theme: String? = null,
+    val locale: String? = null,
+    val compactBoard: Boolean = false,
+)
+
+install(Svelte) {
+    currentUser<User> { sessions.get<UserSession>()?.let { users.find(it.userId) } }
+    preferences<Preferences, User>(
+        defaults = Preferences(),
+        load = { user -> store.preferences(user.id) },
+        save = { user, preferences -> store.save(user.id, preferences) },
+    )
+}
+```
+
+You store them: a table, a JSON column, a document. `load` returns `null` for someone who has saved nothing yet, and they get the defaults. ktor-svelte adds the endpoint, the type and the store:
+
+```svelte
+<script lang="ts">
+    import { preferences } from '#api';
+</script>
+
+<input
+    type="checkbox"
+    checked={preferences.value.compactBoard}
+    onchange={(event) => preferences.set({ compactBoard: event.currentTarget.checked })}
+/>
+<ul class:compact={preferences.value.compactBoard}>...</ul>
+```
+
+| | |
+| --- | --- |
+| `preferences.value` | The preferences, typed as your class and reactive. The defaults until the server has answered, and for a visitor |
+| `preferences.ready` | `false` until the first answer |
+| `preferences.set({ ... })` | Changes some of them. The page shows the change at once, and it is saved in the background |
+| `preferences.load()` | Resolves when they are loaded. Reading `value` starts loading on its own |
+
+The store loads once, loads again when someone signs in, and goes back to the defaults when they sign out. A visitor's changes stay in the page and are not saved. What is saved is checked like every request body, so `@JsonSchema` bounds on the class apply.
+
+### Theme and language
+
+A field called `theme` or `locale` is tied to the cookie that [DaisyUI themes](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#daisyui) and [i18n](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#i18n) use, so the generated switches keep working unchanged and their choice now belongs to the person:
+
+- Someone picks a theme or a language, with the generated switch or your own code. It is saved for them.
+- They sign in on another device. The saved theme is applied at once, and for a saved language the page loads again in that language.
+- They pick another theme on that device. That one is saved, and the first device shows it the next time a page loads there.
+
+The rule behind it: each browser remembers the value it last had in common with the server. If its cookie differs from that, the change was made here and is saved. If not, the saved value is newer and is shown.
+
+Keep preferences to plain values: text, numbers, booleans, enums and lists of them.
+
+The endpoint is `GET` and `PUT /api/preferences`, under your first API prefix. Pass `path = "/api/settings"` to move it.
 
 ## The login page
 
@@ -3795,6 +4263,194 @@ It only lists what it finds. Add `--strict` to fail the build instead, for examp
 
 The check works with or without typed routes. Paths under your API are never reported, because the generated client already makes a call to a missing route a compile error. The API roots come from the generated `openapi.json`, or `/api` when there is none. A link that starts with a value, such as `href="/{section}/overview"`, cannot be judged and is skipped, and with `LocaleStrategy.UrlPrefix` a leading language such as `/de` is accepted.
 
+## Menu, titles and breadcrumbs
+
+A menu is a list of pages with a title and an icon each, kept by hand somewhere far from the pages. Let each page say it about itself instead, in its `+page.ts`:
+
+```ts
+export const _nav = { title: 'Board', icon: 'LayoutDashboard', order: 1 };
+```
+
+| | |
+| --- | --- |
+| `title` | The page's title. With `i18n` on, write the key of a message, such as `'nav-board'`, and the title is translated |
+| `icon` | Optional. With `lucide()` on, the name of an icon |
+| `order` | Optional. Where the page stands in the menu. Pages without it come last, in the order of their paths |
+| `menu` | Optional. `false` keeps the page out of the menu, with its title still known |
+| `description`, `image` | Optional. For [link previews](#link-previews) |
+
+The name starts with an underscore because SvelteKit refuses other exports from a page file. Keep the values plain: text, numbers, `true` and `false`. The plugin reads the file without running it, so a function call or a variable there fails `svelteSync` with the name of the file.
+
+`routes.ts` then has three more things:
+
+```svelte
+<script lang="ts">
+    import { page } from '$app/state';
+    import { breadcrumbs, nav, pageTitle } from '#routes';
+</script>
+
+<svelte:head>
+    <title>{pageTitle(page) ?? 'My app'}</title>
+</svelte:head>
+
+<nav>
+    {#each nav as item (item.name)}
+        <a href={item.to()} aria-current={item.to.ariaCurrent(page)}>{item.title()}</a>
+    {/each}
+</nav>
+
+<ol>
+    {#each breadcrumbs(page) as crumb (crumb.href)}
+        <li><a href={crumb.href} aria-current={crumb.current ? 'page' : undefined}>{crumb.title}</a></li>
+    {/each}
+</ol>
+```
+
+- `nav` lists the pages without parameters, in order. Each item has the typed route as `to`, the `title` as a function so that it follows the language, the `icon`, and the route's `name`.
+- `pageTitle(page)` is the title of the open page, or `undefined` for a page that declared none. It works for pages with parameters too.
+- `breadcrumbs(page)` is the way from the start page to the open one: every page above it that has a title, with a link that carries the open page's parameters.
+
+A menu that depends on who is signed in is a filter over `nav`. With [page guards](https://nijasc.github.io/ktor-svelte/main/features/auth#page-guards) the rule is already written:
+
+```ts
+const links = $derived(
+    nav.filter((item) => {
+        const guard = matchGuard(pageGuards, item.to());
+        if (!guard) return true;
+        return currentUser.signedIn && (!guard.permission || can(guard.permission));
+    })
+);
+```
+
+## Link previews
+
+When someone pastes a link to your site into a chat, the preview comes from tags in the page's HTML. Add what the preview should say to the same `_nav`:
+
+```ts
+export const _nav = {
+    title: 'home-title',
+    description: 'home-lead',
+    image: 'https://example.com/share/home.png'
+};
+```
+
+| | |
+| --- | --- |
+| `description` | One or two sentences. Like `title`, the key of a message when `i18n` is on |
+| `image` | The preview image. Give its full address: most services do not follow a path. A path that starts with `/` is accepted and written as it is |
+
+Every prerendered page that has a `description` or an `image` then gets these tags in its `<head>`, at build time:
+
+```html
+<meta property="og:type" content="website">
+<meta property="og:title" content="A team board in one JAR">
+<meta name="description" content="This example uses every ktor-svelte feature.">
+<meta property="og:description" content="This example uses every ktor-svelte feature.">
+<meta property="og:image" content="https://example.com/share/home.png">
+<meta name="twitter:card" content="summary_large_image">
+```
+
+They are written by the generated server hooks, so there is nothing to add to a layout. With `LocaleStrategy.UrlPrefix` each language's pages get the tags in that language. With the cookie strategy a page is prerendered once, so its tags are in the default language.
+
+This is for pages that are prerendered. A page with a parameter, such as `/notes/[id]`, is not: the server never renders pages, so such a page sets its own title when it runs, and a link to it previews without these tags.
+
+## A new page
+
+A new page is a folder, two files with the right names, the load's types, and for a page with a parameter two settings that are easy to forget. `svelteAdd` writes them:
+
+```bash
+./gradlew svelteAdd --page=notes/[id]
+```
+
+```text
+ktor-svelte added /notes/[id]:
+  frontend/src/routes/notes/[id]/+page.svelte
+  frontend/src/routes/notes/[id]/+page.ts
+Its load calls api.notes.get, the route that answers at the same path.
+Add paramRoutes("/notes/[id]") to install(Svelte), so the app serves the page for every value.
+The files are yours from here on.
+```
+
+Write the folder as it is under `src/routes`, with groups such as `(app)/settings` if you use them.
+
+The `+page.ts` has a typed load. When the generated client already has a `GET` route at the same path below your API prefix, the load calls it, with the page's parameters in the type the route wants:
+
+```ts
+import { apiWith } from '#api';
+import type { PageLoad } from './$types';
+
+export const prerender = false;
+export const ssr = false;
+
+export const load: PageLoad = async (event) => {
+    return { note: await apiWith(event).notes.get(Number(event.params.id)) };
+};
+```
+
+Without such a route the load returns the page's parameters, and you fill in the rest. The `+page.svelte` shows a title and the loaded data, so the page works before you have designed it. With `routes()` on, `routes.ts` is updated in the same run.
+
+Add `--route` and the task also writes a Kotlin file with a route to start from, at the API path of the page:
+
+```bash
+./gradlew svelteAdd --page=orders/[id] --route
+```
+
+```kotlin
+fun Route.ordersIdRoutes() {
+    get("/api/orders/{id}") {
+        val id = call.parameters["id"].orEmpty()
+        call.respondText("Orders $id")
+    }
+}
+```
+
+The file goes into the package of your main class. Call the function inside `routing { }`, and after the next `svelteGenerateTs` the client has the route.
+
+The task only creates. It refuses when one of its files is already there, it never edits a file of yours, and what it wrote has no generated header: the files are yours.
+
+## Pages for a class
+
+Once the API can list, read, create, change and delete something, the first version of its pages is the same every time: a table, a form, a detail page. `svelteAdd --crud` writes that first version from the generated client:
+
+```bash
+./gradlew svelteAdd --crud=Note
+```
+
+```text
+ktor-svelte added pages for Note, wired to api.notes:
+  frontend/src/routes/notes/+page.ts
+  frontend/src/routes/notes/+page.svelte
+  frontend/src/routes/notes/new/+page.svelte
+  frontend/src/routes/notes/[id]/+page.ts
+  frontend/src/routes/notes/[id]/+page.svelte
+Their texts are in de.json, en.json, in English. Translate them.
+The form leaves out tags, icon: add inputs for them, they are not plain text, numbers or switches.
+Add paramRoutes("/notes/[id]") to install(Svelte), so the app serves the detail page for every id.
+The files are yours from here on.
+```
+
+The task looks for the route that lists the class, such as the `list` of a [resource](https://nijasc.github.io/ktor-svelte/main/features/typescript#resource-routes), and for the other four routes next to it. What it finds decides what it writes:
+
+| Route in the client | Page |
+| --- | --- |
+| `list` | A table of the class's plain fields, loaded in `+page.ts` |
+| `create` | `new/+page.svelte` with a form, and a link to it from the list |
+| `get` | `[id]/+page.ts` and a detail page, and a link to it from each row |
+| `update` | The form again on the detail page, filled with the item |
+| `delete` | A delete button in each row and on the detail page |
+
+The pages use what the project has:
+
+- The form is a `formState` of the input class, with its `validate` and, per field, its `bounds`, so the browser shows the same rules as the server.
+- With `routes()` on, every link and `goto` is a typed route.
+- With `i18n` on, every text is a message. The keys are added to each locale file in English, and keys that are already there are left alone.
+
+Text, numbers and booleans get an input. Other fields, such as lists and enums, are left out of the form and named in the output, and the draft keeps their default.
+
+`--page=(app)/memos` puts the pages in another folder than the one named after the API path.
+
+As with a single page, the task only creates: it refuses when a file is already there, and what it wrote has no generated header. These are your pages from the first minute, a starting point to redesign and not a layer to configure.
+
 Source: https://nijasc.github.io/ktor-svelte/main/security
 
 # Security
@@ -4663,6 +5319,8 @@ svelte {
         script = "dev"
         debugPort = 5005
         openBrowser = true
+        https = false
+        httpsPort = 8443
     }
 }
 ```
@@ -4684,6 +5342,8 @@ svelte {
 | `dev.script` | `package.json` script that starts Vite |
 | `dev.debugPort` | Port where the app started by `svelteDevAll` listens for a debugger, on `127.0.0.1` only. `0` turns it off |
 | `dev.openBrowser` | Opens the app in the default browser once `svelteDevAll` is ready, the first time only. Never in CI or without a display |
+| `dev.https` | Serves the app started by `svelteDevAll` over HTTPS too, with a development certificate from `~/.ktor-svelte/dev-https`. See [HTTPS in development](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#https-in-development) |
+| `dev.httpsPort` | Port of that HTTPS address, on `127.0.0.1` only |
 
 The package manager must already be installed unless you set `bunVersion`. The plugin does not download Node.
 
@@ -4795,7 +5455,11 @@ A short name that your build or another plugin already uses is left alone, and t
 | `svelteGenerateTs` | Starts your app once to regenerate TypeScript |
 | `svelteVerifyTs` | Starts your app once and fails if the committed TypeScript is out of date. Runs as part of `check` |
 | `svelteVerifyApiRoutes` | Lists [API routes that nothing in the frontend calls](https://nijasc.github.io/ktor-svelte/main/features/typescript#routes-nothing-calls). With `--strict` it fails when it finds one |
+| `svelteAdd` | [Creates a page](https://nijasc.github.io/ktor-svelte/main/features/routes#a-new-page) with a typed load: `svelteAdd --page=notes/[id]`. With `--route` also a Kotlin route to start from. `svelteAdd --crud=Note` writes [list, detail and form pages for a class](https://nijasc.github.io/ktor-svelte/main/features/routes#pages-for-a-class) |
 | `svelteApiChanges` | Lists [what changed in the API for callers](https://nijasc.github.io/ktor-svelte/main/features/typescript#what-changed-for-callers) since `origin/main`, or the revision given with `--against`. With `--strict` it fails on a change that can break them |
+| `browserTest` | Yours: a test suite with this name gets [the browser test kit](https://nijasc.github.io/ktor-svelte/main/guide/browser-tests), the packaged app and the browser from `-Pbrowser` |
+| `svelteRecordTest` | Opens the packaged app in a browser and writes what you do there as a [Kotlin browser test](https://nijasc.github.io/ktor-svelte/main/guide/browser-tests#record-a-test): `--name=SignIn` |
+| `svelteVerifyA11y` | Packages the app, opens its prerendered pages in a browser in light and dark, and fails on [accessibility problems](https://nijasc.github.io/ktor-svelte/main/guide/browser-tests#accessibility) that axe finds. Not part of `check` |
 | `svelteSmokeTest` | Packages the app, starts it in production mode, and fails unless [every prerendered page and the API routes are answered](https://nijasc.github.io/ktor-svelte/main/guide/deployment#smoke-test). Not part of `check` |
 | `svelteVerifyRoutes` | Lists links to pages that are written as strings, in the frontend and in Kotlin `respondRedirect` calls, with the [typed route](https://nijasc.github.io/ktor-svelte/main/features/routes#finding-links-that-are-still-strings) to use instead, and fails if it finds any. With `--fix` it rewrites the ones it can |
 | `svelteCheck` | Runs your `check` script |
@@ -5063,7 +5727,8 @@ What each release was built and tested with, read from the release's tagged sour
 
 | ktor-svelte | Ktor | Kotlin | JVM | Gradle tested | SvelteKit |
 |---|---|---|---|---|---|
-| main (unreleased) | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
+| main (unreleased) | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.1 | 3.x (tested 3.1.1) |
+| 1.2.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.1 | 3.x (tested 3.1.1) |
 | 1.1.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 1.0.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |
 | 0.12.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.0 | 3.x (tested 3.1.1) |

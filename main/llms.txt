@@ -15,6 +15,7 @@ The whole documentation as one Markdown file: https://nijasc.github.io/ktor-svel
 - [Project structure](https://nijasc.github.io/ktor-svelte/main/guide/project-structure)
 - [Dev workflow](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow)
 - [Deployment](https://nijasc.github.io/ktor-svelte/main/guide/deployment)
+- [Browser tests](https://nijasc.github.io/ktor-svelte/main/guide/browser-tests)
 - [Examples](https://nijasc.github.io/ktor-svelte/main/examples)
 
 ## Features
