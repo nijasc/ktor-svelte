@@ -249,7 +249,7 @@ class LibrariesTest {
         )
         assertTrue(static.resolve("apple-touch-icon.png").isFile)
         val worker = project.frontend.resolve("src/service-worker/index.ts")
-        assertContains(worker.readText(), "\$service-worker")
+        assertContains(worker.readText(), "\$app/manifest")
         assertContains(worker.resolveSibling("tsconfig.json").readText(), "\"extends\": \"\$app/tsconfig/service-worker\"")
         assertContains(project.frontend.resolve("src/lib/ktor-svelte/server-hooks.ts").readText(), "rel=\"manifest\"")
         assertEquals(TaskOutcome.SUCCESS, project.run("svelteVerifySync").task(":svelteVerifySync")?.outcome)
