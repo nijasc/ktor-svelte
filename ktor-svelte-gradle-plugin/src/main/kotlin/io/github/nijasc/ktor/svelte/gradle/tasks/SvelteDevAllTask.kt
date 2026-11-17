@@ -8,6 +8,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -56,6 +57,17 @@ internal class ChangeDetector(
         return true
     }
 }
+
+internal fun frontendArguments(
+    directories: Map<String, String>,
+    ports: Map<String, Int>,
+): List<String> =
+    ports.toSortedMap().flatMap { (name, number) ->
+        listOfNotNull(
+            "-Dktor.svelte.devUrl.$name=http://localhost:$number",
+            directories[name]?.let { "-Dktor.svelte.frontendDir.$name=$it" },
+        )
+    }
 
 internal fun debugArguments(port: Int): List<String> =
     if (port > 0) listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:$port") else emptyList()
@@ -131,6 +143,12 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
     @get:Internal
     public abstract val compileErrorsFile: RegularFileProperty
 
+    @get:Internal
+    public abstract val frontendDirectories: MapProperty<String, String>
+
+    @get:Internal
+    public abstract val frontendPorts: MapProperty<String, Int>
+
     @get:Input
     @get:Optional
     @get:Option(option = "full-stack-traces", description = "Prints every stack trace in full, without hiding framework frames or repeats")
@@ -199,6 +217,9 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
         try {
             val vite = startVite()
             running += vite
+            frontendPorts.getOrElse(emptyMap()).forEach { (name, number) ->
+                running += startVite(File(frontendDirectories.get().getValue(name)), number)
+            }
             val errors = CompileErrorReport(compileErrorsFile.get().asFile)
             val compiler = startCompiler(errors)
             running += compiler
@@ -261,7 +282,11 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
             stopLeftovers(leftovers)
         }
         record.clear()
-        listOf(Triple(port.get(), "Vite", "port"), Triple(debugPort.get(), "the debugger", "debugPort"))
+        val frontendVites =
+            frontendPorts.getOrElse(emptyMap()).map { (name, number) ->
+                Triple(number, "the Vite of the frontend '$name'", "devPort")
+            }
+        (listOf(Triple(port.get(), "Vite", "port"), Triple(debugPort.get(), "the debugger", "debugPort")) + frontendVites)
             .filter { (number, _, _) -> number > 0 && portIsInUse(number) }
             .forEach { (number, purpose, setting) ->
                 throw GradleException(portInUseMessage(number, purpose, setting, portOwner(number)) + DocLink.DEV_WORKFLOW.see())
@@ -274,10 +299,13 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
             .onFailure { logger.info("ktor-svelte could not open a browser: ${it.message}") }
     }
 
-    private fun startVite(): Process {
+    private fun startVite(
+        directory: File = frontendDir.get().asFile,
+        vitePort: Int = port.get(),
+    ): Process {
         val tool = tool()
-        val command = command(tool, tool.runArguments(script.get(), listOf("--port", port.get().toString(), "--strictPort")))
-        return start(LogSource.VITE, command.arguments, frontendDir.get().asFile, pathPrefix = command.pathPrefix)
+        val command = command(tool, tool.runArguments(script.get(), listOf("--port", vitePort.toString(), "--strictPort")))
+        return start(LogSource.VITE, command.arguments, directory, pathPrefix = command.pathPrefix)
     }
 
     private fun startCompiler(errors: CompileErrorReport): Process {
@@ -308,6 +336,8 @@ public abstract class SvelteDevAllTask : SvelteToolTask() {
                     "-D$DEVELOPMENT_SYSTEM_PROPERTY=true",
                     "-D$FRONTEND_DIR_SYSTEM_PROPERTY=${frontendDir.get().asFile.path}",
                     "-D$COMPILE_ERRORS_SYSTEM_PROPERTY=${compileErrorsFile.get().asFile.path}",
+                ) + frontendArguments(frontendDirectories.getOrElse(emptyMap()), frontendPorts.getOrElse(emptyMap())) +
+                listOf(
                     "-cp",
                     snapshotOfFolders(appClasspath.files, classpathSnapshots(), ++appStarts).joinToString(File.pathSeparator) { it.path },
                     mainClass.get(),

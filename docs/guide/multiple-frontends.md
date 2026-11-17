@@ -29,6 +29,7 @@ install(Svelte) {
 | `spaFallback` | `"200.html"` | The page for paths that have no page of their own, inside this frontend |
 | `notFoundPage` | `"404.html"` | The page for missing paths, when there is no fallback |
 | `paramRoutes(...)` | none | Like the main `paramRoutes`, with paths relative to the prefix |
+| `devUrl` | set by `svelteDevAll` | The Vite of this frontend in development. Without one, development serves its build |
 
 Outside development, a frontend without a build stops the start, like the main frontend does. In development it is a warning.
 
@@ -50,10 +51,17 @@ svelte {
 | `outputDir` | `outputDir` of the main frontend, `"build"` | Adapter output, a folder inside its `frontendDir` |
 | `buildScript` | `buildScript` of the main frontend, `"build"` | `package.json` script that builds it |
 | `basePath` | `"/"` and the name, such as `"/admin"` | The path prefix it is built for. Set it for a nested prefix, such as `"/admin/reports"` for the frontend `admin-reports` |
+| `devPort` | the next port after `dev.port`, such as `5174` | Port of its Vite |
 
 Each frontend gets its own tasks, named after it: `svelteInstallAdmin`, `svelteBuildAdmin` and `svelteBundleAdmin`. They run with the main frontend's tasks when the JAR is built, and `svelteBundleAdmin` puts the build under `ktor-svelte/frontends/admin/`, where `install(Svelte) { frontend("/admin") }` reads it. The settings that are not per frontend, such as `packageManager`, `bunVersion`, `precompress` and `includeSourceMaps`, apply to every frontend.
 
 When no page of the build loads its files from `/admin/_app/`, `svelteBundleAdmin` warns: the base path is missing from the frontend's Vite config.
+
+## In development
+
+`svelteDevAll` starts one Vite per frontend, each on its own `devPort`, and tells the app where they are, so `/admin` shows the admin project with hot reload while `/` shows the main one. Through the app's port, the dev panel and the browser logs work on every frontend.
+
+Vite serves a project with a base path under that path, so the app forwards `/admin/...` to the admin Vite as it is. To run one frontend's Vite on its own, use `svelteDevAdmin`, and give the app its address with `devUrl`.
 
 ## In the frontend project
 
@@ -65,11 +73,12 @@ import adapter from '@sveltejs/adapter-static';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    plugins: [sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true }), paths: { base: '/admin' } })]
+    plugins: [sveltekit({ adapter: adapter({ fallback: '200.html', precompress: true }), paths: { base: '/admin' } })],
+    server: { hmr: { clientPort: 5174, protocol: 'ws' } }
 });
 ```
 
-Links inside it go through `resolve()` from `$app/paths`, as SvelteKit asks for any app with a base path.
+Links inside it go through `resolve()` from `$app/paths`, as SvelteKit asks for any app with a base path. The `hmr` line points hot reload at the frontend's own Vite, on its `devPort`.
 
 ## Limits
 

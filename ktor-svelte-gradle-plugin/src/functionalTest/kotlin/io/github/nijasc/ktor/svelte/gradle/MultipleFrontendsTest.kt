@@ -58,6 +58,16 @@ class MultipleFrontendsTest {
     }
 
     @Test
+    fun `each frontend has its own Vite on the next port`() {
+        val project = project("frontend(\"admin\")\n    frontend(\"reports\") { devPort = 6100 }")
+        project.run("svelteDevAdmin")
+        assertEquals(listOf("install --frozen-lockfile", "run dev --port 5174 --strictPort"), project.calls())
+        project.clearCalls()
+        project.run("svelteDevReports")
+        assertEquals("run dev --port 6100 --strictPort", project.calls().last())
+    }
+
+    @Test
     fun `a project without frontends registers no frontend tasks`() {
         val result = project("").run("tasks", "--all")
         assertEquals(false, "svelteBuildAdmin" in result.output)

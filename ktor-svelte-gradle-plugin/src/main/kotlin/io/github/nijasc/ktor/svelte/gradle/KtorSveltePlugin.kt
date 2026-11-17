@@ -1144,6 +1144,8 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
             frontend.outputDir.convention(extension.outputDir)
             frontend.buildScript.convention(extension.buildScript)
             frontend.basePath.convention("/" + frontend.name)
+            val position = extension.frontends.size
+            frontend.devPort.convention(extension.dev.port.map { it + position })
             val suffix = frontendTaskSuffix(frontend.name)
             val install =
                 project.tasks.register("svelteInstall$suffix", SvelteInstallTask::class.java) { task ->
@@ -1225,6 +1227,31 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                     task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/frontends/${frontend.name}"))
                     task.onlyIf("$SKIP_PROPERTY and $DEV_PROPERTY are not set") { !skipFrontend }
                 }
+            project.tasks.register("svelteDev$suffix", SvelteDevTask::class.java) { task ->
+                configureToolTask(task, extension)
+                task.frontendDir.set(frontend.frontendDir)
+                task.description = "Starts the Vite dev server of the frontend '${frontend.name}'."
+                task.dependsOn(install)
+                task.script.set(extension.dev.script)
+                task.port.set(frontend.devPort)
+                task.spec.set(frontend.devPort.map { port -> LibrarySpec(null, null, false, null, port, "") })
+                task.messagesDirectory.set(frontend.frontendDir.map { it.dir("messages") })
+                task.routesDirectory.set(frontend.frontendDir.map { it.dir("src/routes") })
+            }
+            project.tasks.matching { it.name == "svelteDevAll" }.configureEach { task ->
+                task as SvelteDevAllTask
+                task.dependsOn(install)
+                task.frontendDirectories.putAll(
+                    frontend.basePath.zip(frontend.frontendDir) { base, folder ->
+                        mapOf(
+                            serverFrontendName(base) to folder.asFile.absolutePath,
+                        )
+                    },
+                )
+                task.frontendPorts.putAll(
+                    frontend.basePath.zip(frontend.devPort) { base, number -> mapOf(serverFrontendName(base) to number) },
+                )
+            }
             project.pluginManager.withPlugin("java") { wireResources(project, bundle) }
             project.pluginManager.withPlugin("base") {
                 project.tasks.named("clean", Delete::class.java) { clean ->
