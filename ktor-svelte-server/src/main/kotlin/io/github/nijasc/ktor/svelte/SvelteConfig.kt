@@ -27,6 +27,9 @@ public class SvelteConfig internal constructor() {
     internal var paramRouteList: List<String> = emptyList()
         private set
 
+    internal var warmUpPathList: List<String> = emptyList()
+        private set
+
     internal val cacheConfig: SvelteCacheConfig = SvelteCacheConfig()
     internal val devConfig: SvelteDevConfig = SvelteDevConfig()
     internal val transportConfig: SvelteTransportConfig = SvelteTransportConfig()
@@ -91,6 +94,11 @@ public class SvelteConfig internal constructor() {
 
     public fun paramRoutes(vararg routes: String) {
         paramRouteList = routes.toList()
+    }
+
+    public fun warmUp(vararg paths: String) {
+        require(paths.all { it.startsWith("/") }) { "warmUp paths start with a slash, such as \"/api/notes\"." }
+        warmUpPathList = paths.toList()
     }
 
     public fun healthCheck(check: suspend () -> Boolean) {
