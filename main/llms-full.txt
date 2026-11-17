@@ -1573,6 +1573,42 @@ The message is the code's name as a sentence unless you say otherwise. There are
 
 An app has one enum of error codes. A class of your API named `ErrorCode` clashes with the generated type and stops generation.
 
+### Query parameters as a class
+
+A list route usually reads its query string one parameter at a time, converts each by hand and guesses what to do with a wrong one, and the generated client sees a handful of optional strings. Describe the query as a class instead:
+
+```kotlin
+import io.github.nijasc.ktor.svelte.query
+import io.github.nijasc.ktor.svelte.queryOf
+
+@Serializable
+data class NoteQuery(
+    val search: String? = null,
+    val status: Status? = null,
+    val mine: Boolean = false,
+    @JsonSchema.Minimum(1.0) @JsonSchema.Maximum(100.0) val limit: Int = 20,
+    val tags: List<String> = emptyList(),
+)
+
+get("/api/notes") {
+    val query = call.query<NoteQuery>()
+    call.respond(notes.find(query))
+}.queryOf<NoteQuery>()
+```
+
+- `call.query<NoteQuery>()` reads the query string into the class. Numbers, booleans and enums are converted, a parameter that is given several times fills a list, and what is not there takes the property's default.
+- A value that does not fit, such as `limit=many` or an unknown status, and a missing parameter without a default, are answered with the same 422 as a request body, with the field named. The `JsonSchema` annotations and `Validated` rules apply too.
+- Parameters the class does not have are ignored, and an empty one counts as not given, as a form sends it for an empty field.
+- `.queryOf<NoteQuery>()` tells the generated client about the parameters. Without it the function has no `query` argument.
+
+The generated function takes the same fields with their types:
+
+```ts
+await api.notes.list({ status: Status.OPEN, mine: true, limit: 50, tags: ['home', 'food'] });
+```
+
+The properties can be text, numbers, booleans, enums, value classes over those, types that are written as text such as dates, and lists of them. A nested class is refused when the route is declared.
+
 ### Changing some fields
 
 A `PUT` replaces a record, so the browser has to send every field, also the ones the visitor never touched. A `PATCH` sends only what changed, but then the server has to tell a field that was left out from one that was set to null, and a nullable Kotlin property cannot: both arrive as null. `Patch<T>` can, without a second DTO:
