@@ -140,6 +140,7 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.startCommand.set(plan.map { it.start })
         }
         registerDev(project, extension, install)
+        registerFrontends(project, extension, skipFrontend)
         registerUtilityTasks(project, extension, install)
         registerLibraryTasks(project, extension, install, build, librarySpec, skipFrontend)
         configureClean(project, extension)
@@ -1023,6 +1024,107 @@ public class KtorSveltePlugin : Plugin<Project> {
             task.dependsOn(install)
             task.script.set(extension.dev.script)
             task.port.set(extension.dev.port)
+        }
+    }
+
+    private fun registerFrontends(
+        project: Project,
+        extension: SvelteExtension,
+        skipFrontend: Boolean,
+    ) {
+        extension.frontends.all { frontend ->
+            frontend.frontendDir.convention(project.layout.projectDirectory.dir(frontend.name))
+            frontend.outputDir.convention(extension.outputDir)
+            frontend.buildScript.convention(extension.buildScript)
+            frontend.basePath.convention("/" + frontend.name)
+            val suffix = frontendTaskSuffix(frontend.name)
+            val install =
+                project.tasks.register("svelteInstall$suffix", SvelteInstallTask::class.java) { task ->
+                    configureToolTask(task, extension)
+                    task.frontendDir.set(frontend.frontendDir)
+                    task.description = "Installs the dependencies of the frontend '${frontend.name}' from its lockfile."
+                    task.dependencyFiles.from(
+                        frontend.frontendDir.map { dir ->
+                            dir.asFileTree.matching { filter ->
+                                filter.include("package.json")
+                                LOCKFILES.forEach { (lockfile, _) -> filter.include(lockfile) }
+                                filter.exclude("node_modules/**")
+                            }
+                        },
+                    )
+                    task.stampFile.set(project.layout.buildDirectory.file("ktor-svelte/frontends/${frontend.name}/install.stamp"))
+                    task.onlyIf("$SKIP_PROPERTY and $DEV_PROPERTY are not set") { !skipFrontend }
+                }
+            val output =
+                frontend.frontendDir.zip(frontend.outputDir) { dir, folder ->
+                    if (!isFolderInsideFrontend(folder)) {
+                        throw GradleException(
+                            "The outputDir of the frontend '${frontend.name}' must be a path inside its frontendDir, but was '$folder'." +
+                                DocLink.MULTIPLE_FRONTENDS.see(),
+                        )
+                    }
+                    dir.dir(folder)
+                }
+            val build =
+                project.tasks.register("svelteBuild$suffix", SvelteBuildTask::class.java) { task ->
+                    configureToolTask(task, extension)
+                    task.frontendDir.set(frontend.frontendDir)
+                    task.description = "Builds the frontend '${frontend.name}'."
+                    task.dependsOn(install)
+                    task.script.set(frontend.buildScript)
+                    task.outputDirectory.set(output)
+                    task.sources.from(
+                        frontend.frontendDir.map { dir ->
+                            dir.asFileTree.matching { filter ->
+                                filter.exclude("node_modules/**", ".svelte-kit/**", "${frontend.outputDir.get()}/**")
+                            }
+                        },
+                    )
+                    task.declaredEnvironment.set(
+                        extension.buildEnv.map { names ->
+                            names
+                                .mapNotNull { name ->
+                                    project.providers
+                                        .environmentVariable(name)
+                                        .orNull
+                                        ?.let { name to it }
+                                }.toMap()
+                        },
+                    )
+                    task.toolVersion.set(
+                        if (skipFrontend) {
+                            project.provider { "skipped" }
+                        } else {
+                            project.providers.of(ToolVersionSource::class.java) { source ->
+                                source.parameters.frontendDir.set(frontend.frontendDir)
+                                source.parameters.packageManager.set(extension.packageManager)
+                                source.parameters.bunVersion.set(extension.bunVersion)
+                            }
+                        },
+                    )
+                    task.onlyIf("$SKIP_PROPERTY and $DEV_PROPERTY are not set") { !skipFrontend }
+                }
+            val bundle =
+                project.tasks.register("svelteBundle$suffix", SvelteBundleTask::class.java) { task ->
+                    task.group = TASK_GROUP
+                    task.description =
+                        "Copies the build of the frontend '${frontend.name}' into generated resources and writes its manifest."
+                    task.buildOutput.set(build.flatMap { it.outputDirectory })
+                    task.outputDirName.set(frontend.outputDir)
+                    task.includeSourceMaps.set(extension.includeSourceMaps)
+                    task.precompress.set(extension.precompress)
+                    task.resourceRoot.set(frontend.basePath.map { frontendResourceRoot(it.trim('/').replace('/', '-')) })
+                    task.basePath.set(frontend.basePath)
+                    task.bundleDirectory.set(project.layout.buildDirectory.dir("generated/ktor-svelte/frontends/${frontend.name}"))
+                    task.onlyIf("$SKIP_PROPERTY and $DEV_PROPERTY are not set") { !skipFrontend }
+                }
+            project.pluginManager.withPlugin("java") { wireResources(project, bundle) }
+            project.pluginManager.withPlugin("base") {
+                project.tasks.named("clean", Delete::class.java) { clean ->
+                    clean.delete(output)
+                    clean.delete(frontend.frontendDir.map { it.dir(".svelte-kit") })
+                }
+            }
         }
     }
 

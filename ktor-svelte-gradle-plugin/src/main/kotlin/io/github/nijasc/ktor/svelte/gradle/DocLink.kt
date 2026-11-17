@@ -19,6 +19,7 @@ internal enum class DocLink(
     GRADLE("reference/gradle", null),
     I18N("features/frontend-libraries", "i18n"),
     ROUTES("features/routes", null),
+    MULTIPLE_FRONTENDS("guide/multiple-frontends", null),
     ;
 
     val url: String get() = if (anchor == null) "$DOCS_URL/$page" else "$DOCS_URL/$page#$anchor"
