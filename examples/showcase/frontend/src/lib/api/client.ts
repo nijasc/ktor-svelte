@@ -613,34 +613,37 @@ export async function* stream<T>(method: string, path: string, options: Internal
     }
 }
 
-export interface UserState<T> {
+export interface UserState<T, P extends string = string> {
     user: T | null;
     ready: boolean;
     sessionEnds?: number | null;
     sessionEnding?: boolean;
+    permissions?: P[];
 }
 
-interface UserAnswer<T> {
+interface UserAnswer<T, P extends string> {
     user?: T | null;
     sessionSeconds?: number | null;
+    permissions?: P[] | null;
 }
 
 const LONGEST_TIMER = 2_000_000_000;
 
-export interface UserStore<T> {
+export interface UserStore<T, P extends string = string> {
     readonly user: T | null;
     readonly ready: boolean;
     readonly signedIn: boolean;
     readonly sessionEnds: Date | null;
     readonly sessionEnding: boolean;
     extend(): Promise<T | null>;
+    can(permission: P): boolean;
     load(): Promise<T | null>;
     reload(): Promise<T | null>;
     set(user: T | null): void;
     clear(): void;
 }
 
-export function userStore<T>(path: string, state: UserState<T>): UserStore<T> {
+export function userStore<T, P extends string = string>(path: string, state: UserState<T, P>): UserStore<T, P> {
     let pending: Promise<T | null> | undefined;
     let turn = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -668,21 +671,25 @@ export function userStore<T>(path: string, state: UserState<T>): UserStore<T> {
             Math.min(wait, LONGEST_TIMER)
         );
     };
-    const endsFor = (answer: UserAnswer<T> | undefined): number | null =>
+    const endsFor = (answer: UserAnswer<T, P> | undefined): number | null =>
         answer?.user && typeof answer.sessionSeconds === 'number' ? Date.now() + answer.sessionSeconds * 1000 : null;
     const settle = (user: T | null) => {
         turn++;
         state.user = user;
         state.ready = true;
-        if (user === null) plan(null);
+        if (user === null) {
+            plan(null);
+            state.permissions = [];
+        }
         pending = Promise.resolve(user);
     };
     const ask = (method = 'GET', at = path): Promise<T | null> => {
         const mine = ++turn;
-        const asked: Promise<T | null> = request<UserAnswer<T>>(method, at, { silent: true }).then(
+        const asked: Promise<T | null> = request<UserAnswer<T, P>>(method, at, { silent: true }).then(
             (answer) => {
                 if (mine !== turn) return pending ?? null;
                 state.user = answer?.user ?? null;
+                state.permissions = (state.user !== null && answer?.permissions) || [];
                 state.ready = true;
                 plan(endsFor(answer));
                 return state.user;
@@ -723,6 +730,7 @@ export function userStore<T>(path: string, state: UserState<T>): UserStore<T> {
             return state.sessionEnding === true;
         },
         extend: () => ask('POST', `${path}/extend`),
+        can: (permission) => state.permissions?.includes(permission) === true,
         load: () => {
             if (typeof document === 'undefined' && !apiConfig.fetch) return Promise.resolve(null);
             return pending ?? ask();

@@ -520,3 +520,11 @@ export const ErrorCode = {
     WrongPassword: 'WrongPassword',
     LastAdmin: 'LastAdmin',
 } as const;
+
+export type Permission = 'ManageUsers' | 'DeleteAnyTask' | 'DeleteAnyFile';
+
+export const Permission = {
+    ManageUsers: 'ManageUsers',
+    DeleteAnyTask: 'DeleteAnyTask',
+    DeleteAnyFile: 'DeleteAnyFile',
+} as const;
