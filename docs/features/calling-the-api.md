@@ -1,6 +1,25 @@
 # Calling the API
 
-Use the generated client from components and load functions, handle typed errors, stream events, page through lists and upload files.
+Call your Ktor routes from Svelte components and SvelteKit load functions through the [generated client](./typescript.md), with typed results, typed errors, retries, streams, paged lists and uploads. Most features are one setting or one option on a call.
+
+<Badge type="warning" text="Generated client" /> <Badge type="tip" text="Ktor plugin" />
+
+## On this page
+
+| Group | Sections |
+|---|---|
+| [Basics](#basics) | [Quick start](#quick-start), [In components](#in-components), [In load functions](#in-load-functions), [Request options](#request-options), [Client settings](#client-settings), [Import single functions](#import-single-functions), [Find the Kotlin route of a call](#find-the-kotlin-route-of-a-call) |
+| [Errors](#errors) | [Typed errors](#typed-errors), [Error codes](#error-codes), [Errors from StatusPages](#errors-from-statuspages), [Show errors automatically](#show-errors-automatically), [Ask before a call](#ask-before-a-call), [Request IDs](#request-ids) |
+| [Reading data](#reading-data) | [Query parameters as a class](#query-parameters-as-a-class), [Share identical requests](#share-identical-requests), [Prefetch on hover](#prefetch-on-hover), [Search as you type](#search-as-you-type), [Paged lists](#paged-lists), [Event streams](#event-streams) |
+| [Writing data](#writing-data) | [Refresh the page after a write](#refresh-the-page-after-a-write), [Changing some fields](#changing-some-fields), [Two people, one record](#two-people-one-record), [Writes that are safe to send twice](#writes-that-are-safe-to-send-twice), [Uploads](#uploads) |
+| [The server talks back](#the-server-talks-back) | [Toasts from the server](#toasts-from-the-server), [Navigation from the server](#navigation-from-the-server), [Reload after a deploy](#reload-after-a-deploy), [The visitor's time zone](#the-visitor-s-time-zone) |
+| [Slow and flaky networks](#slow-and-flaky-networks) | [Timeouts](#timeouts), [Retries](#retries), [Rate limits](#rate-limits) |
+| [Testing](#testing) | [Fixtures for frontend tests](#fixtures-for-frontend-tests) |
+| [Full examples](#full-examples) | [A notes page](#a-notes-page), [A search box](#a-search-box), [A paged table](#a-paged-table) |
+
+## Basics
+
+### Quick start
 
 ```ts
 import { api, apiConfig } from '#api';
@@ -12,27 +31,145 @@ await api.notes.update(1, { title: 'Oat milk' });
 apiConfig.headers['Authorization'] = 'Bearer token';
 ```
 
-When several components load the same data at the same time, set `apiConfig.dedupeGets = true`. Identical GET requests that are still in flight then share one network request and get the same parsed result, so do not mutate it. Calls with their own `headers`, `fetch` or `signal` are never shared, and nothing is cached after a response arrives. It is off by default.
+Every function returns a promise of the route's response type and throws an [`ApiError`](#typed-errors) for any status that is not a success. How the functions are named is described in [Service names](./typescript.md#service-names).
 
-## Prefetch on hover
+### In components
 
-Projects created by ktor-svelte set `data-sveltekit-preload-data="hover"` on `<body>`, so SvelteKit runs a page's `load` function when the pointer rests on a link to it. A `load` that calls the API through `apiWith(event)` therefore fetches its data before the click, and the page opens without waiting. Add the attribute to `src/app.html` in older projects.
-
-For data a component fetches itself, prefetch the call. The next identical GET within 10 seconds gets that response instead of a new request, once:
+Call the client from a component's script, from an event handler or from an `{#await}` block:
 
 ```svelte
 <script lang="ts">
-    import { api, prefetchOnHover } from '#api';
+    import { api, errorMessage } from '#api';
+
+    const loading = api.notes.list();
 </script>
 
-{#each notes as note (note.id)}
-    <a href="/notes/{note.id}" use:prefetchOnHover={() => api.notes.get(note.id)}>{note.title}</a>
-{/each}
+{#await loading}
+    <p>Loading...</p>
+{:then found}
+    <ul>
+        {#each found as item (item.id)}
+            <li>{item.title}</li>
+        {/each}
+    </ul>
+{:catch error}
+    <p role="alert">{errorMessage(error)}</p>
+{/await}
 ```
 
-`prefetchOnHover` starts after the pointer rests for 50 ms, or at once on focus or touch. Call `prefetch(() => api.notes.get(id))` yourself for other triggers, and pass a second argument to change how long the result is kept, in milliseconds. Only GET requests made synchronously inside the callback are prefetched, without their own `headers` or `signal`, and a failed prefetch is simply forgotten.
+For data a page needs before it shows, prefer a `load` function, below.
 
-Errors are typed too. Ktor's compiler plugin finds error responses such as `call.respond(HttpStatusCode.NotFound, Problem(...))`, and `isApiError` narrows the body:
+### In load functions
+
+Inside a SvelteKit `load` function, every call has to go through the `fetch` SvelteKit gives you. `apiWith(event)` returns the same client, but every call goes through SvelteKit's `fetch`, which prerendering and client-side navigation need:
+
+```ts
+import { apiWith } from '#api';
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async (event) => {
+    const api = apiWith(event);
+    return { notes: await api.notes.list(), stats: await api.stats.list() };
+};
+```
+
+For a single call, pass `fetch` as the last argument instead:
+
+```ts no-check
+import { api } from '#api';
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ fetch, params }) => {
+    const note = await api.notes.get(params.id, { fetch });
+    return { note };
+};
+```
+
+A `fetch` passed in the options of a single call still wins over the one from `apiWith`.
+
+With its own `fetch`, SvelteKit knows which requests a page depends on, reuses a response it already has during hydration, and can rerun the load when you invalidate it. Without it, the call still works, but the browser console warns with `window_fetch_in_load`.
+
+`svelteVerifyLoads` finds the calls that forgot. It reads every `+page.ts`, `+page.js`, `+layout.ts` and `+layout.js`, and fails with the file, the line and the call:
+
+```bash
+./gradlew svelteVerifyLoads
+```
+
+```text
+src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  use apiWith(event), or pass { fetch } as the last argument
+```
+
+It is not part of `check`. The [lint rule](./frontend-libraries.md#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.
+
+### Request options
+
+Every generated function takes the request options as its last argument. They are the options of `fetch`, such as `signal` and `headers`, plus these:
+
+| Option | What it does | Section |
+|---|---|---|
+| `fetch` | The `fetch` to use for this call | [In load functions](#in-load-functions) |
+| `timeout` | Milliseconds before the call gives up | [Timeouts](#timeouts) |
+| `retry` | `true`, `false` or `{ attempts, delay, maxDelay }` | [Retries](#retries) |
+| `silent` | `true` keeps the error away from `apiConfig.onError`, and so from toasts | [Show errors automatically](#show-errors-automatically) |
+| `refresh` | `false` skips `apiConfig.onWrite` after this write | [Refresh the page after a write](#refresh-the-page-after-a-write) |
+| `onUploadProgress` | Called with `{ loaded, total }` while a body is sent | [Uploads](#uploads) |
+
+```ts
+import { api } from '#api';
+
+const controller = new AbortController();
+const found = await api.notes.list({ search: 'milk' }, { signal: controller.signal, timeout: 5000, silent: true });
+```
+
+### Client settings
+
+`apiConfig` holds the settings for every call. Set them once, such as in your root layout or `src/hooks.client.ts`:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `baseUrl` | `''` | Put in front of every path |
+| `headers` | `{}` | Sent with every call |
+| `fetch` | the global `fetch` | The `fetch` every call uses, such as [`fixtureFetch`](#fixtures-for-frontend-tests) in a test |
+| `timeout` | none | [Timeout](#timeouts) for every call, in milliseconds |
+| `retry` | off | [Retries](#retries) for reads |
+| `dedupeGets` | `false` | [Shares identical GET requests](#share-identical-requests) that are in flight |
+| `idempotencyKeys` | on | `false` stops sending the [`Idempotency-Key`](#writes-that-are-safe-to-send-twice) header |
+| `sendTimeZone` | on | `false` stops sending the [visitor's time zone](#the-visitor-s-time-zone) |
+| `onError` | none | Called with every failed call. [Toasts](#show-errors-automatically) set it for you |
+| `onWrite` | none | Called after successful writes, to [refresh the page](#refresh-the-page-after-a-write) |
+| `onToast` | none | Shows [toasts from the server](#toasts-from-the-server) |
+| `onNavigate` | none | Follows [navigation from the server](#navigation-from-the-server) |
+| `onNewBuild` | none | Called when a [new build is deployed](#reload-after-a-deploy) |
+| `onUnauthorized`, `loginPage`, `sessionWarning` | | For signed-in users. See [Auth](./auth.md#the-login-page) |
+
+### Import single functions
+
+Every endpoint is also exported on its own, named after its group and service, such as `notesList` or `notesGet`. Import those in pages that use only a few endpoints, and the bundler leaves the rest of the client out of that page:
+
+```ts
+import { notesGet } from '#api';
+
+const note = await notesGet(1);
+```
+
+### Find the Kotlin route of a call
+
+In development, ktor-svelte also writes `build/ktor-svelte/routes.json`, which maps every generated service to the Kotlin route that serves it:
+
+```json
+"notes.get": { "method": "GET", "path": "/api/notes/{id}", "file": "notes/Routes.kt", "line": 43 }
+```
+
+- Search it for the operation name you see in the frontend, or let an editor plugin use it to jump from a call to its route.
+- `file` is relative to your source root, and `line` is the line of the route's handler.
+- It lives in `build/` because line numbers change with every edit.
+- When ktor-svelte cannot read a handler's location, the entry has only `method` and `path`.
+
+## Errors
+
+### Typed errors
+
+Every failed call throws an `ApiError` with the `status`, the parsed `body`, the `url`, the `operation` name and the [`requestId`](#request-ids). Errors are typed too. Ktor's compiler plugin finds error responses such as `call.respond(HttpStatusCode.NotFound, Problem(...))`, and `isApiError` narrows the body:
 
 ```ts
 import { api, isApiError, isValidationError } from '#api';
@@ -44,6 +181,19 @@ try {
     if (isApiError(error, 'notes.get')) console.log(error.body.message);
 }
 ```
+
+| Helper | True for |
+|---|---|
+| `isApiError(error, 'notes.get')` | An error the route declares, with its body typed |
+| `isValidationError(error)` | A 422 with `fields`, from [validation](./validation.md) |
+| `isVersionConflict(error)` | A [version conflict](#two-people-one-record) |
+| `isRateLimitError(error)` | A 429, with `retryAfter` in milliseconds. See [Rate limits](#rate-limits) |
+| `isTimeoutError(error)` | A call that hit its [timeout](#timeouts) |
+| `isAbortError(error)` | A call that was aborted, such as by [`latest`](#search-as-you-type) |
+| `hasErrorCode(error, code)` | An answer with that one of your [error codes](#error-codes) |
+| `isUploadError(error)` | A file that breaks the [upload rules](../recipes/uploads.md#rules-for-both-sides) |
+
+`errorCode(error)` returns the `code` of an error body, or `undefined` when there is none.
 
 When you only need one line to show, `errorMessage` turns anything a call can throw into text: the `message` of the error body when the server sent one, and otherwise a sentence for a timeout, for a lost connection, or for everything else:
 
@@ -59,7 +209,13 @@ try {
 }
 ```
 
-To change or translate the three built-in sentences, assign to `errorMessages.network`, `errorMessages.timeout` and `errorMessages.failed` once at startup.
+To change or translate the three built-in sentences, assign to `errorMessages.network`, `errorMessages.timeout` and `errorMessages.failed` once at startup:
+
+```ts
+import { errorMessages } from '#api';
+
+errorMessages.network = 'Keine Verbindung zum Server.';
+```
 
 ### Error codes
 
@@ -89,7 +245,7 @@ put("/api/admin/users/{id}/role") {
 }
 ```
 
-The answer is `{ "message": "Email taken.", "code": "EmailTaken" }` with the given status, 400 when none is given. The generated client knows the enum as the type `ErrorCode`, so a mistyped or removed code no longer compiles:
+The answer is `{ "message": "Email taken.", "code": "EmailTaken" }` with the given status, 400 when none is given. `respondError` only takes an error status, 400 and above. The generated client knows the enum as the type `ErrorCode`, so a mistyped or removed code no longer compiles:
 
 ```ts no-check
 import { api, ErrorCode, hasErrorCode } from '#api';
@@ -104,11 +260,116 @@ try {
 
 The message is the code's name as a sentence unless you say otherwise. There are three places to say otherwise, and the first that applies wins:
 
-- One answer: `call.respondError(code, status, message = "...")`, or the `message` of `ApiException`.
-- Every answer, on the server: `errorCodes<AccountError> { call, code -> ... }` returns the text for a code, or null to leave it. It gets the call, so it can translate.
-- In the browser: `setCodeMessages({ EmailTaken: 'That email already has an account.' })` once at startup. `errorMessage`, and so the toasts of `toasts()`, then use this text for the code and ignore what the server sent. A value can be a function, for a translation that depends on the current language.
+| Where | How | Scope |
+|---|---|---|
+| One answer | `call.respondError(code, status, message = "...")`, or the `message` of `ApiException` | That answer |
+| On the server | `errorCodes<AccountError> { call, code -> ... }` returns the text for a code, or null to leave it. It gets the call, so it can translate | Every answer |
+| In the browser | `setCodeMessages({ EmailTaken: 'That email already has an account.' })` once at startup | `errorMessage`, and so the toasts of `toasts()`, use this text for the code and ignore what the server sent. A value can be a function, for a translation that depends on the current language |
 
+::: warning
 An app has one enum of error codes. A class of your API named `ErrorCode` clashes with the generated type and stops generation.
+:::
+
+### Errors from StatusPages
+
+Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
+
+```kotlin
+install(StatusPages) {
+    exception<NotFoundException> { call, cause -> call.respond(HttpStatusCode.NotFound, Problem(cause.message.orEmpty())) }
+}
+install(Svelte) {
+    errorResponse<Problem>(HttpStatusCode.NotFound, HttpStatusCode.Conflict)
+}
+```
+
+### Show errors automatically
+
+Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:
+
+```kotlin
+svelte {
+    libraries {
+        toasts()
+    }
+}
+```
+
+Run `svelteSync` once. It writes `src/lib/ktor-svelte/toasts.ts` and a `src/hooks.client.ts` that sets `apiConfig.onError`.
+
+- The message comes from the error body's `message`, such as `Problem("That note does not exist.")`, or reads "Something went wrong (error 500)" with the request ID for server errors.
+- Network failures and timeouts get their own message.
+- With DaisyUI, toasts are DaisyUI alerts in your theme. Otherwise they bring their own small style.
+
+Some errors are left to you, because a toast would be the wrong answer:
+
+- 422 validation errors, which your form shows next to the fields.
+- 401, which [the login page](auth.md#the-login-page) or `apiConfig.onUnauthorized` handles.
+- Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
+
+The promise still rejects, so you can add handling where you want more.
+
+```ts no-check
+import { toast, toastMessages } from '#lib/ktor-svelte/toasts.ts';
+
+toast('Saved.', { kind: 'success' });
+toast('Note deleted.', { action: { label: 'Undo', run: restore } });
+toastMessages.close = 'Schliessen';
+```
+
+| Function | What it does |
+|---|---|
+| `toast(message, { kind, duration, action })` | Shows your own message. `kind` is `info`, `success`, `warning` or `error`, `duration` is in milliseconds, and `action` adds a button: `{ label: 'Undo', run: restore }` |
+| `toastMessages` | The built-in texts, to change or translate |
+
+Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service. See also [Toasts](./frontend-libraries.md#toasts) among the frontend libraries.
+
+### Ask before a call
+
+A call that deletes something should ask first. `confirmed` asks, and only calls when the answer is yes:
+
+```ts no-check
+import { api } from '#api';
+import { confirmed } from '#lib/ktor-svelte/confirm.ts';
+
+const deleted = await confirmed('Delete this note?', () => api.notes.delete(id), {
+    details: 'It cannot be restored.',
+    confirm: 'Delete',
+    danger: true
+});
+```
+
+It resolves to what the call returned, or to `undefined` when the answer was no.
+
+| Option | What it does |
+|---|---|
+| `details` | A second line under the question |
+| `confirm`, `cancel` | The button labels. Default to `confirmMessages.confirm` and `confirmMessages.cancel` |
+| `danger` | `true` makes the confirm button red and puts the focus on Cancel |
+
+- With DaisyUI on, the question is a modal in your theme. While the call runs, both buttons are disabled, so it cannot be sent twice. When it fails, the modal stays open and shows the error's `message`, and the user can try again or cancel. Escape cancels.
+- Without DaisyUI it is the browser's own `confirm`, and a failed call rejects as usual.
+
+`svelteSync` writes the helper to `src/lib/ktor-svelte/confirm.ts` for every project that has generated files. Set `confirmMessages.confirm` and `confirmMessages.cancel` once, such as to your translations.
+
+### Request IDs
+
+Every call from the generated client sends a fresh `X-Request-Id`. The server keeps it when it is well formed, letters, digits, dots, dashes and underscores up to 128 characters, or generates one, and sends it back in the response. Unhandled errors are logged with it, and `ApiError.requestId` carries it, so a user can quote one ID that support finds in the logs:
+
+```ts
+try {
+    await api.notes.create(draft);
+} catch (error) {
+    if (error instanceof ApiError) showError(`Something went wrong. Reference: ${error.requestId}`);
+}
+```
+
+- The ID is available in routes as `call.callId`, and with Ktor's `CallLogging` you can put it into every log line with `callIdMdc("requestId")`.
+- The client only sends the header to its own origin, so it never causes CORS preflights.
+- If you install Ktor's `CallId` yourself, your setup is used.
+- `requestIds = false` in `install(Svelte)` turns it off.
+
+## Reading data
 
 ### Query parameters as a class
 
@@ -137,6 +398,7 @@ get("/api/notes") {
 - A value that does not fit, such as `limit=many` or an unknown status, and a missing parameter without a default, are answered with the same 422 as a request body, with the field named. The `JsonSchema` annotations and `Validated` rules apply too.
 - Parameters the class does not have are ignored, and an empty one counts as not given, as a form sends it for an empty field.
 - `.queryOf<NoteQuery>()` tells the generated client about the parameters. Without it the function has no `query` argument.
+- In a [resource](./typescript.md#resource-routes), `list<NoteQuery> { query -> }` does both.
 
 The generated function takes the same fields with their types:
 
@@ -145,6 +407,131 @@ await api.notes.list({ status: Status.OPEN, mine: true, limit: 50, tags: ['home'
 ```
 
 The properties can be text, numbers, booleans, enums, value classes over those, types that are written as text such as dates, and lists of them. A nested class is refused when the route is declared.
+
+### Share identical requests
+
+When several components load the same data at the same time, set `apiConfig.dedupeGets = true`:
+
+```ts
+import { apiConfig } from '#api';
+
+apiConfig.dedupeGets = true;
+```
+
+- Identical GET requests that are still in flight then share one network request and get the same parsed result, so do not mutate it.
+- Calls with their own `headers`, `fetch` or `signal` are never shared.
+- Nothing is cached after a response arrives.
+- It is off by default.
+
+### Prefetch on hover
+
+Projects created by ktor-svelte set `data-sveltekit-preload-data="hover"` on `<body>`, so SvelteKit runs a page's `load` function when the pointer rests on a link to it. A `load` that calls the API through `apiWith(event)` therefore fetches its data before the click, and the page opens without waiting. Add the attribute to `src/app.html` in older projects.
+
+For data a component fetches itself, prefetch the call. The next identical GET within 10 seconds gets that response instead of a new request, once:
+
+```svelte
+<script lang="ts">
+    import { api, prefetchOnHover } from '#api';
+</script>
+
+{#each notes as note (note.id)}
+    <a href="/notes/{note.id}" use:prefetchOnHover={() => api.notes.get(note.id)}>{note.title}</a>
+{/each}
+```
+
+- `prefetchOnHover` starts after the pointer rests for 50 ms, or at once on focus or touch.
+- Call `prefetch(() => api.notes.get(id))` yourself for other triggers, and pass a second argument to change how long the result is kept, in milliseconds.
+- Only GET requests made synchronously inside the callback are prefetched, without their own `headers` or `signal`.
+- A failed prefetch is simply forgotten.
+
+```ts
+import { api, prefetch } from '#api';
+
+void prefetch(() => api.notes.get(id), 30_000);
+```
+
+### Search as you type
+
+When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:
+
+```ts
+import { api, isAbortError, latest } from '#api';
+
+const search = latest(api.notes.list);
+
+async function onInput(term: string) {
+    try {
+        notes = await search({ search: term });
+    } catch (error) {
+        if (!isAbortError(error)) throw error;
+    }
+}
+```
+
+A superseded call always rejects with an `AbortError`, even when it was cancelled while its body was being read. Your own `signal` still works alongside it. A complete component is in [A search box](#a-search-box).
+
+### Paged lists
+
+For paged lists, return `Page<T>` from `io.github.nijasc.ktor.svelte` and read a `cursor` query parameter. `next` is the cursor of the following page, or `null` on the last one:
+
+```kotlin
+get("/api/notes/feed") {
+    val cursor = call.queryParameters["cursor"]
+    val page: Page<Note> = store.page(cursor, limit = 20)
+    call.respond(page)
+}
+```
+
+`getPage` writes those lines for you and reads `cursor` and `limit`. See [Page through long lists](../recipes/pagination.md) for its settings and for paging an Exposed query.
+
+`pages` turns any such endpoint into an async iterator that fetches one page at a time, typed from the endpoint:
+
+```ts
+import { api, pages } from '#api';
+
+for await (const notes of pages(api.notes.getFeed, { limit: '50' })) render(notes);
+```
+
+To fetch one page at a time on demand, such as behind a "Load more" button, call the endpoint with the `cursor` yourself, as in [A paged table](#a-paged-table).
+
+### Event streams
+
+Routes that declare a `text/event-stream` response, for example through `describe`, become async generators. Each event's `data` is parsed as JSON when possible, and the stream ends when the connection closes or you stop iterating:
+
+```ts no-check
+for await (const tick of api.ticks.watch()) console.log(tick);
+```
+
+- Pass a `signal` and abort it when the component goes away, to close the connection.
+- Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
+- Streams are never retried.
+
+The server side, with a complete component, is in [Stream live updates](../recipes/live-updates.md).
+
+## Writing data
+
+### Refresh the page after a write
+
+After you create, change or delete something, the lists and details on the page are out of date. Tell the client what to do after a successful write, once, in your root layout, and every page keeps itself current:
+
+```ts no-check
+import { refreshAll } from '$app/navigation';
+import { apiConfig } from '#api';
+
+apiConfig.onWrite = () => void refreshAll();
+```
+
+- `onWrite` runs after every POST, PUT, PATCH and DELETE that succeeds, and `refreshAll` reruns the `load` functions of the page you are on.
+- Writes that finish together, such as three calls in a `Promise.all`, cause one refresh, not three.
+- A failed write does not trigger it, and neither does a read.
+
+A call that should not refresh the page, such as saving a draft while the user types, opts out:
+
+```ts no-check
+await api.notes.update(id, draft, { refresh: false });
+```
+
+The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
 
 ### Changing some fields
 
@@ -164,7 +551,7 @@ patch("/api/notes/{id}") {
 - `applyTo` returns the given object with the sent fields replaced. A field that was not sent keeps its value, and one sent as null becomes null.
 - The result is checked like a received object: the bounds from annotations and the `Validated` rules, answered with the usual 422. `@Trim` and the other normalisers apply to the sent fields.
 - A field the class does not have, null for a property that is not nullable, or a value of the wrong type is a 400.
-- `NoteInput::title in patch`, `patch.has("title")` and `patch.fields` say what was sent, for a route that treats one field specially.
+- `NoteInput::title in patch`, `patch.has("title")` and `patch.fields` say what was sent, for a route that treats one field specially. `patch.isEmpty()` is true when nothing was sent.
 
 In the generated client the body is the class with every field optional, and null allowed where the class allows it:
 
@@ -175,7 +562,11 @@ await api.notes.patch(note.id, { dueOn: null });
 await api.notes.patch(note.id, patchOf(original, draft));
 ```
 
-`patchOf(before, after)` is the fields that differ between two objects, with null for the ones that were cleared, so an edit form sends what the visitor changed and nothing else. `applyPatch(target, patch)` does on the client what `applyTo` does on the server, for showing the result before the answer is there. `Patch<T>` is the type of both.
+| Helper | What it does |
+|---|---|
+| `patchOf(before, after)` | The fields that differ between two objects, with null for the ones that were cleared, so an edit form sends what the visitor changed and nothing else |
+| `applyPatch(target, patch)` | Does on the client what `applyTo` does on the server, for showing the result before the answer is there |
+| `Patch<T>` | The type of both |
 
 ### Two people, one record
 
@@ -200,7 +591,9 @@ put("/api/notes/{id}") {
 }
 ```
 
-When the version that came in is not the stored one, `respondIfStale` answers 409 with the code `version.conflict` and the record as it is now, and returns true. The block that gives the record only runs then. An update without a version is not checked, so make the field required if every client must send it. The third argument is the message, for your own wording or language.
+- When the version that came in is not the stored one, `respondIfStale` answers 409 with the code `version.conflict` and the record as it is now, and returns true. The block that gives the record only runs then.
+- An update without a version is not checked, so make the field required if every client must send it.
+- The third argument is the message, for your own wording or language. It defaults to "Someone else changed this in the meantime."
 
 In the browser, `isVersionConflict` recognises the answer and gives you the other person's record:
 
@@ -217,50 +610,50 @@ try {
 
 From there the two usual ways out are one line each. To load their version, show `theirs` and start over. To save yours anyway, set `draft.version = theirs.version` and send again.
 
-[`formState`](validation.md) does the bookkeeping: after a conflict, `form.conflict` holds their record, `form.takeTheirs()` resets the form to it, and `form.keepMine()` takes over their version so the next `form.submit` goes through. Pass `takeTheirs` a value when the form's type is not the record's type.
+[`formState`](validation.md#form-state) does the bookkeeping: after a conflict, `form.conflict` holds their record, `form.takeTheirs()` resets the form to it, and `form.keepMine()` takes over their version so the next `form.submit` goes through. Pass `takeTheirs` a value when the form's type is not the record's type.
 
-Errors that `StatusPages` sends are invisible to the compiler plugin, because its handlers are plain lambdas. Declare them once, and they join the typed errors of every API endpoint, unless a route already declares that status itself:
+### Writes that are safe to send twice
+
+A `GET` can be repeated without harm. A `POST` cannot: when the answer is lost on the way back, the browser does not know whether the order was placed, and sending it again may place it twice. That is why only `GET` requests are [retried](#retries) by default.
+
+An idempotency key removes the doubt. The generated client adds a header, `Idempotency-Key`, with a fresh random value to every write, and uses the same value when it sends that call again. Turn on the server side, and a repeated key is answered with the stored first answer instead of doing the work again:
 
 ```kotlin
-install(StatusPages) {
-    exception<NotFoundException> { call, cause -> call.respond(HttpStatusCode.NotFound, Problem(cause.message.orEmpty())) }
-}
 install(Svelte) {
-    errorResponse<Problem>(HttpStatusCode.NotFound, HttpStatusCode.Conflict)
+    idempotency()
 }
 ```
 
-Routes that declare a `text/event-stream` response, for example through `describe`, become async generators. Each event's `data` is parsed as JSON when possible, and the stream ends when the connection closes or you stop iterating:
+Now a write can be retried, when the call asks for it:
 
 ```ts no-check
-for await (const tick of api.ticks.watch()) console.log(tick);
+await api.orders.create(order, { retry: true });
 ```
 
-Every endpoint is also exported on its own, named after its group and service, such as `notesList` or `notesGet`. Import those in pages that use only a few endpoints, and the bundler leaves the rest of the client out of that page:
+- The repeat gets the same status, body and headers as the first answer, plus `Idempotency-Replayed: true`. [Toasts and navigation from the server](#toasts-from-the-server) are repeated with it, since the first ones never arrived.
+- An answer with a status of 500 and above is not kept, so the retry does the work. A repeat that arrives while the first is still running is answered with 409 and the code `idempotency.inProgress`, which the client waits for and retries.
+- A key counts for one caller (the same `Authorization` and `Cookie` headers), one method and one path. Somebody else sending the same key gets their own result.
+- Streamed answers and answers above 1 MiB are not kept. Reads and routes outside the API prefixes are not looked at.
 
-```ts
-import { notesGet } from '#api';
+| Setting in `idempotency { }` | Default | What it does |
+|---|---|---|
+| `ttl` | `10.minutes` | How long an answer is kept |
+| `maxEntries` | `10_000` | How many answers are kept, in memory |
 
-const note = await notesGet(1);
-```
-
-For paged lists, return `Page<T>` from `io.github.nijasc.ktor.svelte` and read a `cursor` query parameter. `next` is the cursor of the following page, or `null` on the last one:
-
-```kotlin
-get("/api/notes/feed") {
-    val cursor = call.queryParameters["cursor"]
-    val page: Page<Note> = store.page(cursor, limit = 20)
-    call.respond(page)
+```kotlin no-check
+install(Svelte) {
+    idempotency {
+        ttl = 30.minutes
+        maxEntries = 50_000
+    }
 }
 ```
 
-`pages` turns any such endpoint into an async iterator that fetches one page at a time, typed from the endpoint:
+With several instances of the app behind a load balancer, a repeat only finds the answer on the instance that gave it.
 
-```ts
-import { api, pages } from '#api';
+`retry` in `apiConfig` still applies to reads only. A write is retried when its own call says `retry`, so the decision stays next to the routes where you know the server side is on. To stop sending the header, set `apiConfig.idempotencyKeys = false`, which also stops writes from being retried.
 
-for await (const notes of pages(api.notes.getFeed, { limit: '50' })) render(notes);
-```
+### Uploads
 
 Uploads work with `FormData`. Ktor cannot infer a multipart body from `receiveMultipart`, so describe it once, and the generated function takes `body: FormData`:
 
@@ -283,160 +676,15 @@ await api.notes.attachments(id, form, {
 });
 ```
 
+::: warning
 Uploads count towards `maxApiBodySize`, which is 1 MiB by default, so raise it for routes that accept files.
+:::
 
-Service names follow your routes: `GET /notes` is `list`, `GET /notes/{id}` is `get`, `POST` is `create`, `PUT` is `update`, `DELETE` is `delete`, and `POST /notes/{id}/archive` is `archive`. Set `operationId` in `describe` to choose your own. Inside a SvelteKit `load`, use `apiWith(event)`. It is the same client, but every call goes through SvelteKit's `fetch`, which prerendering and client-side navigation need:
+Rules for size and type that are checked in the browser and on the server, and forms with named fields, are in [Upload files](../recipes/uploads.md).
 
-```ts
-import { apiWith } from '#api';
-import type { PageLoad } from './$types';
+## The server talks back
 
-export const load: PageLoad = async (event) => {
-    const api = apiWith(event);
-    return { notes: await api.notes.list(), stats: await api.stats.list() };
-};
-```
-
-In development, ktor-svelte also writes `build/ktor-svelte/routes.json`, which maps every generated service to the Kotlin route that serves it:
-
-```json
-"notes.get": { "method": "GET", "path": "/api/notes/{id}", "file": "notes/Routes.kt", "line": 43 }
-```
-
-Search it for the operation name you see in the frontend, or let an editor plugin use it to jump from a call to its route. `file` is relative to your source root, and `line` is the line of the route's handler. It lives in `build/` because line numbers change with every edit. When ktor-svelte cannot read a handler's location, the entry has only `method` and `path`.
-
-A `fetch` passed in the options of a single call still wins.
-
-To refresh the files without your dev server, for example in CI, run the task below and check for a diff. It starts your app once, so the app's port must be free.
-
-```bash
-./gradlew svelteGenerateTs
-```
-
-## In load functions
-
-Inside a SvelteKit `load` function, every call has to go through the `fetch` SvelteKit gives you. `apiWith(event)`, shown above, does that for all calls at once. For a single call, pass `fetch` as the last argument:
-
-```ts no-check
-import { api } from '#api';
-import type { PageLoad } from './$types';
-
-export const load: PageLoad = async ({ fetch, params }) => {
-    const note = await api.notes.get(params.id, { fetch });
-    return { note };
-};
-```
-
-With its own `fetch`, SvelteKit knows which requests a page depends on, reuses a response it already has during hydration, and can rerun the load when you invalidate it. Without it, the call still works, but the browser console warns with `window_fetch_in_load`.
-
-`svelteVerifyLoads` finds the calls that forgot. It reads every `+page.ts`, `+page.js`, `+layout.ts` and `+layout.js`, and fails with the file, the line and the call:
-
-```bash
-./gradlew svelteVerifyLoads
-```
-
-```text
-src/routes/notes/[id]/+page.ts:6  api.notes.get(params.id)  ->  use apiWith(event), or pass { fetch } as the last argument
-```
-
-It is not part of `check`. The [lint rule](./frontend-libraries.md#lint-rules) `ktor-svelte/fetch-in-load` reports the same thing in the editor.
-
-## Refresh the page after a write
-
-After you create, change or delete something, the lists and details on the page are out of date. Tell the client what to do after a successful write, once, in your root layout, and every page keeps itself current:
-
-```ts no-check
-import { refreshAll } from '$app/navigation';
-import { apiConfig } from '#api';
-
-apiConfig.onWrite = () => void refreshAll();
-```
-
-`onWrite` runs after every POST, PUT, PATCH and DELETE that succeeds, and `refreshAll` reruns the `load` functions of the page you are on. Writes that finish together, such as three calls in a `Promise.all`, cause one refresh, not three. A failed write does not trigger it, and neither does a read.
-
-A call that should not refresh the page, such as saving a draft while the user types, opts out:
-
-```ts no-check
-await api.notes.update(id, draft, { refresh: false });
-```
-
-The client does not import SvelteKit itself, so nothing happens until you set `onWrite`. That also means you can do something else there, such as refreshing only one resource with `invalidate`.
-
-## Fixtures for frontend tests
-
-A frontend test should not need the backend running, and writing its answers by hand goes stale. Record them instead. In development, click through the part of the app you want to test, open the [dev panel](../guide/dev-workflow.md) and press **Save fixtures**. You get `api-fixtures.json` with every call the page made and what the server answered:
-
-```json
-{
-    "recorded": "2026-11-16T12:00:00.000Z",
-    "calls": [
-        { "method": "GET", "path": "/api/notes?page=1", "status": 200, "response": { "items": [] } },
-        { "method": "POST", "path": "/api/notes", "status": 201, "request": { "title": "New" }, "response": { "id": 7 } }
-    ]
-}
-```
-
-In a test, let the client answer from that file:
-
-```ts no-check
-import { api, apiConfig, fixtureFetch, type ApiFixtures } from '#api';
-import recorded from './api-fixtures.json';
-
-apiConfig.fetch = fixtureFetch(recorded satisfies ApiFixtures);
-
-const page = await api.notes.list({ page: 1 });
-```
-
-The calls go through the real generated client, so the test sees typed results, `ApiError` for a recorded 404 and validation errors for a recorded 422, exactly as the app does. A call is matched by its method and its path with the query. When the same call was recorded more than once, such as a list before and after a create, the answers come back in that order, and the last one repeats. A call that was never recorded fails with a message that names it.
-
-Look through the file before you commit it. It holds the bodies as they were sent and received, which can include data you would not put in the repository. Fields marked [`@Sensitive`](./validation.md#sensitive-fields), such as a password, are saved as `***`. **Clear** in the panel starts a new recording.
-
-## Ask before a call
-
-A call that deletes something should ask first. `confirmed` asks, and only calls when the answer is yes:
-
-```ts no-check
-import { api } from '#api';
-import { confirmed } from '#lib/ktor-svelte/confirm.ts';
-
-const deleted = await confirmed('Delete this note?', () => api.notes.delete(id), {
-    details: 'It cannot be restored.',
-    confirm: 'Delete',
-    danger: true
-});
-```
-
-It resolves to what the call returned, or to `undefined` when the answer was no.
-
-With DaisyUI on, the question is a modal in your theme. While the call runs, both buttons are disabled, so it cannot be sent twice. When it fails, the modal stays open and shows the error's `message`, and the user can try again or cancel. `danger: true` makes the confirm button red and puts the focus on Cancel. Escape cancels.
-
-Without DaisyUI it is the browser's own `confirm`, and a failed call rejects as usual.
-
-`svelteSync` writes the helper to `src/lib/ktor-svelte/confirm.ts` for every project that has generated files. The button labels default to `confirmMessages.confirm` and `confirmMessages.cancel`, which you can set once, such as to your translations.
-
-## Show errors automatically
-
-Turn on toasts in Gradle, and every failed API call shows a short message in the corner of the page, so you don't have to write error handling for the common case:
-
-```kotlin
-svelte {
-    libraries {
-        toasts()
-    }
-}
-```
-
-Run `svelteSync` once. It writes `src/lib/ktor-svelte/toasts.ts` and a `src/hooks.client.ts` that sets `apiConfig.onError`. The message comes from the error body's `message`, such as `Problem("That note does not exist.")`, or reads "Something went wrong (error 500)" with the request ID for server errors. Network failures and timeouts get their own message. With DaisyUI, toasts are DaisyUI alerts in your theme. Otherwise they bring their own small style.
-
-Some errors are left to you, because a toast would be the wrong answer:
-
-- 422 validation errors, which your form shows next to the fields.
-- 401, which [the login page](auth.md#the-login-page) or `apiConfig.onUnauthorized` handles.
-- Aborted requests, failed prefetches, and calls made with `silent: true`, such as `api.notes.get(id, { silent: true })`.
-
-The promise still rejects, so you can add handling where you want more. Call `toast('Saved.', { kind: 'success' })` from `#lib/ktor-svelte/toasts.ts` for your own messages, give one a button with `action: { label: 'Undo', run: restore }`, and change the built-in texts through `toastMessages`. Without `toasts()`, `apiConfig.onError` is yours to set, for example to report errors to a monitoring service.
-
-## Toasts from the server
+### Toasts from the server
 
 Often the route knows best what to tell the user: that the note was saved, that it was the last free seat, that the export will arrive by mail. Say it there:
 
@@ -451,13 +699,16 @@ post("/api/notes") {
 }
 ```
 
-With `toasts()` on, the browser shows it when the answer arrives, and no component has to know. The kinds are `Info`, `Success`, `Warning` and `Error`. With [i18n](./frontend-libraries.md#i18n), pass a message in the visitor's language, such as `call.toast(call.messages.noteSaved())`.
+With `toasts()` on, the browser shows it when the answer arrives, and no component has to know. The kinds are `Info` (the default), `Success`, `Warning` and `Error`. With [i18n](./frontend-libraries.md#i18n), pass a message in the visitor's language, such as `call.toast(call.messages.noteSaved())`.
 
-The toast travels in a response header, so the body and its type stay what they are, and it works with any status, also with an error or an empty 204. Call `toast` before you respond. A response carries up to five toasts of up to 500 characters each.
+- The toast travels in a response header, so the body and its type stay what they are, and it works with any status, also with an error or an empty 204.
+- Call `toast` before you respond.
+- A response carries up to five toasts of up to 500 characters each.
+- The generated client reads the header on answers from your own origin only, so another server cannot put words into your app.
+- Without `toasts()`, set `apiConfig.onToast = (message, kind) => ...` to show them your way, and nothing is shown until you do.
+- Calls made on the server during SSR do not show toasts.
 
-The generated client reads the header on answers from your own origin only, so another server cannot put words into your app. Without `toasts()`, set `apiConfig.onToast = (message, kind) => ...` to show them your way, and nothing is shown until you do. Calls made on the server during SSR do not show toasts.
-
-## Navigation from the server
+### Navigation from the server
 
 "Create it, then open it" is the same few lines in every form: wait for the answer, read the ID, call `goto`. The route already knows where to go, so let it say so:
 
@@ -484,9 +735,11 @@ import { apiConfig } from '#api';
 apiConfig.onNavigate = (path) => void goto(path);
 ```
 
+::: tip Safe by design
 The path has to be one inside your app: `navigateTo` refuses anything that does not start with a single `/`, and the client ignores such a header as well, and reads it on answers from your own origin only. So the header cannot be used to send a visitor to another site.
+:::
 
-## Reload after a deploy
+### Reload after a deploy
 
 Every API response carries the fingerprint of the frontend build the server runs, in the `X-Ktor-Svelte-Build` header. When a response reports a different build than the first one the page saw, the client calls `apiConfig.onNewBuild`, so you can offer a reload instead of running old code against a new API.
 
@@ -515,21 +768,25 @@ apiConfig.onNewBuild = () => {
 
 Set `buildHeader = false` in `install(Svelte)` to leave the header out.
 
-## Request IDs
+### The visitor's time zone
 
-Every call from the generated client sends a fresh `X-Request-Id`. The server keeps it when it is well formed, letters, digits, dots, dashes and underscores up to 128 characters, or generates one, and sends it back in the response. Unhandled errors are logged with it, and `ApiError.requestId` carries it, so a user can quote one ID that support finds in the logs:
+The server usually runs in UTC, and the visitor does not. The generated client sends the browser's time zone with every call to your app, and a route reads it as `call.timeZone`:
 
-```ts
-try {
-    await api.notes.create(draft);
-} catch (error) {
-    if (error instanceof ApiError) showError(`Something went wrong. Reference: ${error.requestId}`);
+```kotlin
+get("/api/report") {
+    val today = java.time.LocalDate.now(call.timeZone)
+    call.respondText("Report for $today")
 }
 ```
 
-The ID is available in routes as `call.callId`, and with Ktor's `CallLogging` you can put it into every log line with `callIdMdc("requestId")`. The client only sends the header to its own origin, so it never causes CORS preflights. If you install Ktor's `CallId` yourself, your setup is used. `requestIds = false` turns it off.
+- It is a `java.time.ZoneId`, such as `Europe/Zurich`, taken from the `X-Time-Zone` header.
+- A request without the header, or with a name the JDK does not know, gets `defaultTimeZone` from `install(Svelte)`, which is `UTC` unless you change it. That covers requests the client does not make, such as a plain link to a download.
+- The header only goes to your own origin, never to a `baseUrl` on another host.
+- To stop sending it, set `apiConfig.sendTimeZone = false`.
 
-## Timeouts
+## Slow and flaky networks
+
+### Timeouts
 
 A request that hangs blocks the UI until the browser gives up, which can take minutes. Set a timeout for every call, or for one:
 
@@ -545,9 +802,11 @@ try {
 }
 ```
 
-A per-call `timeout` wins over `apiConfig.timeout`, and your own `signal` still works next to it. Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
+- A per-call `timeout` wins over `apiConfig.timeout`, and your own `signal` still works next to it.
+- There is no timeout unless you set one.
+- Event streams ignore `apiConfig.timeout`, because a live stream is supposed to stay open. Give one its own `timeout` if you want that.
 
-## Retries
+### Retries
 
 A GET that fails because the network dropped, the request timed out, or a proxy answered 502, 503 or 504 often works a moment later. Turn retries on once, and the client tries again by itself:
 
@@ -557,7 +816,7 @@ import { apiConfig } from '#api';
 apiConfig.retry = true;
 ```
 
-It then makes up to three attempts, waiting 300 ms before the second and 600 ms before the third. Only GET requests are retried, because repeating a write could do the work twice. Every other answer, such as a 404 or a 500, fails at once as before, and `apiConfig.onError` only hears about the last failure.
+It then makes up to three attempts, waiting 300 ms before the second and 600 ms before the third. Only GET requests are retried, because repeating a write could do the work twice (see [Writes that are safe to send twice](#writes-that-are-safe-to-send-twice)). Every other answer, such as a 404 or a 500, fails at once as before, and `apiConfig.onError` only hears about the last failure.
 
 To change the numbers, pass them instead of `true`. A single call can also set its own, or opt out:
 
@@ -568,7 +827,13 @@ const notes = await api.notes.list({ retry: false });
 const report = await api.reports.get(id, { retry: { attempts: 2 } });
 ```
 
-`delay` doubles after every attempt until it reaches `maxDelay`. A call that is aborted through its `signal` stops waiting at once, and each attempt gets the full `timeout`.
+| Setting | Default | What it does |
+|---|---|---|
+| `attempts` | `3` | Attempts in total, the first one included |
+| `delay` | `300` | Milliseconds before the second attempt. It doubles after every attempt |
+| `maxDelay` | `5000` | The longest wait between attempts, and the longest [rate limit](#rate-limits) wait the client sits out |
+
+A call that is aborted through its `signal` stops waiting at once, and each attempt gets the full `timeout`.
 
 ### Rate limits
 
@@ -591,63 +856,305 @@ try {
 
 With retries on, the client waits and sends the call again by itself, once, when the wait is no longer than `maxDelay`, which is five seconds unless you change it. That also applies to writes: a call the rate limit refused never reached your route, so sending it again cannot do the work twice. A longer wait is not sat out, and the error reaches you at once.
 
-### Writes that are safe to send twice
+The server side, `rateLimit { }` in `install(Svelte)`, is described under [Security](../security.md#api-request-guards).
 
-A `GET` can be repeated without harm. A `POST` cannot: when the answer is lost on the way back, the browser does not know whether the order was placed, and sending it again may place it twice. That is why only `GET` requests are retried above.
+## Testing
 
-An idempotency key removes the doubt. The generated client adds a header, `Idempotency-Key`, with a fresh random value to every write, and uses the same value when it sends that call again. Turn on the server side, and a repeated key is answered with the stored first answer instead of doing the work again:
+### Fixtures for frontend tests
 
-```kotlin
-install(Svelte) {
-    idempotency()
+A frontend test should not need the backend running, and writing its answers by hand goes stale. Record them instead. In development, click through the part of the app you want to test, open the [dev panel](../guide/dev-workflow.md) and press **Save fixtures**. You get `api-fixtures.json` with every call the page made and what the server answered:
+
+```json
+{
+    "recorded": "2026-11-16T12:00:00.000Z",
+    "calls": [
+        { "method": "GET", "path": "/api/notes?page=1", "status": 200, "response": { "items": [] } },
+        { "method": "POST", "path": "/api/notes", "status": 201, "request": { "title": "New" }, "response": { "id": 7 } }
+    ]
 }
 ```
 
-Now a write can be retried, when the call asks for it:
+In a test, let the client answer from that file:
 
 ```ts no-check
-await api.orders.create(order, { retry: true });
+import { api, apiConfig, fixtureFetch, type ApiFixtures } from '#api';
+import recorded from './api-fixtures.json';
+
+apiConfig.fetch = fixtureFetch(recorded satisfies ApiFixtures);
+
+const page = await api.notes.list({ page: 1 });
 ```
 
-- The repeat gets the same status, body and headers as the first answer, plus `Idempotency-Replayed: true`. [Toasts and navigation from the server](#toasts-from-the-server) are repeated with it, since the first ones never arrived.
-- An answer with a status of 500 and above is not kept, so the retry does the work. A repeat that arrives while the first is still running is answered with 409 and the code `idempotency.inProgress`, which the client waits for and retries.
-- A key counts for one caller (the same `Authorization` and `Cookie` headers), one method and one path. Somebody else sending the same key gets their own result.
-- Answers are kept for ten minutes, at most 10,000 of them, in memory: `idempotency { ttl = 30.minutes; maxEntries = 50_000 }`. With several instances of the app behind a load balancer, a repeat only finds the answer on the instance that gave it.
-- Streamed answers and answers above 1 MiB are not kept. Reads and routes outside the API prefixes are not looked at.
+- The calls go through the real generated client, so the test sees typed results, `ApiError` for a recorded 404 and validation errors for a recorded 422, exactly as the app does.
+- A call is matched by its method and its path with the query.
+- When the same call was recorded more than once, such as a list before and after a create, the answers come back in that order, and the last one repeats.
+- A call that was never recorded fails with a message that names it.
 
-`retry` in `apiConfig` still applies to reads only. A write is retried when its own call says `retry`, so the decision stays next to the routes where you know the server side is on. To stop sending the header, set `apiConfig.idempotencyKeys = false`.
+::: warning Look before you commit
+Look through the file before you commit it. It holds the bodies as they were sent and received, which can include data you would not put in the repository. Fields marked [`@Sensitive`](./validation.md#sensitive-fields), such as a password, are saved as `***`. **Clear** in the panel starts a new recording.
+:::
 
-## The visitor's time zone
+## Full examples
 
-The server usually runs in UTC, and the visitor does not. The generated client sends the browser's time zone with every call to your app, and a route reads it as `call.timeZone`:
+### A notes page
 
-```kotlin
-get("/api/report") {
-    val today = java.time.LocalDate.now(call.timeZone)
-    call.respondText("Report for $today")
-}
-```
+A list of notes loaded before the page shows, with a clear error when the server is down, an edit form that creates and updates, and a delete that asks first. The root layout refreshes the page after every write, so the list is never stale.
 
-It is a `java.time.ZoneId`, such as `Europe/Zurich`, taken from the `X-Time-Zone` header. A request without the header, or with a name the JDK does not know, gets `defaultTimeZone` from `install(Svelte)`, which is `UTC` unless you change it. That covers requests the client does not make, such as a plain link to a download.
+::: code-group
 
-The header only goes to your own origin, never to a `baseUrl` on another host. To stop sending it, set `apiConfig.sendTimeZone = false`.
+```ts [+page.ts]
+import { error } from '@sveltejs/kit';
+import { apiWith, errorMessage } from '#api';
+import type { PageLoad } from './$types';
 
-## Search as you type
+export const prerender = false;
+export const ssr = false;
 
-When every keystroke starts a request, an older, slower response can arrive after a newer one and overwrite it. Wrap the call in `latest`, and each call aborts the one before it:
-
-```ts
-import { api, isAbortError, latest } from '#api';
-
-const search = latest(api.notes.list);
-
-async function onInput(term: string) {
+export const load: PageLoad = async (event) => {
+    const api = apiWith(event);
     try {
-        notes = await search({ search: term });
-    } catch (error) {
-        if (!isAbortError(error)) throw error;
+        const [notes, stats] = await Promise.all([api.notes.list(), api.stats.list()]);
+        return { notes, stats };
+    } catch (failure) {
+        error(503, errorMessage(failure));
+    }
+};
+```
+
+```svelte [+page.svelte]
+<script lang="ts">
+    import { api, errorMessage, field, NoteInput, type Note } from '#api';
+    import { formState } from '#lib/api/form-state.svelte.ts';
+    import { confirmed } from '#lib/ktor-svelte/confirm.ts';
+    import { routes } from '#routes';
+    import type { PageProps } from './$types';
+
+    let { data }: PageProps = $props();
+
+    const form = formState<NoteInput>(NoteInput.empty(), { validate: NoteInput.validate });
+    let editing = $state<Note | undefined>(undefined);
+    let problem = $state('');
+
+    function edit(note: Note) {
+        editing = note;
+        form.reset({ title: note.title, body: note.body, tags: note.tags });
+    }
+
+    function startOver() {
+        editing = undefined;
+        form.reset(NoteInput.empty());
+    }
+
+    async function save(event: SubmitEvent) {
+        event.preventDefault();
+        const target = editing;
+        const saved = await form.submit((draft) => (target ? api.notes.update(target.id, draft) : api.notes.create(draft)));
+        if (saved) startOver();
+    }
+
+    async function remove(note: Note) {
+        problem = '';
+        try {
+            await confirmed(`Delete "${note.title}"?`, () => api.notes.delete(note.id), {
+                details: 'It cannot be restored.',
+                confirm: 'Delete',
+                danger: true
+            });
+        } catch (error) {
+            problem = errorMessage(error);
+        }
+    }
+</script>
+
+<h1>Notes ({data.stats.total})</h1>
+
+{#if problem}<p role="alert">{problem}</p>{/if}
+
+<ul>
+    {#each data.notes as note (note.id)}
+        <li>
+            <a href={routes.notesId({ id: note.id })}>{note.title}</a>
+            <button type="button" onclick={() => edit(note)}>Edit</button>
+            <button type="button" onclick={() => remove(note)}>Delete</button>
+        </li>
+    {:else}
+        <li>No notes yet.</li>
+    {/each}
+</ul>
+
+<form onsubmit={save}>
+    <h2>{editing ? 'Edit note' : 'New note'}</h2>
+    <input aria-label="Title" bind:value={form.draft.title} use:field={{ bounds: NoteInput.bounds.title, errors: form.errors.title }} />
+    <textarea aria-label="Body" bind:value={form.draft.body}></textarea>
+    {#if form.message}<p role="alert">{form.message}</p>{/if}
+    <button disabled={form.submitting}>{editing ? 'Save' : 'Create'}</button>
+    {#if editing}<button type="button" onclick={startOver}>Cancel</button>{/if}
+</form>
+```
+
+```svelte no-check [+layout.svelte]
+<script lang="ts">
+    import { refreshAll } from '$app/navigation';
+    import { apiConfig } from '#api';
+
+    let { children } = $props();
+
+    apiConfig.onWrite = () => void refreshAll();
+</script>
+
+{@render children()}
+```
+
+```kotlin no-check [Routes.kt]
+fun Route.noteRoutes(store: NoteStore) {
+    resource<Note, Int>("/api/notes") {
+        missing<Problem> { Problem("That note does not exist.") }
+        list<NoteQuery> { query -> store.list(query.search, query.tag) }
+        create<NoteInput> { input -> store.create(input) }
+        get { id -> store.find(id) }
+        update<NoteInput> { id, input -> store.update(id, input) }
+        delete { id -> store.delete(id) }
+    }
+    get("/api/stats") {
+        call.respond(store.stats())
     }
 }
 ```
 
-A superseded call always rejects with an `AbortError`, even when it was cancelled while its body was being read. Your own `signal` still works alongside it.
+:::
+
+What each part does:
+
+- The load uses `apiWith(event)`, so SvelteKit tracks the calls and `refreshAll` reruns them after a write.
+- When the server cannot be reached, `error(503, ...)` shows your error page with a readable message instead of a broken list.
+- `formState` runs `NoteInput.validate` before sending, puts a 422 from the server into `form.errors`, and anything else into `form.message`. With [toasts](#show-errors-automatically) on, the user also sees other failures without any markup.
+- `confirmed` asks before the delete. With DaisyUI the modal shows a failure itself; without it the call rejects and the page shows `problem`.
+
+### A search box
+
+Results follow the input while the visitor types. `latest` drops answers to older terms, and the short pause keeps the server from a request per keystroke.
+
+```svelte [SearchNotes.svelte]
+<script lang="ts">
+    import { api, errorMessage, isAbortError, latest, type Note } from '#api';
+
+    const search = latest(api.notes.list);
+
+    let term = $state('');
+    let results = $state<Note[]>([]);
+    let problem = $state('');
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    function onInput() {
+        clearTimeout(timer);
+        timer = setTimeout(run, 200);
+    }
+
+    async function run() {
+        problem = '';
+        try {
+            results = await search({ search: term.trim() || undefined }, { silent: true });
+        } catch (error) {
+            if (!isAbortError(error)) problem = errorMessage(error);
+        }
+    }
+</script>
+
+<input type="search" placeholder="Search notes" aria-label="Search notes" bind:value={term} oninput={onInput} />
+
+{#if problem}<p role="alert">{problem}</p>{/if}
+
+<ul>
+    {#each results as note (note.id)}
+        <li>{note.title}</li>
+    {:else}
+        <li>Nothing found.</li>
+    {/each}
+</ul>
+```
+
+`silent: true` keeps failed searches out of the toasts, since the component shows its own message.
+
+### A paged table
+
+A table that loads 20 rows at a time behind a "Load more" button, on top of a paged route.
+
+::: code-group
+
+```kotlin [Routes.kt]
+routing {
+    getPage<Note>("/api/notes/feed", defaultLimit = 20) { request -> store.page(request.cursor, request.limit) }
+}
+```
+
+```svelte [NoteTable.svelte]
+<script lang="ts">
+    import { onMount } from 'svelte';
+    import { api, errorMessage, IsoDateTime, type Note } from '#api';
+
+    let rows = $state<Note[]>([]);
+    let cursor: string | undefined;
+    let done = $state(false);
+    let loading = $state(false);
+    let problem = $state('');
+
+    async function more() {
+        loading = true;
+        problem = '';
+        try {
+            const page = await api.notes.getFeed({ cursor, limit: '20' });
+            rows = [...rows, ...page.items];
+            cursor = page.next ?? undefined;
+            done = cursor === undefined;
+        } catch (error) {
+            problem = errorMessage(error);
+        } finally {
+            loading = false;
+        }
+    }
+
+    onMount(more);
+</script>
+
+<table>
+    <thead>
+        <tr><th>Title</th><th>Tags</th><th>Created</th></tr>
+    </thead>
+    <tbody>
+        {#each rows as note (note.id)}
+            <tr>
+                <td>{note.title}</td>
+                <td>{note.tags.join(', ')}</td>
+                <td>{IsoDateTime.parse(note.createdAt).toLocaleDateString()}</td>
+            </tr>
+        {/each}
+    </tbody>
+</table>
+
+{#if problem}<p role="alert">{problem}</p>{/if}
+{#if !done}
+    <button type="button" disabled={loading} onclick={more}>{loading ? 'Loading...' : 'Load more'}</button>
+{/if}
+```
+
+:::
+
+For a ready-made table with sorting and paging, see [DataTable](./frontend-libraries.md#datatable) and [A table without the code](../recipes/pagination.md#a-table-without-the-code).
+
+## Use cases
+
+- A page that needs data before it shows: [in load functions](#in-load-functions).
+- A form: [typed errors](#typed-errors) with [validation](./validation.md), or the [form helper](./validation.md#form-state).
+- Error handling for the common case without code: [show errors automatically](#show-errors-automatically).
+- Deleting or other risky actions: [ask before a call](#ask-before-a-call).
+- Mobile users and flaky networks: [timeouts](#timeouts), [retries](#retries) and [writes that are safe to send twice](#writes-that-are-safe-to-send-twice).
+- Long lists: [paged lists](#paged-lists). Live data: [event streams](#event-streams).
+- Support tickets: [request IDs](#request-ids).
+- Frontend tests without a backend: [fixtures](#fixtures-for-frontend-tests).
+
+## Good to know
+
+- The client always speaks JSON. See [Transport](./transport.md).
+- Calls with their own `headers`, `fetch` or `signal` are never [shared](#share-identical-requests), and calls with their own `headers` or `signal` are never [prefetched](#prefetch-on-hover).
+- `X-Request-Id`, `X-Time-Zone` and `Idempotency-Key` are only sent to your own origin, never to a `baseUrl` on another host.
+- A 401 goes to `apiConfig.onUnauthorized` when you set it. Otherwise a 401 from your own origin sends the visitor to the [login page](./auth.md#the-login-page), when one is set.
