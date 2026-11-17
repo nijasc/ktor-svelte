@@ -138,6 +138,42 @@ Both take the props of `Field` (`label`, `bounds`, `errors`, `hint`, `id`, `clas
 | `DateTimeInput` | `Instant` | Shows the moment in the visitor's own time zone and stores it as the UTC text the server expects |
 | `DateTimeInput local` | `LocalDateTime` | The wall-clock text as typed, with no time zone |
 
+## MaskedInput
+
+A text field that formats while you type, for values people read in groups: phone numbers, IBANs, dates and money. The field shows the friendly form, and the bound value is the clean one your API expects:
+
+```svelte no-check
+<script lang="ts">
+    import MaskedInput from '#components/MaskedInput.svelte';
+</script>
+
+<MaskedInput label="Phone" mask="phone" bind:value={form.draft.phone} />
+<MaskedInput label="IBAN" mask="iban" bind:value={form.draft.iban} />
+<MaskedInput label="Birthday" mask="date" bind:value={form.draft.birthday} />
+<MaskedInput label="Price" mask="money" bind:value={form.draft.price} />
+```
+
+| `mask` | You see while typing | Bound value |
+| --- | --- | --- |
+| `phone` | `+49 301 234 567`, `0301 2345 67` | `+49301234567`: digits and a leading `+` |
+| `iban` | `DE89 3704 0044 0532 0130 00`, in capitals | `DE89370400440532013000` |
+| `date` | `24.12.2026` in German, `12/24/2026` in American English | `2026-12-24`, an `IsoDate`, once the date is complete and real; `null` before |
+| `money` | `1.234.567,8` in German, `1,234,567.8` in English | `1234567.8`, a plain decimal for a [`Decimal`](./../features/typescript.md#money-and-durations) field |
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `label` | required | The label, as for `Field` |
+| `mask` | required | `'phone'`, `'iban'`, `'date'`, `'money'`, or your own `Mask` |
+| `value` | | The clean value, `bind:value`; `null` while the field is empty or a date is incomplete |
+| `locale` | the page's `lang` | Which order and separators `date` and `money` use |
+| `bounds`, `errors`, `hint`, `class` | | As for `Field` |
+
+- The caret stays after the same character you typed, even when a space or a separator is added in front of it.
+- The field sets `inputmode`, so phones show the number or phone keyboard.
+- Money keeps a decimal separator you just typed, so `1234,` stays on screen while the value is `1234`. It never goes through a JavaScript number, so large amounts keep every digit.
+- When you leave the field, a complete value is shown in its tidy form. An incomplete date stays as typed, with `null` as the value, so the form's validation can say it is required.
+- For another format, pass an object with `show(clean)`, `retype(typed)`, `clean(typed)`, `keeps(character)` and `inputMode`, the same shape `masks.ts` exports for the four built-in ones.
+
 ## EnumSelect
 
 A `<select>` over a generated enum object:
