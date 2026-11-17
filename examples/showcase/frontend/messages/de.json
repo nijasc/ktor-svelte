@@ -173,5 +173,10 @@
   "table-no-results": "Keine Aufgabe passt zu dieser Suche.",
   "admin-search-tasks": "Aufgaben suchen",
   "admin-all-tasks": "Alle Aufgaben",
-  "nav-breadcrumb": "Navigationspfad"
+  "nav-breadcrumb": "Navigationspfad",
+  "email-welcome-subject": "Willkommen auf dem Board, {name}",
+  "email-welcome-title": "Hallo {name}",
+  "email-welcome-text": "Dein Konto ist bereit. Die Aufgaben, Kommentare und Dateien deines Teams warten auf dich.",
+  "email-welcome-action": "Zum Board",
+  "email-footer": "Du bekommst diese E-Mail, weil jemand mit dieser Adresse ein Konto im ktor-svelte Showcase angelegt hat."
 }

@@ -5,8 +5,14 @@ import io.github.nijasc.ktor.svelte.fieldCheck
 import io.github.nijasc.ktor.svelte.requireUser
 import io.github.nijasc.ktor.svelte.respondError
 import io.github.nijasc.ktor.svelte.respondLoginRedirect
+import io.github.nijasc.ktor.svelte.svelteLocale
+import io.github.nijasc.ktorsvelte.Emails
+import io.github.nijasc.ktorsvelte.FrontendRoutes
+import io.github.nijasc.ktorsvelte.RenderedEmail
+import io.github.nijasc.ktorsvelte.emails
 import io.github.nijasc.ktorsvelte.messages
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.encodedPath
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.install
@@ -32,6 +38,7 @@ import io.ktor.server.sessions.clear
 import io.ktor.server.sessions.cookie
 import io.ktor.server.sessions.sessions
 import io.ktor.server.sessions.set
+import io.ktor.server.util.url
 import io.ktor.util.hex
 import java.security.SecureRandom
 import java.time.Instant
@@ -114,6 +121,8 @@ fun Route.sessionRoutes(
             val registration = call.receive<Registration>()
             val user: User? = users.create(registration.email, registration.name, registration.password, Role.MEMBER)
             if (user == null) return@post call.respondError(AccountError.EmailTaken, HttpStatusCode.Conflict)
+            val welcome = call.welcomeEmail(Emails.forLocale(call.svelteLocale), user.name)
+            call.application.log.info("Welcome email for {}: {}", user.email, welcome.subject)
             call.sessions.set(length.start(user.id))
             call.currentUserChanged()
             call.respond(HttpStatusCode.Created, user)
@@ -156,6 +165,16 @@ fun Route.sessionRoutes(
 fun Route.adminRoutes(users: UserStore) {
     authenticate(SESSION_AUTH) {
         route("/api/admin") {
+            get("/emails/welcome") {
+                val welcome =
+                    call.welcomeEmail(
+                        call.emails,
+                        call.request.queryParameters["name"] ?: call.requireUser<User>().name,
+                    )
+                val preview: EmailPreview = EmailPreview(welcome.subject, welcome.html, welcome.text)
+                call.respond(preview)
+            }
+
             get("/users") {
                 val all: List<User> = users.all()
                 call.respond(all)
@@ -185,5 +204,10 @@ fun Route.adminRoutes(users: UserStore) {
         }
     }
 }
+
+private fun ApplicationCall.welcomeEmail(
+    emails: Emails,
+    name: String,
+): RenderedEmail = emails.welcome(name = name, boardLink = url { encodedPath = FrontendRoutes.board })
 
 private fun ApplicationCall.userId(): Int = parameters["id"]?.toIntOrNull() ?: -1
