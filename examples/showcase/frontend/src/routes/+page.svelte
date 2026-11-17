@@ -1,10 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { api, type Greeting } from '#api';
+    import { api, currentUser, type Greeting } from '#api';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { routes } from '#routes';
-    import { session } from '#lib/session.svelte.ts';
 
     let greeting = $state<Greeting | undefined>(undefined);
 
@@ -32,7 +31,7 @@
         <h1 class="text-4xl font-bold">{m.homeTitle()}</h1>
         <p class="my-4 text-lg">{m.homeLead()}</p>
         <div class="flex flex-wrap gap-2">
-            {#if session.user}
+            {#if currentUser.user}
                 <a class="btn btn-primary" href={routes.board()}><Icon name="LayoutDashboard" size={18} /> {m.homeOpenBoard()}</a>
             {:else}
                 <a class="btn btn-primary" href={routes.login()}><Icon name="LogIn" size={18} /> {m.navSignIn()}</a>

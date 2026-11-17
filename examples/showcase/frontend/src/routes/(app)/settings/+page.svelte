@@ -4,7 +4,6 @@
     import Icon from '#icon';
     import { m } from '#i18n';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
-    import { session } from '#lib/session.svelte.ts';
     import type { PageProps } from './$types';
 
     let { data }: PageProps = $props();
@@ -23,7 +22,7 @@
         profileErrors = ProfileInput.validate(profile);
         if (Object.keys(profileErrors).length > 0) return;
         try {
-            session.user = await api.me.update(profile);
+            await api.me.update(profile);
             toast(m.settingsSaved(), { kind: 'success' });
         } catch (error) {
             if (!isValidationError(error)) throw error;
