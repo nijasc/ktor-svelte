@@ -284,6 +284,33 @@ Suggestions
 
 A suggestion is advice, not an error, and the task never fails on one. Details: [Review your configuration](../reference/gradle.md#review-your-configuration).
 
+### svelteReadme
+
+**Writes:** the part of the project's `README.md` that says how to run this app: the commands, the addresses in development and the environment variables. It takes them from the build, so the README does not go stale when a port or a variable changes.
+
+Put two marker lines where the section belongs, then run the task:
+
+```text
+## Development
+
+<!-- ktor-svelte:start -->
+<!-- ktor-svelte:end -->
+```
+
+```bash
+./gradlew svelteReadme
+```
+
+Everything between the markers is replaced, and nothing outside them is touched. Without the markers, or without a `README.md`, the task writes nothing and says how to add them. The section has three tables:
+
+| Table | Comes from |
+|---|---|
+| Commands | The tasks of the project: `svelteDevAll`, `build`, `shadowJar` or `buildFatJar` when there is one, `run`, `check`, `svelteSync svelteGenerateTs` and `svelteDoctor`. In a subproject they carry its path, such as `./gradlew :web:build` |
+| Addresses in development | The app at `http://localhost:8080`, Vite at `dev.port`, the HTTPS address when `dev.https` is on, and the debugger at `dev.debugPort` |
+| Environment variables | The variables the app declares, read from the [`.env.example`](../features/runtime-config.md#env-example) the app writes, and the names in `svelte { buildEnv }` |
+
+**Strict:** `./gradlew svelteReadme --check` fails when the section differs from what the task would write, so CI can catch a README that someone forgot to update. Add it to `check` the way [any other check](#make-a-check-part-of-check) is added.
+
 ### format and formatCheck
 
 One command formats Kotlin and the frontend, and one checks them:
