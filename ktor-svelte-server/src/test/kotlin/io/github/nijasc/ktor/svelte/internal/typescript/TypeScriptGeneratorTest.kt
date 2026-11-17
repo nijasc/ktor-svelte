@@ -493,6 +493,27 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `read-only fields are readonly in the type and left out of request bodies`() {
+        val result =
+            generate(
+                paths =
+                    """{"/api/notes":{"post":{"requestBody":{"content":{"application/json":{"schema":{"${'$'}ref":"#/components/schemas/Note"}}}}},
+                    "get":{"responses":{"200":{"content":{"application/json":{"schema":{"${'$'}ref":"#/components/schemas/Note"}}}}}}}}""",
+                schemas =
+                    """{"Note":{"type":"object","required":["id","title"],"properties":{"id":{"type":"integer","readOnly":true},
+                    "title":{"type":"string"},"createdAt":{"type":"string","readOnly":true}}}}""",
+            )
+        val types = result.getValue("types.ts")
+        assertContains(types, "    readonly id: number;")
+        assertContains(types, "    title: string;")
+        assertContains(types, "    readonly createdAt?: string;")
+        val services = result.getValue("services.ts")
+        assertContains(services, "(body: Omit<Note, 'id' | 'createdAt'>, options?: RequestOptions)")
+        assertContains(services, "{ ...options, body, omit: ['id', 'createdAt'], operation: ")
+        assertFalse("omit" in services.lines().first { it.startsWith("export const notesList") })
+    }
+
+    @Test
     fun `required query parameters make the query argument required`() {
         val source =
             services(
