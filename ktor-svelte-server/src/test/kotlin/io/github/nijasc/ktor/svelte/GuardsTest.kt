@@ -8,6 +8,7 @@ import io.ktor.client.request.post
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.encodedPath
 import io.ktor.server.application.install
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
@@ -105,6 +106,17 @@ class GuardsTest {
             }
             assertEquals("""["hello"]""", client.get("/api/greeting").bodyAsText())
             assertEquals("""["/api/administrators"]""", client.get("/api/administrators").bodyAsText(), "another name that starts the same")
+        }
+
+    @Test
+    fun `repeated slashes in the path do not get past a guard`() =
+        app {
+            listOf("//api/tasks", "/api//tasks", "//api//admin/users", "/api//admin/users").forEach { path ->
+                val refused = client.get { url { encodedPath = path } }
+                assertEquals(HttpStatusCode.Unauthorized, refused.status, path)
+            }
+            val member = signedIn(2)
+            assertEquals(HttpStatusCode.Forbidden, member.get { url { encodedPath = "/api//admin/users" } }.status)
         }
 
     @Test
