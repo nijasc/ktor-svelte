@@ -14,9 +14,13 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.runBlocking
 import java.net.URI
+import java.net.URLClassLoader
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
+import kotlin.io.path.createDirectories
+import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -25,14 +29,27 @@ import kotlin.test.assertFalse
 class InlinePageDataTest {
     private fun withServer(
         inline: Boolean = true,
+        libraries: String? = null,
         block: (get: (String) -> HttpResponse<String>) -> Unit,
     ) {
         val build = fixtureBuild()
+        val environment =
+            applicationEnvironment {
+                if (libraries != null) {
+                    val root = Files.createTempDirectory("ktor-svelte-libraries")
+                    root
+                        .resolve("ktor-svelte")
+                        .createDirectories()
+                        .resolve("libraries.properties")
+                        .writeText(libraries)
+                    classLoader = URLClassLoader(arrayOf(root.toUri().toURL()), InlinePageDataTest::class.java.classLoader)
+                }
+            }
         val server =
             embeddedServer(
                 Netty,
                 rootConfig =
-                    serverConfig(applicationEnvironment {}) {
+                    serverConfig(environment) {
                         developmentMode = false
                         watchPaths = emptyList()
                         module {
@@ -126,4 +143,13 @@ class InlinePageDataTest {
         }
         withServer(inline = false) { get -> assertFalse(get("/tasks/5").body().contains("ktor-svelte-data")) }
     }
+
+    @Test
+    fun `a page under its language prefix arrives with its data too`() =
+        withServer(libraries = "i18n.locales=en,de\ni18n.default=en\ni18n.strategy=UrlPrefix\n") { get ->
+            val page = get("/de/tasks/5")
+            assertEquals(200, page.statusCode())
+            assertContains(page.body(), "{\"path\":\"/de/tasks/5\",\"data\":{\"task\":{\"id\":\"5\"")
+            assertFalse(get("/de/tasks/5/more").body().contains("ktor-svelte-data"))
+        }
 }
