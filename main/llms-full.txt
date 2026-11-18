@@ -1597,6 +1597,8 @@ Every route becomes a function on `api`, grouped by resource. The names follow y
 
 Set `operationId` in `describe` to choose your own name.
 
+A group whose name is a JavaScript reserved word or is already exported by the generated client, such as `/api/default`, `/api/pages` or `/api/latest`, gets a leading underscore: `api._pages.list()`. A function export that would clash the same way gets a number, such as `errorMessage2`.
+
 A function takes its arguments in this order: the path parameters, the body, the query, and last the [request options](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#request-options). Every function is also exported on its own, named after its group and service, such as `notesList` or `notesGet`, so a page can [import only what it uses](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#import-single-functions).
 
 ## Typed path parameters
