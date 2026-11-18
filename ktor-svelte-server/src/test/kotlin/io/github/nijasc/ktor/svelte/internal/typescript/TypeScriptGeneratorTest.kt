@@ -128,6 +128,24 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `route groups and endpoints never take a name that client or form already export`() {
+        val source =
+            TypeScriptGenerator(listOf("/api"), errorCodes = listOf("notes.missing"))
+                .generate(
+                    """{"openapi":"3.1.1","info":{"title":"t","version":"1"},"paths":{"/api/pages":{"get":{}},"/api/latest":{"get":{}},""" +
+                        """"/api/field":{"get":{}},"/api/error-code":{"get":{}},"/api/password-strength":{"get":{}},""" +
+                        """"/api/error/message":{"post":{}}},"components":{"schemas":{}}}""",
+                ).getValue("services.ts")
+        assertContains(source, "export const _pages = {")
+        assertContains(source, "export const _latest = {")
+        assertContains(source, "export const _field = {")
+        assertContains(source, "export const _errorCode = {")
+        assertContains(source, "export const _passwordStrength = {")
+        assertContains(source, "export const errorMessage2 = ")
+        assertContains(source, "export const api = { _errorCode, _field, _latest, _pages, _passwordStrength, error };")
+    }
+
+    @Test
     fun `type names never start with a digit`() {
         val source = types("""{"2fa-code":{"type":"string"}}""")
         assertContains(source, "export type _2faCode = string;")

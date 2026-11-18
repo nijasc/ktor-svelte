@@ -17,6 +17,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
+import io.ktor.http.encodedPath
 import io.ktor.server.application.install
 import io.ktor.server.request.contentLength
 import io.ktor.server.request.receive
@@ -201,6 +202,25 @@ class RequestGuardsTest {
     fun `only the configured api prefixes are checked`() =
         guardTest({ apiPrefixes("/rpc") }) {
             assertEquals(HttpStatusCode.OK, postNote(HttpHeaders.Origin to "https://evil.example").status)
+        }
+
+    @Test
+    fun `repeated slashes before the api prefix do not skip the checks`() =
+        guardTest({ maxApiBodySize = 10 }) {
+            listOf("//api/notes", "///api/notes").forEach { path ->
+                val crossSite =
+                    client.post {
+                        url { encodedPath = path }
+                        header(HttpHeaders.Origin, "https://evil.example")
+                    }
+                assertEquals(HttpStatusCode.Forbidden, crossSite.status, path)
+                val large =
+                    client.post {
+                        url { encodedPath = path }
+                        setBody("x".repeat(11))
+                    }
+                assertEquals(HttpStatusCode.PayloadTooLarge, large.status, path)
+            }
         }
 
     @Test

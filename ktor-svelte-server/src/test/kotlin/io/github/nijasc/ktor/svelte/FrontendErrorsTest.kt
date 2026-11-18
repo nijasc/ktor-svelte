@@ -3,17 +3,22 @@ package io.github.nijasc.ktor.svelte
 import io.github.nijasc.ktor.svelte.internal.FrontendError
 import io.github.nijasc.ktor.svelte.internal.ReportLimiter
 import io.github.nijasc.ktor.svelte.internal.frontendErrorLine
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.server.application.install
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.writeFully
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
@@ -23,6 +28,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+internal fun HttpRequestBuilder.hugeChunkedBody(sent: AtomicLong) {
+    setBody(
+        object : OutgoingContent.WriteChannelContent() {
+            override suspend fun writeTo(channel: ByteWriteChannel) {
+                val chunk = ByteArray(8 * 1024) { 'x'.code.toByte() }
+                repeat(8 * 1024) {
+                    channel.writeFully(chunk)
+                    channel.flush()
+                    sent.addAndGet(chunk.size.toLong())
+                }
+            }
+        },
+    )
+}
 
 class FrontendErrorsTest {
     @TempDir
@@ -82,6 +103,19 @@ class FrontendErrorsTest {
             assertEquals(HttpStatusCode.NoContent, report("""{"message":"Boom","page":"/board","extra":1}""").status)
             assertEquals(HttpStatusCode.BadRequest, report("not json").status)
             assertEquals(HttpStatusCode.PayloadTooLarge, report("""{"message":"${"x".repeat(9000)}"}""").status)
+        }
+
+    @Test
+    fun `a chunked report is cut off at the limit instead of read to the end`() =
+        app {
+            val sent = AtomicLong()
+            val response =
+                client.post("/_ktor-svelte/errors") {
+                    contentType(ContentType.Application.Json)
+                    hugeChunkedBody(sent)
+                }
+            assertEquals(HttpStatusCode.PayloadTooLarge, response.status)
+            assertTrue(sent.get() < 4 * 1024 * 1024, "the server read ${sent.get()} bytes of a report limited to 8 KiB")
         }
 
     @Test

@@ -22,6 +22,7 @@ import java.net.URI
 import java.net.URISyntaxException
 
 private val SAFE_METHODS = setOf(HttpMethod.Get, HttpMethod.Head, HttpMethod.Options, HttpMethod("TRACE"))
+private val REPEATED_SLASHES = Regex("/{2,}")
 private const val SEC_FETCH_SITE = "Sec-Fetch-Site"
 private const val CROSS_ORIGIN_MESSAGE = "Cross-origin API request refused."
 private const val CROSS_ORIGIN_HINT = " Add the origin with allowedOrigins(...) in install(Svelte) to allow it."
@@ -66,13 +67,15 @@ internal class OriginCheck(
 
 internal fun decodedPathOrRaw(call: ApplicationCall): String {
     val path = call.request.path()
-    return try {
-        path.decodeURLPart()
-    } catch (_: IllegalArgumentException) {
-        path
-    } catch (_: URLDecodeException) {
-        path
-    }
+    val decoded =
+        try {
+            path.decodeURLPart()
+        } catch (_: IllegalArgumentException) {
+            path
+        } catch (_: URLDecodeException) {
+            path
+        }
+    return decoded.replace(REPEATED_SLASHES, "/")
 }
 
 internal fun Throwable.findPayloadTooLarge(): PayloadTooLargeException? =

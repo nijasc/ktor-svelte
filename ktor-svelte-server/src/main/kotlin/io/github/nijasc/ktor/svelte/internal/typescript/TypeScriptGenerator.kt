@@ -1593,7 +1593,9 @@ private val ERROR_CODE_HELPERS =
 internal const val FORM_STATE_FILE = "form-state.svelte.ts"
 internal const val PENDING_WRITES_FILE = "pending-writes.svelte.ts"
 private const val GENERATED_FILE_ATTRIBUTES = "text eol=lf linguist-generated merge=ktor-svelte"
-private val SERVICES_MODULE_NAMES =
+private val TEMPLATE_EXPORT =
+    Regex("^export (?:async )?(?:function\\*?|const|let|class) +([A-Za-z_$][A-Za-z0-9_$]*)", RegexOption.MULTILINE)
+private val SERVICES_MODULE_NAMES by lazy {
     setOf(
         "api",
         "request",
@@ -1606,7 +1608,14 @@ private val SERVICES_MODULE_NAMES =
         "uploadRules",
         "hasErrorCode",
         "setCodeMessages",
-    )
+        "passwordRules",
+        "passwordMessage",
+        "passwordStrength",
+    ) +
+        listOf("client.ts", "form.ts", "public-config.ts", "api-with.ts").flatMap { template ->
+            TEMPLATE_EXPORT.findAll(typeScriptTemplate(template)).map { it.groupValues[1] }
+        }
+}
 private val ENDPOINT_ARGUMENTS = setOf("body", "query", "headers", "options", "encodeURIComponent")
 private val MANAGED_HEADERS =
     setOf("accept", "content-type", "content-length", "cookie", "x-request-id", "idempotency-key", "x-time-zone")
