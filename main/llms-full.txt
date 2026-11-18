@@ -8621,7 +8621,7 @@ install(Svelte) {
 
 ### The API is closed by the server
 
-With the guards above, every route under `/api/tasks` answers a visitor with a 401, and every route under `/api/admin` answers a user without `UsersManage` with a 403. This is the part that protects your data, and it needs no `authenticate` or `requires` around those routes. A route with another name, such as `/api/stats` for the board page, is not covered and keeps its own check.
+With the guards above, every route under `/api/tasks` answers a visitor with a 401, and every route under `/api/admin` answers a user without `UsersManage` with a 403. This is the part that protects your data, and it needs no `authenticate` or `requires` around those routes. Repeated slashes, as in `//api/tasks`, are covered too. A route with another name, such as `/api/stats` for the board page, is not covered and keeps its own check.
 
 ### The pages are guarded in the browser
 
@@ -9148,7 +9148,7 @@ Two checks protect every path under your API prefixes: the origin check and the 
 | `maxJsonStringLength` | `null` | Longest string in a JSON body |
 | `hideErrorDetails` | `true` | Hides exception messages in production |
 
-Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
+Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected. Repeated slashes count as one, as they do in Ktor's routing, so `//api/notes` is checked like `/api/notes`.
 
 ### Origin check
 
