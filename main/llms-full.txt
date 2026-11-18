@@ -2580,6 +2580,7 @@ There is nothing to change in the frontend: the generated load reads the data fr
 - A page with data is sent with `Cache-Control: private, no-store`, because it holds that visitor's data.
 - It works where the plugin serves the built frontend, as in production. In development, pages come from the Vite dev server and load as usual.
 - The data is only used when it was made for the path in the address bar, and only once.
+- With [`LocaleStrategy.UrlPrefix`](https://nijasc.github.io/ktor-svelte/main/features/i18n#url-prefix), a page under its language, such as `/de/tasks/5`, gets its data the same way.
 - The calls count as requests in your logs, metrics and rate limits, from `127.0.0.1`. They carry an `X-Ktor-Svelte-Inline` header if you want to tell them apart.
 
 ### Request options
@@ -11687,6 +11688,7 @@ method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8
 
 - Each line has the method, the path, the status, how long the app took in milliseconds, and the [request ID](https://nijasc.github.io/ktor-svelte/main/features/calling-the-api#request-ids) that the browser also shows for a failed call.
 - The query string is left out, because it can hold secrets.
+- A path with spaces, quotes or `=` is put in quotes, and control characters in it, such as an encoded line break, are written as `\u000a`, so a request cannot add a line of its own to the log.
 - Requests for build assets under `/_app/` are not logged.
 - The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again.
 - Development mode never logs these, since the dev log and the [dev panel](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#request-log) already show requests.
