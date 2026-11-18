@@ -47,6 +47,7 @@ import io.github.nijasc.ktor.svelte.internal.dev.devRequestRoutes
 import io.github.nijasc.ktor.svelte.internal.dev.devRuntimeRoute
 import io.github.nijasc.ktor.svelte.internal.dev.devStatus
 import io.github.nijasc.ktor.svelte.internal.dev.installDevHttps
+import io.github.nijasc.ktor.svelte.internal.dev.installMigrationGeneration
 import io.github.nijasc.ktor.svelte.internal.dev.isLocalCall
 import io.github.nijasc.ktor.svelte.internal.dev.pagesOf
 import io.github.nijasc.ktor.svelte.internal.dev.requireAllowedTarget
@@ -278,6 +279,7 @@ public val Svelte: ApplicationPlugin<SvelteConfig> =
         val clientExcludedPaths =
             listOfNotNull(docsPath, currentUserPath, pluginConfig.preferencesSpec?.let { preferencesPathOf(pluginConfig) })
         pageData?.operationSource = { generatedOperations(application, pluginConfig.apiPrefixList, clientExcludedPaths) }
+        installMigrationGeneration(application)
         installTypeScriptGeneration(
             application,
             pluginConfig.generateTs,

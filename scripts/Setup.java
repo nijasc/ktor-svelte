@@ -479,7 +479,7 @@ public class Setup {
         if (database) {
             text.append("## Database\n\n`docker compose up -d` starts Postgres on this machine, using the settings in `.env`. ");
             text.append(flyway
-                ? "`Database.kt` connects when the app starts and Flyway runs any new migration in `src/main/resources/db/migration`. Add a new file for each change and never edit one that has already run. "
+                ? "`Database.kt` connects when the app starts and Flyway runs any new migration in `src/main/resources/db/migration`. Add a new file for each change and never edit one that has already run: after changing a table, `./gradlew generateMigrations` writes the next one for you. "
                 : "`Database.kt` connects when the app starts and creates missing tables, but it does not change existing ones. ");
             text.append("`POST /api/visits` shows the pattern with a small example table, so replace it with your own.\n\n");
         }
@@ -581,9 +581,10 @@ public class Setup {
         if (i18n) imports.append("import io.github.nijasc.ktor.svelte.gradle.LocaleStrategy\n");
         if (flatPackages) imports.append("import org.jetbrains.gradle.ext.packagePrefix\nimport org.jetbrains.gradle.ext.settings\n");
         if (imports.length() > 0) imports.append("\n");
-        String librariesBlock = libraries.length() == 0
-            ? ""
-            : "svelte {\n    libraries {\n" + libraries + "    }\n}\n\n";
+        StringBuilder svelte = new StringBuilder();
+        if (libraries.length() > 0) svelte.append("    libraries {\n").append(libraries).append("    }\n");
+        if (flyway) svelte.append("    utils {\n        flyway()\n    }\n");
+        String librariesBlock = svelte.length() == 0 ? "" : "svelte {\n" + svelte + "}\n\n";
         StringBuilder dependencies = new StringBuilder();
         dependencies.append("    implementation(libs.ktor.server.netty)\n    implementation(libs.ktor.server.status.pages)\n");
         if (auth) dependencies.append("    implementation(libs.ktor.server.auth)\n    implementation(libs.ktor.server.sessions)\n");

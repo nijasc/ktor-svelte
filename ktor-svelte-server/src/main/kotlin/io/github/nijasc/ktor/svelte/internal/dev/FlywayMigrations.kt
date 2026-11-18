@@ -16,7 +16,7 @@ import java.sql.SQLException
 import java.util.logging.Logger
 import javax.sql.DataSource
 
-private class ExposedDataSource(
+internal class ExposedDataSource(
     private val database: Database,
 ) : DataSource {
     override fun getConnection(): Connection = database.connector().connection as Connection

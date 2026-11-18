@@ -361,7 +361,7 @@ The **Migrations** section shows the state of the database schema, when your app
 - how many are pending, which happens when you added a migration file and the app has not run it yet,
 - whether the last one that ran failed, in red.
 
-A pending or failed migration is usually why a new column "does not exist". The section asks Flyway each time you open it, through the database your app connected with `Database.connect`, and changes nothing.
+To write the SQL for a table you changed, see [Generate a migration](#generate-a-migration). A pending or failed migration is usually why a new column "does not exist". The section asks Flyway each time you open it, through the database your app connected with `Database.connect`, and changes nothing.
 
 - It needs `flyway-core` and Exposed in the app. Without Flyway on the classpath the section says so; ktor-svelte itself does not depend on it.
 - It reads Flyway's default setup: migrations in `src/main/resources/db/migration` and the history in `flyway_schema_history`. With other `locations` or another `table`, the list may not match what your app runs.
@@ -435,6 +435,38 @@ Two more sections appear when the matching library is on:
 
 - **Theme colors**, with [DaisyUI](../features/frontend-libraries.md#daisyui): a color picker for each theme color that recolors the open page at once, and **Copy for Gradle** to take the result into `build.gradle.kts`.
 - **Not translated**, with [i18n](../features/frontend-libraries.md#i18n), when you look at the app in another language than the default one: the messages on the page whose text is the same as in the default language.
+
+## Generate a migration
+
+With Flyway and Exposed, you change a table in Kotlin and then write the SQL for the change by hand. `generateMigrations` writes it for you. Turn it on in the build; projects made by the installer with Flyway have it on already:
+
+```kotlin
+svelte {
+    utils {
+        flyway()
+    }
+}
+```
+
+Change a table, for example add a column to an `object Tasks : Table("tasks")`, then run:
+
+```bash
+./gradlew generateMigrations --name=add_due_date
+```
+
+The task starts your app once, the same way `svelteGenerateTs` does, so the app connects to its development database as it always does. It then finds every Exposed `Table` object in your compiled code, compares them with the database, and writes what is missing as the next migration: `V3__add_due_date.sql` after `V2__...`. The app stops right after; it does not serve requests.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `flyway { enabled }` | `true` once `flyway { }` is called | `false` removes the task again |
+| `flyway { migrationsDir }` | `src/main/resources/db/migration` | Folder the new file goes to, and where the task looks for the highest version so far |
+
+- Without `--name`, the file is named after what it does, such as `create_tags`, or `update_schema` when it changes more than new tables.
+- The database must have run every migration in the folder first, or the new file would repeat them. The task stops and says which ones are pending; start the app once so Flyway runs them, then try again.
+- When the database already matches the tables, no file is written.
+- It needs `flyway-core` and `exposed-jdbc` in the app, and the app must call `Database.connect` while it starts.
+- Read the file before you commit it. Exposed adds tables, columns, indexes and constraints that are missing; it does not drop columns you removed or rename anything, and a rename shows up as a new column. Edit the SQL when you need a rename or want to copy data.
+- Exposed compares each column with what the database reports. A column whose type, nullability or default differs shows up as an `ALTER COLUMN`, which is how a default you only set in SQL gets noticed. Some settings make it report columns that match, such as H2 with `CASE_INSENSITIVE_IDENTIFIERS` and columns named like SQL keywords; delete those lines.
 
 ## Browser console in the server log
 
