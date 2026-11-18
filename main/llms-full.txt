@@ -157,7 +157,7 @@ When something looks off, run `./gradlew svelteDoctor`.
 | i18n | `--i18n`, `--locales`, `--locale-strategy` | no | Message files and the chosen strategy |
 | Sign in | `--auth` | no | Cookie sessions, hashed passwords, routes, and login and account pages |
 | Postgres | `--database` | no | Exposed, HikariCP, `compose.yaml` and a small example table |
-| Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration` |
+| Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration`, and [`generateMigrations`](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#generate-a-migration) to write the next one from your tables |
 | No package folders | `--idea-ext` | yes | Kotlin files directly in `src/main/kotlin`, and IntelliJ knows the package through the `idea-ext` plugin |
 | Convention plugin | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
 | Dockerfile | `--docker` | yes | A multi-stage build that runs the JAR as a non-root user |
@@ -2580,6 +2580,7 @@ There is nothing to change in the frontend: the generated load reads the data fr
 - A page with data is sent with `Cache-Control: private, no-store`, because it holds that visitor's data.
 - It works where the plugin serves the built frontend, as in production. In development, pages come from the Vite dev server and load as usual.
 - The data is only used when it was made for the path in the address bar, and only once.
+- With [`LocaleStrategy.UrlPrefix`](https://nijasc.github.io/ktor-svelte/main/features/i18n#url-prefix), a page under its language, such as `/de/tasks/5`, gets its data the same way.
 - The calls count as requests in your logs, metrics and rate limits, from `127.0.0.1`. They carry an `X-Ktor-Svelte-Inline` header if you want to tell them apart.
 
 ### Request options
@@ -10123,7 +10124,7 @@ The **Migrations** section shows the state of the database schema, when your app
 - how many are pending, which happens when you added a migration file and the app has not run it yet,
 - whether the last one that ran failed, in red.
 
-A pending or failed migration is usually why a new column "does not exist". The section asks Flyway each time you open it, through the database your app connected with `Database.connect`, and changes nothing.
+To write the SQL for a table you changed, see [Generate a migration](#generate-a-migration). A pending or failed migration is usually why a new column "does not exist". The section asks Flyway each time you open it, through the database your app connected with `Database.connect`, and changes nothing.
 
 - It needs `flyway-core` and Exposed in the app. Without Flyway on the classpath the section says so; ktor-svelte itself does not depend on it.
 - It reads Flyway's default setup: migrations in `src/main/resources/db/migration` and the history in `flyway_schema_history`. With other `locations` or another `table`, the list may not match what your app runs.
@@ -10197,6 +10198,38 @@ Two more sections appear when the matching library is on:
 
 - **Theme colors**, with [DaisyUI](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#daisyui): a color picker for each theme color that recolors the open page at once, and **Copy for Gradle** to take the result into `build.gradle.kts`.
 - **Not translated**, with [i18n](https://nijasc.github.io/ktor-svelte/main/features/frontend-libraries#i18n), when you look at the app in another language than the default one: the messages on the page whose text is the same as in the default language.
+
+## Generate a migration
+
+With Flyway and Exposed, you change a table in Kotlin and then write the SQL for the change by hand. `generateMigrations` writes it for you. Turn it on in the build; projects made by the installer with Flyway have it on already:
+
+```kotlin
+svelte {
+    utils {
+        flyway()
+    }
+}
+```
+
+Change a table, for example add a column to an `object Tasks : Table("tasks")`, then run:
+
+```bash
+./gradlew generateMigrations --name=add_due_date
+```
+
+The task starts your app once, the same way `svelteGenerateTs` does, so the app connects to its development database as it always does. It then finds every Exposed `Table` object in your compiled code, compares them with the database, and writes what is missing as the next migration: `V3__add_due_date.sql` after `V2__...`. The app stops right after; it does not serve requests.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `flyway { enabled }` | `true` once `flyway { }` is called | `false` removes the task again |
+| `flyway { migrationsDir }` | `src/main/resources/db/migration` | Folder the new file goes to, and where the task looks for the highest version so far |
+
+- Without `--name`, the file is named after what it does, such as `create_tags`, or `update_schema` when it changes more than new tables.
+- The database must have run every migration in the folder first, or the new file would repeat them. The task stops and says which ones are pending; start the app once so Flyway runs them, then try again.
+- When the database already matches the tables, no file is written.
+- It needs `flyway-core` and `exposed-jdbc` in the app, and the app must call `Database.connect` while it starts.
+- Read the file before you commit it. Exposed adds tables, columns, indexes and constraints that are missing; it does not drop columns you removed or rename anything, and a rename shows up as a new column. Edit the SQL when you need a rename or want to copy data.
+- Exposed compares each column with what the database reports. A column whose type, nullability or default differs shows up as an `ALTER COLUMN`, which is how a default you only set in SQL gets noticed. Some settings make it report columns that match, such as H2 with `CASE_INSENSITIVE_IDENTIFIERS` and columns named like SQL keywords; delete those lines.
 
 ## Browser console in the server log
 
@@ -14342,7 +14375,7 @@ svelte {
 }
 ```
 
-`bunVersion` and `nodeVersion` are unset by default, and `libraries { }` is empty.
+`bunVersion` and `nodeVersion` are unset by default, and `libraries { }` and `utils { }` are empty.
 
 ## Settings
 
@@ -14362,6 +14395,7 @@ svelte {
 | `precompress` | `true` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10% |
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](https://nijasc.github.io/ktor-svelte/main/features/runtime-config#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
+| `utils { }` | empty | Helpers for the Kotlin side, such as `flyway { }`, which adds `generateMigrations`. See [Utils](#utils) |
 | `naming { }` | no rules | Naming rules for pages, API routes, DTOs and message keys that `svelteVerifyNaming` checks. See [svelteVerifyNaming](https://nijasc.github.io/ktor-svelte/main/guide/checks-and-tooling#svelteverifynaming) |
 | `frontend(name) { }` | none | Another SvelteKit project served under its own path prefix, with `frontendDir`, `outputDir`, `buildScript`, `basePath` and `devPort`. See [Multiple frontends](https://nijasc.github.io/ktor-svelte/main/guide/multiple-frontends) |
 
@@ -14422,6 +14456,24 @@ svelte {
 | `components()` | none | |
 | `charts()` | none | |
 | `generatedPackage` | | `"io.github.nijasc.ktorsvelte"`, the package of the generated Kotlin |
+
+## Utils
+
+Everything in `utils { }` is off until you call it.
+
+```kotlin
+svelte {
+    utils {
+        flyway {
+            migrationsDir = layout.projectDirectory.dir("src/main/resources/db/migration")
+        }
+    }
+}
+```
+
+| Call | Settings inside | Default inside |
+|---|---|---|
+| `flyway { }` | `enabled`, `migrationsDir`. Adds the `generateMigrations` task. See [Generate a migration](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#generate-a-migration) | `enabled = true` once called, `migrationsDir` is `src/main/resources/db/migration` |
 
 ## Review your configuration
 
@@ -14600,6 +14652,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 |---|---|---|
 | `svelteInit` | `--package-manager=bun` | Creates a working SvelteKit project in an empty `frontendDir`, then runs `svelteSync` and `svelteGenerateRunConfigurations` |
 | `svelteAdd` | `--page`, `--route`, `--crud` | [Creates a page](https://nijasc.github.io/ktor-svelte/main/features/routes#a-new-page) with a typed load: `svelteAdd --page=notes/[id]`. `--route` adds a Kotlin route to start from. `svelteAdd --crud=Note` writes [list, detail and form pages for a class](https://nijasc.github.io/ktor-svelte/main/features/routes#pages-for-a-class) |
+| `generateMigrations` | `--name` | Only with `utils { flyway() }`. Starts the app once and writes the next Flyway migration with what its Exposed tables need and the database lacks: `generateMigrations --name=add_tags`. See [Generate a migration](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#generate-a-migration) |
 | `svelteRename` | `--page`, `--to`, `--force` | [Moves a page](https://nijasc.github.io/ktor-svelte/main/features/routes#renaming-a-page) and rewrites its typed route calls in the frontend and in Kotlin: `svelteRename --page=notes/[id] --to=memos/[id]`. `--force` renames even with uncommitted changes |
 
 ### Test and deploy
