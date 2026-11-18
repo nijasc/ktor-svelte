@@ -630,12 +630,19 @@ public fun Route.svelte(public: List<String> = emptyList()) {
         return
     }
     val vitePaths = handler.vitePrefixes.flatMap { prefix -> VITE_DEV_PATHS.map { prefix + it } }
-    val paths = (public + vitePaths + INSTALLABLE_APP_PATHS).distinct()
+    val paths = (public.flatMap(::withEitherTrailingSlash) + vitePaths + INSTALLABLE_APP_PATHS).distinct()
     paths.forEach { path ->
         val routePath = if (path.endsWith("/*")) path.removeSuffix("*") + "{svelte-path...}" else path
         route(routePath) { handle { handler.handle(call) } }
     }
 }
+
+private fun withEitherTrailingSlash(path: String): List<String> =
+    when {
+        path == "/" || path.endsWith("/*") -> listOf(path)
+        path.endsWith("/") -> listOf(path, path.trimEnd('/'))
+        else -> listOf(path, "$path/")
+    }
 
 private fun Route.catchAll(
     handler: SvelteHandler,
