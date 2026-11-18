@@ -44,6 +44,7 @@ method=POST path=/api/notes status=422 ms=3 id=1f3e9d10-7c44-4d3b-b0a1-9a2f4e6c8
 
 - Each line has the method, the path, the status, how long the app took in milliseconds, and the [request ID](../features/calling-the-api.md#request-ids) that the browser also shows for a failed call.
 - The query string is left out, because it can hold secrets.
+- A path with spaces, quotes or `=` is put in quotes, and control characters in it, such as an encoded line break, are written as `\u000a`, so a request cannot add a line of its own to the log.
 - Requests for build assets under `/_app/` are not logged.
 - The lines go to the logger `ktor-svelte.access` at INFO, so your logging config decides where they end up and can turn them off again.
 - Development mode never logs these, since the dev log and the [dev panel](./dev-workflow.md#request-log) already show requests.

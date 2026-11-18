@@ -13,7 +13,8 @@ import org.slf4j.LoggerFactory
 internal const val ACCESS_LOGGER = "ktor-svelte.access"
 private const val BUILD_ASSETS = "/_app/"
 private const val NANOS_PER_MILLI = 1_000_000
-private val NEEDS_QUOTES = Regex("""[\s"=]""")
+private val NEEDS_QUOTES = Regex("""[\s"=\p{Cc}\p{Zl}\p{Zp}]""")
+private val CONTROL = Regex("""[\p{Cc}\p{Zl}\p{Zp}]""")
 private val AccessStartedAt = AttributeKey<Long>("KtorSvelteAccessStartedAt")
 
 internal fun accessLine(
@@ -23,7 +24,23 @@ internal fun accessLine(
     milliseconds: Long,
     requestId: String?,
 ): String {
-    val shownPath = if (NEEDS_QUOTES.containsMatchIn(path)) "\"" + path.replace("\\", "\\\\").replace("\"", "\\\"") + "\"" else path
+    val shownPath =
+        if (NEEDS_QUOTES.containsMatchIn(path)) {
+            val escaped =
+                path
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace(CONTROL) {
+                        "\\u" +
+                            it.value[0]
+                                .code
+                                .toString(16)
+                                .padStart(4, '0')
+                    }
+            "\"" + escaped + "\""
+        } else {
+            path
+        }
     val id = requestId?.takeIf(::isValidRequestId)?.let { " id=$it" }.orEmpty()
     return "method=$method path=$shownPath status=$status ms=$milliseconds$id"
 }
