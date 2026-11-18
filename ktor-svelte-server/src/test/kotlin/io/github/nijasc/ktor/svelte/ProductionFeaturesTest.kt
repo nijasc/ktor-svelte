@@ -88,6 +88,16 @@ class ProductionFeaturesTest {
         }
 
     @Test
+    fun `a public page asked for with a trailing slash is redirected instead of refused`() =
+        protectedApp {
+            val visitor = createClient { followRedirects = false }
+            val redirect = visitor.get("/login/?next=%2Fboard")
+            assertEquals(HttpStatusCode.PermanentRedirect, redirect.status)
+            assertEquals("/login?next=%2Fboard", redirect.headers[HttpHeaders.Location])
+            assertEquals(HttpStatusCode.Unauthorized, visitor.get("/anything/else/").status)
+        }
+
+    @Test
     fun `authenticated requests reach the frontend`() =
         protectedApp {
             val home = client.get("/") { basicAuth("me", "secret") }
