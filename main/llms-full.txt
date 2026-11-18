@@ -1670,6 +1670,8 @@ const reports = await api.reports.list({ 'X-Tenant': 'acme', 'X-Report-Rows': 50
 
 ## Types and forms
 
+A type keeps the name of its Kotlin class. A class named like a JavaScript global that the generated code relies on, such as `Record`, `File`, `Date`, `Promise` or `URL`, gets a leading underscore (`_Record`), so the global keeps working in the generated files.
+
 ### Empty objects
 
 Every object type gets an `empty()` factory, handy as the initial state of a form:
