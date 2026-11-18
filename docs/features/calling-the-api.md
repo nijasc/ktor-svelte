@@ -176,6 +176,7 @@ There is nothing to change in the frontend: the generated load reads the data fr
 - A page with data is sent with `Cache-Control: private, no-store`, because it holds that visitor's data.
 - It works where the plugin serves the built frontend, as in production. In development, pages come from the Vite dev server and load as usual.
 - The data is only used when it was made for the path in the address bar, and only once.
+- With [`LocaleStrategy.UrlPrefix`](./i18n.md#url-prefix), a page under its language, such as `/de/tasks/5`, gets its data the same way.
 - The calls count as requests in your logs, metrics and rate limits, from `127.0.0.1`. They carry an `X-Ktor-Svelte-Inline` header if you want to tell them apart.
 
 ### Request options

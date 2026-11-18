@@ -1,5 +1,7 @@
 package io.github.nijasc.ktor.svelte.internal.assets
 
+import io.github.nijasc.ktor.svelte.internal.LibraryConfig
+import io.github.nijasc.ktor.svelte.internal.libraryConfig
 import io.github.nijasc.ktor.svelte.internal.typescript.GeneratedOperation
 import io.github.nijasc.ktor.svelte.internal.typescript.PageLoadSpec
 import io.github.nijasc.ktor.svelte.internal.typescript.pageParameters
@@ -43,9 +45,10 @@ internal class PageDataInliner(
     suspend fun elementFor(call: ApplicationCall): String? {
         if (call.request.header(INLINE_REQUEST_HEADER) != null) return null
         val path = call.request.path()
+        val pagePath = withoutLocale(path, call.application.libraryConfig)
         val (page, values) =
             patterns.firstNotNullOfOrNull { (page, pattern) ->
-                pattern.matchEntire(path)?.let { match -> page to pageParameters(page.page).zip(match.groupValues.drop(1)).toMap() }
+                pattern.matchEntire(pagePath)?.let { match -> page to pageParameters(page.page).zip(match.groupValues.drop(1)).toMap() }
             } ?: return null
         val urls = page.data.map { data -> urlOf(data.route, data.params, values) ?: return null }
         val local = call.request.local
@@ -105,6 +108,16 @@ internal class PageDataInliner(
                 .takeIf { response.statusCode() == 200 && json }
                 ?.also { Json.parseToJsonElement(it) }
         }.getOrNull()
+}
+
+private fun withoutLocale(
+    path: String,
+    config: LibraryConfig,
+): String {
+    if (!config.usesUrlPrefix) return path
+    val first = path.removePrefix("/").substringBefore('/')
+    if (first !in config.locales) return path
+    return path.removePrefix("/$first").ifEmpty { "/" }
 }
 
 internal fun pagePattern(page: String): Regex {
