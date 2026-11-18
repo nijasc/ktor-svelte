@@ -127,7 +127,7 @@ Two checks protect every path under your API prefixes: the origin check and the 
 | `maxJsonStringLength` | `null` | Longest string in a JSON body |
 | `hideErrorDetails` | `true` | Hides exception messages in production |
 
-Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected.
+Paths outside your API prefixes, such as frontend files and the dev proxy, are not affected. Repeated slashes count as one, as they do in Ktor's routing, so `//api/notes` is checked like `/api/notes`.
 
 ### Origin check
 

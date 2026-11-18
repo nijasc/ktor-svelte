@@ -363,7 +363,7 @@ install(Svelte) {
 
 ### The API is closed by the server
 
-With the guards above, every route under `/api/tasks` answers a visitor with a 401, and every route under `/api/admin` answers a user without `UsersManage` with a 403. This is the part that protects your data, and it needs no `authenticate` or `requires` around those routes. A route with another name, such as `/api/stats` for the board page, is not covered and keeps its own check.
+With the guards above, every route under `/api/tasks` answers a visitor with a 401, and every route under `/api/admin` answers a user without `UsersManage` with a 403. This is the part that protects your data, and it needs no `authenticate` or `requires` around those routes. Repeated slashes, as in `//api/tasks`, are covered too. A route with another name, such as `/api/stats` for the board page, is not covered and keeps its own check.
 
 ### The pages are guarded in the browser
 
