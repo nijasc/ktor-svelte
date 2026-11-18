@@ -96,10 +96,10 @@ class PageLoadsTest {
                     "            api.members.list({ silent: true })\n" +
                     "        ]);\n" +
                     "    const inline = inlinePageData(event.url.pathname);\n" +
-                    "    const [task, comments, members] = inline\n" +
+                    "    const loaded = inline\n" +
                     "        ? ([inline.task, inline.comments, inline.members] as Awaited<ReturnType<typeof load>>)\n" +
                     "        : await load();\n" +
-                    "    return { task, comments, members };\n" +
+                    "    return { task: loaded[0], comments: loaded[1], members: loaded[2] };\n" +
                     "}\n",
                 dir.resolve("src/lib/api/loads.ts").readText(),
             )
@@ -162,6 +162,24 @@ class PageLoadsTest {
                 operations,
             )
         assertContains(mapped, "api.numbers.get(Number(event.params.value), { silent: true })")
+    }
+
+    @Test
+    fun `data keys never clash with the names inside the generated load`() {
+        val operations = listOf(GeneratedOperation("members.list", "GET", "/api/members"))
+        val keys = listOf("load", "api", "inline", "event", "loaded", "default")
+        val source =
+            pageLoadsSource(
+                listOf(PageLoadSpec("/board", keys.map { PageDataSpec(it, "GET", "/api/members", emptyMap()) })),
+                operations,
+            )
+        assertContains(source, "    const loaded = inline\n")
+        assertContains(source, "        ? ([inline.load, inline.api, inline.inline, inline.event, inline.loaded, inline.default] as ")
+        assertContains(
+            source,
+            "    return { load: loaded[0], api: loaded[1], inline: loaded[2], event: loaded[3], loaded: loaded[4], default: loaded[5] };\n",
+        )
+        assertFalse(source.contains("const ["))
     }
 
     @Test
