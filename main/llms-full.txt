@@ -14239,7 +14239,7 @@ With `routing = SvelteRouting.Manual`, you place the frontend in your own routin
 | Call | What it does |
 |---|---|
 | `svelte()` | Serves the frontend for every path under this route. Pages get `private` caching, so shared proxies do not keep them |
-| `svelte(public = listOf(...))` | Serves only the listed paths, with normal caching. A path ending in `/*` covers everything below it. A listed page also answers with the other trailing slash, so `/login/` redirects to `/login` instead of asking for a sign-in |
+| `svelte(public = listOf(...))` | Serves only the listed paths, with normal caching. A path ending in `/*` covers everything below it |
 
 ```kotlin
 routing {
