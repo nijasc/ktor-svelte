@@ -42,6 +42,14 @@ object MigrationTags : Table("tags") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object KeywordColumns : Table("files") {
+    val id = integer("id")
+    val name = varchar("name", 80)
+    val size = long("size")
+    val role = varchar("role", 16)
+    override val primaryKey = PrimaryKey(id)
+}
+
 class MigrationGenerationTest {
     private val url = "jdbc:h2:mem:migration-generation-${System.nanoTime()};DB_CLOSE_DELAY=-1"
     private val loader = javaClass.classLoader
@@ -90,6 +98,17 @@ class MigrationGenerationTest {
             FlywayMigrationWriter.write(loader, database, directory, null, listOf(MigratedNotes, MigrationTags)),
         )
         assertEquals(3, directory.listDirectoryEntries().size)
+    }
+
+    @Test
+    fun `columns named like SQL keywords are not reported as changed once they exist`() {
+        val directory = migrations()
+        val database = migrated(directory)
+        val first =
+            assertIs<MigrationOutcome.Written>(FlywayMigrationWriter.write(loader, database, directory, null, listOf(KeywordColumns)))
+        assertEquals("V3__create_files.sql", first.file.name)
+        migrated(directory)
+        assertEquals(MigrationOutcome.UpToDate, FlywayMigrationWriter.write(loader, database, directory, null, listOf(KeywordColumns)))
     }
 
     @Test

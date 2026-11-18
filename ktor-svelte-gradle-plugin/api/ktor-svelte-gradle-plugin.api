@@ -99,6 +99,13 @@ public final class io/github/nijasc/ktor/svelte/gradle/DaisyTheme : java/lang/En
 	public static fun values ()[Lio/github/nijasc/ktor/svelte/gradle/DaisyTheme;
 }
 
+public abstract class io/github/nijasc/ktor/svelte/gradle/FlywaySettings {
+	public fun <init> ()V
+	public abstract fun getEnabled ()Lorg/gradle/api/provider/Property;
+	public abstract fun getMigrationsDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
+}
+
 public abstract class io/github/nijasc/ktor/svelte/gradle/FontSettings {
 	public fun <init> ()V
 	public abstract fun getMono ()Lorg/gradle/api/provider/Property;
@@ -213,10 +220,12 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteExtension {
 	public abstract fun getPrecompress ()Lorg/gradle/api/provider/Property;
 	public abstract fun getShortTaskNames ()Lorg/gradle/api/provider/Property;
 	public abstract fun getTimingSummary ()Lorg/gradle/api/provider/Property;
+	public abstract fun getUtils ()Lio/github/nijasc/ktor/svelte/gradle/SvelteUtils;
 	public abstract fun getVerifyLeaks ()Lorg/gradle/api/provider/Property;
 	public final fun libraries (Lorg/gradle/api/Action;)V
 	public final fun naming (Lorg/gradle/api/Action;)V
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
+	public final fun utils (Lorg/gradle/api/Action;)V
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteFrontend : org/gradle/api/Named {
@@ -279,6 +288,14 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteNamingSettings {
 	public abstract fun getStrict ()Lorg/gradle/api/provider/Property;
 	public final fun messageKeys (Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;)V
 	public final fun pages (Lio/github/nijasc/ktor/svelte/gradle/NamingStyle;)V
+	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/SvelteUtils {
+	public fun <init> ()V
+	public final fun flyway (Lorg/gradle/api/Action;)V
+	public static synthetic fun flyway$default (Lio/github/nijasc/ktor/svelte/gradle/SvelteUtils;Lorg/gradle/api/Action;ILjava/lang/Object;)V
+	public abstract fun getFlyway ()Lio/github/nijasc/ktor/svelte/gradle/FlywaySettings;
 	public final fun propertyMissing (Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Void;
 }
 
@@ -548,6 +565,15 @@ public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteFormatTask
 	public abstract fun getExample ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPurpose ()Lorg/gradle/api/provider/Property;
 	public abstract fun getScript ()Lorg/gradle/api/provider/Property;
+}
+
+public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteGenerateMigrationsTask : org/gradle/api/tasks/JavaExec {
+	public fun <init> ()V
+	public fun exec ()V
+	public abstract fun getMigrationName ()Lorg/gradle/api/provider/Property;
+	public abstract fun getMigrationsDirectory ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getReportFile ()Lorg/gradle/api/file/RegularFileProperty;
+	public abstract fun getTableClasses ()Lorg/gradle/api/file/ConfigurableFileCollection;
 }
 
 public abstract class io/github/nijasc/ktor/svelte/gradle/tasks/SvelteGenerateSourcesTask : org/gradle/api/DefaultTask {

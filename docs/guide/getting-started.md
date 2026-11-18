@@ -57,7 +57,7 @@ When something looks off, run `./gradlew svelteDoctor`.
 | i18n | `--i18n`, `--locales`, `--locale-strategy` | no | Message files and the chosen strategy |
 | Sign in | `--auth` | no | Cookie sessions, hashed passwords, routes, and login and account pages |
 | Postgres | `--database` | no | Exposed, HikariCP, `compose.yaml` and a small example table |
-| Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration` |
+| Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration`, and [`generateMigrations`](dev-workflow.md#generate-a-migration) to write the next one from your tables |
 | No package folders | `--idea-ext` | yes | Kotlin files directly in `src/main/kotlin`, and IntelliJ knows the package through the `idea-ext` plugin |
 | Convention plugin | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
 | Dockerfile | `--docker` | yes | A multi-stage build that runs the JAR as a non-root user |

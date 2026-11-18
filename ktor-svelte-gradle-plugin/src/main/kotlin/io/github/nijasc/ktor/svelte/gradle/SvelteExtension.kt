@@ -31,6 +31,9 @@ public abstract class SvelteExtension {
     @get:Nested
     public abstract val naming: SvelteNamingSettings
 
+    @get:Nested
+    public abstract val utils: SvelteUtils
+
     public abstract val frontends: NamedDomainObjectContainer<SvelteFrontend>
 
     public fun frontend(
@@ -54,6 +57,10 @@ public abstract class SvelteExtension {
 
     public fun libraries(action: Action<SvelteLibraries>) {
         action.execute(libraries)
+    }
+
+    public fun utils(action: Action<SvelteUtils>) {
+        action.execute(utils)
     }
 
     public fun propertyMissing(

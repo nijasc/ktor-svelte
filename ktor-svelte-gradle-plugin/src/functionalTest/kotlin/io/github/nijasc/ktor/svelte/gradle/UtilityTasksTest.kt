@@ -577,6 +577,62 @@ class UtilityTasksTest {
         assertEquals(emptyList(), project.calls())
     }
 
+    private fun migratingApp(outcome: String): TestProject {
+        val project = project()
+        val source = dir.resolve("src/main/java/Main.java")
+        source.parentFile.mkdirs()
+        source.writeText(
+            """
+            public class Main {
+                public static void main(String[] args) throws Exception {
+                    System.out.println("folder=" + System.getProperty("ktor.svelte.generateMigration"));
+                    System.out.println("name=" + System.getProperty("ktor.svelte.migrationName"));
+                    System.out.println("classes=" + System.getProperty("ktor.svelte.migrationClasses"));
+                    String report = System.getProperty("ktor.svelte.migrationReport");
+                    java.nio.file.Files.writeString(java.nio.file.Path.of(report), "$outcome");
+                    System.exit("$outcome".startsWith("ok") ? 0 : 1);
+                }
+            }
+            """.trimIndent(),
+        )
+        return project
+    }
+
+    @Test
+    fun `generateMigrations only exists once utils flyway is on`() {
+        val project = migratingApp("ok\\nWrote V3__x.sql")
+        project.buildScript(applicationBuild)
+        assertContains(project.runAndFail("generateMigrations").output, "Task 'generateMigrations' not found")
+        project.buildScript("$applicationBuild\nsvelte { utils { flyway { enabled = false } } }\n")
+        assertContains(project.runAndFail("generateMigrations").output, "Task 'generateMigrations' not found")
+    }
+
+    @Test
+    fun `generateMigrations starts the app with the migrations folder and passes on what it wrote`() {
+        val project = migratingApp("ok\\nWrote V3__add_tags.sql with 1 statement")
+        project.buildScript("$applicationBuild\nsvelte { utils { flyway() } }\n")
+
+        val output = project.run("generateMigrations", "--name=add_tags").output
+
+        assertContains(output, "folder=" + dir.resolve("src/main/resources/db/migration").absolutePath)
+        assertContains(output, "name=add_tags")
+        assertContains(output, "classes=" + dir.resolve("build/classes/java/main").absolutePath)
+        assertContains(output, "ktor-svelte: Wrote V3__add_tags.sql with 1 statement")
+        assertEquals(emptyList(), project.calls())
+    }
+
+    @Test
+    fun `generateMigrations writes to the folder set in the build and fails with the app's reason`() {
+        val project = migratingApp("error\\nThe database has not run V2__b.sql yet")
+        project.buildScript("$applicationBuild\nsvelte { utils { flyway { migrationsDir = layout.projectDirectory.dir(\"db/sql\") } } }\n")
+
+        val output = project.runAndFail("generateMigrations").output
+
+        assertContains(output, "folder=" + dir.resolve("db/sql").absolutePath)
+        assertContains(output, "name=null")
+        assertContains(output, "The database has not run V2__b.sql yet")
+    }
+
     private fun verifyingApp(staleFile: String?): TestProject {
         val project = project()
         project.buildScript(applicationBuild)

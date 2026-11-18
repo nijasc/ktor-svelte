@@ -24,6 +24,7 @@ import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDevTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteDoctorTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteEmailsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteFormatTask
+import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateMigrationsTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGenerateSourcesTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteGitHooksTask
 import io.github.nijasc.ktor.svelte.gradle.tasks.SvelteInitTask
@@ -178,6 +179,7 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
                 if (devMode) run.systemProperty(DEVELOPMENT_SYSTEM_PROPERTY, "true")
             }
             registerGenerateTs(project, extension)
+            registerGenerateMigrations(project, extension)
             config.configure { task ->
                 val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
                 val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
@@ -905,6 +907,28 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         }
     }
 
+    private fun registerGenerateMigrations(
+        project: Project,
+        extension: SvelteExtension,
+    ) {
+        val flyway = extension.utils.flyway
+        val register = {
+            if (flyway.enabled.get() && GENERATE_MIGRATIONS_TASK !in project.tasks.names) {
+                val main = project.extensions.getByType(SourceSetContainer::class.java).named("main")
+                project.tasks.register(GENERATE_MIGRATIONS_TASK, SvelteGenerateMigrationsTask::class.java) { task ->
+                    configureGenerateTsExec(project, extension, task)
+                    task.description =
+                        "Starts the app once and writes a Flyway migration with what its Exposed tables need and the database lacks: " +
+                        "--name=add_tags"
+                    task.migrationsDirectory.set(flyway.migrationsDir)
+                    task.tableClasses.from(main.map { it.output.classesDirs })
+                    task.reportFile.set(project.layout.buildDirectory.file("ktor-svelte/migration.txt"))
+                }
+            }
+        }
+        if (project.state.executed) register() else project.afterEvaluate { register() }
+    }
+
     private fun configureBrowserTests(
         project: Project,
         extension: SvelteExtension,
@@ -1031,6 +1055,10 @@ public abstract class KtorSveltePlugin : Plugin<Project> {
         extension.precompress.convention(true)
         extension.verifyLeaks.convention(true)
         extension.shortTaskNames.convention(true)
+        extension.utils.flyway.enabled
+            .convention(false)
+        extension.utils.flyway.migrationsDir
+            .convention(project.layout.projectDirectory.dir("src/main/resources/db/migration"))
         extension.timingSummary.convention(true)
         extension.dev.port.convention(5173)
         extension.dev.script.convention("dev")
@@ -1399,4 +1427,5 @@ internal const val BROWSER_TEST_SUITE = "browserTest"
 internal const val DEFAULT_HTTPS_PORT = 8443
 internal const val BROWSER_TEST_JAR = "ktorSvelte.test.jar"
 internal const val BROWSER_TEST_CLASSPATH = "ktorSvelte.test.classpath"
+internal const val GENERATE_MIGRATIONS_TASK = "generateMigrations"
 internal const val BROWSER_TEST_MAIN = "ktorSvelte.test.mainClass"

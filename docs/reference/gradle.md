@@ -34,7 +34,7 @@ svelte {
 }
 ```
 
-`bunVersion` and `nodeVersion` are unset by default, and `libraries { }` is empty.
+`bunVersion` and `nodeVersion` are unset by default, and `libraries { }` and `utils { }` are empty.
 
 ## Settings
 
@@ -54,6 +54,7 @@ svelte {
 | `precompress` | `true` | Gzips text files of 1 KiB or more that have no `.br` or `.gz` variant yet, such as SVG, JSON and fonts from `static/`, and keeps the result only when it saves at least 10% |
 | `verifyLeaks` | `true` | Runs `svelteVerifyLeaks` before the build goes into the JAR. See [Secrets in the frontend build](../features/runtime-config.md#secrets-in-the-frontend-build) |
 | `libraries { }` | empty | Tailwind, DaisyUI, Lucide, i18n, typed routes and more. See [Libraries](#libraries) |
+| `utils { }` | empty | Helpers for the Kotlin side, such as `flyway { }`, which adds `generateMigrations`. See [Utils](#utils) |
 | `naming { }` | no rules | Naming rules for pages, API routes, DTOs and message keys that `svelteVerifyNaming` checks. See [svelteVerifyNaming](../guide/checks-and-tooling.md#svelteverifynaming) |
 | `frontend(name) { }` | none | Another SvelteKit project served under its own path prefix, with `frontendDir`, `outputDir`, `buildScript`, `basePath` and `devPort`. See [Multiple frontends](../guide/multiple-frontends.md) |
 
@@ -114,6 +115,24 @@ svelte {
 | `components()` | none | |
 | `charts()` | none | |
 | `generatedPackage` | | `"io.github.nijasc.ktorsvelte"`, the package of the generated Kotlin |
+
+## Utils
+
+Everything in `utils { }` is off until you call it.
+
+```kotlin
+svelte {
+    utils {
+        flyway {
+            migrationsDir = layout.projectDirectory.dir("src/main/resources/db/migration")
+        }
+    }
+}
+```
+
+| Call | Settings inside | Default inside |
+|---|---|---|
+| `flyway { }` | `enabled`, `migrationsDir`. Adds the `generateMigrations` task. See [Generate a migration](../guide/dev-workflow.md#generate-a-migration) | `enabled = true` once called, `migrationsDir` is `src/main/resources/db/migration` |
 
 ## Review your configuration
 
@@ -292,6 +311,7 @@ These run as part of `jar` and `processResources`, so you rarely call them yours
 |---|---|---|
 | `svelteInit` | `--package-manager=bun` | Creates a working SvelteKit project in an empty `frontendDir`, then runs `svelteSync` and `svelteGenerateRunConfigurations` |
 | `svelteAdd` | `--page`, `--route`, `--crud` | [Creates a page](../features/routes.md#a-new-page) with a typed load: `svelteAdd --page=notes/[id]`. `--route` adds a Kotlin route to start from. `svelteAdd --crud=Note` writes [list, detail and form pages for a class](../features/routes.md#pages-for-a-class) |
+| `generateMigrations` | `--name` | Only with `utils { flyway() }`. Starts the app once and writes the next Flyway migration with what its Exposed tables need and the database lacks: `generateMigrations --name=add_tags`. See [Generate a migration](../guide/dev-workflow.md#generate-a-migration) |
 | `svelteRename` | `--page`, `--to`, `--force` | [Moves a page](../features/routes.md#renaming-a-page) and rewrites its typed route calls in the frontend and in Kotlin: `svelteRename --page=notes/[id] --to=memos/[id]`. `--force` renames even with uncommitted changes |
 
 ### Test and deploy
