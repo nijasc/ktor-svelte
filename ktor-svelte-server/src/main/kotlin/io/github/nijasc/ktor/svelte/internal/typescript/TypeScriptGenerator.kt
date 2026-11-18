@@ -350,7 +350,7 @@ internal class TypeScriptGenerator(
         schema: String,
         schemas: Map<String, JsonElement>,
     ): String {
-        val same = schemas.keys.firstOrNull { typeName(it) == kotlinName }
+        val same = schemas.keys.firstOrNull { typeName(it) == typeName(kotlinName) }
         if (same != null) return "\nexport type $name = ${typeName(same)};\n"
         return "\n" + declaration(name, Json.parseToJsonElement(schema).jsonObject, mutableSetOf(), schemas)
     }
@@ -1461,7 +1461,32 @@ private fun typeName(raw: String): String =
         .filter { it.isNotEmpty() }
         .joinToString("") { pascalCase(it) }
         .ifEmpty { "Unnamed" }
-        .let { if (it.first().isDigit()) "_$it" else it }
+        .let { if (it.first().isDigit() || it in GLOBAL_NAMES) "_$it" else it }
+
+private val GLOBAL_NAMES =
+    setOf(
+        "Array",
+        "Awaited",
+        "BigInt",
+        "Date",
+        "Extract",
+        "File",
+        "Intl",
+        "JSON",
+        "Math",
+        "Number",
+        "Object",
+        "Omit",
+        "Partial",
+        "Pick",
+        "Promise",
+        "Record",
+        "RegExp",
+        "Required",
+        "ReturnType",
+        "String",
+        "URL",
+    )
 
 private fun pascalCase(value: String): String = camelCase(value).replaceFirstChar { it.uppercase() }
 

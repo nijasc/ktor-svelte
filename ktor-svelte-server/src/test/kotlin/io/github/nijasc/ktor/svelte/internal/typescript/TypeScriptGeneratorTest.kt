@@ -134,6 +134,36 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `a class named like a global the generated code uses does not hide that global`() {
+        val record = """{"type":"object","required":["id"],"properties":{"id":{"type":"string"}}}"""
+        val holder =
+            """{"type":"object","required":["m","at"],"properties":{"m":{"type":"object","additionalProperties":{"type":"string"}},""" +
+                """"at":{"type":"string","format":"date"},"r":{"${'$'}ref":"#/components/schemas/Record"}}}"""
+        val returnsFile =
+            """{"200":{"description":"","content":{"application/json":{"schema":{"${'$'}ref":"#/components/schemas/File"}}}}}"""
+        val multipart =
+            """{"content":{"multipart/form-data":{"schema":{"type":"object","properties":{"f":{"type":"string","format":"binary"}}}}}}"""
+        val generated =
+            generate(
+                paths = """{"/api/files":{"get":{"responses":$returnsFile},"post":{"requestBody":$multipart}}}""",
+                schemas = """{"Record":$record,"File":$record,"Date":$record,"Holder":$holder}""",
+            )
+        val types = generated.getValue("types.ts")
+        assertContains(types, "export interface _Record {")
+        assertContains(types, "export interface _File {")
+        assertContains(types, "export const _Date = {")
+        assertContains(types, "    m: Record<string, string>;")
+        assertContains(types, "    r?: _Record;")
+        assertContains(types, "new Date(")
+        assertFalse(Regex("\\b(interface|const) (Record|File|Date)\\b").containsMatchIn(types))
+        val services = generated.getValue("services.ts")
+        assertContains(services, "import type { _File } from './types.js';")
+        assertContains(services, "request<_File>('GET', '/api/files'")
+        assertContains(services, "(body: { f?: File }, options?: RequestOptions)")
+        assertContains(services, "const errorStatuses: Record<string, number[]>")
+    }
+
+    @Test
     fun `single value enums stay literals`() {
         val source = types("""{"A":{"type":"object","properties":{"kind":{"type":"string","enum":["Only"]}}}}""")
         assertContains(source, "kind?: 'Only';")
