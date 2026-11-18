@@ -85,10 +85,10 @@ internal fun pageLoadsSource(
                 calls.joinToString(",\n") { "    $it" } + "\n" +
                 "        ]);\n" +
                 "    const inline = inlinePageData(event.url.pathname);\n" +
-                "    const [${keys.joinToString()}] = inline\n" +
+                "    const loaded = inline\n" +
                 "        ? (${keys.joinToString(", ", "[", "]") { "inline.$it" }} as Awaited<ReturnType<typeof load>>)\n" +
                 "        : await load();\n" +
-                "    return { ${keys.joinToString()} };\n" +
+                "    return { ${keys.mapIndexed { index, key -> "$key: loaded[$index]" }.joinToString()} };\n" +
                 "}\n"
         }
     return "import { inlinePageData } from './client.js';\nimport { apiWith } from './services.js';\n\n$functions"
