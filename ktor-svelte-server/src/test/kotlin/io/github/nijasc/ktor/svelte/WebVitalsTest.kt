@@ -15,6 +15,7 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
@@ -24,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class WebVitalsTest {
     @TempDir
@@ -118,6 +120,15 @@ class WebVitalsTest {
             assertEquals(HttpStatusCode.PayloadTooLarge, report("""{"page":"/${"x".repeat(3000)}","metrics":{"LCP":1}}""").status)
             assertEquals(HttpStatusCode.TooManyRequests, report("""{"page":"/board","metrics":{"LCP":1}}""").status)
             assertEquals(emptyList(), running.svelteMetrics.webVitals)
+        }
+
+    @Test
+    fun `a chunked report is cut off at the limit instead of read to the end`() =
+        app {
+            val sent = AtomicLong()
+            val response = client.post("/_ktor-svelte/vitals") { hugeChunkedBody(sent) }
+            assertEquals(HttpStatusCode.PayloadTooLarge, response.status)
+            assertTrue(sent.get() < 4 * 1024 * 1024, "the server read ${sent.get()} bytes of a report limited to 2 KiB")
         }
 
     @Test

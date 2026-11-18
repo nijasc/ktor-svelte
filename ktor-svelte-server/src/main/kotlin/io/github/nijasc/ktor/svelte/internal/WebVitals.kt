@@ -5,7 +5,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.origin
 import io.ktor.server.request.header
-import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.openapi.hide
@@ -131,8 +130,7 @@ internal fun Route.webVitalsRoute(
         if (!limiter.allows(call.request.origin.remoteAddress)) return@post call.respond(HttpStatusCode.TooManyRequests)
         val declared = call.request.header(HttpHeaders.ContentLength)?.toLongOrNull()
         if (declared != null && declared > MAX_BODY_BYTES) return@post call.respond(HttpStatusCode.PayloadTooLarge)
-        val body = call.receiveText()
-        if (body.toByteArray().size > MAX_BODY_BYTES) return@post call.respond(HttpStatusCode.PayloadTooLarge)
+        val body = call.receiveTextUpTo(MAX_BODY_BYTES) ?: return@post call.respond(HttpStatusCode.PayloadTooLarge)
         val report = runCatching { lenient.decodeFromString<VitalsReport>(body) }.getOrNull()
         if (report == null || !recordVitals(store, report, paramRoutes)) return@post call.respond(HttpStatusCode.BadRequest)
         call.respond(HttpStatusCode.NoContent)
