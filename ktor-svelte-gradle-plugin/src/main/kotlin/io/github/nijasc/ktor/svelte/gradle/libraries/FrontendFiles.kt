@@ -187,8 +187,8 @@ private fun breadcrumbs(daisy: Boolean): String =
 private const val SIDEBAR_STYLE =
     "\n<style>\n" +
         "    .ktor-svelte-sidebar-layout {\n        display: grid;\n" +
-        "        grid-template-columns: 14rem 1fr;\n        gap: 1rem;\n    }\n\n" +
-        "    .ktor-svelte-sidebar-layout[data-collapsed='true'] {\n        grid-template-columns: 3.5rem 1fr;\n    }\n\n" +
+        "        grid-template-columns: 14rem minmax(0, 1fr);\n        gap: 1rem;\n    }\n\n" +
+        "    .ktor-svelte-sidebar-layout[data-collapsed='true'] {\n        grid-template-columns: 3.5rem minmax(0, 1fr);\n    }\n\n" +
         "    .ktor-svelte-sidebar-list {\n        display: grid;\n        gap: 0.25rem;\n        margin: 0;\n        padding: 0;\n" +
         "        list-style: none;\n    }\n\n" +
         "    .ktor-svelte-sidebar-link {\n        display: flex;\n        gap: 0.5rem;\n        align-items: center;\n    }\n\n" +
@@ -197,7 +197,7 @@ private const val SIDEBAR_STYLE =
         "        overflow: hidden;\n        clip: rect(0 0 0 0);\n        white-space: nowrap;\n    }\n\n" +
         "    @media (max-width: 768px) {\n" +
         "        .ktor-svelte-sidebar-layout,\n        .ktor-svelte-sidebar-layout[data-collapsed='true'] {\n" +
-        "            grid-template-columns: 1fr;\n        }\n\n" +
+        "            grid-template-columns: minmax(0, 1fr);\n        }\n\n" +
         "        .ktor-svelte-sidebar-menu {\n            display: inline-block;\n            justify-self: start;\n        }\n\n" +
         "        .ktor-svelte-sidebar-nav,\n        .ktor-svelte-sidebar-collapse {\n            display: none;\n        }\n\n" +
         "        .ktor-svelte-sidebar-layout[data-open='true'] .ktor-svelte-sidebar-nav {\n            display: block;\n" +
