@@ -766,6 +766,15 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `a wide table next to the sidebar scrolls in its own box and the page keeps the width of the screen`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.setViewportSize(360, 740)
+        page.navigate("/admin")
+        assertThat(page.locator("table").first().locator("tbody tr").first()).isVisible()
+        assertEquals(0, page.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth"))
+    }
+
+    @Test
     fun `after a navigation in the app the new page's heading has the focus`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigationLink("Settings").click()

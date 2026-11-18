@@ -91,12 +91,12 @@
 <style>
     .ktor-svelte-sidebar-layout {
         display: grid;
-        grid-template-columns: 14rem 1fr;
+        grid-template-columns: 14rem minmax(0, 1fr);
         gap: 1rem;
     }
 
     .ktor-svelte-sidebar-layout[data-collapsed='true'] {
-        grid-template-columns: 3.5rem 1fr;
+        grid-template-columns: 3.5rem minmax(0, 1fr);
     }
 
     .ktor-svelte-sidebar-list {
@@ -130,7 +130,7 @@
     @media (max-width: 768px) {
         .ktor-svelte-sidebar-layout,
         .ktor-svelte-sidebar-layout[data-collapsed='true'] {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
         }
 
         .ktor-svelte-sidebar-menu {
