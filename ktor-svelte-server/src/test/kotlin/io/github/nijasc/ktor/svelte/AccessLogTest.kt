@@ -63,6 +63,10 @@ class AccessLogTest {
             accessLine("GET", """/files/my "big" file=1.txt""", 200, 3, null),
         )
         assertEquals("method=GET path=/ status=200 ms=1", accessLine("GET", "/", 200, 1, "bad id\nmethod=DELETE"))
+        assertEquals(
+            """method=GET path="/a\u2028b\u0085c\u0000" status=200 ms=1""",
+            accessLine("GET", "/a\u2028b\u0085c\u0000", 200, 1, null),
+        )
     }
 
     @Test
@@ -83,6 +87,18 @@ class AccessLogTest {
                 "method=GET path=/api/missing status=404 ms=N id=req-4",
             ),
             lines,
+        )
+    }
+
+    @Test
+    fun `an encoded line break in the path cannot start a log line of its own`() {
+        val forged = "/x%0D%0Amethod=DELETE%20path=/api/users%20status=200%1B[2K"
+        val lines = logged { client.get(forged) { header("X-Request-Id", "req-1") } }
+        assertEquals(1, lines.size, lines.toString())
+        assertTrue(lines.single().none { it.isISOControl() }, lines.single())
+        assertEquals(
+            """method=GET path="/x\u000d\u000amethod=DELETE path=/api/users status=200\u001b[2K" status=200 ms=N id=req-1""",
+            lines.single(),
         )
     }
 
