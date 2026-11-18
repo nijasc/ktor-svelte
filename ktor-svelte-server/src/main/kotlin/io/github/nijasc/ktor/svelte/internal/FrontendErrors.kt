@@ -2,14 +2,17 @@ package io.github.nijasc.ktor.svelte.internal
 
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.origin
 import io.ktor.server.request.header
-import io.ktor.server.request.receiveText
+import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.openapi.hide
 import io.ktor.server.routing.post
 import io.ktor.utils.io.ExperimentalKtorApi
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.Logger
@@ -63,6 +66,11 @@ internal class ReportLimiter(
     }
 }
 
+internal suspend fun ApplicationCall.receiveTextUpTo(limit: Int): String? {
+    val bytes = receiveChannel().readRemaining(limit + 1L).readByteArray()
+    return if (bytes.size > limit) null else bytes.decodeToString()
+}
+
 private fun oneLine(
     text: String,
     limit: Int,
@@ -95,8 +103,7 @@ internal fun Route.frontendErrorRoute(
         if (!limiter.allows(call.request.origin.remoteAddress)) return@post call.respond(HttpStatusCode.TooManyRequests)
         val declared = call.request.header(HttpHeaders.ContentLength)?.toLongOrNull()
         if (declared != null && declared > maxBodyBytes) return@post call.respond(HttpStatusCode.PayloadTooLarge)
-        val body = call.receiveText()
-        if (body.toByteArray().size > maxBodyBytes) return@post call.respond(HttpStatusCode.PayloadTooLarge)
+        val body = call.receiveTextUpTo(maxBodyBytes) ?: return@post call.respond(HttpStatusCode.PayloadTooLarge)
         val line = runCatching { lenient.decodeFromString<FrontendError>(body) }.getOrNull()?.let(::frontendErrorLine)
         if (line == null) return@post call.respond(HttpStatusCode.BadRequest)
         logger.warn(line)
