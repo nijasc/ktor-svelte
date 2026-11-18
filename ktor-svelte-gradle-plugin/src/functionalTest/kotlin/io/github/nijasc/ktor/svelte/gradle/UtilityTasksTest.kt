@@ -614,9 +614,9 @@ class UtilityTasksTest {
 
         val output = project.run("generateMigrations", "--name=add_tags").output
 
-        assertContains(output, "folder=" + dir.resolve("src/main/resources/db/migration").absolutePath)
+        assertContains(output, "folder=" + dir.resolve("src/main/resources/db/migration").canonicalPath)
         assertContains(output, "name=add_tags")
-        assertContains(output, "classes=" + dir.resolve("build/classes/java/main").absolutePath)
+        assertContains(output, "classes=" + dir.resolve("build/classes/java/main").canonicalPath)
         assertContains(output, "ktor-svelte: Wrote V3__add_tags.sql with 1 statement")
         assertEquals(emptyList(), project.calls())
     }
@@ -628,7 +628,7 @@ class UtilityTasksTest {
 
         val output = project.runAndFail("generateMigrations").output
 
-        assertContains(output, "folder=" + dir.resolve("db/sql").absolutePath)
+        assertContains(output, "folder=" + dir.resolve("db/sql").canonicalPath)
         assertContains(output, "name=null")
         assertContains(output, "The database has not run V2__b.sql yet")
     }
