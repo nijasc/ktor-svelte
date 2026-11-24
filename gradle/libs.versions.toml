@@ -19,7 +19,7 @@ axePlaywright = "4.14.0"
 ideaExt = "1.4.1"
 dokka = "2.3.0"
 cyclonedx = "3.6.1"
-micrometer = "1.17.2"
+micrometer = "1.18.0"
 
 [libraries]
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
