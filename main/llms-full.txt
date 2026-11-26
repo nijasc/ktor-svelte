@@ -6921,6 +6921,7 @@ The components import from `#api`, so they need `generateTs = true` on the serve
 |---|---|---|
 | [`Field`](#field) | `components()` | A label, an input, a hint and its validation errors |
 | [`DateInput`, `DateTimeInput`](#dateinput-and-datetimeinput) | `components()` | Date and date-time inputs bound to the API's date text, `null` when empty |
+| [`IconInput`](#iconinput) | `components()` and `lucide()` | A field with an icon inside, a clear button and a show button for passwords |
 | [`EnumSelect`](#enumselect) | `components()` | A select over a generated enum |
 | [`DataTable`](#datatable) | `components()` | A table over a route that returns `Page<T>` |
 | [`FileDrop`](#filedrop) | `components()` | A drop area with progress for an upload route |
@@ -7054,6 +7055,38 @@ A text field that formats while you type, for values people read in groups: phon
 - Money keeps a decimal separator you just typed, so `1234,` stays on screen while the value is `1234`. It never goes through a JavaScript number, so large amounts keep every digit.
 - When you leave the field, a complete value is shown in its tidy form. An incomplete date stays as typed, with `null` as the value, so the form's validation can say it is required.
 - For another format, pass an object with `show(clean)`, `retype(typed)`, `clean(typed)`, `keeps(character)` and `inputMode`, the same shape `masks.ts` exports for the four built-in ones.
+
+## IconInput
+
+A `Field` with a [Lucide icon](https://nijasc.github.io/ktor-svelte/main/features/icons-and-images) inside the box, for fields people find by their icon: email, search, passwords. It is generated when both `components()` and `lucide()` are on:
+
+```svelte
+<script lang="ts">
+    import IconInput from '#components/IconInput.svelte';
+</script>
+
+<IconInput label="Email" icon="Mail" type="email" bind:value={form.draft.email} bounds={SignUp.bounds.email} errors={form.errors.email} />
+<IconInput label="Search" icon="Search" type="search" clearable bind:value={query} />
+<IconInput label="Password" icon="LockKeyhole" type="password" autocomplete="current-password" bind:value={form.draft.password} />
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `label` | required | The label, as for `Field` |
+| `icon` | required | A `LucideIconName`, shown at the start of the box. Names are type checked |
+| `trailingIcon` | | A second icon at the end of the box. A password field shows its show button there instead |
+| `type` | from `bounds`, else `text` | `text`, `email`, `search`, `url`, `tel` or `password` |
+| `clearable` | `false` | Shows a clear button while the field has a value. Escape clears it too |
+| `clearLabel`, `showLabel`, `hideLabel` | `Clear`, `Show password`, `Hide password` | The accessible names of the buttons. Pass your translations here |
+| `value` | | `bind:value`; `null` after clearing |
+| `bounds`, `errors`, `hint`, `id`, `class` | | As for `Field` |
+
+- The icons are decorative and hidden from screen readers. The label names the field.
+- The show button is a toggle with `aria-pressed`, and it switches the field to plain text and back. The browser's own reveal and clear buttons are hidden, so there is only one of each.
+- Clearing puts the focus back into the field.
+- Validation messages appear under the box, not inside it, and stay tied to the input through `aria-describedby`.
+- With daisyUI the box is an `input`, so it follows the theme. Without it, the component carries a small style of its own.
+- The icon you pass is picked up by the icon scan like any other quoted icon name, so it is in the production build.
 
 ## ErrorSummary
 
