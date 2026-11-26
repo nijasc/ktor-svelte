@@ -292,6 +292,29 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `an icon input reveals the password on request and keeps its errors below the box`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page.navigate("/settings")
+        val next = page.locator("#password-next")
+        val toggle = page.locator("button[aria-controls=password-next]")
+        next.fill("short")
+        assertThat(toggle).hasAttribute("aria-label", "Show password")
+        toggle.click()
+        assertThat(next).hasAttribute("type", "text")
+        assertThat(toggle).hasAttribute("aria-pressed", "true")
+        assertThat(toggle).hasAttribute("aria-label", "Hide password")
+        toggle.click()
+        assertThat(next).hasAttribute("type", "password")
+
+        page.getByLabel("Current password").fill(ADMIN_PASSWORD)
+        next.press("Enter")
+        assertThat(next).hasAttribute("aria-invalid", "true")
+        val box = next.locator("xpath=..")
+        assertThat(box.locator("[role=alert]")).hasCount(0)
+        assertThat(box.locator("xpath=following-sibling::*[@role='alert']")).not().isEmpty()
+    }
+
+    @Test
     fun `generated date and enum inputs put typed values into the request`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.navigate("/tasks/new")

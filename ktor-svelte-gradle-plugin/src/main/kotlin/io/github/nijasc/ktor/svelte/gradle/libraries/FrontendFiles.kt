@@ -81,6 +81,20 @@ private const val PLAIN_FIELD_STYLE =
         "        margin-left: 0.4em;\n        border-radius: 50%;\n        background: currentColor;\n        opacity: 0.6;\n    }\n" +
         "</style>\n"
 
+private const val PLAIN_ICON_INPUT_STYLE =
+    "\n    .ktor-svelte-icon-input {\n        display: flex;\n        align-items: center;\n        gap: 0.5rem;\n" +
+        "        padding: 0 0.5rem;\n        border: 1px solid color-mix(in srgb, currentColor 30%, transparent);\n" +
+        "        border-radius: 0.375rem;\n    }\n\n" +
+        "    .ktor-svelte-icon-input:focus-within {\n        outline: 2px solid currentColor;\n        outline-offset: 1px;\n    }\n\n" +
+        "    .ktor-svelte-icon-input-control {\n        flex: 1;\n        min-width: 0;\n        padding: 0.5rem 0;\n        border: 0;\n" +
+        "        background: transparent;\n        color: inherit;\n        font: inherit;\n        outline: none;\n    }\n\n" +
+        "    .ktor-svelte-icon-input-icon {\n        display: inline-flex;\n        flex-shrink: 0;\n        opacity: 0.6;\n    }\n\n" +
+        "    .ktor-svelte-icon-input-button {\n        display: inline-flex;\n        padding: 0.25rem;\n        border: 0;\n" +
+        "        border-radius: 0.25rem;\n        background: none;\n        color: inherit;\n" +
+        "        cursor: pointer;\n        opacity: 0.7;\n    }\n\n" +
+        "    .ktor-svelte-icon-input-button:hover,\n    .ktor-svelte-icon-input-button:focus-visible {\n        opacity: 1;\n    }\n\n" +
+        "    .ktor-svelte-icon-input-button:focus-visible {\n        outline: 2px solid currentColor;\n    }\n"
+
 private const val PLAIN_TABLE_STYLE =
     "\n<style>\n" +
         "    .ktor-svelte-table-wrap {\n        overflow-x: auto;\n    }\n\n" +
@@ -210,6 +224,18 @@ private const val SIDEBAR_STYLE =
         "            width: auto;\n            height: auto;\n            clip: auto;\n        }\n" +
         "    }\n" +
         "</style>\n"
+
+private fun iconInput(daisy: Boolean): String =
+    renderTemplate(
+        "components/IconInput.svelte",
+        mapOf(
+            "box" to if (daisy) "input w-full" else "ktor-svelte-icon-input",
+            "icon" to if (daisy) "shrink-0 opacity-60" else "ktor-svelte-icon-input-icon",
+            "control" to "ktor-svelte-icon-input-control" + if (daisy) " grow" else "",
+            "button" to if (daisy) "btn btn-ghost btn-xs btn-square -me-1" else "ktor-svelte-icon-input-button",
+            "style" to if (daisy) "" else PLAIN_ICON_INPUT_STYLE,
+        ),
+    )
 
 private fun sidebar(
     daisy: Boolean,
@@ -357,6 +383,7 @@ internal fun componentFiles(
             if (spec.routes) put("$COMPONENTS_DIR/Breadcrumbs.svelte", breadcrumbs(daisy))
             put("$COMPONENTS_DIR/Sidebar.svelte", sidebar(daisy, spec.lucide))
             put("$COMPONENTS_DIR/FocusHeading.svelte", renderTemplate("components/FocusHeading.svelte"))
+            if (spec.lucide) put("$COMPONENTS_DIR/IconInput.svelte", iconInput(daisy))
             if (spec.i18n != null) {
                 put("$COMPONENTS_DIR/TimeAgo.svelte", renderTemplate("components/TimeAgo.svelte"))
                 val classes = mapOf("select" to if (daisy) "select select-sm" else "ktor-svelte-locale-switch")

@@ -13,7 +13,29 @@ class ComponentsTest {
     private fun spec(
         components: Boolean,
         withDaisy: Boolean = false,
-    ) = LibrarySpec(null, daisy.takeIf { withDaisy }, false, null, 5173, "app.generated", components = components)
+        lucide: Boolean = false,
+    ) = LibrarySpec(null, daisy.takeIf { withDaisy }, lucide, null, 5173, "app.generated", components = components)
+
+    @Test
+    fun `the icon input comes only with lucide and keeps the field action and its messages`() {
+        assertFalse("$COMPONENTS_DIR/IconInput.svelte" in componentFiles(spec(components = true)))
+        val plain = componentFiles(spec(components = true, lucide = true)).getValue("$COMPONENTS_DIR/IconInput.svelte")
+        assertContains(plain, "import Icon from '../Icon.svelte';")
+        assertContains(plain, "icon: LucideIconName;")
+        assertContains(plain, "<div class=\"ktor-svelte-icon-input\" use:keepMessagesBelow>")
+        assertContains(plain, "class=\"ktor-svelte-icon-input-control\"")
+        assertContains(plain, "use:field={options}")
+        assertContains(plain, "box.after(message)")
+        assertContains(plain, "aria-pressed={revealed}")
+        assertContains(plain, ".ktor-svelte-icon-input:focus-within {")
+        assertFalse("{{" in plain)
+        val styled = componentFiles(spec(components = true, withDaisy = true, lucide = true)).getValue("$COMPONENTS_DIR/IconInput.svelte")
+        assertContains(styled, "<div class=\"input w-full\" use:keepMessagesBelow>")
+        assertContains(styled, "class=\"ktor-svelte-icon-input-control grow\"")
+        assertContains(styled, "class=\"btn btn-ghost btn-xs btn-square -me-1\"")
+        assertFalse(".ktor-svelte-icon-input {" in styled)
+        assertFalse("{{" in styled)
+    }
 
     @Test
     fun `components are generated only when the library is on`() {
