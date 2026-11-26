@@ -112,6 +112,7 @@ public class Setup {
         boolean auth = confirm("auth", "Add sign in with cookie sessions?", false);
         boolean database = confirm("database", "Add a Postgres database with Exposed?", false);
         boolean flyway = database && confirm("flyway", "Add Flyway migrations?", true);
+        boolean exposedTime = database && confirm("exposed-time", "Add Exposed dates and times (timestamp, date and datetime columns)?", true);
         UI.section("Architecture");
         Hexagon hexagon = confirm("hexagonal", "Split the backend into domain driven, hexagonal modules?", false) ? askHexagon() : null;
         boolean conventions = hexagon != null || confirm("conventions", "Add a convention plugin in build-logic, for multi-module projects?", false);
@@ -125,7 +126,7 @@ public class Setup {
         boolean docker = railway != null || confirm("docker", "Add a Dockerfile?", true);
         if (railway != null && flags.containsKey("no-docker")) UI.note("Railway builds the Dockerfile, so it is added anyway.");
         boolean agents = confirm("agents", "Prepare the project for agentic usage (AGENTS.md, CLAUDE.md and agent permissions)?", true);
-        Extras extras = new Extras(agents, railway);
+        Extras extras = new Extras(agents, railway, exposedTime);
         boolean liveTemplates = confirm("live-templates", "Install the ktor-svelte live templates into IntelliJ and WebStorm?", true);
         boolean git = isOnPath("git") && confirm("git", "Create a git repository?", true);
         Optional<List<String>> idea = findIntellij();
@@ -203,16 +204,18 @@ public class Setup {
         Files.writeString(directory.resolve("gradle.properties"), "org.gradle.configuration-cache=true\nkotlin.code.style=official\n");
         Files.writeString(directory.resolve(".gitignore"), GITIGNORE);
         Files.writeString(directory.resolve(".editorconfig"), EDITORCONFIG);
-        Files.writeString(directory.resolve("gradle/libs.versions.toml"), versionCatalog(versions, auth, database, flyway, flatPackages, conventions, hexagon));
-        Files.writeString(directory.resolve("build.gradle.kts"), buildScript(packageName, auth, database, flyway, flatPackages, conventions, tailwind, daisy, lucide, i18n, locales, strategy, hexagon, releasePlease));
+        Files.writeString(directory.resolve("gradle/libs.versions.toml"), versionCatalog(versions, auth, database, flyway, flatPackages, conventions, hexagon, extras.exposedTime()));
+        Files.writeString(directory.resolve("build.gradle.kts"), buildScript(packageName, auth, database, flyway, flatPackages, conventions, tailwind, daisy, lucide, i18n, locales, strategy, hexagon, releasePlease)
+            .replace("    implementation(libs.exposed.jdbc)\n",
+                extras.exposedTime() ? "    implementation(libs.exposed.jdbc)\n    implementation(libs.exposed.kotlin.datetime)\n" : "    implementation(libs.exposed.jdbc)\n"));
         if (conventions) writeBuildLogic(directory, hexagon != null);
-        if (hexagon != null) writeHexagon(directory, packageName, hexagon, database);
+        if (hexagon != null) writeHexagon(directory, packageName, hexagon, database, extras.exposedTime());
         Files.writeString(directory.resolve(".env.example"), envExample(name, auth, database));
         if (auth || database) Files.writeString(directory.resolve(".env"), localEnv(name, auth, database));
-        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck, dependabot, extras.railway()));
+        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck, dependabot, extras.railway(), extras.exposedTime()));
         if (extras.agents()) {
             AgentGuide guide = new AgentGuide(name, packageName, manager, flatPackages, generateTs, tailwind || lucide || i18n, i18n, auth, database, flyway,
-                hexagon, docker, actions, releasePlease, commitCheck, dependabot, extras.railway());
+                hexagon, docker, actions, releasePlease, commitCheck, dependabot, extras.railway(), extras.exposedTime());
             writeAgentFiles(directory, guide);
         }
         Path source = flatPackages ? directory.resolve("src/main/kotlin") : directory.resolve("src/main/kotlin").resolve(packageName.replace('.', '/'));
@@ -222,10 +225,10 @@ public class Setup {
         Files.writeString(source.resolve("Errors.kt"), errorsSource(packageName, hexagon));
         if (auth) Files.writeString(source.resolve("Auth.kt"), fill(AUTH_KT, packageName));
         if (auth) Files.writeString(source.resolve(database ? "DatabaseUserStore.kt" : "MemoryUserStore.kt"), fill(database ? DATABASE_USER_STORE_KT : MEMORY_USER_STORE_KT, packageName));
-        if (database) Files.writeString(source.resolve("Database.kt"), fill(databaseSource(packageName, auth, flyway, hexagon), packageName));
+        if (database) Files.writeString(source.resolve("Database.kt"), fill(databaseSource(packageName, auth, flyway, hexagon, extras.exposedTime()), packageName));
         Files.createDirectories(directory.resolve("src/main/resources"));
         Files.writeString(directory.resolve("src/main/resources/logback.xml"), LOGBACK);
-        if (flyway) writeMigration(directory, auth, hexagon);
+        if (flyway) writeMigration(directory, auth, hexagon, extras.exposedTime());
         if (i18n) writeMessages(directory, locales);
         if (database) Files.writeString(directory.resolve("compose.yaml"), COMPOSE);
         if (docker) writeDocker(directory, manager);
@@ -550,7 +553,7 @@ public class Setup {
         return text.toString();
     }
 
-    private static void writeHexagon(Path directory, String packageName, Hexagon hexagon, boolean database) throws IOException {
+    private static void writeHexagon(Path directory, String packageName, Hexagon hexagon, boolean database, boolean exposedTime) throws IOException {
         if (hexagon.kernel()) {
             Path kernel = directory.resolve("shared-kernel");
             writeModuleBuild(kernel, false, List.of());
@@ -564,6 +567,7 @@ public class Setup {
             Path adapters = hexagon.layered() ? directory.resolve(context.name()).resolve("adapters") : domain;
             List<String> adapterLibraries = new ArrayList<>(List.of("implementation(libs.ktor.server.core)", "implementation(libs.ktor.svelte.server)"));
             if (database) adapterLibraries.add("implementation(libs.exposed.jdbc)");
+            if (exposedTime) adapterLibraries.add("implementation(libs.exposed.kotlin.datetime)");
             if (hexagon.layered()) {
                 writeModuleBuild(domain, false, hexagon.kernel() ? List.of("api(projects.sharedKernel)") : List.of());
                 writeModuleBuild(application, false, List.of("api(projects." + accessor(context.name() + "-domain") + ")"));
@@ -885,6 +889,10 @@ public class Setup {
             text.append(guide.flyway()
                 ? "Tables change only through migrations. Never edit a migration that has run. After changing an Exposed table, run `./gradlew generateMigrations` and review the new file.\n\n"
                 : "Missing tables are created when the app starts, but existing ones are never changed. Add Flyway before you need to change a table that holds data.\n\n");
+            if (guide.exposedTime()) {
+                text.append("For dates and times, use the columns from `org.jetbrains.exposed.v1.datetime`: `timestamp` for a moment as `kotlin.time.Instant`, ");
+                text.append("`date` for a `kotlinx.datetime.LocalDate`, `datetime` for a `LocalDateTime`. Use the same types in DTOs, and the TypeScript client gets `IsoDateTime` and `IsoDate`.\n\n");
+            }
         }
 
         if (guide.railway() != null) {
@@ -963,10 +971,12 @@ public class Setup {
         if (routeModules) Files.writeString(logic.resolve("src/main/kotlin/ktor-routes-conventions.gradle.kts"), KTOR_ROUTES_CONVENTIONS);
     }
 
-    private static void writeMigration(Path directory, boolean auth, Hexagon hexagon) throws IOException {
+    private static void writeMigration(Path directory, boolean auth, Hexagon hexagon, boolean exposedTime) throws IOException {
         Path migrations = directory.resolve("src/main/resources/db/migration");
         Files.createDirectories(migrations);
-        StringBuilder tables = new StringBuilder("CREATE TABLE visits (\n    id SERIAL PRIMARY KEY\n);\n");
+        StringBuilder tables = new StringBuilder(exposedTime
+            ? "CREATE TABLE visits (\n    id SERIAL PRIMARY KEY,\n    at TIMESTAMP NOT NULL\n);\n"
+            : "CREATE TABLE visits (\n    id SERIAL PRIMARY KEY\n);\n");
         if (auth) tables.append("\nCREATE TABLE users (\n    username VARCHAR(64) PRIMARY KEY,\n    password_hash VARCHAR(255) NOT NULL\n);\n");
         if (hexagon != null) {
             for (BoundedContext context : hexagon.contexts()) {
@@ -974,6 +984,19 @@ public class Setup {
             }
         }
         Files.writeString(migrations.resolve("V1__create_tables.sql"), tables.toString());
+    }
+
+    private static String databaseSource(String packageName, boolean auth, boolean flyway, Hexagon hexagon, boolean exposedTime) {
+        String source = databaseSource(packageName, auth, flyway, hexagon);
+        if (!exposedTime) return source;
+        return mergeImports(
+            source
+                .replace("    val id = integer(\"id\").autoIncrement()\n", "    val id = integer(\"id\").autoIncrement()\n    val at = timestamp(\"at\")\n")
+                .replace("    val visits: Long,\n)", "    val visits: Long,\n    val at: Instant,\n)")
+                .replace("        val count =\n", "        val now = Clock.System.now()\n        val count =\n")
+                .replace("Visits.insert { }", "Visits.insert { it[at] = now }")
+                .replace("VisitCount(count)", "VisitCount(count, now)"),
+            List.of("org.jetbrains.exposed.v1.datetime.timestamp", "kotlin.time.Clock", "kotlin.time.Instant"));
     }
 
     private static String databaseSource(String packageName, boolean auth, boolean flyway, Hexagon hexagon) {
@@ -996,7 +1019,8 @@ public class Setup {
             .replace("transaction { SchemaUtils.create(__TABLES__) }", "Flyway\n            .configure()\n            .dataSource(dataSource)\n            .load()\n            .migrate()");
     }
 
-    private static String versionCatalog(Versions versions, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, Hexagon hexagon) {
+    private static String versionCatalog(
+        Versions versions, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, Hexagon hexagon, boolean exposedTime) {
         StringBuilder text = new StringBuilder("[versions]\n");
         text.append("kotlin = \"").append(versions.kotlin).append("\"\n");
         text.append("ktor = \"").append(versions.ktor).append("\"\n");
@@ -1031,6 +1055,7 @@ public class Setup {
         text.append("logback = { module = \"ch.qos.logback:logback-classic\", version.ref = \"logback\" }\n");
         if (database) {
             text.append("exposed-jdbc = { module = \"org.jetbrains.exposed:exposed-jdbc\", version.ref = \"exposed\" }\n");
+            if (exposedTime) text.append("exposed-kotlin-datetime = { module = \"org.jetbrains.exposed:exposed-kotlin-datetime\", version.ref = \"exposed\" }\n");
             text.append("hikari = { module = \"com.zaxxer:HikariCP\", version.ref = \"hikari\" }\n");
             text.append("postgresql = { module = \"org.postgresql:postgresql\", version.ref = \"postgresql\" }\n");
         }
@@ -1079,7 +1104,7 @@ public class Setup {
 
     private static String projectReadme(
         String name, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, boolean docker,
-        Hexagon hexagon, boolean releasePlease, boolean commitCheck, boolean dependabot, Railway railway) {
+        Hexagon hexagon, boolean releasePlease, boolean commitCheck, boolean dependabot, Railway railway, boolean exposedTime) {
         StringBuilder text = new StringBuilder("# ").append(name).append("\n\n");
         text.append("A Ktor app with a SvelteKit frontend, served from one JAR on one port by [ktor-svelte](https://github.com/nijasc/ktor-svelte).\n\n");
         text.append("## Develop\n\n```bash\n");
@@ -1115,6 +1140,9 @@ public class Setup {
                 ? "`Database.kt` connects when the app starts and Flyway runs any new migration in `src/main/resources/db/migration`. Add a new file for each change and never edit one that has already run: after changing a table, `./gradlew generateMigrations` writes the next one for you. "
                 : "`Database.kt` connects when the app starts and creates missing tables, but it does not change existing ones. ");
             text.append("`POST /api/visits` shows the pattern with a small example table, so replace it with your own.\n\n");
+            if (exposedTime) {
+                text.append("Exposed's date and time module is included: `timestamp`, `date` and `datetime` columns from `org.jetbrains.exposed.v1.datetime` read and write `kotlin.time.Instant` and kotlinx-datetime values, as the `at` column of the example table shows.\n\n");
+            }
         }
         if (flatPackages || conventions) {
             text.append("## Project layout\n\n");
@@ -1913,7 +1941,7 @@ public class Setup {
         private static final long serialVersionUID = 1L;
     }
 
-    private record Extras(boolean agents, Railway railway) {}
+    private record Extras(boolean agents, Railway railway, boolean exposedTime) {}
 
     private record Railway(String deployOn, String branch, boolean releasePlease) {
         boolean fromReleasePlease() {
@@ -1946,7 +1974,8 @@ public class Setup {
         boolean releasePlease,
         boolean commitCheck,
         boolean dependabot,
-        Railway railway
+        Railway railway,
+        boolean exposedTime
     ) {}
 
     private record BoundedContext(String name, String aggregate) {}
