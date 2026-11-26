@@ -39,6 +39,7 @@ public class Setup {
     private static final List<String> MANAGERS = List.of("bun", "pnpm", "npm", "yarn");
     private static final boolean WINDOWS = System.getProperty("os.name", "").startsWith("Windows");
     private static final Ui UI = new Ui();
+    private static final Keys KEYS = new Keys();
 
     private final Map<String, String> flags;
     private final boolean acceptDefaults;
@@ -341,6 +342,11 @@ public class Setup {
             UI.answered(question, options.get(0), 0);
             return options.get(0);
         }
+        if (KEYS.available()) {
+            String picked = UI.menu(question, options, KEYS);
+            UI.answered(question, picked, options.size() + 1);
+            return picked;
+        }
         UI.choices(question, options);
         int lines = options.size() + 1;
         while (true) {
@@ -372,6 +378,11 @@ public class Setup {
         if (preset != null) {
             UI.answered(question, preset ? "Yes" : "No", 0);
             return preset;
+        }
+        if (KEYS.available()) {
+            boolean picked = UI.toggle(question, fallback, KEYS);
+            UI.answered(question, picked ? "Yes" : "No", 1);
+            return picked;
         }
         int lines = 0;
         while (true) {
@@ -1405,6 +1416,66 @@ public class Setup {
             out.println("  " + green(check) + " " + label + dim(" : ") + cyan(value));
         }
 
+        String menu(String question, List<String> options, Keys keys) throws IOException {
+            String keysHint = unicode ? "↑ ↓ and Enter" : "up, down and Enter";
+            out.println("  " + cyan(mark) + " " + bold(question) + " " + dim("(" + keysHint + ")"));
+            int[] selected = {0};
+            drawOptions(options, selected[0]);
+            return keys.raw(() -> {
+                while (true) {
+                    String key = keys.key();
+                    int count = options.size();
+                    if (key.equals("enter") || key.equals("space")) return options.get(selected[0]);
+                    if (key.equals("up") || key.equals("k")) selected[0] = (selected[0] + count - 1) % count;
+                    else if (key.equals("down") || key.equals("j") || key.equals("tab")) selected[0] = (selected[0] + 1) % count;
+                    else if (key.length() == 1 && Character.isDigit(key.charAt(0))) {
+                        int number = key.charAt(0) - '0';
+                        if (number >= 1 && number <= count) selected[0] = number - 1;
+                    } else continue;
+                    out.print("\033[" + count + "A");
+                    drawOptions(options, selected[0]);
+                }
+            });
+        }
+
+        private void drawOptions(List<String> options, int selected) {
+            String pointer = unicode ? "❯" : ">";
+            for (int index = 0; index < options.size(); index++) {
+                String line = index == selected ? "    " + cyan(pointer) + " " + bold(options.get(index)) : "      " + dim(options.get(index));
+                out.print("\r\033[2K" + line + "\n");
+            }
+            out.flush();
+        }
+
+        boolean toggle(String question, boolean fallback, Keys keys) throws IOException {
+            boolean[] value = {fallback};
+            drawToggle(question, value[0]);
+            boolean picked = keys.raw(() -> {
+                while (true) {
+                    String key = keys.key();
+                    if (key.equals("y")) return true;
+                    if (key.equals("n")) return false;
+                    if (key.equals("enter")) return value[0];
+                    if (List.of("left", "right", "space", "tab", "h", "l").contains(key)) {
+                        value[0] = !value[0];
+                        drawToggle(question, value[0]);
+                    }
+                }
+            });
+            out.println();
+            return picked;
+        }
+
+        private void drawToggle(String question, boolean yes) {
+            String on = unicode ? "●" : "(*)";
+            String off = unicode ? "○" : "( )";
+            String choices = yes
+                ? cyan(on + " " + bold("Yes")) + "  " + dim(off + " No")
+                : dim(off + " Yes") + "  " + cyan(on + " " + bold("No"));
+            out.print("\r\033[2K  " + cyan(mark) + " " + bold(question) + "  " + choices);
+            out.flush();
+        }
+
         void item(String text) {
             out.println("  " + accent(pending) + " " + text);
         }
@@ -1548,6 +1619,72 @@ public class Setup {
             if (tenths < 600) return (tenths / 10) + "." + (tenths % 10) + "s";
             long seconds = tenths / 10;
             return (seconds / 60) + "m " + (seconds % 60) + "s";
+        }
+    }
+
+    private interface KeyWork<T> {
+        T run() throws IOException;
+    }
+
+    private static final class Keys {
+        private Boolean available;
+
+        boolean available() {
+            if (available == null) available = !WINDOWS && UI.live && UI.ansi && stty("-g").isPresent();
+            return available;
+        }
+
+        <T> T raw(KeyWork<T> work) throws IOException {
+            String saved = stty("-g").orElseThrow(() -> new SetupException("Could not read the terminal settings."));
+            Thread restore = new Thread(() -> stty(saved));
+            Runtime.getRuntime().addShutdownHook(restore);
+            stty("-icanon", "-echo", "min", "1");
+            try {
+                return work.run();
+            } finally {
+                stty(saved);
+                Runtime.getRuntime().removeShutdownHook(restore);
+            }
+        }
+
+        String key() throws IOException {
+            int first = read();
+            if (first == 27) {
+                int second = read();
+                if (second != '[' && second != 'O') return "other";
+                return switch (read()) {
+                    case 'A' -> "up";
+                    case 'B' -> "down";
+                    case 'C' -> "right";
+                    case 'D' -> "left";
+                    default -> "other";
+                };
+            }
+            if (first == '\r' || first == '\n') return "enter";
+            if (first == ' ') return "space";
+            if (first == '\t') return "tab";
+            return String.valueOf((char) first).toLowerCase(Locale.ROOT);
+        }
+
+        private static int read() throws IOException {
+            int next = System.in.read();
+            if (next < 0) throw new SetupException("Input ended before all questions were answered. Add --yes to accept the defaults.");
+            return next;
+        }
+
+        private static Optional<String> stty(String... arguments) {
+            List<String> command = new ArrayList<>(List.of("stty"));
+            command.addAll(Arrays.asList(arguments));
+            try {
+                Process process = new ProcessBuilder(command)
+                    .redirectInput(new java.io.File("/dev/tty"))
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
+                    .start();
+                String output = new String(process.getInputStream().readAllBytes()).trim();
+                return process.waitFor() == 0 ? Optional.of(output) : Optional.empty();
+            } catch (IOException | InterruptedException failure) {
+                return Optional.empty();
+            }
         }
     }
 
