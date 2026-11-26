@@ -230,6 +230,95 @@ const windowsCommand = computed(() => {
     return `powershell -c "& ([scriptblock]::Create((irm ${scripts}/setup.ps1))) ${quoted.join(' ')}"`;
 });
 
+const createdFiles = computed(() => {
+    const files = [
+        'build.gradle.kts',
+        'settings.gradle.kts',
+        'gradle.properties',
+        'gradle/libs.versions.toml',
+        'gradle/wrapper/gradle-wrapper.jar',
+        'gradle/wrapper/gradle-wrapper.properties',
+        'gradlew',
+        'gradlew.bat',
+        '.gitignore',
+        '.editorconfig',
+        '.env.example',
+        'README.md',
+        '.run/',
+        'frontend/package.json',
+        'frontend/vite.config.ts',
+        'frontend/eslint.config.js',
+        'frontend/.prettierrc',
+        'frontend/src/routes/+page.svelte',
+        'frontend/src/lib/ktor-svelte/',
+        'src/main/resources/logback.xml'
+    ];
+    const on = (key: ToggleKey) => checked(key);
+    const source = on('ideaExt') ? 'src/main/kotlin' : `src/main/kotlin/${form.package.replace(/\./g, '/')}`;
+    files.push(`${source}/Application.kt`, `${source}/Env.kt`, `${source}/Errors.kt`);
+    if (on('auth')) {
+        files.push(`${source}/Auth.kt`, `${source}/${on('database') ? 'DatabaseUserStore.kt' : 'MemoryUserStore.kt'}`);
+        files.push('frontend/src/lib/auth.ts', 'frontend/src/routes/login/+page.svelte', 'frontend/src/routes/account/+page.svelte');
+    }
+    if (on('database')) files.push(`${source}/Database.kt`, 'compose.yaml');
+    if (on('auth') || on('database')) files.push('.env');
+    if (on('flyway')) files.push('src/main/resources/db/migration/V1__create_tables.sql');
+    if (on('tailwind') || on('lucide') || on('i18n')) files.push('AGENTS.md');
+    if (on('generateTs')) files.push('frontend/src/lib/api/');
+    if (on('i18n') && localeList.test(form.locales)) form.locales.split(',').forEach((locale) => files.push(`frontend/messages/${locale}.json`));
+    if (on('docker')) files.push('Dockerfile', '.dockerignore');
+    if (on('githubActions')) files.push('.github/workflows/ci.yml');
+    if (releasePleaseOn.value) files.push('.github/workflows/release.yml', 'release-please-config.json', '.release-please-manifest.json', 'version.txt');
+    if (on('conventionalCommits')) files.push('.githooks/commit-msg', '.gitattributes');
+    if (on('conventions')) {
+        files.push('build-logic/settings.gradle.kts', 'build-logic/build.gradle.kts', 'build-logic/src/main/kotlin/kotlin-conventions.gradle.kts');
+        if (form.hexagonal) files.push('build-logic/src/main/kotlin/ktor-routes-conventions.gradle.kts');
+    }
+    if (form.hexagonal) {
+        if (form.sharedKernel) files.push('shared-kernel/build.gradle.kts', 'shared-kernel/src/main/kotlin/.../DomainException.kt');
+        for (const context of contextNames.value) {
+            const aggregate = aggregateOf(context);
+            const repository = `${on('database') ? 'Exposed' : 'InMemory'}${aggregate}Repository.kt`;
+            const layered = form.moduleLayout === 'layers';
+            const module = (layer: string) => (layered ? `${context}/${layer}` : context);
+            const folder = (layer: string) => `${module(layer)}/src/main/kotlin/.../${layer}`;
+            for (const layer of layered ? ['domain', 'application', 'adapters'] : ['domain']) files.push(`${module(layer)}/build.gradle.kts`);
+            files.push(`${folder('domain')}/${aggregate}.kt`);
+            files.push(`${folder('application')}/${aggregate}Repository.kt`, `${folder('application')}/${aggregate}Service.kt`);
+            files.push(`${folder('adapters')}/web/${aggregate}Routes.kt`, `${folder('adapters')}/persistence/${repository}`);
+        }
+    }
+    return files;
+});
+
+type TreeNode = { children: Map<string, TreeNode>; file: boolean };
+
+const treeText = computed(() => {
+    const root: TreeNode = { children: new Map(), file: false };
+    for (const path of createdFiles.value) {
+        const parts = path.split('/').filter((part) => part !== '');
+        let node = root;
+        parts.forEach((part, index) => {
+            const last = index === parts.length - 1;
+            if (!node.children.has(part)) node.children.set(part, { children: new Map(), file: last && !path.endsWith('/') });
+            node = node.children.get(part) as TreeNode;
+        });
+    }
+    const lines: string[] = [`${form.name}/`];
+    const walk = (node: TreeNode, depth: number) => {
+        const entries = [...node.children.entries()].sort(([a, left], [b, right]) => {
+            if (left.file !== right.file) return left.file ? 1 : -1;
+            return a.localeCompare(b);
+        });
+        for (const [name, child] of entries) {
+            lines.push(`${'  '.repeat(depth)}${name}${child.file ? '' : '/'}`);
+            walk(child, depth + 1);
+        }
+    };
+    walk(root, 1);
+    return lines.join('\n');
+});
+
 const SHARE_PARAM = 'setup';
 const DEFAULT_FLAGS = '--yes --name=my-app';
 const allToggles = [...frontendToggles, ...backendToggles, ...architectureToggles, ...workflowToggles];
@@ -444,6 +533,10 @@ async function copy(which: string, text: string) {
                     <ul class="summary">
                         <li v-for="item in summary" :key="item">{{ item }}</li>
                     </ul>
+                    <details class="tree">
+                        <summary>The files it creates ({{ createdFiles.length }})</summary>
+                        <pre><code>{{ treeText }}</code></pre>
+                    </details>
                     <div class="command-head share">
                         <span>A link to these answers, to share with your team</span>
                         <button type="button" @click="copy('link', shareLink)">{{ copied === 'link' ? 'Copied' : 'Copy link' }}</button>
@@ -694,6 +787,21 @@ button:focus-visible,
 
 .command {
     margin-top: 16px;
+}
+
+.tree {
+    margin-top: 12px;
+    font-size: 14px;
+}
+
+.tree summary {
+    cursor: pointer;
+    color: var(--vp-c-text-2);
+}
+
+.tree pre code {
+    white-space: pre;
+    word-break: normal;
 }
 
 .share {
