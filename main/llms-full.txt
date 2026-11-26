@@ -165,6 +165,7 @@ When something looks off, run `./gradlew svelteDoctor`.
 | GitHub Actions | `--github-actions` | yes | A CI workflow with Actions pinned to commit SHAs |
 | release-please, only with GitHub Actions | `--release-please` | no | A release workflow that keeps a release pull request open, and a `version.txt` that sets the Gradle `version` |
 | Conventional Commits | `--conventional-commits` | yes with release-please, otherwise no | A `commit-msg` hook in `.githooks` that rejects other messages |
+| Dependabot | `--dependabot` | no | `.github/dependabot.yml` with weekly, grouped updates for Gradle, the frontend packages and, with GitHub Actions, the Actions |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
 | IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |
@@ -182,13 +183,13 @@ With `--hexagonal`, the backend is split into bounded contexts, and the script a
 | Modules per context | `--module-layout` | `layers` | `layers` makes `domain`, `application` and `adapters` modules, so Gradle keeps each layer from seeing the one above it. `single` makes one module with a package per layer |
 | Shared kernel | `--shared-kernel` | no | A `shared-kernel` module with `DomainException`, which the app answers with 422 |
 
-The root project starts the app and wires the contexts together in `Application.kt`. The repository adapter uses Exposed when you chose Postgres, and keeps data in memory otherwise. Modules depend on each other through type-safe project accessors such as `projects.ordersDomain`, and every library and plugin version comes from `gradle/libs.versions.toml`. Modules with routes apply `ktor-routes-conventions` from `build-logic`, which adds Ktor's OpenAPI compiler plugin, so `generateTs` sees their request and response types.
+The root project starts the app and wires the contexts together in `Application.kt`. The repository adapter uses Exposed when you chose Postgres, and keeps data in memory otherwise. Modules depend on each other through type-safe project accessors such as `projects.ordersDomain`, and every library and plugin version comes from `gradle/libs.versions.toml`. Modules with routes apply `ktor-routes-conventions` from `build-logic`, which adds Ktor's OpenAPI compiler plugin, so `generateTs` sees their request and response types. [Hexagonal modules](https://nijasc.github.io/ktor-svelte/main/guide/hexagonal-modules) explains the layers, how a request flows through them, and how to add a context.
 
 Every project also gets a Gradle version catalog, JSON and typed error responses, ktlint, ESLint and Prettier, a `README.md`, a `.env.example` and a `.gitignore`. With sign in or Postgres, it also gets a `.env` with random secrets, which is not committed. [Project structure](https://nijasc.github.io/ktor-svelte/main/guide/project-structure) shows where everything lives.
 
 ## Build the command
 
-Walk through the steps, or skip to the command at any point, and copy the command for your system. Every step starts with the defaults, and the command skips every question.
+Walk through the steps, or skip to the command at any point, and copy the command for your system. Every step starts with the defaults, and the command skips every question. The page address keeps your answers, so the link on the last step opens the same choices for a teammate.
 
 To write the command by hand, add `--yes` and any options from the table. `--yes` takes the default for every question you do not answer with a flag. Turn something off with `--no-`, such as `--no-lucide`:
 
@@ -202,10 +203,13 @@ On Windows, `irm ... | iex` cannot pass options, so run the script as a script b
 powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.ps1))) --yes --name=shop --i18n '--locales=en,de'"
 ```
 
-The script shows each step with its time and keeps the Gradle and package manager output out of the way. When a step fails, it prints the last lines of that output and where the full log is. It uses color in a terminal that supports it. Set `NO_COLOR` to turn color off, or `FORCE_COLOR` to keep it when the output is not a terminal.
+On macOS and Linux, pick from a list with the arrow keys and Enter, and answer a yes or no question with y, n, the arrow keys or Enter for the highlighted answer. Elsewhere, type the number or y and n. The script shows each step with its time and keeps the Gradle and package manager output out of the way. When a step fails, it prints the last lines of that output and where the full log is. It uses color in a terminal that supports it. Set `NO_COLOR` to turn color off, or `FORCE_COLOR` to keep it when the output is not a terminal.
+
+**Preview without writing anything**
+Add `--dry-run` to see what a command would do. The script asks its questions as usual, then lists every file it would write and every step it would run, and stops. Nothing in the current folder changes.
 
 **Pin a release**
-The script uses the latest release from Maven Central. Pass a release number, such as `--version=1.0.0`, to create the project with that release instead.
+The script uses the latest release from Maven Central. Pass a release number, such as `--version=1.0.0`, to create the project with that release instead. When a newer release exists, the script says so, and goes on with the one you pinned.
 
 **Read before you run**
 Prefer to read scripts before running them? They are in [`scripts/`](https://github.com/nijasc/ktor-svelte/tree/main/scripts). [What runs on your machine](https://nijasc.github.io/ktor-svelte/main/security#what-runs-on-your-machine) explains what they download.
@@ -876,6 +880,7 @@ my-app/
   .github/workflows/release.yml, release-please-config.json, version.txt
                               if you chose release-please
   .githooks/commit-msg        if you chose Conventional Commits
+  .github/dependabot.yml      if you chose Dependabot
   build-logic/                if you chose the convention plugin or hexagonal modules
   orders/                     a bounded context, if you chose hexagonal modules
     domain/                   the aggregate and its rules
@@ -926,6 +931,144 @@ Libraries add their own short imports next to it, such as `#routes` for [typed r
 ## What ends up in the JAR
 
 `svelteBundle` copies the static build into `ktor-svelte/public/` in your resources and writes `ktor-svelte/manifest.json`. Hidden files such as `.env` and source maps are left out. The [How it works](https://nijasc.github.io/ktor-svelte/main/reference/how-it-works) page explains how requests are answered from the manifest.
+
+Source: https://nijasc.github.io/ktor-svelte/main/guide/hexagonal-modules
+
+# Hexagonal modules
+
+Split the backend into bounded contexts, each built as a hexagon: the domain in the middle, use cases around it, and Ktor and the database at the edge. The setup script can create this layout for you, and this page explains how it works and how to grow it.
+
+## When it pays off
+
+One module is the quickest start, and many apps never need more. Hexagonal modules pay off when:
+
+- the app has areas that change for different reasons, such as orders, billing and the catalog
+- several people work on it at once, and you want them to meet at clear interfaces
+- you want domain rules that you can test without Ktor, a database or a browser
+
+If you are not sure, start with one module. Moving code into a context later is a matter of moving files, because ktor-svelte does not care where a route is defined.
+
+## Create it
+
+Answer yes to "Split the backend into domain driven, hexagonal modules?" in the [setup script](https://nijasc.github.io/ktor-svelte/main/guide/getting-started), or pass the flags:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.sh | sh -s -- --yes --name=shop --hexagonal --contexts=catalog,orders --aggregate-catalog=Product --shared-kernel
+```
+
+| Question | Flag | Default |
+|---|---|---|
+| Bounded contexts | `--contexts` | `orders` |
+| Main aggregate of each context | `--aggregate-<context>` | The name without a trailing `s`, capitalized |
+| Modules per context | `--module-layout` | `layers` |
+| Shared kernel | `--shared-kernel` | no |
+
+## The layout
+
+With `--module-layout=layers`, each context has three Gradle modules:
+
+```text
+shop/
+  build.gradle.kts            the app: starts Ktor and wires the contexts
+  src/main/kotlin/            Application.kt, Env.kt, Errors.kt, Auth.kt, Database.kt
+  build-logic/                kotlin-conventions and ktor-routes-conventions
+  shared-kernel/              code every context may use, if you chose it
+  catalog/
+    domain/                   Product and its rules
+    application/              ProductRepository (a port) and ProductService (the use cases)
+    adapters/                 web/ProductRoutes.kt and persistence/ the repository
+  orders/
+    domain/
+    application/
+    adapters/
+  frontend/
+```
+
+Each module only sees the one below it:
+
+| Module | Depends on | Holds | Must not use |
+|---|---|---|---|
+| `domain` | the shared kernel | Aggregates, value objects, rules | Ktor, Exposed, serialization |
+| `application` | `domain` | Use cases and the ports they need | Ktor, Exposed |
+| `adapters` | `application` | HTTP routes, repositories, clients for other systems | Other contexts' adapters |
+| the app | every context's `adapters` | `Application.kt`, which plugs adapters into use cases | Domain rules |
+
+Gradle enforces this: `domain` has no Ktor on its classpath, so an import of `io.ktor` there does not compile. With `--module-layout=single`, each context is one module with a `domain`, `application` and `adapters` package. That is lighter, but nothing stops a domain class from importing Ktor, so keep to the rule yourself, or split the module when the context grows.
+
+## How a request flows
+
+`POST /api/catalog` goes through every layer once:
+
+1. `ProductRoutes.kt` in `adapters/web` receives `NewProduct`, a DTO that ktor-svelte validates like any other.
+2. It calls `ProductService.create(name)` in `application`.
+3. The service builds a `Product` in `domain`, which checks its own rules, and saves it through the `ProductRepository` port.
+4. `ExposedProductRepository` in `adapters/persistence`, or `InMemoryProductRepository` without Postgres, stores it.
+5. The route answers with `ProductView`, so the domain class never becomes your API.
+
+```kotlin
+fun Route.catalogRoutes(service: ProductService) {
+    route("/api/catalog") {
+        get {
+            call.respond(service.list().map { it.toView() })
+        }
+        post {
+            val request = call.receive<NewProduct>()
+            call.respond(HttpStatusCode.Created, service.create(request.name).toView())
+        }
+    }
+}
+```
+
+The app wires it together, so it is the only place that knows which adapter fills which port:
+
+```kotlin
+routing {
+    catalogRoutes(ProductService(ExposedProductRepository()))
+}
+```
+
+## The TypeScript client sees every module
+
+`generateTs` builds the client from Ktor's OpenAPI model, and the request and response types come from Ktor's compiler plugin. That plugin normally comes with the Ktor Gradle plugin, which also adds the `application` plugin and a fat JAR to whatever module applies it. So route modules apply `ktor-routes-conventions` from `build-logic` instead. It adds only the compiler plugin, with the same OpenAPI options as the app:
+
+```kotlin
+plugins {
+    id("ktor-routes-conventions")
+}
+
+dependencies {
+    api(projects.catalogApplication)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.svelte.server)
+}
+```
+
+Put a route in a module without it, and its request and response types are missing from `types.ts`.
+
+## Add a context
+
+With `layers`:
+
+1. Add `boundedContext("billing")` to `settings.gradle.kts`.
+2. Create `billing/domain`, `billing/application` and `billing/adapters`, each with a `build.gradle.kts` like the ones in an existing context, with the project accessors renamed, such as `projects.billingDomain`.
+3. Add `implementation(projects.billingAdapters)` to the root `build.gradle.kts`.
+4. Wire its routes in `Application.kt`.
+
+With `single`, add the name to `include(...)` in `settings.gradle.kts`, create `billing/build.gradle.kts` like an existing one, and depend on `projects.billing` in the root build.
+
+Modules depend on each other through type-safe project accessors and on libraries through `gradle/libs.versions.toml`, so the build files hold no versions and no module paths as text.
+
+## Talking between contexts
+
+Keep contexts from reaching into each other's tables or classes. When orders needs a product name, give the catalog's `application` module a small use case for it, and let the orders adapter call that. If two contexts share a type, such as a `Money` value, put it in the shared kernel. Keep the kernel small: everything in it couples every context.
+
+## Errors
+
+With a shared kernel, domain rules throw `DomainException`, and `Errors.kt` answers it with 422 and the message. Without one, the domain uses `require`, and the DTO's validation in the route catches bad input before it gets there. Either way, the domain never knows about HTTP status codes.
+
+## Tests
+
+The domain and application modules need neither Ktor nor a database, so their tests are plain JUnit with the in-memory repository. Test the routes with Ktor's `testApplication` in the adapters module, and the whole app, including the frontend, as in [Checks and tooling](https://nijasc.github.io/ktor-svelte/main/guide/checks-and-tooling).
 
 Source: https://nijasc.github.io/ktor-svelte/main/guide/multiple-frontends
 
@@ -1878,6 +2021,14 @@ const archived = notes.filter((note) => note.status === Status.ARCHIVED);
 ```
 
 Enums that appear in several classes with the same values share one generated name. The name comes from the property, such as `status` becoming `Status`. When two different enums would get the same name, the owning class is added in front, such as `NoteStatus`.
+
+Each enum also gets the length of its shortest and longest value, for a column, a filter field or a layout that has to fit every value:
+
+```ts
+export const StatusLength = { min: 6, max: 8 } as const;
+```
+
+It is left out when another type already has that name.
 
 ### Dates
 
@@ -6926,6 +7077,7 @@ The components import from `#api`, so they need `generateTs = true` on the serve
 | [`IconInput`](#iconinput) | `components()` and `lucide()` | A field with an icon inside, a clear button and a show button for passwords |
 | [`EnumSelect`](#enumselect) | `components()` | A select over a generated enum |
 | [`DataTable`](#datatable) | `components()` | A table over a route that returns `Page<T>` |
+| [`Pagination`](#pagination) | `components()` | The same paging for lists and cards, with your own markup per item |
 | [`FileDrop`](#filedrop) | `components()` | A drop area with progress for an upload route |
 | [`ErrorPage`](#errorpage) | `components()` | The page SvelteKit shows when a page fails, with `+error.svelte` |
 | [`NavigationProgress`](#navigationprogress) | `components()` | A thin bar while a navigation waits |
@@ -7080,12 +7232,36 @@ A `Field` with a [Lucide icon](https://nijasc.github.io/ktor-svelte/main/feature
 | `type` | from `bounds`, else `text` | `text`, `email`, `search`, `url`, `tel` or `password` |
 | `clearable` | `false` | Shows a clear button while the field has a value. Escape clears it too |
 | `clearLabel`, `showLabel`, `hideLabel` | `Clear`, `Show password`, `Hide password` | The accessible names of the buttons. Pass your translations here |
+| `busy`, `busyLabel` | `false`, `Checking` | Shows a spinner in place of the trailing icon while a check runs, such as whether a username is taken, and announces `busyLabel` |
 | `value` | | `bind:value`; `null` after clearing |
 | `bounds`, `errors`, `hint`, `id`, `class` | | As for `Field` |
 
 - The icons are decorative and hidden from screen readers. The label names the field.
 - The show button is a toggle with `aria-pressed`, and it switches the field to plain text and back. The browser's own reveal and clear buttons are hidden, so there is only one of each.
 - Clearing puts the focus back into the field.
+- While `busy`, the input has `aria-busy` and a hidden status line says `busyLabel` once, so screen readers hear that a check is running. The spinner slows down for people who prefer reduced motion.
+
+```svelte
+<script lang="ts">
+    import { api } from '#api';
+    import IconInput from '#components/IconInput.svelte';
+
+    let name = $state('');
+    let checking = $state(false);
+    let taken = $state<string[]>([]);
+
+    async function check() {
+        checking = true;
+        try {
+            taken = (await api.users.nameTaken({ name })) ? ['That name is taken.'] : [];
+        } finally {
+            checking = false;
+        }
+    }
+</script>
+
+<IconInput label="Username" icon="AtSign" bind:value={name} onblur={check} busy={checking} errors={taken} />
+```
 - Validation messages appear under the box, not inside it, and stay tied to the input through `aria-describedby`.
 - With daisyUI the box is an `input`, so it follows the theme. Without it, the component carries a small style of its own.
 - The icon you pass is picked up by the icon scan like any other quoted icon name, so it is in the production build.
@@ -7547,6 +7723,42 @@ export const load: PageLoad = async (event) => {
 ```
 
 The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
+
+## Pagination
+
+The paging of [`DataTable`](#datatable) for anything that is not a table: cards, a feed, a list of results. It takes the same `load` and `query`, and you render each item with an `item` snippet:
+
+```svelte
+<script lang="ts">
+    import { api } from '#api';
+    import Pagination from '#components/Pagination.svelte';
+</script>
+
+<Pagination load={api.tasks.list} query={{ limit: 6, search }} paging="pages" key={(task) => task.id} label="Tasks">
+    {#snippet item(task)}
+        <a class="card" href="/tasks/{task.id}">{task.title}</a>
+    {/snippet}
+</Pagination>
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `load` | required | A generated call that returns `Page<T>` |
+| `item` | required | A snippet that gets the item and its index |
+| `query` | | The other parameters. A change loads the first page again |
+| `first` | | A page you already loaded, such as from a `load` function, so nothing is fetched at first |
+| `paging` | `more` | `more` adds the next page below, `pages` shows one page at a time with Previous and Next |
+| `key` | the index | A stable key for each item |
+| `label` | | The accessible name of the list and its page controls |
+| `empty`, `emptyAction` | `Nothing here yet.` | The text, and a snippet such as a create button, when there are no items |
+| `loading`, `more`, `previous`, `next`, `retry`, `pageText` | English | The texts. `pageText(page)` gives `Page 2` |
+| `class`, `listClass` | | Added to the wrapper and to the `<ul>`, for example a grid |
+
+- Items are in a `<ul>`, so screen readers announce how many there are.
+- With `more`, the focus moves to the first new item, so keyboard users continue where the new items start.
+- With `pages`, the page number is announced when it changes.
+- A failed page shows the error with a retry button that loads the same page again.
+- `reload()` is exported, for a list that should refresh after you create something: `bind:this={list}` and `list.reload()`.
 
 ## FileDrop
 
