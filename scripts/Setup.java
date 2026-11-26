@@ -128,6 +128,8 @@ public class Setup {
         UI.section("Creating " + name);
         Versions versions = UI.step(flags.containsKey("local-build") ? "Reading the local build" : "Finding the latest release", this::resolveVersions);
         UI.note("ktor-svelte " + versions.release);
+        newerRelease(versions.release).ifPresent(latest -> UI.warn(
+            "ktor-svelte " + latest + " is out. Leave out --version to use it, or pass --version=" + latest + "."));
 
         UI.step("Writing the project files", () -> {
             writeProjectFiles(directory, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
@@ -372,6 +374,32 @@ public class Setup {
         }
         String release = flags.containsKey("version") ? flags.get("version") : latestRelease();
         return parseVersions(release, download(REPOSITORY + "/v" + release + "/gradle/libs.versions.toml"));
+    }
+
+    private Optional<String> newerRelease(String release) {
+        if (!flags.containsKey("version") || flags.containsKey("local-build")) return Optional.empty();
+        try {
+            String latest = latestRelease();
+            return compareVersions(latest, release) > 0 ? Optional.of(latest) : Optional.empty();
+        } catch (Exception unreachable) {
+            return Optional.empty();
+        }
+    }
+
+    static int compareVersions(String left, String right) {
+        String[] leftParts = left.split("[.-]");
+        String[] rightParts = right.split("[.-]");
+        for (int index = 0; index < Math.max(leftParts.length, rightParts.length); index++) {
+            String leftPart = index < leftParts.length ? leftParts[index] : "0";
+            String rightPart = index < rightParts.length ? rightParts[index] : "0";
+            boolean leftNumber = leftPart.chars().allMatch(Character::isDigit);
+            boolean rightNumber = rightPart.chars().allMatch(Character::isDigit);
+            int result = leftNumber && rightNumber
+                ? Long.compare(Long.parseLong(leftPart), Long.parseLong(rightPart))
+                : leftNumber != rightNumber ? (leftNumber ? 1 : -1) : leftPart.compareTo(rightPart);
+            if (result != 0) return result;
+        }
+        return 0;
     }
 
     private String latestRelease() throws Exception {
@@ -1341,6 +1369,10 @@ public class Setup {
             if (ansi && linesToReplace > 0) out.print("\033[" + linesToReplace + "A\r\033[J");
             String label = question.endsWith("?") ? question.substring(0, question.length() - 1) : question;
             out.println("  " + green(check) + " " + label + dim(" : ") + cyan(value));
+        }
+
+        void warn(String text) {
+            out.println("    " + yellow(text));
         }
 
         void note(String text) {
