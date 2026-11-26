@@ -210,7 +210,16 @@ class LibraryFilesTest {
         assertContains(source, "public enum class AppLanguage(\n    public val tag: String,\n) {")
         assertContains(source, "    En(\"en\"),\n    PtBr(\"pt-BR\"),\n    De(\"de\"),\n    ;")
         assertContains(source, "public val default: AppLanguage = De")
+        assertContains(source, "public const val MAX_LENGTH: Int = 4")
         assertFalse("AppLanguage.kt" in kotlinFiles(spec(lucide = true), emptyList(), null, true))
+    }
+
+    @Test
+    fun `kotlin theme enum knows its longest constant name`() {
+        val themes = DaisySpec(listOf("light", "shadcn-light", "dark"), "light", "dark", emptyList())
+        val source = kotlinFiles(spec(daisy = themes), emptyList(), null, true).getValue("AppTheme.kt")
+        assertContains(source, "    Light(\"light\"),\n    ShadcnLight(\"shadcn-light\"),\n    Dark(\"dark\"),\n    ;")
+        assertContains(source, "public const val MAX_LENGTH: Int = 11")
     }
 
     @Test

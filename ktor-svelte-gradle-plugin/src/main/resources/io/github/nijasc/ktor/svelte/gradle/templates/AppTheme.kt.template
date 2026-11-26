@@ -5,6 +5,8 @@ public enum class AppTheme(
     ;
 
     public companion object {
+        public const val MAX_LENGTH: Int = {{maxLength}}
+
         public val default: AppTheme = {{defaultTheme}}
 
         public fun fromCssName(name: String): AppTheme? = entries.firstOrNull { it.cssName == name }

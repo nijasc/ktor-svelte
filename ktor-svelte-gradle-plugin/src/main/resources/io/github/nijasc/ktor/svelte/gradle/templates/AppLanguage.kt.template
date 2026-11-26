@@ -5,6 +5,8 @@ public enum class AppLanguage(
     ;
 
     public companion object {
+        public const val MAX_LENGTH: Int = {{maxLength}}
+
         public val default: AppLanguage = {{defaultLanguage}}
 
         public fun fromTag(tag: String): AppLanguage? = entries.firstOrNull { it.tag.equals(tag, ignoreCase = true) }
