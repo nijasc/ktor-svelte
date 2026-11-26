@@ -58,6 +58,7 @@ When something looks off, run `./gradlew svelteDoctor`.
 | Sign in | `--auth` | no | Cookie sessions, hashed passwords, routes, and login and account pages |
 | Postgres | `--database` | no | Exposed, HikariCP, `compose.yaml` and a small example table |
 | Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration`, and [`generateMigrations`](dev-workflow.md#generate-a-migration) to write the next one from your tables |
+| Dates and times, only with Postgres | `--exposed-time` | yes | Exposed's date and time module, for `timestamp`, `date` and `datetime` columns that read and write `kotlin.time.Instant` and kotlinx-datetime values. The example table gets an `at` timestamp |
 | No package folders | `--idea-ext` | yes | Kotlin files directly in `src/main/kotlin`, and IntelliJ knows the package through the `idea-ext` plugin |
 | Hexagonal modules | `--hexagonal` | no | A domain driven, multi-module backend. See [Hexagonal modules](#hexagonal-modules) |
 | Convention plugin, asked only without hexagonal modules | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |

@@ -24,6 +24,7 @@ const form = reactive({
     auth: false,
     database: false,
     flyway: true,
+    exposedTime: true,
     hexagonal: false,
     contexts: 'orders',
     moduleLayout: 'layers',
@@ -63,7 +64,8 @@ const frontendToggles: Toggle[] = [
 const backendToggles: Toggle[] = [
     { key: 'auth', flag: 'auth', label: 'Sign in', hint: 'Cookie sessions, hashed passwords, login and account pages' },
     { key: 'database', flag: 'database', label: 'Postgres', hint: 'Exposed, HikariCP and a compose.yaml' },
-    { key: 'flyway', flag: 'flyway', label: 'Flyway migrations', hint: 'Versioned SQL, and a task that writes the next one' }
+    { key: 'flyway', flag: 'flyway', label: 'Flyway migrations', hint: 'Versioned SQL, and a task that writes the next one' },
+    { key: 'exposedTime', flag: 'exposed-time', label: 'Dates and times', hint: 'Exposed timestamp, date and datetime columns' }
 ];
 
 const architectureToggles: Toggle[] = [
@@ -94,6 +96,7 @@ const fallbacks: Record<ToggleKey, () => boolean> = {
     auth: () => false,
     database: () => false,
     flyway: () => true,
+    exposedTime: () => true,
     hexagonal: () => false,
     sharedKernel: () => false,
     conventions: () => false,
@@ -119,7 +122,7 @@ watch(releasePleaseOn, (on) => {
 
 function disabled(key: ToggleKey): string | null {
     if (key === 'tailwind' && form.daisy) return 'Included with DaisyUI';
-    if (key === 'flyway' && !form.database) return 'Needs Postgres';
+    if ((key === 'flyway' || key === 'exposedTime') && !form.database) return 'Needs Postgres';
     if (key === 'releasePlease' && !form.githubActions) return 'Needs GitHub Actions';
     if (key === 'sharedKernel' && !form.hexagonal) return 'Needs hexagonal modules';
     if (key === 'conventions' && form.hexagonal) return 'Always on with hexagonal modules';

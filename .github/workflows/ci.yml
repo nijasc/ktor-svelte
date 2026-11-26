@@ -173,7 +173,7 @@ jobs:
         run: |
           repository="$PWD"
           cd "$RUNNER_TEMP"
-          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=full --i18n --locales=en,de --locale-strategy=UrlPrefix --auth --database --conventions --dependabot --no-git
+          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=full --i18n --locales=en,de --locale-strategy=UrlPrefix --auth --database --exposed-time --conventions --dependabot --no-git
           cd full
           ./gradlew check buildFatJar svelteCheck
           ./gradlew svelteRun --script=lint

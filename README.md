@@ -82,6 +82,7 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 | Sign in | `--auth` | no | Cookie sessions, hashed passwords, routes, and login and account pages |
 | Postgres | `--database` | no | Exposed, HikariCP, `compose.yaml` and a small example table |
 | Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration` |
+| Dates and times, only with Postgres | `--exposed-time` | yes | Exposed's date and time module, for `timestamp`, `date` and `datetime` columns with `kotlin.time.Instant` and kotlinx-datetime |
 | No package folders | `--idea-ext` | yes | Kotlin files directly in `src/main/kotlin`, and IntelliJ knows the package through the `idea-ext` plugin |
 | Hexagonal modules | `--hexagonal` | no | Bounded contexts split into domain, application and adapter modules. It asks for the contexts, their aggregates, the module layout and a shared kernel |
 | Convention plugin, asked only without hexagonal modules | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
