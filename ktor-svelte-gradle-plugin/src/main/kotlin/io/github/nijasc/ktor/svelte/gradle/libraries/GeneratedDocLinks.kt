@@ -7,7 +7,7 @@ private val DOC_PAGES: List<Pair<(String) -> Boolean, String>> =
         { name: String -> name == "AGENTS.md" } to "features/components",
         { name: String -> name == "eslint.js" } to "guide/checks-and-tooling",
         { name: String -> name == ".gitattributes" } to "guide/project-structure",
-        { name: String -> name in setOf("i18n.ts", "format.ts", "Messages.kt", "Formats.kt") } to "features/i18n",
+        { name: String -> name in setOf("i18n.ts", "format.ts", "Messages.kt", "Formats.kt", "AppLanguage.kt") } to "features/i18n",
         { name: String -> name in setOf("theme.ts", "app.css", "AppTheme.kt") } to "features/styling",
         { name: String -> name in setOf("Icon.svelte", "icons.ts", "LucideIcon.kt") } to "features/icons-and-images",
         { name: String -> name in setOf("routes.ts", "FrontendRoutes.kt") } to "features/routes",

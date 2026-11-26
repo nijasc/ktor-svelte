@@ -626,6 +626,7 @@ class LibrariesTest {
         source.parentFile.mkdirs()
         source.writeText(
             """
+            import io.github.nijasc.ktorsvelte.AppLanguage
             import io.github.nijasc.ktorsvelte.AppTheme
             import io.github.nijasc.ktorsvelte.FrontendRoutes
             import io.github.nijasc.ktorsvelte.LucideIcon
@@ -633,7 +634,8 @@ class LibrariesTest {
 
             val icon = LucideIcon.ArrowRight
             val theme = AppTheme.Light
-            val text = Messages.forLocale("de").hello("Nils")
+            val language = AppLanguage.De
+            val text = Messages.forLocale(language.tag).hello("Nils")
             val links = listOf(FrontendRoutes.home, FrontendRoutes.notesId("1"), FrontendRoutes.docsLangPath(path = "a/b"))
             """.trimIndent(),
         )

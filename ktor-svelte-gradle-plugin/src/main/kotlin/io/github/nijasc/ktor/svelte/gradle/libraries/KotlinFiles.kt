@@ -34,6 +34,7 @@ internal fun kotlinFiles(
     buildMap {
         if (spec.lucide) put("LucideIcon.kt", lucideEnum(spec.generatedPackage, iconConstants))
         if (spec.daisy != null) put("AppTheme.kt", themeEnum(spec.generatedPackage, spec.daisy))
+        if (spec.i18n != null) put("AppLanguage.kt", languageEnum(spec.generatedPackage, spec.i18n))
         if (spec.i18n != null && messages != null) {
             put("Messages.kt", messagesClass(spec, messages))
             put("Formats.kt", formatsClass(spec.generatedPackage, spec.i18n))
@@ -78,6 +79,22 @@ private fun themeEnum(
             mapOf(
                 "entries" to daisy.allThemes.joinToString(",\n", postfix = ",") { "    ${themeConstant(it)}(${kotlinString(it)})" },
                 "defaultTheme" to themeConstant(daisy.defaultTheme),
+            ),
+        )
+
+internal fun languageConstant(tag: String): String =
+    tag.split('-').joinToString("") { part -> part.lowercase().replaceFirstChar { it.uppercase() } }
+
+private fun languageEnum(
+    generatedPackage: String,
+    i18n: I18nSpec,
+): String =
+    fileHeader(generatedPackage) +
+        renderTemplate(
+            "AppLanguage.kt.template",
+            mapOf(
+                "entries" to i18n.locales.joinToString(",\n", postfix = ",") { "    ${languageConstant(it)}(${kotlinString(it)})" },
+                "defaultLanguage" to languageConstant(i18n.defaultLocale),
             ),
         )
 
@@ -154,6 +171,7 @@ private fun callExtensions(spec: LibrarySpec): String =
         if (spec.i18n != null) {
             append("public val ApplicationCall.messages: Messages get() = Messages.forLocale(svelteLocale)\n")
             append("public val ApplicationCall.formats: Formats get() = Formats.forLocale(svelteLocale)\n")
+            append("public val ApplicationCall.language: AppLanguage get() = AppLanguage.fromTag(svelteLocale) ?: AppLanguage.default\n")
         }
         if (spec.daisy != null) {
             append("public val ApplicationCall.theme: AppTheme get() = AppTheme.fromCssName(svelteTheme) ?: AppTheme.default\n")

@@ -58,7 +58,7 @@ The next sync or start overwrites your changes.
 | `frontend/vite.config.ts` | `svelteSync` | library settings change |
 | `frontend/src/lib/ktor-svelte/*` | `svelteSync` | themes, icons or locales change |
 | `frontend/src/hooks*.ts` | `svelteSync` | i18n or theme settings change |
-| Kotlin `AppTheme` and `Messages` classes | the Gradle build, in `build/generated`, never committed | themes or messages change |
+| Kotlin `AppTheme`, `AppLanguage` and `Messages` classes | the Gradle build, in `build/generated`, never committed | themes, locales or messages change |
 
 Everything else is yours. ktor-svelte never overwrites a file without the header. If it needs to own a file you already have, such as your own `vite.config.ts`, the build stops and tells you what to move. Put custom Vite settings in `vite.user.ts`.
 

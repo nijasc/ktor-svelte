@@ -1,0 +1,12 @@
+public enum class AppLanguage(
+    public val tag: String,
+) {
+{{entries}}
+    ;
+
+    public companion object {
+        public val default: AppLanguage = {{defaultLanguage}}
+
+        public fun fromTag(tag: String): AppLanguage? = entries.firstOrNull { it.tag.equals(tag, ignoreCase = true) }
+    }
+}
