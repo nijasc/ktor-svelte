@@ -34,6 +34,7 @@ const form = reactive({
     githubActions: true,
     releasePlease: false,
     conventionalCommits: false,
+    dependabot: false,
     git: true,
     liveTemplates: true,
     openIdea: false
@@ -72,6 +73,7 @@ const workflowToggles: Toggle[] = [
     { key: 'githubActions', flag: 'github-actions', label: 'GitHub Actions', hint: 'CI with Actions pinned to commit SHAs' },
     { key: 'releasePlease', flag: 'release-please', label: 'release-please', hint: 'Release pull requests, and version.txt sets the Gradle version' },
     { key: 'conventionalCommits', flag: 'conventional-commits', label: 'Conventional Commits', hint: 'A local commit-msg hook that rejects other messages' },
+    { key: 'dependabot', flag: 'dependabot', label: 'Dependabot', hint: 'A weekly pull request each for Gradle, the frontend and Actions' },
     { key: 'git', flag: 'git', label: 'Git repository', hint: 'Runs git init' },
     { key: 'liveTemplates', flag: 'live-templates', label: 'Live templates', hint: 'ksget, ksapi and more in IntelliJ and WebStorm' },
     { key: 'openIdea', flag: 'open-idea', label: 'Open in IntelliJ', hint: 'Opens the project when it is ready' }
@@ -94,6 +96,7 @@ const fallbacks: Record<ToggleKey, () => boolean> = {
     githubActions: () => true,
     releasePlease: () => false,
     conventionalCommits: () => releasePleaseOn.value,
+    dependabot: () => false,
     git: () => true,
     liveTemplates: () => true,
     openIdea: () => false
@@ -270,6 +273,7 @@ const createdFiles = computed(() => {
     if (on('githubActions')) files.push('.github/workflows/ci.yml');
     if (releasePleaseOn.value) files.push('.github/workflows/release.yml', 'release-please-config.json', '.release-please-manifest.json', 'version.txt');
     if (on('conventionalCommits')) files.push('.githooks/commit-msg', '.gitattributes');
+    if (on('dependabot')) files.push('.github/dependabot.yml');
     if (on('conventions')) {
         files.push('build-logic/settings.gradle.kts', 'build-logic/build.gradle.kts', 'build-logic/src/main/kotlin/kotlin-conventions.gradle.kts');
         if (form.hexagonal) files.push('build-logic/src/main/kotlin/ktor-routes-conventions.gradle.kts');

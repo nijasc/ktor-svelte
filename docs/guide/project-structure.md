@@ -41,6 +41,7 @@ my-app/
   .github/workflows/release.yml, release-please-config.json, version.txt
                               if you chose release-please
   .githooks/commit-msg        if you chose Conventional Commits
+  .github/dependabot.yml      if you chose Dependabot
   build-logic/                if you chose the convention plugin or hexagonal modules
   orders/                     a bounded context, if you chose hexagonal modules
     domain/                   the aggregate and its rules

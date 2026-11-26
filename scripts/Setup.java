@@ -119,6 +119,7 @@ public class Setup {
         boolean actions = confirm("github-actions", "Add a GitHub Actions workflow?", true);
         boolean releasePlease = actions && confirm("release-please", "Add release-please, which sets the version and writes releases from your commit messages?", false);
         boolean commitCheck = confirm("conventional-commits", "Check commit messages for Conventional Commits in a local git hook?", releasePlease);
+        boolean dependabot = confirm("dependabot", "Add Dependabot, which opens a pull request for dependency updates every week?", false);
         boolean liveTemplates = confirm("live-templates", "Install the ktor-svelte live templates into IntelliJ and WebStorm?", true);
         boolean git = isOnPath("git") && confirm("git", "Create a git repository?", true);
         Optional<List<String>> idea = findIntellij();
@@ -130,7 +131,7 @@ public class Setup {
 
         UI.step("Writing the project files", () -> {
             writeProjectFiles(directory, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
-                auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck);
+                auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck, dependabot);
             return null;
         });
 
@@ -159,7 +160,7 @@ public class Setup {
     private void writeProjectFiles(
         Path directory, String name, String packageName, String manager, Versions versions, boolean generateTs, boolean daisy, boolean tailwind,
         boolean lucide, boolean i18n, List<String> locales, String strategy, boolean auth, boolean database, boolean flyway, boolean flatPackages,
-        Hexagon hexagon, boolean conventions, boolean docker, boolean actions, boolean releasePlease, boolean commitCheck
+        Hexagon hexagon, boolean conventions, boolean docker, boolean actions, boolean releasePlease, boolean commitCheck, boolean dependabot
     ) throws Exception {
         Files.createDirectories(directory);
         writeWrapper(directory, versions);
@@ -173,7 +174,7 @@ public class Setup {
         if (hexagon != null) writeHexagon(directory, packageName, hexagon, database);
         Files.writeString(directory.resolve(".env.example"), envExample(name, auth, database));
         if (auth || database) Files.writeString(directory.resolve(".env"), localEnv(name, auth, database));
-        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck));
+        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck, dependabot));
         if (tailwind || lucide || i18n) Files.writeString(directory.resolve("AGENTS.md"), ASSISTANT_NOTES);
         Path source = flatPackages ? directory.resolve("src/main/kotlin") : directory.resolve("src/main/kotlin").resolve(packageName.replace('.', '/'));
         Files.createDirectories(source);
@@ -190,6 +191,7 @@ public class Setup {
         if (database) Files.writeString(directory.resolve("compose.yaml"), COMPOSE);
         if (docker) writeDocker(directory, manager);
         if (actions) writeWorkflow(directory, manager);
+        if (dependabot) writeDependabot(directory, manager, actions);
         if (releasePlease) writeReleasePlease(directory, name);
         if (commitCheck) writeCommitHook(directory);
     }
@@ -643,6 +645,26 @@ public class Setup {
         Files.writeString(directory.resolve(".github/workflows/release.yml"), RELEASE_WORKFLOW);
     }
 
+    private static void writeDependabot(Path directory, String manager, boolean actions) throws IOException {
+        StringBuilder text = new StringBuilder("version: 2\nupdates:\n");
+        text.append(dependabotEntry("gradle", "/", "gradle"));
+        text.append(dependabotEntry(manager.equals("bun") ? "bun" : "npm", "/frontend", "frontend"));
+        if (actions) text.append(dependabotEntry("github-actions", "/", "actions"));
+        Files.createDirectories(directory.resolve(".github"));
+        Files.writeString(directory.resolve(".github/dependabot.yml"), text.toString());
+    }
+
+    private static String dependabotEntry(String ecosystem, String folder, String group) {
+        return "  - package-ecosystem: " + ecosystem + "\n"
+            + "    directory: " + folder + "\n"
+            + "    schedule:\n"
+            + "      interval: weekly\n"
+            + "    groups:\n"
+            + "      " + group + ":\n"
+            + "        patterns:\n"
+            + "          - \"*\"\n";
+    }
+
     private static void writeCommitHook(Path directory) throws IOException {
         Path hooks = directory.resolve(".githooks");
         Files.createDirectories(hooks);
@@ -777,7 +799,7 @@ public class Setup {
 
     private static String projectReadme(
         String name, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, boolean docker,
-        Hexagon hexagon, boolean releasePlease, boolean commitCheck) {
+        Hexagon hexagon, boolean releasePlease, boolean commitCheck, boolean dependabot) {
         StringBuilder text = new StringBuilder("# ").append(name).append("\n\n");
         text.append("A Ktor app with a SvelteKit frontend, served from one JAR on one port by [ktor-svelte](https://github.com/nijasc/ktor-svelte).\n\n");
         text.append("## Develop\n\n```bash\n");
@@ -845,6 +867,13 @@ public class Setup {
             text.append("[release-please](https://github.com/googleapis/release-please) reads the commit messages on `main` and keeps a release pull request open. Merging it raises the version in `version.txt`, which `build.gradle.kts` uses, writes `CHANGELOG.md` and creates the GitHub release. ");
             text.append("`feat` raises the minor version, `fix` the patch version, and a `!` after the type marks a breaking change. ");
             text.append("In the repository settings, under Actions, allow GitHub Actions to create pull requests. Never edit `version.txt` or `.release-please-manifest.json` by hand.\n\n");
+        }
+        if (dependabot) {
+            text.append("## Dependency updates\n\n");
+            text.append("Dependabot opens one pull request a week for the Gradle dependencies, one for the frontend packages");
+            text.append(" and, with GitHub Actions, one for the Actions. ");
+            text.append("When an update changes a frontend library that ktor-svelte configures, such as Lucide or DaisyUI, the build asks you to run `./gradlew svelteSync`. ");
+            text.append("Check out the pull request, run it, and commit the generated files.\n\n");
         }
         if (commitCheck) {
             text.append("## Commit messages\n\n");
