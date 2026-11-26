@@ -221,7 +221,29 @@ class TypeScriptGeneratorTest {
             "Note":{"type":"object","properties":{"mood":{"type":"string","enum":["BAD","GOOD"]}}}}"""
         val source = types(schemas)
         assertContains(source, "    mood?: Mood;")
-        assertEquals(1, Regex("as const;").findAll(source).count())
+        assertEquals(1, Regex("export const Mood = ").findAll(source).count())
+        assertEquals(1, Regex("export const MoodLength = ").findAll(source).count())
+    }
+
+    @Test
+    fun `an enum knows the length of its shortest and longest value`() {
+        val schemas =
+            """{"Note":{"type":"object","properties":{"status":{"type":"string","enum":["NEW","ARCHIVED","DONE"]}}}}"""
+        val source = types(schemas)
+        assertContains(source, "export const Status = {")
+        assertContains(source, "export const StatusLength = { min: 3, max: 8 } as const;")
+        assertContains(source, "export type Status = (typeof Status)[keyof typeof Status];")
+    }
+
+    @Test
+    fun `an enum length is left out when a type already has its name`() {
+        val schemas =
+            """{"Size":{"type":"string","enum":["S","M"]},
+            "SizeLength":{"type":"object","properties":{"value":{"type":"integer"}}}}"""
+        val source = types(schemas)
+        assertContains(source, "export const Size = {")
+        assertFalse("export const SizeLength = { min:" in source)
+        assertContains(source, "export interface SizeLength {")
     }
 
     @Test

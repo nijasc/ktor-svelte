@@ -698,7 +698,13 @@ internal class TypeScriptGenerator(
         values: List<String>,
     ): String {
         val members = values.joinToString("") { "    ${propertyKey(it)}: ${literal(JsonPrimitive(it))},\n" }
-        return "export const $name = {\n$members} as const;\n\nexport type $name = (typeof $name)[keyof typeof $name];\n"
+        val declaration = "export const $name = {\n$members} as const;\n\nexport type $name = (typeof $name)[keyof typeof $name];\n"
+        val lengthName = "${name}Length"
+        if (values.isEmpty() || lengthName in componentSchemas.keys.map(::typeName) || enumTypes.values.any { it.name == lengthName }) {
+            return declaration
+        }
+        val lengths = values.map { it.codePointCount(0, it.length) }
+        return declaration + "\nexport const $lengthName = { min: ${lengths.min()}, max: ${lengths.max()} } as const;\n"
     }
 
     private fun nameEnums(
