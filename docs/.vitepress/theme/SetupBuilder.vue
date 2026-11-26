@@ -9,11 +9,14 @@ const localeList = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*(,[a-z]{2,3}(-[A-Za-z0-9]{2,8
 const contextList = /^[a-z][a-z0-9]*(,[a-z][a-z0-9]*)*$/;
 const aggregateName = /^[A-Z][A-Za-z0-9]*$/;
 const reservedContexts = ['build', 'frontend', 'gradle', 'src', 'shared', 'kernel'];
+const licenses = ['none', 'MIT', 'Apache-2.0', 'BSD-3-Clause', 'MPL-2.0', 'GPL-3.0', 'AGPL-3.0'];
 
 const form = reactive({
     name: 'my-app',
     package: 'com.example.app',
     packageManager: 'auto',
+    license: 'none',
+    licenseHolder: '',
     generateTs: true,
     daisy: true,
     tailwind: true,
@@ -170,6 +173,7 @@ const stepErrors = computed<string[][]>(() => {
     const project: string[] = [];
     if (!projectName.test(form.name)) project.push('The project name may use letters, digits, dashes and underscores, and starts with a letter.');
     if (!packageName.test(form.package)) project.push('Use a Kotlin package such as com.example.app.');
+    if (form.license !== 'none' && /[[\]]/.test(form.licenseHolder)) project.push('The copyright holder cannot contain square brackets.');
     const frontend: string[] = [];
     if (form.i18n && !localeList.test(form.locales)) frontend.push('Use language tags such as en,de,pt-BR, the default first.');
     const architecture: string[] = [];
@@ -206,6 +210,10 @@ const flags = computed(() => {
     const result = ['--yes', `--name=${form.name}`];
     if (form.package !== 'com.example.app') result.push(`--package=${form.package}`);
     if (form.packageManager !== 'auto') result.push(`--package-manager=${form.packageManager}`);
+    if (form.license !== 'none') {
+        result.push(`--license=${form.license}`);
+        if (form.licenseHolder) result.push(`--license-holder=${form.licenseHolder}`);
+    }
     const add = (toggle: Toggle) => {
         if (disabled(toggle.key)) return;
         const value = form[toggle.key];
@@ -239,6 +247,7 @@ const summary = computed(() => {
     const items: string[] = [];
     const on = (key: ToggleKey) => checked(key);
     items.push(`${form.name}, package ${form.package}, ${form.packageManager === 'auto' ? 'first package manager found' : form.packageManager}`);
+    items.push(form.license === 'none' ? 'No license, all rights reserved' : `${form.license} license${form.licenseHolder ? `, copyright ${form.licenseHolder}` : ''}`);
     const frontend = frontendToggles.filter((toggle) => on(toggle.key)).map((toggle) => toggle.label);
     items.push(`Frontend: ${frontend.length ? frontend.join(', ') : 'plain SvelteKit'}${form.i18n ? ` (${form.locales}, by ${form.localeStrategy === 'Cookie' ? 'cookie' : 'URL prefix'})` : ''}`);
     const backend = backendToggles.filter((toggle) => on(toggle.key)).map((toggle) => toggle.label);
@@ -258,7 +267,10 @@ const summary = computed(() => {
     return items;
 });
 
-const unixCommand = computed(() => `curl -fsSL ${scripts}/setup.sh | sh -s -- ${flags.value.join(' ')}`);
+const unixCommand = computed(() => {
+    const quoted = flags.value.map((flag) => (/^[A-Za-z0-9_=.,/:@+-]+$/.test(flag) ? flag : `'${flag.replace(/'/g, `'\\''`)}'`));
+    return `curl -fsSL ${scripts}/setup.sh | sh -s -- ${quoted.join(' ')}`;
+});
 
 const windowsCommand = computed(() => {
     const quoted = flags.value.map((flag) => (/[,;'\s]/.test(flag) ? `'${flag.replace(/'/g, "''")}'` : flag));
@@ -266,7 +278,9 @@ const windowsCommand = computed(() => {
 });
 
 const createdFiles = computed(() => {
+    const licensed = form.license !== 'none' ? ['LICENSE'] : [];
     const files = [
+        ...licensed,
         'build.gradle.kts',
         'settings.gradle.kts',
         'gradle.properties',
@@ -368,6 +382,8 @@ function applyFlags(list: string[]) {
         if (name === 'name') form.name = value;
         else if (name === 'package') form.package = value;
         else if (name === 'package-manager') form.packageManager = value;
+        else if (name === 'license') form.license = value;
+        else if (name === 'license-holder') form.licenseHolder = value;
         else if (name === 'locales') form.locales = value;
         else if (name === 'locale-strategy') form.localeStrategy = value;
         else if (name === 'contexts') form.contexts = value;
@@ -397,7 +413,7 @@ const shareLink = computed(() => {
 onMounted(() => {
     const shared = new URLSearchParams(window.location.search).get(SHARE_PARAM);
     if (shared) {
-        applyFlags(shared.split(' '));
+        applyFlags(shared.split(/ (?=--)/));
         go(steps.length - 1);
     }
     watch(flags, (current) => {
@@ -460,6 +476,16 @@ async function copy(which: string, text: string) {
                             <option value="npm">npm</option>
                             <option value="yarn">Yarn</option>
                         </select>
+                    </label>
+                    <label>
+                        <span>License</span>
+                        <select v-model="form.license">
+                            <option v-for="license in licenses" :key="license" :value="license">{{ license === 'none' ? 'None, all rights reserved' : license }}</option>
+                        </select>
+                    </label>
+                    <label v-if="form.license !== 'none'">
+                        <span>Copyright holder</span>
+                        <input v-model.trim="form.licenseHolder" placeholder="Your git user name" spellcheck="false" />
                     </label>
                 </div>
             </template>
