@@ -5768,6 +5768,7 @@ get("/api/report") {
 - `call.theme` is the visitor's theme, or `AppTheme.default` when there is none.
 - Each constant has its `cssName`, such as `"shadcn-dark"`.
 - `AppTheme.fromCssName(name)` turns a name back into a constant, or `null`.
+- `AppTheme.MAX_LENGTH` is the length of the longest constant name, such as `11` for `ShadcnLight`. Use it to size a column that stores the theme, for example `enumerationByName("theme", AppTheme.MAX_LENGTH, AppTheme::class)` in Exposed. It is a `const`, so it also works in annotations.
 
 Use it for anything rendered on the server that should match the page, such as a PDF or a chart image.
 
@@ -6528,7 +6529,7 @@ val german = Messages.forLocale(AppLanguage.De.tag).appTitle()
 | `Messages.forLocale(locale)` | The messages in another language, for an email to someone else. An unknown locale gives the default one |
 | `Messages.locales`, `Messages.defaultLocale` | The configured locales |
 | `call.language` | The visitor's locale as an `AppLanguage` constant |
-| `AppLanguage` | One constant per configured locale in PascalCase, such as `AppLanguage.En` and `AppLanguage.PtBr` for `pt-BR`. `tag` is the locale, `AppLanguage.default` the default one, and `AppLanguage.fromTag(tag)` turns a locale back into a constant, or `null` |
+| `AppLanguage` | One constant per configured locale in PascalCase, such as `AppLanguage.En` and `AppLanguage.PtBr` for `pt-BR`. `tag` is the locale, `AppLanguage.default` the default one, and `AppLanguage.fromTag(tag)` turns a locale back into a constant, or `null`. `AppLanguage.MAX_LENGTH` is the length of the longest constant name, such as `4` for `PtBr`, to size a column that stores it, for example with Exposed's `enumerationByName` |
 | `call.svelteLocale` | The visitor's locale as text, from `io.github.nijasc.ktor.svelte` |
 | `call.localizeHref(path)` | Like `localizeHref`, for redirects from Ktor |
 | `call.formats` | [Formats](#numbers-money-and-dates) in the visitor's language |
