@@ -236,6 +236,8 @@ export const Priority = {
 
 export type Priority = (typeof Priority)[keyof typeof Priority];
 
+export const PriorityLength = { min: 3, max: 6 } as const;
+
 export interface Problem {
     message: string;
 }
@@ -312,6 +314,8 @@ export const Role = {
 
 export type Role = (typeof Role)[keyof typeof Role];
 
+export const RoleLength = { min: 5, max: 6 } as const;
+
 export interface RoleChange {
     role: Role;
 }
@@ -329,6 +333,8 @@ export const Status = {
 } as const;
 
 export type Status = (typeof Status)[keyof typeof Status];
+
+export const StatusLength = { min: 4, max: 5 } as const;
 
 export interface StatusChange {
     status: Status;

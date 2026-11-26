@@ -366,6 +366,14 @@ const archived = notes.filter((note) => note.status === Status.ARCHIVED);
 
 Enums that appear in several classes with the same values share one generated name. The name comes from the property, such as `status` becoming `Status`. When two different enums would get the same name, the owning class is added in front, such as `NoteStatus`.
 
+Each enum also gets the length of its shortest and longest value, for a column, a filter field or a layout that has to fit every value:
+
+```ts
+export const StatusLength = { min: 6, max: 8 } as const;
+```
+
+It is left out when another type already has that name.
+
 ### Dates
 
 Dates arrive as strings, but not as plain `string`, so a date can't be mixed up with ordinary text:

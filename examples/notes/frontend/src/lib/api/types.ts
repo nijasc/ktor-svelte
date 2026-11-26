@@ -182,6 +182,8 @@ export const Status = {
 
 export type Status = (typeof Status)[keyof typeof Status];
 
+export const StatusLength = { min: 6, max: 8 } as const;
+
 export interface UploadReceipt {
     files: string[];
     bytes: number;
