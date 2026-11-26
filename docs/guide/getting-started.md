@@ -66,6 +66,7 @@ When something looks off, run `./gradlew svelteDoctor`.
 | release-please, only with GitHub Actions | `--release-please` | no | A release workflow that keeps a release pull request open, and a `version.txt` that sets the Gradle `version` |
 | Conventional Commits | `--conventional-commits` | yes with release-please, otherwise no | A `commit-msg` hook in `.githooks` that rejects other messages |
 | Dependabot | `--dependabot` | no | `.github/dependabot.yml` with weekly, grouped updates for Gradle, the frontend packages and, with GitHub Actions, the Actions |
+| Agentic usage | `--agents` | yes | An `AGENTS.md` written for the answers you gave: commands, layout, how backend and frontend fit, generated files, conventions and a checklist. Also a `CLAUDE.md` that imports it and a `.claude/settings.json` that allows the Gradle and package manager commands and keeps `.env` unread |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
 | IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |

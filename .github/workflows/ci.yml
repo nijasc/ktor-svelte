@@ -211,7 +211,7 @@ jobs:
         run: |
           repository="$PWD"
           cd "$RUNNER_TEMP"
-          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=small --no-generate-ts --no-daisy --no-tailwind --no-lucide --no-idea-ext --no-docker --no-github-actions --no-git
+          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=small --no-generate-ts --no-daisy --no-tailwind --no-lucide --no-idea-ext --no-docker --no-github-actions --no-agents --no-git
           cd small
           ./gradlew check buildFatJar svelteCheck
           ./gradlew svelteRun --script=lint

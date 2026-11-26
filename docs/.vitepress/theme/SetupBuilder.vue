@@ -35,6 +35,7 @@ const form = reactive({
     releasePlease: false,
     conventionalCommits: false,
     dependabot: false,
+    agents: true,
     git: true,
     liveTemplates: true,
     openIdea: false
@@ -74,6 +75,7 @@ const workflowToggles: Toggle[] = [
     { key: 'releasePlease', flag: 'release-please', label: 'release-please', hint: 'Release pull requests, and version.txt sets the Gradle version' },
     { key: 'conventionalCommits', flag: 'conventional-commits', label: 'Conventional Commits', hint: 'A local commit-msg hook that rejects other messages' },
     { key: 'dependabot', flag: 'dependabot', label: 'Dependabot', hint: 'A weekly pull request each for Gradle, the frontend and Actions' },
+    { key: 'agents', flag: 'agents', label: 'Agentic usage', hint: 'AGENTS.md, CLAUDE.md and agent permissions, written for this project' },
     { key: 'git', flag: 'git', label: 'Git repository', hint: 'Runs git init' },
     { key: 'liveTemplates', flag: 'live-templates', label: 'Live templates', hint: 'ksget, ksapi and more in IntelliJ and WebStorm' },
     { key: 'openIdea', flag: 'open-idea', label: 'Open in IntelliJ', hint: 'Opens the project when it is ready' }
@@ -97,6 +99,7 @@ const fallbacks: Record<ToggleKey, () => boolean> = {
     releasePlease: () => false,
     conventionalCommits: () => releasePleaseOn.value,
     dependabot: () => false,
+    agents: () => true,
     git: () => true,
     liveTemplates: () => true,
     openIdea: () => false
@@ -266,7 +269,7 @@ const createdFiles = computed(() => {
     if (on('database')) files.push(`${source}/Database.kt`, 'compose.yaml');
     if (on('auth') || on('database')) files.push('.env');
     if (on('flyway')) files.push('src/main/resources/db/migration/V1__create_tables.sql');
-    if (on('tailwind') || on('lucide') || on('i18n')) files.push('AGENTS.md');
+    if (on('agents')) files.push('AGENTS.md', 'CLAUDE.md', '.claude/settings.json');
     if (on('generateTs')) files.push('frontend/src/lib/api/');
     if (on('i18n') && localeList.test(form.locales)) form.locales.split(',').forEach((locale) => files.push(`frontend/messages/${locale}.json`));
     if (on('docker')) files.push('Dockerfile', '.dockerignore');
