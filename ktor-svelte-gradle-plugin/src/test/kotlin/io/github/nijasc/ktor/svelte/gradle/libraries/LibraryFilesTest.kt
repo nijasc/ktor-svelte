@@ -204,11 +204,22 @@ class LibraryFilesTest {
     }
 
     @Test
+    fun `kotlin language enum lists the configured locales`() {
+        val i18n = I18nSpec(listOf("en", "pt-BR", "de"), "de", LocaleStrategy.Cookie)
+        val source = kotlinFiles(spec(i18n = i18n), emptyList(), null, true).getValue("AppLanguage.kt")
+        assertContains(source, "public enum class AppLanguage(\n    public val tag: String,\n) {")
+        assertContains(source, "    En(\"en\"),\n    PtBr(\"pt-BR\"),\n    De(\"de\"),\n    ;")
+        assertContains(source, "public val default: AppLanguage = De")
+        assertFalse("AppLanguage.kt" in kotlinFiles(spec(lucide = true), emptyList(), null, true))
+    }
+
+    @Test
     fun `call extensions need the runtime dependency`() {
         val daisySpec = spec(TailwindSpec(false, false), daisy, i18n = cookieI18n)
         val extensions = kotlinFiles(daisySpec, emptyList(), catalog, true).getValue("CallExtensions.kt")
         assertContains(extensions, "ApplicationCall.messages")
         assertContains(extensions, "ApplicationCall.theme")
+        assertContains(extensions, "ApplicationCall.language: AppLanguage get() = AppLanguage.fromTag(svelteLocale) ?: AppLanguage.default")
         assertFalse("CallExtensions.kt" in kotlinFiles(daisySpec, emptyList(), catalog, false))
     }
 
