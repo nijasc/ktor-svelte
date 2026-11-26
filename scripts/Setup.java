@@ -1861,12 +1861,25 @@ public class Setup {
             } catch (ProcessFailed failure) {
                 List<String> lines = new String(Files.readAllBytes(log), Charset.defaultCharset()).lines().collect(Collectors.toList());
                 out.println();
-                lines.subList(Math.max(0, lines.size() - 30), lines.size()).forEach(line -> out.println("    " + dim(line)));
+                failureLines(lines).forEach(line -> out.println("    " + dim(line)));
                 out.println();
                 out.println("    " + dim("Full output: " + log));
                 throw new SetupException(failureMessage);
             }
             Files.deleteIfExists(log);
+        }
+
+        private List<String> failureLines(List<String> lines) {
+            if (!live) return lines;
+            int firstProblem = -1;
+            for (int index = 0; index < lines.size(); index++) {
+                if (lines.get(index).startsWith("* What went wrong") || lines.get(index).startsWith("FAILURE:")) {
+                    firstProblem = index;
+                    break;
+                }
+            }
+            int start = firstProblem >= 0 ? Math.min(firstProblem, Math.max(0, lines.size() - 30)) : Math.max(0, lines.size() - 30);
+            return lines.subList(start, Math.min(lines.size(), start + 120));
         }
 
         private void stop(Thread spinner) throws InterruptedException {
