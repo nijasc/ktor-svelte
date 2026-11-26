@@ -104,6 +104,8 @@ On Windows, `irm ... | iex` cannot pass options, so run the script as a script b
 powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.ps1))) --yes --name=shop --i18n '--locales=en,de'"
 ```
 
+The script shows each step with its time and keeps the Gradle and package manager output out of the way. When a step fails, it prints the last lines of that output and where the full log is. It uses color in a terminal that supports it. Set `NO_COLOR` to turn color off, or `FORCE_COLOR` to keep it when the output is not a terminal.
+
 ::: details Pin a release
 The script uses the latest release from Maven Central. Pass a release number, such as `--version=1.0.0`, to create the project with that release instead.
 :::

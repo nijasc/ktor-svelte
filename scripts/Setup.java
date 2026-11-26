@@ -1,11 +1,14 @@
 import java.io.BufferedReader;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -34,6 +38,7 @@ public class Setup {
     private static final List<String> LAYERS = List.of("domain", "application", "adapters");
     private static final List<String> MANAGERS = List.of("bun", "pnpm", "npm", "yarn");
     private static final boolean WINDOWS = System.getProperty("os.name", "").startsWith("Windows");
+    private static final Ui UI = new Ui();
 
     private final Map<String, String> flags;
     private final boolean acceptDefaults;
@@ -49,12 +54,10 @@ public class Setup {
         try {
             new Setup(parseFlags(arguments)).run();
         } catch (SetupException failure) {
-            System.err.println();
-            System.err.println("ktor-svelte setup: " + failure.getMessage());
+            UI.failure(failure.getMessage());
             System.exit(1);
         } catch (Exception failure) {
-            System.err.println();
-            System.err.println("ktor-svelte setup failed: " + failure);
+            UI.failure("Setup failed: " + failure);
             System.exit(1);
         }
     }
@@ -75,15 +78,15 @@ public class Setup {
     }
 
     private void run() throws Exception {
-        System.out.println();
-        System.out.println("  ktor-svelte: one app, one JAR, one port");
-        System.out.println();
+        long started = System.nanoTime();
+        UI.banner();
 
         List<String> installed = MANAGERS.stream().filter(Setup::isOnPath).collect(Collectors.toList());
         if (installed.isEmpty()) {
             throw new SetupException("No package manager found. Install bun, pnpm, npm or yarn, then run this again.");
         }
 
+        UI.section("Project");
         String name = ask("name", "Project name", "my-app", PROJECT_NAME, "Use letters, digits, dashes and underscores.");
         Path directory = Path.of(name).toAbsolutePath();
         if (Files.exists(directory)) {
@@ -93,23 +96,25 @@ public class Setup {
         }
         String packageName = ask("package", "Kotlin package", "com.example.app", PACKAGE_NAME, "Use a package such as com.example.app.");
         String manager = choose("package-manager", "Package manager", installed);
+        UI.section("Frontend");
         boolean generateTs = confirm("generate-ts", "Generate a TypeScript client from your Ktor routes?", true);
         boolean daisy = confirm("daisy", "Add DaisyUI (includes Tailwind)?", true);
         boolean tailwind = daisy || confirm("tailwind", "Add Tailwind?", true);
         boolean lucide = confirm("lucide", "Add Lucide icons?", true);
         boolean i18n = confirm("i18n", "Add i18n?", false);
-        List<String> locales = List.of();
-        String strategy = "Cookie";
-        if (i18n) {
-            locales = Arrays.asList(ask("locales", "Languages, default first", "en,de", LOCALES, "Use tags such as en,de,pt-BR.").split(","));
-            strategy = choose("locale-strategy", "How is the language chosen?", List.of("Cookie", "UrlPrefix"));
-        }
+        List<String> locales = i18n
+            ? Arrays.asList(ask("locales", "Languages, default first", "en,de", LOCALES, "Use tags such as en,de,pt-BR.").split(","))
+            : List.of();
+        String strategy = i18n ? choose("locale-strategy", "How is the language chosen?", List.of("Cookie", "UrlPrefix")) : "Cookie";
+        UI.section("Backend");
         boolean auth = confirm("auth", "Add sign in with cookie sessions?", false);
         boolean database = confirm("database", "Add a Postgres database with Exposed?", false);
         boolean flyway = database && confirm("flyway", "Add Flyway migrations?", true);
-        boolean flatPackages = confirm("idea-ext", "Skip package folders, so IntelliJ treats src/main/kotlin as " + packageName + " (uses the idea-ext plugin)?", true);
+        UI.section("Architecture");
         Hexagon hexagon = confirm("hexagonal", "Split the backend into domain driven, hexagonal modules?", false) ? askHexagon() : null;
         boolean conventions = hexagon != null || confirm("conventions", "Add a convention plugin in build-logic, for multi-module projects?", false);
+        UI.section("Workflow");
+        boolean flatPackages = confirm("idea-ext", "Skip package folders, so IntelliJ treats src/main/kotlin as " + packageName + " (uses the idea-ext plugin)?", true);
         boolean docker = confirm("docker", "Add a Dockerfile?", true);
         boolean actions = confirm("github-actions", "Add a GitHub Actions workflow?", true);
         boolean releasePlease = actions && confirm("release-please", "Add release-please, which sets the version and writes releases from your commit messages?", false);
@@ -119,10 +124,43 @@ public class Setup {
         Optional<List<String>> idea = findIntellij();
         boolean openIdea = flags.containsKey("open-idea") || (!acceptDefaults && idea.isPresent() && confirm("open-idea", "Open the project in IntelliJ when it is ready?", true));
 
-        Versions versions = resolveVersions();
-        System.out.println();
-        System.out.println("Creating " + name + " with ktor-svelte " + versions.release + "...");
+        UI.section("Creating " + name);
+        Versions versions = UI.step(flags.containsKey("local-build") ? "Reading the local build" : "Finding the latest release", this::resolveVersions);
+        UI.note("ktor-svelte " + versions.release);
 
+        UI.step("Writing the project files", () -> {
+            writeProjectFiles(directory, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
+                auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck);
+            return null;
+        });
+
+        gradle(directory, "Creating the SvelteKit app", "svelteInit", "--package-manager=" + manager, "svelteGenerateRunConfigurations");
+        if (liveTemplates) gradle(directory, "Installing the live templates", "svelteLiveTemplates", "--install");
+        writeFrontendLinting(directory, tailwind || lucide || i18n);
+        Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth, generateTs, database, hexagon));
+        if (auth) writeAuthPages(directory, daisy, tailwind, i18n);
+        installPackages(directory, manager);
+        gradle(directory, "Formatting the frontend", "svelteRun", "--script=format");
+        gradle(directory, "Syncing the frontend libraries", "svelteSync");
+        if (generateTs) gradle(directory, "Generating the TypeScript client", "svelteGenerateTs");
+        if (git) UI.step("Creating the git repository", () -> {
+            initGit(directory, commitCheck);
+            return null;
+        });
+
+        List<String> next = new ArrayList<>();
+        next.add("cd " + name);
+        if (database) next.add("docker compose up -d");
+        next.add((WINDOWS ? "gradlew.bat" : "./gradlew") + " svelteDevAll");
+        UI.done(name, System.nanoTime() - started, next, "Then open http://localhost:8080. In IntelliJ, open the folder and run the Dev configuration.");
+        if (openIdea) openInIntellij(idea, directory);
+    }
+
+    private void writeProjectFiles(
+        Path directory, String name, String packageName, String manager, Versions versions, boolean generateTs, boolean daisy, boolean tailwind,
+        boolean lucide, boolean i18n, List<String> locales, String strategy, boolean auth, boolean database, boolean flyway, boolean flatPackages,
+        Hexagon hexagon, boolean conventions, boolean docker, boolean actions, boolean releasePlease, boolean commitCheck
+    ) throws Exception {
         Files.createDirectories(directory);
         writeWrapper(directory, versions);
         Files.writeString(directory.resolve("settings.gradle.kts"), settings(name, conventions, hexagon));
@@ -154,27 +192,6 @@ public class Setup {
         if (actions) writeWorkflow(directory, manager);
         if (releasePlease) writeReleasePlease(directory, name);
         if (commitCheck) writeCommitHook(directory);
-
-        gradle(directory, "svelteInit", "--package-manager=" + manager, "svelteGenerateRunConfigurations");
-        if (liveTemplates) gradle(directory, "svelteLiveTemplates", "--install");
-        writeFrontendLinting(directory, tailwind || lucide || i18n);
-        Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth, generateTs, database, hexagon));
-        if (auth) writeAuthPages(directory, daisy, tailwind, i18n);
-        installPackages(directory, manager);
-        gradle(directory, "svelteRun", "--script=format");
-        gradle(directory, "svelteSync");
-        if (generateTs) gradle(directory, "svelteGenerateTs");
-        if (git) initGit(directory, commitCheck);
-
-        System.out.println();
-        System.out.println("Done! Next:");
-        System.out.println();
-        System.out.println("  cd " + name);
-        if (database) System.out.println("  docker compose up -d");
-        System.out.println("  " + (WINDOWS ? "gradlew.bat" : "./gradlew") + " svelteDevAll");
-        System.out.println();
-        System.out.println("Then open http://localhost:8080. In IntelliJ, open the folder and run the Dev configuration.");
-        if (openIdea) openInIntellij(idea, directory);
     }
 
     private static String fill(String template, String packageName) {
@@ -239,7 +256,7 @@ public class Setup {
 
     private static void openInIntellij(Optional<List<String>> idea, Path directory) throws IOException {
         if (idea.isEmpty()) {
-            System.out.println("IntelliJ was not found, so open the folder yourself.");
+            UI.note("IntelliJ was not found, so open the folder yourself.");
             return;
         }
         List<String> command = new ArrayList<>(idea.get());
@@ -254,14 +271,24 @@ public class Setup {
         if (flags.containsKey(flag)) {
             String value = flags.get(flag);
             if (!valid.matcher(value).matches()) throw new SetupException("--" + flag + "=" + value + " is not valid. " + hint);
+            UI.answered(question, value, 0);
             return value;
         }
-        if (acceptDefaults) return fallback;
+        if (acceptDefaults) {
+            UI.answered(question, fallback, 0);
+            return fallback;
+        }
+        int lines = 0;
         while (true) {
-            String answer = prompt(question + " (" + fallback + "): ");
+            String answer = prompt(UI.question(question, fallback));
+            lines++;
             String value = answer.isEmpty() ? fallback : answer;
-            if (valid.matcher(value).matches()) return value;
-            System.out.println("  " + hint);
+            if (valid.matcher(value).matches()) {
+                UI.answered(question, value, lines);
+                return value;
+            }
+            UI.hint(hint);
+            lines++;
         }
     }
 
@@ -269,35 +296,59 @@ public class Setup {
         if (flags.containsKey(flag)) {
             String value = flags.get(flag);
             if (!options.contains(value)) throw new SetupException("--" + flag + " must be one of " + options + ".");
+            UI.answered(question, value, 0);
             return value;
         }
-        if (acceptDefaults || options.size() == 1) return options.get(0);
-        System.out.println(question + ":");
-        for (int index = 0; index < options.size(); index++) {
-            System.out.println("  " + (index + 1) + ") " + options.get(index));
+        if (acceptDefaults || options.size() == 1) {
+            UI.answered(question, options.get(0), 0);
+            return options.get(0);
         }
+        UI.choices(question, options);
+        int lines = options.size() + 1;
         while (true) {
-            String answer = prompt("Choose (1): ");
-            if (answer.isEmpty()) return options.get(0);
-            if (options.contains(answer)) return answer;
-            try {
-                return options.get(Integer.parseInt(answer) - 1);
-            } catch (NumberFormatException | IndexOutOfBoundsException failure) {
-                System.out.println("  Enter a number from 1 to " + options.size() + ".");
+            String answer = prompt(UI.question("Choose a number", "1"));
+            lines++;
+            String value = null;
+            if (answer.isEmpty()) value = options.get(0);
+            else if (options.contains(answer)) value = answer;
+            else {
+                try {
+                    value = options.get(Integer.parseInt(answer) - 1);
+                } catch (NumberFormatException | IndexOutOfBoundsException failure) {
+                    UI.hint("Enter a number from 1 to " + options.size() + ".");
+                    lines++;
+                }
+            }
+            if (value != null) {
+                UI.answered(question, value, lines);
+                return value;
             }
         }
     }
 
     private boolean confirm(String flag, String question, boolean fallback) throws IOException {
-        if (flags.containsKey(flag)) return !flags.get(flag).equals("false");
-        if (flags.containsKey("no-" + flag)) return false;
-        if (acceptDefaults) return fallback;
+        Boolean preset = null;
+        if (flags.containsKey(flag)) preset = !flags.get(flag).equals("false");
+        else if (flags.containsKey("no-" + flag)) preset = false;
+        else if (acceptDefaults) preset = fallback;
+        if (preset != null) {
+            UI.answered(question, preset ? "Yes" : "No", 0);
+            return preset;
+        }
+        int lines = 0;
         while (true) {
-            String answer = prompt(question + (fallback ? " (Y/n): " : " (y/N): ")).toLowerCase(Locale.ROOT);
-            if (answer.isEmpty()) return fallback;
-            if (answer.equals("y") || answer.equals("yes")) return true;
-            if (answer.equals("n") || answer.equals("no")) return false;
-            System.out.println("  Answer y or n.");
+            String answer = prompt(UI.question(question, fallback ? "Y/n" : "y/N")).toLowerCase(Locale.ROOT);
+            lines++;
+            Boolean value = null;
+            if (answer.isEmpty()) value = fallback;
+            else if (answer.equals("y") || answer.equals("yes")) value = true;
+            else if (answer.equals("n") || answer.equals("no")) value = false;
+            if (value != null) {
+                UI.answered(question, value ? "Yes" : "No", lines);
+                return value;
+            }
+            UI.hint("Answer y or n.");
+            lines++;
         }
     }
 
@@ -1058,7 +1109,7 @@ public class Setup {
             + "    </ul>\n";
     }
 
-    private void gradle(Path directory, String... tasks) throws Exception {
+    private void gradle(Path directory, String label, String... tasks) throws Exception {
         List<String> command = new ArrayList<>();
         if (WINDOWS) {
             command.add(directory.resolve("gradlew.bat").toString());
@@ -1067,21 +1118,22 @@ public class Setup {
         }
         command.addAll(Arrays.asList(tasks));
         command.add("--console=plain");
-        ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile()).inheritIO();
+        ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile());
         builder.environment().put("PORT", "0");
-        int exit = builder.start().waitFor();
-        if (exit != 0) {
-            throw new SetupException(
-                "Gradle failed while running " + String.join(" ", tasks) + ". The project is in " + directory + "."
-                    + " If the ktor-svelte plugin was not found, its release may still be waiting for approval on the Gradle Plugin Portal."
-            );
-        }
+        UI.process(
+            label,
+            builder,
+            "Gradle failed while running " + String.join(" ", tasks) + ". The project is in " + directory + "."
+                + " If the ktor-svelte plugin was not found, its release may still be waiting for approval on the Gradle Plugin Portal."
+        );
     }
 
     private static void installPackages(Path directory, String manager) throws Exception {
         List<String> command = WINDOWS ? List.of("cmd", "/c", manager, "install") : List.of(manager, "install");
-        int exit = new ProcessBuilder(command).directory(directory.resolve("frontend").toFile()).inheritIO().start().waitFor();
-        if (exit != 0) throw new SetupException(manager + " install failed. The project is in " + directory + ".");
+        UI.process(
+            "Installing the frontend packages with " + manager,
+            new ProcessBuilder(command).directory(directory.resolve("frontend").toFile()),
+            manager + " install failed. The project is in " + directory + ".");
     }
 
     private static void initGit(Path directory, boolean commitCheck) throws Exception {
@@ -1095,7 +1147,12 @@ public class Setup {
     private static void git(Path directory, String... arguments) throws Exception {
         List<String> command = new ArrayList<>(List.of("git"));
         command.addAll(Arrays.asList(arguments));
-        new ProcessBuilder(command).directory(directory.toFile()).inheritIO().start().waitFor();
+        new ProcessBuilder(command)
+            .directory(directory.toFile())
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
+            .waitFor();
     }
 
     private String download(String url) throws Exception {
@@ -1142,6 +1199,217 @@ public class Setup {
         String flyway;
         String ideaExt;
         Path localBuild;
+    }
+
+    private static final class Ui {
+        private final PrintStream out = System.out;
+        private final boolean live;
+        private final boolean ansi;
+        private final boolean color;
+        private final boolean unicode;
+        private final String mark;
+        private final String check;
+        private final String cross;
+        private final String pending;
+        private final String[] frames;
+
+        Ui() {
+            boolean forced = System.getenv("FORCE_COLOR") != null;
+            live = interactive();
+            ansi = forced || (live && ansiTerminal());
+            color = forced || (ansi && System.getenv("NO_COLOR") == null);
+            String encoding = System.getProperty("stdout.encoding", System.getProperty("sun.stdout.encoding", Charset.defaultCharset().name()));
+            unicode = encoding.equalsIgnoreCase("UTF-8") || encoding.equalsIgnoreCase("UTF8");
+            mark = unicode ? "◆" : "?";
+            check = unicode ? "✔" : "+";
+            cross = unicode ? "✖" : "x";
+            pending = unicode ? "◇" : "-";
+            frames = unicode
+                ? new String[] {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+                : new String[] {"|", "/", "-", "\\"};
+        }
+
+        private static boolean interactive() {
+            Console console = System.console();
+            if (console == null) return false;
+            try {
+                return (Boolean) Console.class.getMethod("isTerminal").invoke(console);
+            } catch (ReflectiveOperationException failure) {
+                return true;
+            }
+        }
+
+        private static boolean ansiTerminal() {
+            String term = System.getenv("TERM");
+            if ("dumb".equals(term)) return false;
+            if (!WINDOWS) return true;
+            return term != null
+                || System.getenv("WT_SESSION") != null
+                || System.getenv("TERM_PROGRAM") != null
+                || System.getenv("ANSICON") != null
+                || "ON".equalsIgnoreCase(System.getenv("ConEmuANSI"));
+        }
+
+        private String paint(String codes, String text) {
+            return color ? "\033[" + codes + "m" + text + "\033[0m" : text;
+        }
+
+        String bold(String text) {
+            return paint("1", text);
+        }
+
+        String dim(String text) {
+            return paint("2", text);
+        }
+
+        String accent(String text) {
+            return paint("38;5;99", text);
+        }
+
+        String cyan(String text) {
+            return paint("36", text);
+        }
+
+        String green(String text) {
+            return paint("32", text);
+        }
+
+        String yellow(String text) {
+            return paint("33", text);
+        }
+
+        String red(String text) {
+            return paint("31", text);
+        }
+
+        void banner() {
+            out.println();
+            String badge = color ? "\033[48;5;99;97;1m ktor-svelte \033[0m" : "ktor-svelte";
+            out.println("  " + badge + "  " + dim("one app, one JAR, one port"));
+        }
+
+        void section(String title) {
+            out.println();
+            out.println("  " + bold(accent(title)));
+        }
+
+        String question(String question, String fallback) {
+            return "  " + cyan(mark) + " " + bold(question) + " " + dim("(" + fallback + ")") + " ";
+        }
+
+        void choices(String question, List<String> options) {
+            out.println("  " + cyan(mark) + " " + bold(question));
+            for (int index = 0; index < options.size(); index++) {
+                out.println("      " + dim(String.valueOf(index + 1)) + "  " + options.get(index) + (index == 0 ? dim("  default") : ""));
+            }
+        }
+
+        void hint(String text) {
+            out.println("    " + yellow(text));
+        }
+
+        void answered(String question, String value, int linesToReplace) {
+            if (ansi && linesToReplace > 0) out.print("\033[" + linesToReplace + "A\r\033[J");
+            String label = question.endsWith("?") ? question.substring(0, question.length() - 1) : question;
+            out.println("  " + green(check) + " " + label + dim(" : ") + cyan(value));
+        }
+
+        void note(String text) {
+            out.println("    " + dim(text));
+        }
+
+        <T> T step(String label, Callable<T> work) throws Exception {
+            long started = System.nanoTime();
+            Thread spinner = null;
+            if (ansi) {
+                spinner = new Thread(() -> {
+                    int frame = 0;
+                    while (!Thread.currentThread().isInterrupted()) {
+                        out.print("\r\033[2K  " + accent(frames[frame++ % frames.length]) + " " + label + "  " + dim(elapsed(System.nanoTime() - started)));
+                        out.flush();
+                        try {
+                            Thread.sleep(80);
+                        } catch (InterruptedException stop) {
+                            return;
+                        }
+                    }
+                });
+                spinner.setDaemon(true);
+                spinner.start();
+            } else {
+                out.println("  " + pending + " " + label + "...");
+            }
+            try {
+                T result = work.call();
+                stop(spinner);
+                finish(green(check), label, started);
+                return result;
+            } catch (Exception failure) {
+                stop(spinner);
+                finish(red(cross), label, started);
+                throw failure;
+            }
+        }
+
+        void process(String label, ProcessBuilder builder, String failureMessage) throws Exception {
+            Path log = Files.createTempFile("ktor-svelte-setup", ".log");
+            builder.redirectErrorStream(true).redirectOutput(log.toFile());
+            try {
+                step(label, () -> {
+                    Process process = builder.start();
+                    process.getOutputStream().close();
+                    if (process.waitFor() != 0) throw new ProcessFailed();
+                    return null;
+                });
+            } catch (ProcessFailed failure) {
+                List<String> lines = new String(Files.readAllBytes(log), Charset.defaultCharset()).lines().collect(Collectors.toList());
+                out.println();
+                lines.subList(Math.max(0, lines.size() - 30), lines.size()).forEach(line -> out.println("    " + dim(line)));
+                out.println();
+                out.println("    " + dim("Full output: " + log));
+                throw new SetupException(failureMessage);
+            }
+            Files.deleteIfExists(log);
+        }
+
+        private void stop(Thread spinner) throws InterruptedException {
+            if (spinner == null) return;
+            spinner.interrupt();
+            spinner.join();
+            out.print("\r\033[2K");
+        }
+
+        private void finish(String symbol, String label, long started) {
+            out.println("  " + symbol + " " + label + "  " + dim(elapsed(System.nanoTime() - started)));
+        }
+
+        void done(String name, long nanos, List<String> commands, String after) {
+            out.println();
+            out.println("  " + green(check) + " " + bold("Created " + name) + " " + dim("in " + elapsed(nanos)));
+            out.println();
+            out.println("  " + bold(accent("Next")));
+            commands.forEach(command -> out.println("    " + dim("$") + " " + cyan(command)));
+            out.println();
+            out.println("  " + dim(after));
+            out.println();
+        }
+
+        void failure(String message) {
+            System.err.println();
+            System.err.println("  " + red(cross + " " + message));
+            System.err.println();
+        }
+
+        private static String elapsed(long nanos) {
+            long tenths = nanos / 100_000_000L;
+            if (tenths < 600) return (tenths / 10) + "." + (tenths % 10) + "s";
+            long seconds = tenths / 10;
+            return (seconds / 60) + "m " + (seconds % 60) + "s";
+        }
+    }
+
+    private static final class ProcessFailed extends Exception {
+        private static final long serialVersionUID = 1L;
     }
 
     private record BoundedContext(String name, String aggregate) {}
