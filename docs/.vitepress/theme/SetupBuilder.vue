@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 
 const scripts = 'https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts';
 
@@ -230,6 +230,57 @@ const windowsCommand = computed(() => {
     return `powershell -c "& ([scriptblock]::Create((irm ${scripts}/setup.ps1))) ${quoted.join(' ')}"`;
 });
 
+const SHARE_PARAM = 'setup';
+const DEFAULT_FLAGS = '--yes --name=my-app';
+const allToggles = [...frontendToggles, ...backendToggles, ...architectureToggles, ...workflowToggles];
+
+function applyFlags(list: string[]) {
+    for (const flag of list) {
+        if (!flag.startsWith('--')) continue;
+        const [name, ...parts] = flag.slice(2).split('=');
+        const value = parts.join('=');
+        if (name === 'name') form.name = value;
+        else if (name === 'package') form.package = value;
+        else if (name === 'package-manager') form.packageManager = value;
+        else if (name === 'locales') form.locales = value;
+        else if (name === 'locale-strategy') form.localeStrategy = value;
+        else if (name === 'contexts') form.contexts = value;
+        else if (name === 'module-layout') form.moduleLayout = value;
+        else if (name === 'hexagonal') form.hexagonal = true;
+        else if (name.startsWith('aggregate-')) aggregates[name.slice('aggregate-'.length)] = value;
+        else {
+            const negative = name.startsWith('no-');
+            const toggle = allToggles.find((item) => item.flag === (negative ? name.slice(3) : name));
+            if (!toggle) continue;
+            touched.add(toggle.key);
+            form[toggle.key] = !negative;
+        }
+    }
+}
+
+const shareLink = computed(() => {
+    if (typeof window === 'undefined') return '';
+    const url = new URL(window.location.href);
+    url.searchParams.set(SHARE_PARAM, flags.value.join(' '));
+    url.hash = 'build-the-command';
+    return url.toString();
+});
+
+onMounted(() => {
+    const shared = new URLSearchParams(window.location.search).get(SHARE_PARAM);
+    if (shared) {
+        applyFlags(shared.split(' '));
+        go(steps.length - 1);
+    }
+    watch(flags, (current) => {
+        const url = new URL(window.location.href);
+        const joined = current.join(' ');
+        if (joined === DEFAULT_FLAGS) url.searchParams.delete(SHARE_PARAM);
+        else url.searchParams.set(SHARE_PARAM, joined);
+        window.history.replaceState(window.history.state, '', url);
+    });
+});
+
 const copied = ref('');
 
 async function copy(which: string, text: string) {
@@ -393,6 +444,10 @@ async function copy(which: string, text: string) {
                     <ul class="summary">
                         <li v-for="item in summary" :key="item">{{ item }}</li>
                     </ul>
+                    <div class="command-head share">
+                        <span>A link to these answers, to share with your team</span>
+                        <button type="button" @click="copy('link', shareLink)">{{ copied === 'link' ? 'Copied' : 'Copy link' }}</button>
+                    </div>
                     <div class="command">
                         <div class="command-head">
                             <span>macOS and Linux</span>
@@ -639,6 +694,12 @@ button:focus-visible,
 
 .command {
     margin-top: 16px;
+}
+
+.share {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--vp-c-divider);
 }
 
 .command-head {
