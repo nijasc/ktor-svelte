@@ -159,20 +159,36 @@ When something looks off, run `./gradlew svelteDoctor`.
 | Postgres | `--database` | no | Exposed, HikariCP, `compose.yaml` and a small example table |
 | Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration`, and [`generateMigrations`](https://nijasc.github.io/ktor-svelte/main/guide/dev-workflow#generate-a-migration) to write the next one from your tables |
 | No package folders | `--idea-ext` | yes | Kotlin files directly in `src/main/kotlin`, and IntelliJ knows the package through the `idea-ext` plugin |
-| Convention plugin | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
+| Hexagonal modules | `--hexagonal` | no | A domain driven, multi-module backend. See [Hexagonal modules](#hexagonal-modules) |
+| Convention plugin, asked only without hexagonal modules | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
 | Dockerfile | `--docker` | yes | A multi-stage build that runs the JAR as a non-root user |
 | GitHub Actions | `--github-actions` | yes | A CI workflow with Actions pinned to commit SHAs |
+| release-please, only with GitHub Actions | `--release-please` | no | A release workflow that keeps a release pull request open, and a `version.txt` that sets the Gradle `version` |
+| Conventional Commits | `--conventional-commits` | yes with release-please, otherwise no | A `commit-msg` hook in `.githooks` that rejects other messages |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
 | IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |
 
 DaisyUI includes Tailwind, so with `--daisy` the Tailwind question is skipped. The languages for i18n are written default first, such as `en,de`, and the strategy is `Cookie` or `UrlPrefix`.
 
+### Hexagonal modules
+
+With `--hexagonal`, the backend is split into bounded contexts, and the script asks how:
+
+| Question | Flag | Default | What you get |
+|---|---|---|---|
+| Bounded contexts | `--contexts` | `orders` | One context per name, such as `--contexts=catalog,orders`. Lowercase letters and digits |
+| Main aggregate of each context | `--aggregate-<context>` | The name without a trailing `s`, capitalized | An aggregate, a repository port, a service and `/api/<context>`, such as `--aggregate-catalog=Product` |
+| Modules per context | `--module-layout` | `layers` | `layers` makes `domain`, `application` and `adapters` modules, so Gradle keeps each layer from seeing the one above it. `single` makes one module with a package per layer |
+| Shared kernel | `--shared-kernel` | no | A `shared-kernel` module with `DomainException`, which the app answers with 422 |
+
+The root project starts the app and wires the contexts together in `Application.kt`. The repository adapter uses Exposed when you chose Postgres, and keeps data in memory otherwise. Modules depend on each other through type-safe project accessors such as `projects.ordersDomain`, and every library and plugin version comes from `gradle/libs.versions.toml`. Modules with routes apply `ktor-routes-conventions` from `build-logic`, which adds Ktor's OpenAPI compiler plugin, so `generateTs` sees their request and response types.
+
 Every project also gets a Gradle version catalog, JSON and typed error responses, ktlint, ESLint and Prettier, a `README.md`, a `.env.example` and a `.gitignore`. With sign in or Postgres, it also gets a `.env` with random secrets, which is not committed. [Project structure](https://nijasc.github.io/ktor-svelte/main/guide/project-structure) shows where everything lives.
 
 ## Build the command
 
-Pick what you want, and copy the command for your system. It skips every question.
+Walk through the steps, or skip to the command at any point, and copy the command for your system. Every step starts with the defaults, and the command skips every question.
 
 To write the command by hand, add `--yes` and any options from the table. `--yes` takes the default for every question you do not answer with a flag. Turn something off with `--no-`, such as `--no-lucide`:
 
@@ -185,6 +201,8 @@ On Windows, `irm ... | iex` cannot pass options, so run the script as a script b
 ```powershell
 powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.ps1))) --yes --name=shop --i18n '--locales=en,de'"
 ```
+
+The script shows each step with its time and keeps the Gradle and package manager output out of the way. When a step fails, it prints the last lines of that output and where the full log is. It uses color in a terminal that supports it. Set `NO_COLOR` to turn color off, or `FORCE_COLOR` to keep it when the output is not a terminal.
 
 **Pin a release**
 The script uses the latest release from Maven Central. Pass a release number, such as `--version=1.0.0`, to create the project with that release instead.
@@ -855,11 +873,19 @@ my-app/
   compose.yaml                if you chose Postgres
   Dockerfile                  if you chose Docker
   .github/workflows/ci.yml    if you chose GitHub Actions
-  build-logic/                if you chose the convention plugin
+  .github/workflows/release.yml, release-please-config.json, version.txt
+                              if you chose release-please
+  .githooks/commit-msg        if you chose Conventional Commits
+  build-logic/                if you chose the convention plugin or hexagonal modules
+  orders/                     a bounded context, if you chose hexagonal modules
+    domain/                   the aggregate and its rules
+    application/              use cases and ports
+    adapters/                 HTTP routes and the repository
+  shared-kernel/              if you chose a shared kernel
   README.md
 ```
 
-With `--no-idea-ext`, the Kotlin files sit in package folders, such as `src/main/kotlin/com/example/app/`, instead of directly in `src/main/kotlin`.
+With `--no-idea-ext`, the Kotlin files sit in package folders, such as `src/main/kotlin/com/example/app/`, instead of directly in `src/main/kotlin`. The modules of a bounded context always use package folders, such as `orders/domain/src/main/kotlin/com/example/app/orders/domain/`. With `--module-layout=single`, each context is one folder with those three packages instead of three modules.
 
 ## Files you own and files ktor-svelte owns
 
@@ -15198,6 +15224,7 @@ What each release was built and tested with, read from the release's tagged sour
 | ktor-svelte | Ktor | Kotlin | JVM | Gradle tested | SvelteKit |
 |---|---|---|---|---|---|
 | main (unreleased) | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.2 | 3.x (tested 3.1.1) |
+| 1.6.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.2 | 3.x (tested 3.1.1) |
 | 1.5.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.1 | 3.x (tested 3.1.1) |
 | 1.4.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.1 | 3.x (tested 3.1.1) |
 | 1.3.0 | 3.6+ (tested 3.6.1) | 2.3+ (built with 2.4.21) | 17+ | 8.14.6, 9.9.1 | 3.x (tested 3.1.1) |
