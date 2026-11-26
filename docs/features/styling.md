@@ -264,6 +264,7 @@ get("/api/report") {
 - `call.theme` is the visitor's theme, or `AppTheme.default` when there is none.
 - Each constant has its `cssName`, such as `"shadcn-dark"`.
 - `AppTheme.fromCssName(name)` turns a name back into a constant, or `null`.
+- `AppTheme.MAX_LENGTH` is the length of the longest constant name, such as `11` for `ShadcnLight`. Use it to size a column that stores the theme, for example `enumerationByName("theme", AppTheme.MAX_LENGTH, AppTheme::class)` in Exposed. It is a `const`, so it also works in annotations.
 
 Use it for anything rendered on the server that should match the page, such as a PDF or a chart image.
 

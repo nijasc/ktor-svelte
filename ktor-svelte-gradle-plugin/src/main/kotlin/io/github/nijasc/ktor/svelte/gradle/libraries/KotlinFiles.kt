@@ -67,6 +67,8 @@ private fun lucideEnum(
         constants.joinToString(",\n", postfix = ",\n") { "    $it" } +
         "}\n"
 
+private fun longestName(constants: List<String>): String = constants.maxOf { it.length }.toString()
+
 private fun themeConstant(name: String): String = name.split('-').joinToString("") { part -> part.replaceFirstChar { it.uppercase() } }
 
 private fun themeEnum(
@@ -78,6 +80,7 @@ private fun themeEnum(
             "AppTheme.kt.template",
             mapOf(
                 "entries" to daisy.allThemes.joinToString(",\n", postfix = ",") { "    ${themeConstant(it)}(${kotlinString(it)})" },
+                "maxLength" to longestName(daisy.allThemes.map(::themeConstant)),
                 "defaultTheme" to themeConstant(daisy.defaultTheme),
             ),
         )
@@ -94,6 +97,7 @@ private fun languageEnum(
             "AppLanguage.kt.template",
             mapOf(
                 "entries" to i18n.locales.joinToString(",\n", postfix = ",") { "    ${languageConstant(it)}(${kotlinString(it)})" },
+                "maxLength" to longestName(i18n.locales.map(::languageConstant)),
                 "defaultLanguage" to languageConstant(i18n.defaultLocale),
             ),
         )
