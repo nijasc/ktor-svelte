@@ -91,6 +91,7 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 | Conventional Commits | `--conventional-commits` | yes with release-please, otherwise no | A local `commit-msg` hook that rejects other messages |
 | Dependabot | `--dependabot` | no | `.github/dependabot.yml` with weekly, grouped updates for Gradle, the frontend packages and GitHub Actions |
 | Agentic usage | `--agents` | yes | An `AGENTS.md` written for this project, a `CLAUDE.md` that imports it, and `.claude/settings.json` that allows the project commands |
+| Railway | `--railway`, `--deploy-on`, `--deploy-branch` | no | `.railway/railway.ts` as infrastructure as code, a deploy workflow and a config workflow. Deploys on each release by default with release-please, on each push to `main` otherwise |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
 | IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |

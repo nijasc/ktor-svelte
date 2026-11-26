@@ -36,6 +36,9 @@ const form = reactive({
     conventionalCommits: false,
     dependabot: false,
     agents: true,
+    railway: false,
+    deployOn: '',
+    deployBranch: 'production',
     git: true,
     liveTemplates: true,
     openIdea: false
@@ -75,6 +78,7 @@ const workflowToggles: Toggle[] = [
     { key: 'releasePlease', flag: 'release-please', label: 'release-please', hint: 'Release pull requests, and version.txt sets the Gradle version' },
     { key: 'conventionalCommits', flag: 'conventional-commits', label: 'Conventional Commits', hint: 'A local commit-msg hook that rejects other messages' },
     { key: 'dependabot', flag: 'dependabot', label: 'Dependabot', hint: 'A weekly pull request each for Gradle, the frontend and Actions' },
+    { key: 'railway', flag: 'railway', label: 'Railway', hint: 'Deploys with the infrastructure as code in .railway/railway.ts' },
     { key: 'agents', flag: 'agents', label: 'Agentic usage', hint: 'AGENTS.md, CLAUDE.md and agent permissions, written for this project' },
     { key: 'git', flag: 'git', label: 'Git repository', hint: 'Runs git init' },
     { key: 'liveTemplates', flag: 'live-templates', label: 'Live templates', hint: 'ksget, ksapi and more in IntelliJ and WebStorm' },
@@ -100,6 +104,7 @@ const fallbacks: Record<ToggleKey, () => boolean> = {
     conventionalCommits: () => releasePleaseOn.value,
     dependabot: () => false,
     agents: () => true,
+    railway: () => false,
     git: () => true,
     liveTemplates: () => true,
     openIdea: () => false
@@ -118,8 +123,18 @@ function disabled(key: ToggleKey): string | null {
     if (key === 'releasePlease' && !form.githubActions) return 'Needs GitHub Actions';
     if (key === 'sharedKernel' && !form.hexagonal) return 'Needs hexagonal modules';
     if (key === 'conventions' && form.hexagonal) return 'Always on with hexagonal modules';
+    if (key === 'docker' && form.railway) return 'Railway builds the Dockerfile';
     return null;
 }
+
+const branchName = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const defaultDeployOn = computed(() => (releasePleaseOn.value ? 'release' : 'main'));
+const deployOn = computed(() => form.deployOn || defaultDeployOn.value);
+const deployMoments = computed(() => [
+    { value: 'release', label: releasePleaseOn.value ? 'On each release (recommended with release-please)' : 'On each published release' },
+    { value: 'main', label: 'On each push to main' },
+    { value: 'branch', label: 'On each push to another branch' }
+]);
 
 function set(key: ToggleKey, event: Event) {
     touched.add(key);
@@ -129,6 +144,7 @@ function set(key: ToggleKey, event: Event) {
 function checked(key: ToggleKey): boolean {
     if (key === 'tailwind' && form.daisy) return true;
     if (key === 'conventions' && form.hexagonal) return true;
+    if (key === 'docker' && form.railway) return true;
     if (disabled(key)) return false;
     return form[key];
 }
@@ -167,7 +183,9 @@ const stepErrors = computed<string[][]>(() => {
             if (new Set(chosen).size !== chosen.length) architecture.push('Two contexts cannot have aggregates with the same name.');
         }
     }
-    return [project, frontend, [], architecture, [], []];
+    const workflow: string[] = [];
+    if (form.railway && deployOn.value === 'branch' && !branchName.test(form.deployBranch)) workflow.push('Use a branch name such as production.');
+    return [project, frontend, [], architecture, workflow, []];
 });
 
 const allErrors = computed(() => stepErrors.value.flat());
@@ -207,6 +225,10 @@ const flags = computed(() => {
     }
     architectureToggles.forEach(add);
     workflowToggles.forEach(add);
+    if (form.railway) {
+        if (deployOn.value !== defaultDeployOn.value) result.push(`--deploy-on=${deployOn.value}`);
+        if (deployOn.value === 'branch' && form.deployBranch !== 'production') result.push(`--deploy-branch=${form.deployBranch}`);
+    }
     return result;
 });
 
@@ -226,6 +248,10 @@ const summary = computed(() => {
     }
     const workflow = workflowToggles.filter((toggle) => on(toggle.key)).map((toggle) => toggle.label);
     items.push(`Workflow: ${workflow.length ? workflow.join(', ') : 'nothing extra'}`);
+    if (form.railway) {
+        const moment = deployOn.value === 'branch' ? `each push to ${form.deployBranch}` : deployOn.value === 'release' ? 'each release' : 'each push to main';
+        items.push(`Deploys to Railway on ${moment}`);
+    }
     return items;
 });
 
@@ -273,6 +299,7 @@ const createdFiles = computed(() => {
     if (on('generateTs')) files.push('frontend/src/lib/api/');
     if (on('i18n') && localeList.test(form.locales)) form.locales.split(',').forEach((locale) => files.push(`frontend/messages/${locale}.json`));
     if (on('docker')) files.push('Dockerfile', '.dockerignore');
+    if (on('railway')) files.push('.railway/railway.ts', '.railway/package.json', '.github/workflows/railway-config.yml', '.github/workflows/deploy.yml');
     if (on('githubActions')) files.push('.github/workflows/ci.yml');
     if (releasePleaseOn.value) files.push('.github/workflows/release.yml', 'release-please-config.json', '.release-please-manifest.json', 'version.txt');
     if (on('conventionalCommits')) files.push('.githooks/commit-msg', '.gitattributes');
@@ -342,6 +369,8 @@ function applyFlags(list: string[]) {
         else if (name === 'locale-strategy') form.localeStrategy = value;
         else if (name === 'contexts') form.contexts = value;
         else if (name === 'module-layout') form.moduleLayout = value;
+        else if (name === 'deploy-on') form.deployOn = value;
+        else if (name === 'deploy-branch') form.deployBranch = value;
         else if (name === 'hexagonal') form.hexagonal = true;
         else if (name.startsWith('aggregate-')) aggregates[name.slice('aggregate-'.length)] = value;
         else {
@@ -527,6 +556,18 @@ async function copy(which: string, text: string) {
                         <input type="checkbox" :disabled="!!disabled(toggle.key)" :checked="checked(toggle.key)" @change="set(toggle.key, $event)" />
                         <span class="card-label">{{ toggle.label }}</span>
                         <span class="card-hint">{{ disabled(toggle.key) ?? toggle.hint }}</span>
+                    </label>
+                </div>
+                <div v-if="form.railway" class="fields nested">
+                    <label>
+                        <span>Deploy to Railway</span>
+                        <select :value="deployOn" @change="form.deployOn = ($event.target as HTMLSelectElement).value">
+                            <option v-for="moment in deployMoments" :key="moment.value" :value="moment.value">{{ moment.label }}</option>
+                        </select>
+                    </label>
+                    <label v-if="deployOn === 'branch'">
+                        <span>Branch that deploys</span>
+                        <input v-model.trim="form.deployBranch" spellcheck="false" />
                     </label>
                 </div>
             </template>

@@ -138,6 +138,25 @@ To use it:
 
 Railway is the only host so far. `--host` exists for the ones to come, and another value says so.
 
+### From the setup script
+
+A new project can start with all of this. Answer yes to "Deploy to Railway" in the [setup script](getting-started.md), or pass `--railway`, and choose when it deploys with `--deploy-on`:
+
+| `--deploy-on` | Deploys on | Default when |
+|---|---|---|
+| `release` | Each release. With release-please, `release.yml` runs the deploy after it creates the release, because a release made by a workflow does not start other workflows. Without it, each published GitHub release | release-please is on |
+| `main` | Each push to `main` | release-please is off |
+| `branch` | Each push to the branch in `--deploy-branch`, `production` by default | |
+
+It writes:
+
+- `.railway/railway.ts` with the app service, the health check, and with Postgres a database whose `DATABASE_URL` the app reads. `Database.kt` accepts Railway's `postgresql://` URL as it is. With sign in, `SESSION_SECRET` is kept in Railway with `preserve()`.
+- `.railway/package.json` with Railway's package pinned.
+- `.github/workflows/deploy.yml`, which runs `railway up` with the pinned CLI. The service has no `source`, so Railway deploys only when this workflow says so.
+- `.github/workflows/railway-config.yml`, which posts a plan on pull requests that change `.railway/` and applies it when they merge.
+
+The Dockerfile is always added, since Railway builds with it. The project README lists the one-time steps: create the project, apply the configuration, set the secrets, and save a project token as the `RAILWAY_TOKEN` repository secret.
+
 ## A plain server
 
 Copy the JAR to the server and run it as a service. A minimal systemd unit:

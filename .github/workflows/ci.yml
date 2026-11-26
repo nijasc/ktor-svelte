@@ -197,6 +197,19 @@ jobs:
           cd contexts
           ./gradlew check buildFatJar svelteCheck
           ./gradlew svelteRun --script=lint
+      - name: Create a project that deploys to Railway and check its infrastructure code
+        shell: bash
+        run: |
+          repository="$PWD"
+          cd "$RUNNER_TEMP"
+          java "$repository/scripts/Setup.java" "--local-build=$repository" --yes --name=railway --railway --deploy-on=branch --database --auth --no-live-templates --no-git
+          cd railway
+          ./gradlew check buildFatJar
+          test -f Dockerfile
+          grep -q "branches: \[production\]" .github/workflows/deploy.yml
+          cd .railway
+          bun install
+          bunx -p typescript@5.9.3 tsc --noEmit --strict --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck railway.ts
       - name: Preview a project without writing it
         shell: bash
         run: |
