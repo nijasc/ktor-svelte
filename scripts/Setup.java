@@ -131,6 +131,33 @@ public class Setup {
         newerRelease(versions.release).ifPresent(latest -> UI.warn(
             "ktor-svelte " + latest + " is out. Leave out --version to use it, or pass --version=" + latest + "."));
 
+        if (flags.containsKey("dry-run")) {
+            Path preview = Files.createTempDirectory("ktor-svelte-dry-run");
+            try {
+                Path planned = preview.resolve(name);
+                UI.step("Planning the project files", () -> {
+                    writeProjectFiles(planned, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
+                        auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck, dependabot);
+                    return null;
+                });
+                UI.section("It writes");
+                UI.tree(planned, name);
+                UI.section("Then it runs");
+                UI.item("svelteInit: the SvelteKit app in frontend/ and the IntelliJ run configurations");
+                if (liveTemplates) UI.item("svelteLiveTemplates --install: the live templates in IntelliJ and WebStorm");
+                UI.item("the start page, ESLint and Prettier" + (auth ? ", and the sign in pages" : ""));
+                UI.item(manager + " install: the frontend packages");
+                UI.item("svelteRun --script=format and svelteSync: formatted sources and the generated frontend files");
+                if (generateTs) UI.item("svelteGenerateTs: the TypeScript client in frontend/src/lib/api");
+                if (git) UI.item("git init" + (commitCheck ? ", with the commit-msg hook turned on" : ""));
+                if (openIdea) UI.item("IntelliJ, with the project open");
+            } finally {
+                deleteRecursively(preview);
+            }
+            UI.finishDryRun(name);
+            return;
+        }
+
         UI.step("Writing the project files", () -> {
             writeProjectFiles(directory, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
                 auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck, dependabot);
@@ -196,6 +223,13 @@ public class Setup {
         if (dependabot) writeDependabot(directory, manager, actions);
         if (releasePlease) writeReleasePlease(directory, name);
         if (commitCheck) writeCommitHook(directory);
+    }
+
+    private static void deleteRecursively(Path root) throws IOException {
+        if (!Files.exists(root)) return;
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).collect(Collectors.toList())) Files.delete(path);
+        }
     }
 
     private static String fill(String template, String packageName) {
@@ -1369,6 +1403,54 @@ public class Setup {
             if (ansi && linesToReplace > 0) out.print("\033[" + linesToReplace + "A\r\033[J");
             String label = question.endsWith("?") ? question.substring(0, question.length() - 1) : question;
             out.println("  " + green(check) + " " + label + dim(" : ") + cyan(value));
+        }
+
+        void item(String text) {
+            out.println("  " + accent(pending) + " " + text);
+        }
+
+        void tree(Path root, String name) throws IOException {
+            out.println("    " + bold(name + "/"));
+            branch(root, 1);
+        }
+
+        private void branch(Path folder, int depth) throws IOException {
+            List<Path> entries;
+            try (var listed = Files.list(folder)) {
+                entries = listed
+                    .sorted(java.util.Comparator.comparing((Path path) -> !Files.isDirectory(path)).thenComparing(path -> path.getFileName().toString()))
+                    .collect(Collectors.toList());
+            }
+            for (Path entry : entries) {
+                if (!Files.isDirectory(entry)) {
+                    out.println("    " + "  ".repeat(depth) + entry.getFileName());
+                    continue;
+                }
+                StringBuilder label = new StringBuilder(entry.getFileName() + "/");
+                Path inner = entry;
+                Optional<Path> only = onlyFolder(inner);
+                while (only.isPresent()) {
+                    inner = only.get();
+                    label.append(inner.getFileName()).append('/');
+                    only = onlyFolder(inner);
+                }
+                out.println("    " + "  ".repeat(depth) + accent(label.toString()));
+                branch(inner, depth + 1);
+            }
+        }
+
+        private static Optional<Path> onlyFolder(Path folder) throws IOException {
+            try (var listed = Files.list(folder)) {
+                List<Path> children = listed.collect(Collectors.toList());
+                return children.size() == 1 && Files.isDirectory(children.get(0)) ? Optional.of(children.get(0)) : Optional.empty();
+            }
+        }
+
+        void finishDryRun(String name) {
+            out.println();
+            out.println("  " + green(check) + " " + bold("Nothing was written") + dim(" (dry run)"));
+            out.println("  " + dim("Run the same command without --dry-run to create " + name + "."));
+            out.println();
         }
 
         void warn(String text) {

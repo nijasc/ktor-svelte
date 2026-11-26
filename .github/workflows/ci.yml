@@ -194,6 +194,15 @@ jobs:
           cd contexts
           ./gradlew check buildFatJar svelteCheck
           ./gradlew svelteRun --script=lint
+      - name: Preview a project without writing it
+        shell: bash
+        run: |
+          repository="$PWD"
+          cd "$RUNNER_TEMP"
+          java "$repository/scripts/Setup.java" "--local-build=$repository" --dry-run --yes --name=preview --hexagonal --auth | tee preview.log
+          grep -q "Nothing was written" preview.log
+          grep -q "OrderRoutes.kt" preview.log
+          test ! -e preview
       - name: Create a project with no options and build it
         shell: bash
         run: |
