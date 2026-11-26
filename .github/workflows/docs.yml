@@ -115,7 +115,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.retry.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -125,4 +125,11 @@ jobs:
         with:
           path: .
       - id: deploy
+        continue-on-error: true
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
+      - name: Wait for the artifact to be visible to the Pages API
+        if: ${{ steps.deploy.outcome == 'failure' }}
+        run: sleep 30
+      - id: retry
+        if: ${{ steps.deploy.outcome == 'failure' }}
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346

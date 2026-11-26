@@ -55,6 +55,9 @@ jobs:
           bun-version-file: .bun-version
       - run: ./gradlew check apiCheck
         shell: bash
+      - name: Build the generator playground, which compiles the TypeScript generator to JavaScript
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: ./gradlew -p docs/playground compileProductionLibraryKotlinJs
 
   gradle-8:
     needs: changes
