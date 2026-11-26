@@ -1,6 +1,7 @@
 <script lang="ts">
     import { api, ErrorCode, hasErrorCode, isValidationError, PasswordChange, ProfileInput } from '#api';
     import Field from '#components/Field.svelte';
+    import IconInput from '#components/IconInput.svelte';
     import Icon from '#icon';
     import { m } from '#i18n';
     import { toast } from '#lib/ktor-svelte/toasts.ts';
@@ -70,19 +71,25 @@
 <section class="max-w-md" aria-labelledby="password-title">
     <h2 id="password-title" class="mb-3 text-xl font-semibold">{m.settingsPassword()}</h2>
     <form class="grid gap-3" novalidate onsubmit={changePassword}>
-        <Field
+        <IconInput
             id="password-current"
             label={m.settingsCurrentPassword()}
+            icon="LockKeyhole"
             type="password"
             autocomplete="current-password"
+            showLabel={m.settingsShowPassword()}
+            hideLabel={m.settingsHidePassword()}
             bind:value={password.current}
             errors={passwordErrors.current}
         />
-        <Field
+        <IconInput
             id="password-next"
             label={m.settingsNewPassword()}
+            icon="KeyRound"
             type="password"
             autocomplete="new-password"
+            showLabel={m.settingsShowPassword()}
+            hideLabel={m.settingsHidePassword()}
             bind:value={password.next}
             bounds={PasswordChange.bounds.next}
             errors={passwordErrors.next}

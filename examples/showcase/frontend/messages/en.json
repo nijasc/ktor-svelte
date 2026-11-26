@@ -20,6 +20,8 @@
   "skip-to-content": "Skip to content",
   "nav-loading": "Loading page",
   "settings-password-hint": "At least {min} characters.",
+  "settings-show-password": "Show password",
+  "settings-hide-password": "Hide password",
   "consent-text": "This site can remember your board filter in a cookie.",
   "consent-accept": "Remember it",
   "consent-refuse": "Only what is needed",

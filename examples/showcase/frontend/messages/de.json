@@ -20,6 +20,8 @@
   "skip-to-content": "Zum Inhalt springen",
   "nav-loading": "Seite l\u00e4dt",
   "settings-password-hint": "Mindestens {min} Zeichen.",
+  "settings-show-password": "Passwort anzeigen",
+  "settings-hide-password": "Passwort verbergen",
   "consent-text": "Diese Seite kann sich deinen Board-Filter in einem Cookie merken.",
   "consent-accept": "Merken",
   "consent-refuse": "Nur das N\u00f6tige",

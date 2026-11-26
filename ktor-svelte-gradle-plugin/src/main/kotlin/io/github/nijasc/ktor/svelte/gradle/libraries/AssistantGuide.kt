@@ -83,6 +83,12 @@ internal fun assistantGuide(
                 "- `MaskedInput.svelte`: formats phone numbers, IBANs, dates and money while typing and binds the clean value, " +
                     "such as `<MaskedInput label=\"IBAN\" mask=\"iban\" bind:value={form.draft.iban} />`.",
             )
+            if (spec.lucide) {
+                appendLine(
+                    "- `IconInput.svelte`: a field with a Lucide icon inside, an optional clear button and a show button for passwords, " +
+                        "such as `<IconInput label=\"Email\" icon=\"Mail\" type=\"email\" bind:value={form.draft.email} />`.",
+                )
+            }
             appendLine(
                 "- `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, " +
                     "such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.",
