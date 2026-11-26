@@ -25,3 +25,35 @@
     font-size: 14px;
     color: var(--vp-c-text-2);
 }
+
+.nav-switchers {
+    display: flex;
+    align-items: center;
+}
+
+.nav-screen-switchers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 24px;
+}
+
+.nav-screen-switchers > * {
+    margin-left: 0 !important;
+}
+
+@media (max-width: 959px) {
+    .nav-switchers,
+    .VPNavBarMenu,
+    .VPNavBarExtra {
+        display: none !important;
+    }
+
+    .VPNavBarHamburger {
+        display: flex !important;
+    }
+
+    .VPNavScreen {
+        display: block !important;
+    }
+}
