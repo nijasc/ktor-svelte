@@ -83,9 +83,12 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 | Postgres | `--database` | no | Exposed, HikariCP, `compose.yaml` and a small example table |
 | Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration` |
 | No package folders | `--idea-ext` | yes | Kotlin files directly in `src/main/kotlin`, and IntelliJ knows the package through the `idea-ext` plugin |
-| Convention plugin | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
+| Hexagonal modules | `--hexagonal` | no | Bounded contexts split into domain, application and adapter modules. It asks for the contexts, their aggregates, the module layout and a shared kernel |
+| Convention plugin, asked only without hexagonal modules | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
 | Dockerfile | `--docker` | yes | A multi-stage build that runs the JAR as a non-root user |
 | GitHub Actions | `--github-actions` | yes | A CI workflow with Actions pinned to commit SHAs |
+| release-please, only with GitHub Actions | `--release-please` | no | Release pull requests from your commit messages, and a `version.txt` that sets the Gradle `version` |
+| Conventional Commits | `--conventional-commits` | yes with release-please, otherwise no | A local `commit-msg` hook that rejects other messages |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
 | IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |

@@ -59,14 +59,30 @@ When something looks off, run `./gradlew svelteDoctor`.
 | Postgres | `--database` | no | Exposed, HikariCP, `compose.yaml` and a small example table |
 | Flyway, only with Postgres | `--flyway` | yes | Migrations in `src/main/resources/db/migration`, and [`generateMigrations`](dev-workflow.md#generate-a-migration) to write the next one from your tables |
 | No package folders | `--idea-ext` | yes | Kotlin files directly in `src/main/kotlin`, and IntelliJ knows the package through the `idea-ext` plugin |
-| Convention plugin | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
+| Hexagonal modules | `--hexagonal` | no | A domain driven, multi-module backend. See [Hexagonal modules](#hexagonal-modules) |
+| Convention plugin, asked only without hexagonal modules | `--conventions` | no | `build-logic` with shared Kotlin and ktlint setup, for multi-module projects |
 | Dockerfile | `--docker` | yes | A multi-stage build that runs the JAR as a non-root user |
 | GitHub Actions | `--github-actions` | yes | A CI workflow with Actions pinned to commit SHAs |
+| release-please, only with GitHub Actions | `--release-please` | no | A release workflow that keeps a release pull request open, and a `version.txt` that sets the Gradle `version` |
+| Conventional Commits | `--conventional-commits` | yes with release-please, otherwise no | A `commit-msg` hook in `.githooks` that rejects other messages |
 | Git repository, only if git is installed | `--git` | yes | `git init` |
 | IntelliJ live templates | `--live-templates` | yes | Installs `ksget`, `ksapi` and the other ktor-svelte live templates into every IntelliJ IDEA and WebStorm on the machine |
 | Open in IntelliJ, only if it is installed | `--open-idea` | yes, but no with `--yes` | Opens the project when it is ready |
 
 DaisyUI includes Tailwind, so with `--daisy` the Tailwind question is skipped. The languages for i18n are written default first, such as `en,de`, and the strategy is `Cookie` or `UrlPrefix`.
+
+### Hexagonal modules
+
+With `--hexagonal`, the backend is split into bounded contexts, and the script asks how:
+
+| Question | Flag | Default | What you get |
+|---|---|---|---|
+| Bounded contexts | `--contexts` | `orders` | One context per name, such as `--contexts=catalog,orders`. Lowercase letters and digits |
+| Main aggregate of each context | `--aggregate-<context>` | The name without a trailing `s`, capitalized | An aggregate, a repository port, a service and `/api/<context>`, such as `--aggregate-catalog=Product` |
+| Modules per context | `--module-layout` | `layers` | `layers` makes `domain`, `application` and `adapters` modules, so Gradle keeps each layer from seeing the one above it. `single` makes one module with a package per layer |
+| Shared kernel | `--shared-kernel` | no | A `shared-kernel` module with `DomainException`, which the app answers with 422 |
+
+The root project starts the app and wires the contexts together in `Application.kt`. The repository adapter uses Exposed when you chose Postgres, and keeps data in memory otherwise. Modules depend on each other through type-safe project accessors such as `projects.ordersDomain`, and every library and plugin version comes from `gradle/libs.versions.toml`. Modules with routes apply `ktor-routes-conventions` from `build-logic`, which adds Ktor's OpenAPI compiler plugin, so `generateTs` sees their request and response types.
 
 Every project also gets a Gradle version catalog, JSON and typed error responses, ktlint, ESLint and Prettier, a `README.md`, a `.env.example` and a `.gitignore`. With sign in or Postgres, it also gets a `.env` with random secrets, which is not committed. [Project structure](project-structure.md) shows where everything lives.
 
