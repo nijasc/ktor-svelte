@@ -88,7 +88,7 @@ Every project also gets a Gradle version catalog, JSON and typed error responses
 
 ## Build the command
 
-Pick what you want, and copy the command for your system. It skips every question.
+Walk through the steps, or skip to the command at any point, and copy the command for your system. Every step starts with the defaults, and the command skips every question.
 
 <SetupBuilder />
 
