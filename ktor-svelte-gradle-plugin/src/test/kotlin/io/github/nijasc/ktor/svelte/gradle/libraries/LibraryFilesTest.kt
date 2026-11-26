@@ -120,6 +120,7 @@ class LibraryFilesTest {
     fun `theme helper is typed and hook applies default and saved theme`() {
         val files = frontendFiles(spec(TailwindSpec(false, false), daisy), null, false)
         assertContains(files.getValue("$GENERATED_DIR/theme.ts"), "export const themes = ['light','dark'] as const;")
+        assertContains(files.getValue("$GENERATED_DIR/theme.ts"), "export const themeMinLength = 4;\n\nexport const themeMaxLength = 5;")
         val hooks = files.getValue("$GENERATED_DIR/server-hooks.ts")
         assertContains(hooks, "data-theme=\"light\"")
         assertContains(hooks, "ktor_svelte_theme")
@@ -132,6 +133,7 @@ class LibraryFilesTest {
         assertContains(i18n, "appTitle: () => translate('app-title'),")
         assertContains(i18n, "greeting: (values: { name: string | number }) => translate('greeting', values),")
         assertContains(i18n, "export const defaultLocale: Locale = 'en';")
+        assertContains(i18n, "export const localeMinLength = 2;\n\nexport const localeMaxLength = 2;")
         assertContains(i18n, "location.reload();")
     }
 

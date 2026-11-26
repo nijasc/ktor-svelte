@@ -9,6 +9,10 @@ export const locales = ['en','de'] as const;
 
 export type Locale = (typeof locales)[number];
 
+export const localeMinLength = 2;
+
+export const localeMaxLength = 2;
+
 export const defaultLocale: Locale = 'en';
 
 declare global {

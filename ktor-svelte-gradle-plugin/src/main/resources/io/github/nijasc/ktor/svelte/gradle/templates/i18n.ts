@@ -6,6 +6,10 @@ export const locales = {{locales}} as const;
 
 export type Locale = (typeof locales)[number];
 
+export const localeMinLength = {{minLength}};
+
+export const localeMaxLength = {{maxLength}};
+
 export const defaultLocale: Locale = '{{defaultLocale}}';
 
 declare global {

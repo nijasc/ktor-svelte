@@ -218,6 +218,7 @@ The real block lists all twelve colors, and says `colorScheme = "dark"` when you
 |---|---|
 | `themes` | Every theme name, in order, as a readonly tuple |
 | `ThemeName` | The union of those names, such as `'shadcn-light' \| 'shadcn-dark'` |
+| `themeMinLength`, `themeMaxLength` | The length of the shortest and the longest theme name, such as `11` and `12` for the two above |
 | `defaultTheme` | The default theme |
 | `getTheme()` | The visitor's saved theme, or the default. On the server it is always the default |
 | `setTheme(theme)` | Applies the theme at once and saves it in a cookie for a year |

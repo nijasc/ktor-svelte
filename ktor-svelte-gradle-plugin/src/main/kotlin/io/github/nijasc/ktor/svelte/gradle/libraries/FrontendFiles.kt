@@ -516,7 +516,13 @@ private fun themeSource(daisy: DaisySpec): String =
     HEADER +
         renderTemplate(
             "theme.ts",
-            mapOf("themes" to tsArray(daisy.allThemes), "defaultTheme" to daisy.defaultTheme, "cookie" to THEME_COOKIE),
+            mapOf(
+                "themes" to tsArray(daisy.allThemes),
+                "minLength" to daisy.allThemes.minOf { it.length }.toString(),
+                "maxLength" to daisy.allThemes.maxOf { it.length }.toString(),
+                "defaultTheme" to daisy.defaultTheme,
+                "cookie" to THEME_COOKIE,
+            ),
         )
 
 private fun i18nSource(
@@ -569,6 +575,8 @@ private fun i18nSource(
             mapOf(
                 "tables" to tables,
                 "locales" to tsArray(i18n.locales),
+                "minLength" to i18n.locales.minOf { it.length }.toString(),
+                "maxLength" to i18n.locales.maxOf { it.length }.toString(),
                 "defaultLocale" to i18n.defaultLocale,
                 "browserLocale" to browserLocale,
                 "cookie" to LOCALE_COOKIE,
