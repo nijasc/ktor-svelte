@@ -42,6 +42,7 @@ my-app/
                               if you chose release-please
   .githooks/commit-msg        if you chose Conventional Commits
   .github/dependabot.yml      if you chose Dependabot
+  .railway/railway.ts         if you chose Railway, with .github/workflows/deploy.yml
   AGENTS.md, CLAUDE.md        if you chose agentic usage
   .claude/settings.json       if you chose agentic usage
   build-logic/                if you chose the convention plugin or hexagonal modules

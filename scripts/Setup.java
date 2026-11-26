@@ -34,6 +34,7 @@ public class Setup {
     private static final Pattern LOCALES = Pattern.compile("[a-z]{2,3}(-[A-Za-z0-9]{2,8})*(,[a-z]{2,3}(-[A-Za-z0-9]{2,8})*)*");
     private static final Pattern CONTEXTS = Pattern.compile("[a-z][a-z0-9]*(,[a-z][a-z0-9]*)*");
     private static final Pattern AGGREGATE = Pattern.compile("[A-Z][A-Za-z0-9]*");
+    private static final Pattern BRANCH_NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]*");
     private static final List<String> RESERVED_CONTEXTS = List.of("build", "frontend", "gradle", "src", "shared", "kernel");
     private static final List<String> LAYERS = List.of("domain", "application", "adapters");
     private static final List<String> MANAGERS = List.of("bun", "pnpm", "npm", "yarn");
@@ -116,13 +117,15 @@ public class Setup {
         boolean conventions = hexagon != null || confirm("conventions", "Add a convention plugin in build-logic, for multi-module projects?", false);
         UI.section("Workflow");
         boolean flatPackages = confirm("idea-ext", "Skip package folders, so IntelliJ treats src/main/kotlin as " + packageName + " (uses the idea-ext plugin)?", true);
-        boolean docker = confirm("docker", "Add a Dockerfile?", true);
         boolean actions = confirm("github-actions", "Add a GitHub Actions workflow?", true);
         boolean releasePlease = actions && confirm("release-please", "Add release-please, which sets the version and writes releases from your commit messages?", false);
         boolean commitCheck = confirm("conventional-commits", "Check commit messages for Conventional Commits in a local git hook?", releasePlease);
         boolean dependabot = confirm("dependabot", "Add Dependabot, which opens a pull request for dependency updates every week?", false);
+        Railway railway = confirm("railway", "Deploy to Railway, with the infrastructure as code in .railway/railway.ts?", false) ? askRailway(releasePlease) : null;
+        boolean docker = railway != null || confirm("docker", "Add a Dockerfile?", true);
+        if (railway != null && flags.containsKey("no-docker")) UI.note("Railway builds the Dockerfile, so it is added anyway.");
         boolean agents = confirm("agents", "Prepare the project for agentic usage (AGENTS.md, CLAUDE.md and agent permissions)?", true);
-        Extras extras = new Extras(agents);
+        Extras extras = new Extras(agents, railway);
         boolean liveTemplates = confirm("live-templates", "Install the ktor-svelte live templates into IntelliJ and WebStorm?", true);
         boolean git = isOnPath("git") && confirm("git", "Create a git repository?", true);
         Optional<List<String>> idea = findIntellij();
@@ -206,15 +209,15 @@ public class Setup {
         if (hexagon != null) writeHexagon(directory, packageName, hexagon, database);
         Files.writeString(directory.resolve(".env.example"), envExample(name, auth, database));
         if (auth || database) Files.writeString(directory.resolve(".env"), localEnv(name, auth, database));
-        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck, dependabot));
+        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck, dependabot, extras.railway()));
         if (extras.agents()) {
             AgentGuide guide = new AgentGuide(name, packageName, manager, flatPackages, generateTs, tailwind || lucide || i18n, i18n, auth, database, flyway,
-                hexagon, docker, actions, releasePlease, commitCheck, dependabot);
+                hexagon, docker, actions, releasePlease, commitCheck, dependabot, extras.railway());
             writeAgentFiles(directory, guide);
         }
         Path source = flatPackages ? directory.resolve("src/main/kotlin") : directory.resolve("src/main/kotlin").resolve(packageName.replace('.', '/'));
         Files.createDirectories(source);
-        Files.writeString(source.resolve("Application.kt"), application(packageName, generateTs, auth, database, hexagon));
+        Files.writeString(source.resolve("Application.kt"), application(packageName, generateTs, auth, database, hexagon, extras.railway() != null));
         Files.writeString(source.resolve("Env.kt"), fill(ENV_KT, packageName));
         Files.writeString(source.resolve("Errors.kt"), errorsSource(packageName, hexagon));
         if (auth) Files.writeString(source.resolve("Auth.kt"), fill(AUTH_KT, packageName));
@@ -228,7 +231,8 @@ public class Setup {
         if (docker) writeDocker(directory, manager);
         if (actions) writeWorkflow(directory, manager);
         if (dependabot) writeDependabot(directory, manager, actions);
-        if (releasePlease) writeReleasePlease(directory, name);
+        if (releasePlease) writeReleasePlease(directory, name, extras.railway());
+        if (extras.railway() != null) writeRailway(directory, name, auth, database, extras.railway());
         if (commitCheck) writeCommitHook(directory);
     }
 
@@ -260,6 +264,16 @@ public class Setup {
         boolean layered = choose("module-layout", "Modules per context (layers: domain, application and adapters modules, single: one module with a package per layer)", List.of("layers", "single")).equals("layers");
         boolean kernel = confirm("shared-kernel", "Add a shared kernel module for code every context uses?", false);
         return new Hexagon(contexts, layered, kernel);
+    }
+
+    private Railway askRailway(boolean releasePlease) throws IOException {
+        List<String> moments = releasePlease ? List.of("release", "main", "branch") : List.of("main", "release", "branch");
+        String recommended = releasePlease ? "release is recommended with release-please" : "release, main or another branch";
+        String deployOn = choose("deploy-on", "When should it deploy? (" + recommended + ")", moments);
+        String branch = deployOn.equals("branch")
+            ? ask("deploy-branch", "Branch that deploys", "production", BRANCH_NAME, "Use a branch name such as production.")
+            : null;
+        return new Railway(deployOn, branch, releasePlease);
     }
 
     private static String defaultAggregate(String context) {
@@ -716,12 +730,59 @@ public class Setup {
         return String.join("\n", result) + "\n";
     }
 
-    private static void writeReleasePlease(Path directory, String name) throws IOException {
+    private static void writeReleasePlease(Path directory, String name, Railway railway) throws IOException {
         Files.writeString(directory.resolve("version.txt"), "0.1.0\n");
         Files.writeString(directory.resolve(".release-please-manifest.json"), "{\n  \".\": \"0.1.0\"\n}\n");
         Files.writeString(directory.resolve("release-please-config.json"), RELEASE_PLEASE_CONFIG.replace("__NAME__", name));
         Files.createDirectories(directory.resolve(".github/workflows"));
-        Files.writeString(directory.resolve(".github/workflows/release.yml"), RELEASE_WORKFLOW);
+        String workflow = railway != null && railway.fromReleasePlease()
+            ? RELEASE_WORKFLOW.replace("      - uses: googleapis/", "      - id: release\n        uses: googleapis/")
+                .replace("    runs-on: ubuntu-latest\n", "    runs-on: ubuntu-latest\n    outputs:\n"
+                    + "      release_created: ${{ steps.release.outputs.release_created }}\n"
+                    + "      tag_name: ${{ steps.release.outputs.tag_name }}\n")
+                + RELEASE_DEPLOY_JOB
+            : RELEASE_WORKFLOW;
+        Files.writeString(directory.resolve(".github/workflows/release.yml"), workflow);
+    }
+
+    private static void writeRailway(Path directory, String name, boolean auth, boolean database, Railway railway) throws IOException {
+        Path folder = directory.resolve(".railway");
+        Files.createDirectories(folder);
+        Files.writeString(folder.resolve("package.json"), RAILWAY_PACKAGE.replace("__NAME__", name));
+        Files.writeString(folder.resolve("railway.ts"), railwayConfig(name, auth, database));
+        Files.createDirectories(directory.resolve(".github/workflows"));
+        Files.writeString(directory.resolve(".github/workflows/railway-config.yml"), RAILWAY_CONFIG_WORKFLOW);
+        String trigger = switch (railway.deployOn()) {
+            case "release" -> railway.releasePlease()
+                ? "  workflow_call:\n    inputs:\n      ref:\n        required: true\n        type: string\n"
+                : "  release:\n    types: [published]\n";
+            case "branch" -> "  push:\n    branches: [" + railway.branch() + "]\n";
+            default -> "  push:\n    branches: [main]\n";
+        };
+        String checkout = railway.fromReleasePlease() ? "        with:\n          ref: ${{ inputs.ref }}\n          persist-credentials: false\n" : "        with:\n          persist-credentials: false\n";
+        Files.writeString(
+            directory.resolve(".github/workflows/deploy.yml"),
+            DEPLOY_WORKFLOW.replace("__TRIGGER__\n", trigger).replace("__CHECKOUT__\n", checkout).replace("__NAME__", name));
+    }
+
+    private static String railwayConfig(String name, boolean auth, boolean database) {
+        List<String> imports = new ArrayList<>(List.of("defineRailway", "project", "service"));
+        if (database) imports.add("postgres");
+        if (auth) imports.add("preserve");
+        StringBuilder env = new StringBuilder();
+        if (database) env.append("            DATABASE_URL: db.env.DATABASE_URL,\n");
+        if (auth) env.append("            SESSION_SECRET: preserve(),\n            COOKIE_SECURE: 'true',\n");
+        StringBuilder text = new StringBuilder("import { ")
+            .append(imports.stream().sorted().collect(Collectors.joining(", ")))
+            .append(" } from 'railway/iac';\n\nexport default defineRailway(() => {\n");
+        if (database) text.append("    const db = postgres('postgres');\n");
+        text.append("    const app = service('").append(name).append("', {\n");
+        text.append("        healthcheck: '/_ktor-svelte/health'");
+        if (env.length() > 0) text.append(",\n        env: {\n").append(env).append("        }");
+        text.append(",\n    });\n\n");
+        text.append("    return project('").append(name).append("', {\n");
+        text.append("        resources: [").append(database ? "db, app" : "app").append("],\n    });\n});\n");
+        return text.toString();
     }
 
     private static void writeAgentFiles(Path directory, AgentGuide guide) throws IOException {
@@ -824,6 +885,14 @@ public class Setup {
             text.append(guide.flyway()
                 ? "Tables change only through migrations. Never edit a migration that has run. After changing an Exposed table, run `./gradlew generateMigrations` and review the new file.\n\n"
                 : "Missing tables are created when the app starts, but existing ones are never changed. Add Flyway before you need to change a table that holds data.\n\n");
+        }
+
+        if (guide.railway() != null) {
+            text.append("## Deployment\n\n");
+            text.append("The app runs on Railway and deploys on ").append(guide.railway().trigger()).append(" through `.github/workflows/deploy.yml`. ");
+            text.append("The infrastructure is code in `.railway/railway.ts`: change services, databases and variables there, never in the Railway dashboard. ");
+            text.append("A pull request that touches `.railway/` gets a plan comment, and merging applies it. Run `railway config plan` locally to preview a change. ");
+            text.append("Secrets stay in Railway: `preserve()` keeps their values, so never write a secret into the file.\n\n");
         }
 
         text.append("## Files you must not edit\n\n");
@@ -1010,7 +1079,7 @@ public class Setup {
 
     private static String projectReadme(
         String name, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, boolean docker,
-        Hexagon hexagon, boolean releasePlease, boolean commitCheck, boolean dependabot) {
+        Hexagon hexagon, boolean releasePlease, boolean commitCheck, boolean dependabot, Railway railway) {
         StringBuilder text = new StringBuilder("# ").append(name).append("\n\n");
         text.append("A Ktor app with a SvelteKit frontend, served from one JAR on one port by [ktor-svelte](https://github.com/nijasc/ktor-svelte).\n\n");
         text.append("## Develop\n\n```bash\n");
@@ -1031,7 +1100,7 @@ public class Setup {
             text.append("| `COOKIE_SECURE` | Send the session cookie over HTTPS only. Defaults to `true`, so set `false` only for local HTTP |\n");
         }
         if (database) {
-            text.append("| `DATABASE_URL` | JDBC URL of the Postgres database |\n");
+            text.append("| `DATABASE_URL` | JDBC URL of the Postgres database, or a `postgresql://user:password@host:port/name` URL that carries the user and password too |\n");
             text.append("| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Used by `compose.yaml` and by the app |\n");
         }
         text.append("\n");
@@ -1078,6 +1147,19 @@ public class Setup {
             text.append("[release-please](https://github.com/googleapis/release-please) reads the commit messages on `main` and keeps a release pull request open. Merging it raises the version in `version.txt`, which `build.gradle.kts` uses, writes `CHANGELOG.md` and creates the GitHub release. ");
             text.append("`feat` raises the minor version, `fix` the patch version, and a `!` after the type marks a breaking change. ");
             text.append("In the repository settings, under Actions, allow GitHub Actions to create pull requests. Never edit `version.txt` or `.release-please-manifest.json` by hand.\n\n");
+        }
+        if (railway != null) {
+            text.append("## Deploy to Railway\n\n");
+            text.append("`.railway/railway.ts` describes the Railway project as code: the `").append(name).append("` service, built from the `Dockerfile`, with its health check");
+            text.append(database ? ", and a Postgres database whose `DATABASE_URL` the app reads" : "").append(". ");
+            text.append("`.github/workflows/deploy.yml` deploys on ").append(railway.trigger()).append(", and `.github/workflows/railway-config.yml` plans changes to `.railway/` on pull requests and applies them when they merge.\n\n");
+            text.append("Set it up once:\n\n");
+            text.append("1. Install the [Railway CLI](https://docs.railway.com/cli), sign in with `railway login`, and create a project with `railway init`.\n");
+            text.append("2. Apply the configuration: `npm install --prefix .railway`, then `railway config apply`.\n");
+            if (auth) text.append("3. Give the app a session secret: `railway variables --service ").append(name).append(" --set SESSION_SECRET=$(openssl rand -hex 32)`.\n");
+            text.append(auth ? "4. " : "3. ").append("Create a project token for the production environment in the project settings, and save it as the `RAILWAY_TOKEN` secret of this GitHub repository.\n");
+            text.append(auth ? "5. " : "4. ").append("Give the service a public address with `railway domain`.\n\n");
+            text.append("After that, change the infrastructure only in `.railway/railway.ts`. Run the deploy workflow by hand from the Actions tab to deploy without waiting.\n\n");
         }
         if (dependabot) {
             text.append("## Dependency updates\n\n");
@@ -1222,7 +1304,7 @@ public class Setup {
             + "}\n";
     }
 
-    private static String application(String packageName, boolean generateTs, boolean auth, boolean database, Hexagon hexagon) {
+    private static String application(String packageName, boolean generateTs, boolean auth, boolean database, Hexagon hexagon, boolean healthEndpoint) {
         String generate = generateTs ? "        generateTs = true\n" : "";
         List<String> imports = new ArrayList<>(List.of(
             "io.github.nijasc.ktor.svelte.Svelte",
@@ -1255,6 +1337,7 @@ public class Setup {
             + "fun Application.module() {\n"
             + "    install(Svelte) {\n"
             + generate
+            + (healthEndpoint ? "        healthEndpoint = true\n" : "")
             + "        transport {\n            json()\n            compression()\n        }\n"
             + "    }\n"
             + "    configureErrors()\n"
@@ -1830,7 +1913,21 @@ public class Setup {
         private static final long serialVersionUID = 1L;
     }
 
-    private record Extras(boolean agents) {}
+    private record Extras(boolean agents, Railway railway) {}
+
+    private record Railway(String deployOn, String branch, boolean releasePlease) {
+        boolean fromReleasePlease() {
+            return deployOn.equals("release") && releasePlease;
+        }
+
+        String trigger() {
+            return switch (deployOn) {
+                case "release" -> releasePlease ? "each release that release-please creates" : "each published GitHub release";
+                case "branch" -> "each push to " + branch;
+                default -> "each push to main";
+            };
+        }
+    }
 
     private record AgentGuide(
         String name,
@@ -1848,7 +1945,8 @@ public class Setup {
         boolean actions,
         boolean releasePlease,
         boolean commitCheck,
-        boolean dependabot
+        boolean dependabot,
+        Railway railway
     ) {}
 
     private record BoundedContext(String name, String aggregate) {}
@@ -2085,6 +2183,115 @@ public class Setup {
                 with:
                   config-file: release-please-config.json
                   manifest-file: .release-please-manifest.json
+        """;
+
+    private static final String RELEASE_DEPLOY_JOB = """
+
+          deploy:
+            needs: release-please
+            if: ${{ needs.release-please.outputs.release_created == 'true' }}
+            permissions:
+              contents: read
+            uses: ./.github/workflows/deploy.yml
+            with:
+              ref: ${{ needs.release-please.outputs.tag_name }}
+            secrets: inherit
+        """;
+
+    private static final String RAILWAY_PACKAGE = """
+        {
+          "name": "__NAME__-infrastructure",
+          "private": true,
+          "type": "module",
+          "devDependencies": {
+            "railway": "3.18.0"
+          }
+        }
+        """;
+
+    private static final String RAILWAY_CONFIG_WORKFLOW = """
+        name: Railway config
+
+        on:
+          pull_request:
+            types: [opened, synchronize, reopened, closed]
+            paths:
+              - .railway/**
+
+        permissions: {}
+
+        jobs:
+          plan:
+            if: ${{ github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository }}
+            runs-on: ubuntu-latest
+            permissions:
+              contents: read
+              pull-requests: write
+              id-token: write
+            steps:
+              - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+                with:
+                  persist-credentials: false
+              - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+                with:
+                  node-version: 24
+              - run: npm install --prefix .railway
+              - uses: railwayapp/config@9e17d413dbe219f19d62538d9c06b5dbb5e9abf8
+                with:
+                  command: plan
+                  railway-token: ${{ secrets.RAILWAY_TOKEN }}
+
+          apply:
+            if: ${{ github.event.action == 'closed' && github.event.pull_request.merged && github.event.pull_request.head.repo.full_name == github.repository }}
+            runs-on: ubuntu-latest
+            permissions:
+              contents: read
+              actions: read
+              id-token: write
+            steps:
+              - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+                with:
+                  ref: ${{ github.event.pull_request.merge_commit_sha }}
+                  persist-credentials: false
+              - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+                with:
+                  node-version: 24
+              - run: npm install --prefix .railway
+              - uses: railwayapp/config@9e17d413dbe219f19d62538d9c06b5dbb5e9abf8
+                with:
+                  command: apply
+                  railway-token: ${{ secrets.RAILWAY_TOKEN }}
+        """;
+
+    private static final String DEPLOY_WORKFLOW = """
+        name: Deploy
+
+        on:
+        __TRIGGER__
+          workflow_dispatch:
+
+        permissions: {}
+
+        concurrency:
+          group: deploy
+          cancel-in-progress: false
+
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            permissions:
+              contents: read
+            environment: production
+            steps:
+              - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        __CHECKOUT__
+              - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+                with:
+                  node-version: 24
+              - run: npm install --global @railway/cli@5.75.0
+              - run: railway up --ci --service __NAME__
+                env:
+                  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         """;
 
     private static final String COMMIT_MSG_HOOK = """
@@ -2500,9 +2707,36 @@ public class Setup {
         import org.jetbrains.exposed.v1.jdbc.insert
         import org.jetbrains.exposed.v1.jdbc.selectAll
         import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+        import java.net.URI
+        import java.net.URLDecoder
 
         private const val MAX_POOL_SIZE = 10
         private const val CONNECTION_TIMEOUT_MILLIS = 5_000L
+
+        private data class ConnectionSettings(
+            val url: String,
+            val user: String,
+            val password: String,
+        )
+
+        private fun connectionSettings(databaseUrl: String): ConnectionSettings {
+            if (databaseUrl.startsWith("jdbc:")) {
+                return ConnectionSettings(databaseUrl, requireEnv("POSTGRES_USER"), requireEnv("POSTGRES_PASSWORD"))
+            }
+            val uri = URI(databaseUrl)
+            val credentials =
+                uri.rawUserInfo
+                    .orEmpty()
+                    .split(':', limit = 2)
+                    .map { URLDecoder.decode(it, Charsets.UTF_8) }
+            val port = if (uri.port == -1) "" else ":${uri.port}"
+            val query = uri.rawQuery?.let { "?$it" }.orEmpty()
+            return ConnectionSettings(
+                "jdbc:postgresql://${uri.host}$port${uri.rawPath}$query",
+                credentials.getOrElse(0) { "" },
+                credentials.getOrElse(1) { "" },
+            )
+        }
 
         object Visits : Table("visits") {
             val id = integer("id").autoIncrement()
@@ -2517,12 +2751,13 @@ public class Setup {
 
         fun Application.configureDatabase() {
             monitor.subscribe(ApplicationStarted) {
+                val settings = connectionSettings(requireEnv("DATABASE_URL"))
                 val dataSource =
                     HikariDataSource(
                         HikariConfig().apply {
-                            jdbcUrl = requireEnv("DATABASE_URL")
-                            username = requireEnv("POSTGRES_USER")
-                            password = requireEnv("POSTGRES_PASSWORD")
+                            jdbcUrl = settings.url
+                            username = settings.user
+                            password = settings.password
                             maximumPoolSize = MAX_POOL_SIZE
                             connectionTimeout = CONNECTION_TIMEOUT_MILLIS
                         },
