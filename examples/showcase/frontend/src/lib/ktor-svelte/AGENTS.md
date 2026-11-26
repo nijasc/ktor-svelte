@@ -40,6 +40,7 @@ Ready-made components are in `#components/`. Use them before writing the same ma
 - `MaskedInput.svelte`: formats phone numbers, IBANs, dates and money while typing and binds the clean value, such as `<MaskedInput label="IBAN" mask="iban" bind:value={form.draft.iban} />`.
 - `IconInput.svelte`: a field with a Lucide icon inside, an optional clear button and a show button for passwords, such as `<IconInput label="Email" icon="Mail" type="email" bind:value={form.draft.email} />`.
 - `DataTable.svelte`: a table over a route that returns `Page<T>`, with loading, empty and error states and paging, such as `<DataTable load={api.notes.list} columns={[{ key: 'title', label: 'Title' }]} />`.
+- `Pagination.svelte`: the same paging for lists and cards, rendering each item with an `item` snippet, such as `<Pagination load={api.notes.list}>{#snippet item(note)}<NoteCard {note} />{/snippet}</Pagination>`.
 - `ThemeToggle.svelte`: lets the visitor pick one of the configured themes and remembers it.
 - `TimeAgo.svelte`: a time as "3 minutes ago" in the visitor's language, which keeps itself current.
 - `LocaleSwitch.svelte`: lets the visitor pick one of the configured languages.

@@ -17,6 +17,22 @@ class ComponentsTest {
     ) = LibrarySpec(null, daisy.takeIf { withDaisy }, lucide, null, 5173, "app.generated", components = components)
 
     @Test
+    fun `pagination pages through a Page route and renders items with a snippet`() {
+        val plain = componentFiles(spec(components = true)).getValue("$COMPONENTS_DIR/Pagination.svelte")
+        assertContains(plain, "load: (query: Q) => Promise<PageOf<T>>;")
+        assertContains(plain, "item: Snippet<[T, number]>;")
+        assertContains(plain, "<li>{@render item(entry, index)}</li>")
+        assertContains(plain, "export function reload(): Promise<void> {")
+        assertContains(plain, "<span class=\"ktor-svelte-paging-page\" aria-live=\"polite\">{pageText(trail.length + 1)}</span>")
+        assertContains(plain, ".ktor-svelte-paging-list {")
+        assertFalse("{{" in plain)
+        val styled = componentFiles(spec(components = true, withDaisy = true)).getValue("$COMPONENTS_DIR/Pagination.svelte")
+        assertContains(styled, "<button type=\"button\" class=\"btn btn-sm\" disabled={busy} onclick={loadMore}>{more}</button>")
+        assertFalse("<style>" in styled)
+        assertFalse("{{" in styled)
+    }
+
+    @Test
     fun `the icon input comes only with lucide and keeps the field action and its messages`() {
         assertFalse("$COMPONENTS_DIR/IconInput.svelte" in componentFiles(spec(components = true)))
         val plain = componentFiles(spec(components = true, lucide = true)).getValue("$COMPONENTS_DIR/IconInput.svelte")
@@ -55,6 +71,7 @@ class ComponentsTest {
                 "MaskedInput.svelte",
                 "NavigationProgress.svelte",
                 "NumberInput.svelte",
+                "Pagination.svelte",
                 "PasswordStrength.svelte",
                 "Sidebar.svelte",
                 "masks.ts",

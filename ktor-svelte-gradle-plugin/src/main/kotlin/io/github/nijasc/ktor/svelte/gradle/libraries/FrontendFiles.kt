@@ -95,6 +95,17 @@ private const val PLAIN_ICON_INPUT_STYLE =
         "    .ktor-svelte-icon-input-button:hover,\n    .ktor-svelte-icon-input-button:focus-visible {\n        opacity: 1;\n    }\n\n" +
         "    .ktor-svelte-icon-input-button:focus-visible {\n        outline: 2px solid currentColor;\n    }\n"
 
+private const val PLAIN_PAGING_STYLE =
+    "\n<style>\n" +
+        "    .ktor-svelte-paging {\n        display: grid;\n        gap: 0.5rem;\n    }\n\n" +
+        "    .ktor-svelte-paging-list {\n        display: grid;\n        gap: 0.5rem;\n        margin: 0;\n        padding: 0;\n" +
+        "        list-style: none;\n    }\n\n" +
+        "    .ktor-svelte-paging-note,\n    .ktor-svelte-paging-page {\n        opacity: 0.7;\n    }\n\n" +
+        "    .ktor-svelte-paging-pager {\n        display: flex;\n        align-items: center;\n        gap: 0.5rem;\n    }\n\n" +
+        "    .ktor-svelte-paging-empty {\n        display: grid;\n        justify-items: center;\n        gap: 0.5rem;\n" +
+        "        padding: 1.5rem 0;\n        text-align: center;\n    }\n" +
+        "</style>\n"
+
 private const val PLAIN_TABLE_STYLE =
     "\n<style>\n" +
         "    .ktor-svelte-table-wrap {\n        overflow-x: auto;\n    }\n\n" +
@@ -279,6 +290,22 @@ private fun errorSummary(daisy: Boolean): String =
         ),
     )
 
+private fun pagination(daisy: Boolean): String =
+    renderTemplate(
+        "components/Pagination.svelte",
+        mapOf(
+            "wrapper" to if (daisy) "grid gap-2" else "ktor-svelte-paging",
+            "list" to if (daisy) "grid gap-2" else "ktor-svelte-paging-list",
+            "error" to if (daisy) "text-error py-2 text-sm" else "ktor-svelte-paging-error",
+            "note" to if (daisy) "py-2 text-sm opacity-70" else "ktor-svelte-paging-note",
+            "button" to if (daisy) "btn btn-sm" else "ktor-svelte-paging-button",
+            "pager" to if (daisy) "flex items-center gap-2 py-2" else "ktor-svelte-paging-pager",
+            "page" to if (daisy) "text-sm opacity-70" else "ktor-svelte-paging-page",
+            "emptyState" to if (daisy) "grid justify-items-center gap-2 py-6 text-center" else "ktor-svelte-paging-empty",
+            "style" to if (daisy) "" else PLAIN_PAGING_STYLE,
+        ),
+    )
+
 private fun dataTable(daisy: Boolean): String =
     renderTemplate(
         "components/DataTable.svelte",
@@ -402,6 +429,7 @@ internal fun componentFiles(
             "$COMPONENTS_DIR/NumberInput.svelte" to renderTemplate("components/NumberInput.svelte"),
             "$COMPONENTS_DIR/EnumSelect.svelte" to renderTemplate("components/EnumSelect.svelte", select),
             "$COMPONENTS_DIR/DataTable.svelte" to dataTable(daisy),
+            "$COMPONENTS_DIR/Pagination.svelte" to pagination(daisy),
             "$COMPONENTS_DIR/FileDrop.svelte" to fileDrop(daisy),
             "$COMPONENTS_DIR/ErrorPage.svelte" to errorPage(daisy, messages),
             "$COMPONENTS_DIR/NavigationProgress.svelte" to

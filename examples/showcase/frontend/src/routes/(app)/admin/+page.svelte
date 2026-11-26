@@ -2,6 +2,7 @@
     import { goto } from '$app/navigation';
     import { api, Role, type Status, type User } from '#api';
     import DataTable from '#components/DataTable.svelte';
+    import Pagination from '#components/Pagination.svelte';
     import { m } from '#i18n';
     import { routes } from '#routes';
     import { formatDateTime } from '#lib/format.ts';
@@ -123,4 +124,29 @@
         workingText={(done, total) => m.tableWorking({ done, total })}
         doneText={(worked, total) => m.tableDone({ worked, total })}
     />
+</div>
+
+<h2 id="latest-tasks-title" class="mb-3 mt-10 text-xl font-semibold">{m.adminLatestTasks()}</h2>
+<div id="latest-tasks" class="max-w-3xl">
+    <Pagination
+        load={api.tasks.list}
+        query={{ limit: 3 }}
+        paging="pages"
+        key={(task) => task.id}
+        label={m.adminLatestTasks()}
+        listClass="sm:grid-cols-3"
+        empty={m.tableEmpty()}
+        loading={m.tableLoading()}
+        previous={m.tablePrevious()}
+        next={m.tableNext()}
+        pageText={(page) => m.tablePage({ page })}
+        retry={m.tableRetry()}
+    >
+        {#snippet item(task)}
+            <a class="card bg-base-200 hover:bg-base-300 block p-3" href={routes.tasksId({ id: task.id })}>
+                <span class="font-semibold">{task.title}</span>
+                <span class="block text-sm opacity-70">{statusLabels[task.status]()}</span>
+            </a>
+        {/snippet}
+    </Pagination>
 </div>

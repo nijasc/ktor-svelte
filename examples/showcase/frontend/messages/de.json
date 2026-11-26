@@ -147,6 +147,8 @@
   "table-previous": "Zur\u00fcck",
   "table-next": "Weiter",
   "table-retry": "Erneut versuchen",
+  "table-page": "Seite {page}",
+  "admin-latest-tasks": "Neueste Aufgaben",
   "admin-role": "Rolle",
   "admin-active": "Aktiv",
   "admin-joined": "Dabei seit",

@@ -43,6 +43,7 @@ The components import from `#api`, so they need `generateTs = true` on the serve
 | [`IconInput`](#iconinput) | `components()` and `lucide()` | A field with an icon inside, a clear button and a show button for passwords |
 | [`EnumSelect`](#enumselect) | `components()` | A select over a generated enum |
 | [`DataTable`](#datatable) | `components()` | A table over a route that returns `Page<T>` |
+| [`Pagination`](#pagination) | `components()` | The same paging for lists and cards, with your own markup per item |
 | [`FileDrop`](#filedrop) | `components()` | A drop area with progress for an upload route |
 | [`ErrorPage`](#errorpage) | `components()` | The page SvelteKit shows when a page fails, with `+error.svelte` |
 | [`NavigationProgress`](#navigationprogress) | `components()` | A thin bar while a navigation waits |
@@ -665,6 +666,42 @@ export const load: PageLoad = async (event) => {
 ```
 
 The route's pages are cursors, so there are no page numbers: the table can go forward and back, not jump.
+
+## Pagination
+
+The paging of [`DataTable`](#datatable) for anything that is not a table: cards, a feed, a list of results. It takes the same `load` and `query`, and you render each item with an `item` snippet:
+
+```svelte no-check
+<script lang="ts">
+    import { api } from '#api';
+    import Pagination from '#components/Pagination.svelte';
+</script>
+
+<Pagination load={api.tasks.list} query={{ limit: 6, search }} paging="pages" key={(task) => task.id} label="Tasks">
+    {#snippet item(task)}
+        <a class="card" href="/tasks/{task.id}">{task.title}</a>
+    {/snippet}
+</Pagination>
+```
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `load` | required | A generated call that returns `Page<T>` |
+| `item` | required | A snippet that gets the item and its index |
+| `query` | | The other parameters. A change loads the first page again |
+| `first` | | A page you already loaded, such as from a `load` function, so nothing is fetched at first |
+| `paging` | `more` | `more` adds the next page below, `pages` shows one page at a time with Previous and Next |
+| `key` | the index | A stable key for each item |
+| `label` | | The accessible name of the list and its page controls |
+| `empty`, `emptyAction` | `Nothing here yet.` | The text, and a snippet such as a create button, when there are no items |
+| `loading`, `more`, `previous`, `next`, `retry`, `pageText` | English | The texts. `pageText(page)` gives `Page 2` |
+| `class`, `listClass` | | Added to the wrapper and to the `<ul>`, for example a grid |
+
+- Items are in a `<ul>`, so screen readers announce how many there are.
+- With `more`, the focus moves to the first new item, so keyboard users continue where the new items start.
+- With `pages`, the page number is announced when it changes.
+- A failed page shows the error with a retry button that loads the same page again.
+- `reload()` is exported, for a list that should refresh after you create something: `bind:this={list}` and `list.reload()`.
 
 ## FileDrop
 
