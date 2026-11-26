@@ -100,7 +100,7 @@ export default defineConfig({
         logo: '/logo.svg',
         search: { provider: 'local' },
         nav: [
-            { text: 'Get started', link: '/guide/getting-started', activeMatch: '/guide/(introduction|getting-started|configurator|tutorial|existing-project|project-structure|multiple-frontends|comparison)' },
+            { text: 'Get started', link: '/guide/getting-started', activeMatch: '/guide/(introduction|getting-started|configurator|tutorial|existing-project|project-structure|hexagonal-modules|multiple-frontends|comparison)' },
             { text: 'Everything it does', link: '/features/', activeMatch: '/features/' },
             { text: 'Recipes', link: '/recipes/', activeMatch: '/recipes/' },
             { text: 'Reference', link: '/reference/ktor', activeMatch: '/reference/' },
@@ -125,6 +125,7 @@ export default defineConfig({
                     { text: 'Tutorial: a notes app', link: '/guide/tutorial' },
                     { text: 'Add to an existing project', link: '/guide/existing-project' },
                     { text: 'Project structure', link: '/guide/project-structure' },
+                    { text: 'Hexagonal modules', link: '/guide/hexagonal-modules' },
                     { text: 'Multiple frontends', link: '/guide/multiple-frontends' },
                     { text: 'Compared with other setups', link: '/guide/comparison' },
                     { text: 'Examples', link: '/examples' }
