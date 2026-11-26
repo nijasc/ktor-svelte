@@ -703,7 +703,7 @@ internal class TypeScriptGenerator(
         if (values.isEmpty() || lengthName in componentSchemas.keys.map(::typeName) || enumTypes.values.any { it.name == lengthName }) {
             return declaration
         }
-        val lengths = values.map { it.codePointCount(0, it.length) }
+        val lengths = values.map { value -> value.length - value.count(Char::isLowSurrogate) }
         return declaration + "\nexport const $lengthName = { min: ${lengths.min()}, max: ${lengths.max()} } as const;\n"
     }
 

@@ -236,6 +236,12 @@ class TypeScriptGeneratorTest {
     }
 
     @Test
+    fun `an enum length counts a character outside the basic plane once`() {
+        val schemas = """{"Note":{"type":"object","properties":{"mood":{"type":"string","enum":["😀","AB"]}}}}"""
+        assertContains(types(schemas), "export const MoodLength = { min: 1, max: 2 } as const;")
+    }
+
+    @Test
     fun `an enum length is left out when a type already has its name`() {
         val schemas =
             """{"Size":{"type":"string","enum":["S","M"]},
