@@ -30,7 +30,7 @@
         "@tailwindcss/typography": "^0.5.20",
         "@tailwindcss/vite": "^4.3.4",
         "axe-core": "^4.14.1",
-        "daisyui": "^5.8.0",
+        "daisyui": "^5.8.2",
         "layerchart": "^2.11.0",
         "svelte": "^5.59.1",
         "svelte-check": "^4.7.8",
