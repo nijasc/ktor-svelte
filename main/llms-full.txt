@@ -152,6 +152,7 @@ When something looks off, run `./gradlew svelteDoctor`.
 | Question | Flag | Default | What you get |
 |---|---|---|---|
 | Project name, Kotlin package, package manager | `--name`, `--package`, `--package-manager` | `my-app`, `com.example.app`, first one found | |
+| License, then the copyright holder | `--license`, `--license-holder` | none, then your git user name | A `LICENSE` with the year and holder filled in, and a License section in the README. MIT, Apache-2.0, BSD-3-Clause, MPL-2.0, GPL-3.0 or AGPL-3.0, with texts from choosealicense.com |
 | TypeScript client | `--generate-ts` | yes | `generateTs` turned on |
 | DaisyUI, Tailwind, Lucide | `--daisy`, `--tailwind`, `--lucide` | yes | Configured in `build.gradle.kts` |
 | i18n | `--i18n`, `--locales`, `--locale-strategy` | no | Message files and the chosen strategy |
@@ -894,6 +895,7 @@ my-app/
     adapters/                 HTTP routes and the repository
   shared-kernel/              if you chose a shared kernel
   README.md
+  LICENSE                     if you chose a license
 ```
 
 With `--no-idea-ext`, the Kotlin files sit in package folders, such as `src/main/kotlin/com/example/app/`, instead of directly in `src/main/kotlin`. The modules of a bounded context always use package folders, such as `orders/domain/src/main/kotlin/com/example/app/orders/domain/`. With `--module-layout=single`, each context is one folder with those three packages instead of three modules.
@@ -9654,6 +9656,8 @@ curl -fsSLO https://raw.githubusercontent.com/nijasc/ktor-svelte/v<version>/scri
 ```bash
 java Setup.java --version=<version>
 ```
+
+`Setup.java` downloads only the release's version catalog and Gradle wrapper from this repository and, when you choose a license, its text from the [choosealicense.com repository](https://github.com/github/choosealicense.com) at a pinned commit.
 
 **Your package manager.** `svelteInstall` runs `bun install --frozen-lockfile`, `npm ci`, `pnpm install --frozen-lockfile` or `yarn install --frozen-lockfile`, so a build only installs what your lockfile names. Install scripts of dependencies run as your package manager allows: Bun and pnpm only run them for packages you trust explicitly, npm and Yarn run them for every package unless you set `ignore-scripts`. ktor-svelte does not change that setting for you. Only `svelteSync`, `svelteInit` and `svelteUpdateDependencies` change `package.json` or the lockfile, and never as part of a build.
 
