@@ -105,7 +105,7 @@ On Windows, `irm ... | iex` cannot pass options, so run the script as a script b
 powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/nijasc/ktor-svelte/main/scripts/setup.ps1))) --yes --name=shop --i18n '--locales=en,de'"
 ```
 
-The script shows each step with its time and keeps the Gradle and package manager output out of the way. When a step fails, it prints the last lines of that output and where the full log is. It uses color in a terminal that supports it. Set `NO_COLOR` to turn color off, or `FORCE_COLOR` to keep it when the output is not a terminal.
+On macOS and Linux, pick from a list with the arrow keys and Enter, and answer a yes or no question with y, n, the arrow keys or Enter for the highlighted answer. Elsewhere, type the number or y and n. The script shows each step with its time and keeps the Gradle and package manager output out of the way. When a step fails, it prints the last lines of that output and where the full log is. It uses color in a terminal that supports it. Set `NO_COLOR` to turn color off, or `FORCE_COLOR` to keep it when the output is not a terminal.
 
 ::: details Preview without writing anything
 Add `--dry-run` to see what a command would do. The script asks its questions as usual, then lists every file it would write and every step it would run, and stops. Nothing in the current folder changes.
