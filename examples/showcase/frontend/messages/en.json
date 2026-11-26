@@ -147,6 +147,8 @@
   "table-previous": "Previous",
   "table-next": "Next",
   "table-retry": "Try again",
+  "table-page": "Page {page}",
+  "admin-latest-tasks": "Latest tasks",
   "admin-role": "Role",
   "admin-active": "Active",
   "admin-joined": "Joined",

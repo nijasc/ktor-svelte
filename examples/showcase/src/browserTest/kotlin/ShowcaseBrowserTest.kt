@@ -559,6 +559,29 @@ class ShowcaseBrowserTest {
     }
 
     @Test
+    fun `the generated pagination pages through a route as cards`() {
+        page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
+        val token = unique("Carded").replace(" ", "")
+        (1..4).forEach { page.createTask("$token $it") }
+        page.navigationLink("Admin").click()
+        val latest = page.locator("#latest-tasks")
+        val cards = latest.locator("li")
+        assertThat(cards).hasCount(3)
+        assertThat(cards.first()).containsText("$token 4")
+        assertThat(latest.locator("[aria-live=polite]")).hasText("Page 1")
+        val previous = latest.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Previous"))
+        val next = latest.getByRole(AriaRole.BUTTON, com.microsoft.playwright.Locator.GetByRoleOptions().setName("Next"))
+        assertThat(previous).isDisabled()
+
+        next.click()
+        assertThat(cards.first()).containsText("$token 1")
+        assertThat(latest.locator("[aria-live=polite]")).hasText("Page 2")
+        previous.click()
+        assertThat(cards.first()).containsText("$token 4")
+        assertThat(previous).isDisabled()
+    }
+
+    @Test
     fun `the generated data table pages through a route and shows typed columns`() {
         page.signIn(ADMIN_EMAIL, ADMIN_PASSWORD)
         val token = unique("Tabled").replace(" ", "")
