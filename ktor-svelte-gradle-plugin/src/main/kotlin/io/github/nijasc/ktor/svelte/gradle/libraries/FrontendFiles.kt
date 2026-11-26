@@ -93,7 +93,13 @@ private const val PLAIN_ICON_INPUT_STYLE =
         "        border-radius: 0.25rem;\n        background: none;\n        color: inherit;\n" +
         "        cursor: pointer;\n        opacity: 0.7;\n    }\n\n" +
         "    .ktor-svelte-icon-input-button:hover,\n    .ktor-svelte-icon-input-button:focus-visible {\n        opacity: 1;\n    }\n\n" +
-        "    .ktor-svelte-icon-input-button:focus-visible {\n        outline: 2px solid currentColor;\n    }\n"
+        "    .ktor-svelte-icon-input-button:focus-visible {\n        outline: 2px solid currentColor;\n    }\n\n" +
+        "    .ktor-svelte-icon-input-spinner {\n        flex-shrink: 0;\n        width: 1rem;\n        height: 1rem;\n" +
+        "        border: 2px solid currentColor;\n        border-right-color: transparent;\n        border-radius: 50%;\n" +
+        "        opacity: 0.7;\n        animation: ktor-svelte-spin 0.8s linear infinite;\n    }\n\n" +
+        "    @keyframes ktor-svelte-spin {\n        to {\n            transform: rotate(360deg);\n        }\n    }\n\n" +
+        "    @media (prefers-reduced-motion: reduce) {\n        .ktor-svelte-icon-input-spinner {\n" +
+        "            animation-duration: 2.4s;\n        }\n    }\n"
 
 private const val PLAIN_PAGING_STYLE =
     "\n<style>\n" +
@@ -244,6 +250,7 @@ private fun iconInput(daisy: Boolean): String =
             "icon" to if (daisy) "shrink-0 opacity-60" else "ktor-svelte-icon-input-icon",
             "control" to "ktor-svelte-icon-input-control" + if (daisy) " grow" else "",
             "button" to if (daisy) "btn btn-ghost btn-xs btn-square -me-1" else "ktor-svelte-icon-input-button",
+            "spinner" to if (daisy) "loading loading-spinner loading-xs shrink-0 opacity-70" else "ktor-svelte-icon-input-spinner",
             "style" to if (daisy) "" else PLAIN_ICON_INPUT_STYLE,
         ),
     )

@@ -198,12 +198,36 @@ A `Field` with a [Lucide icon](./icons-and-images.md) inside the box, for fields
 | `type` | from `bounds`, else `text` | `text`, `email`, `search`, `url`, `tel` or `password` |
 | `clearable` | `false` | Shows a clear button while the field has a value. Escape clears it too |
 | `clearLabel`, `showLabel`, `hideLabel` | `Clear`, `Show password`, `Hide password` | The accessible names of the buttons. Pass your translations here |
+| `busy`, `busyLabel` | `false`, `Checking` | Shows a spinner in place of the trailing icon while a check runs, such as whether a username is taken, and announces `busyLabel` |
 | `value` | | `bind:value`; `null` after clearing |
 | `bounds`, `errors`, `hint`, `id`, `class` | | As for `Field` |
 
 - The icons are decorative and hidden from screen readers. The label names the field.
 - The show button is a toggle with `aria-pressed`, and it switches the field to plain text and back. The browser's own reveal and clear buttons are hidden, so there is only one of each.
 - Clearing puts the focus back into the field.
+- While `busy`, the input has `aria-busy` and a hidden status line says `busyLabel` once, so screen readers hear that a check is running. The spinner slows down for people who prefer reduced motion.
+
+```svelte no-check
+<script lang="ts">
+    import { api } from '#api';
+    import IconInput from '#components/IconInput.svelte';
+
+    let name = $state('');
+    let checking = $state(false);
+    let taken = $state<string[]>([]);
+
+    async function check() {
+        checking = true;
+        try {
+            taken = (await api.users.nameTaken({ name })) ? ['That name is taken.'] : [];
+        } finally {
+            checking = false;
+        }
+    }
+</script>
+
+<IconInput label="Username" icon="AtSign" bind:value={name} onblur={check} busy={checking} errors={taken} />
+```
 - Validation messages appear under the box, not inside it, and stay tied to the input through `aria-describedby`.
 - With daisyUI the box is an `input`, so it follows the theme. Without it, the component carries a small style of its own.
 - The icon you pass is picked up by the icon scan like any other quoted icon name, so it is in the production build.
