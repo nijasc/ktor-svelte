@@ -121,6 +121,8 @@ public class Setup {
         boolean releasePlease = actions && confirm("release-please", "Add release-please, which sets the version and writes releases from your commit messages?", false);
         boolean commitCheck = confirm("conventional-commits", "Check commit messages for Conventional Commits in a local git hook?", releasePlease);
         boolean dependabot = confirm("dependabot", "Add Dependabot, which opens a pull request for dependency updates every week?", false);
+        boolean agents = confirm("agents", "Prepare the project for agentic usage (AGENTS.md, CLAUDE.md and agent permissions)?", true);
+        Extras extras = new Extras(agents);
         boolean liveTemplates = confirm("live-templates", "Install the ktor-svelte live templates into IntelliJ and WebStorm?", true);
         boolean git = isOnPath("git") && confirm("git", "Create a git repository?", true);
         Optional<List<String>> idea = findIntellij();
@@ -138,7 +140,7 @@ public class Setup {
                 Path planned = preview.resolve(name);
                 UI.step("Planning the project files", () -> {
                     writeProjectFiles(planned, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
-                        auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck, dependabot);
+                        auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck, dependabot, extras);
                     return null;
                 });
                 UI.section("It writes");
@@ -161,7 +163,7 @@ public class Setup {
 
         UI.step("Writing the project files", () -> {
             writeProjectFiles(directory, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
-                auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck, dependabot);
+                auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck, dependabot, extras);
             return null;
         });
 
@@ -190,7 +192,7 @@ public class Setup {
     private void writeProjectFiles(
         Path directory, String name, String packageName, String manager, Versions versions, boolean generateTs, boolean daisy, boolean tailwind,
         boolean lucide, boolean i18n, List<String> locales, String strategy, boolean auth, boolean database, boolean flyway, boolean flatPackages,
-        Hexagon hexagon, boolean conventions, boolean docker, boolean actions, boolean releasePlease, boolean commitCheck, boolean dependabot
+        Hexagon hexagon, boolean conventions, boolean docker, boolean actions, boolean releasePlease, boolean commitCheck, boolean dependabot, Extras extras
     ) throws Exception {
         Files.createDirectories(directory);
         writeWrapper(directory, versions);
@@ -205,7 +207,11 @@ public class Setup {
         Files.writeString(directory.resolve(".env.example"), envExample(name, auth, database));
         if (auth || database) Files.writeString(directory.resolve(".env"), localEnv(name, auth, database));
         Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck, dependabot));
-        if (tailwind || lucide || i18n) Files.writeString(directory.resolve("AGENTS.md"), ASSISTANT_NOTES);
+        if (extras.agents()) {
+            AgentGuide guide = new AgentGuide(name, packageName, manager, flatPackages, generateTs, tailwind || lucide || i18n, i18n, auth, database, flyway,
+                hexagon, docker, actions, releasePlease, commitCheck, dependabot);
+            writeAgentFiles(directory, guide);
+        }
         Path source = flatPackages ? directory.resolve("src/main/kotlin") : directory.resolve("src/main/kotlin").resolve(packageName.replace('.', '/'));
         Files.createDirectories(source);
         Files.writeString(source.resolve("Application.kt"), application(packageName, generateTs, auth, database, hexagon));
@@ -716,6 +722,138 @@ public class Setup {
         Files.writeString(directory.resolve("release-please-config.json"), RELEASE_PLEASE_CONFIG.replace("__NAME__", name));
         Files.createDirectories(directory.resolve(".github/workflows"));
         Files.writeString(directory.resolve(".github/workflows/release.yml"), RELEASE_WORKFLOW);
+    }
+
+    private static void writeAgentFiles(Path directory, AgentGuide guide) throws IOException {
+        Files.writeString(directory.resolve("AGENTS.md"), agentGuide(guide));
+        Files.writeString(directory.resolve("CLAUDE.md"), "@AGENTS.md\n");
+        Files.createDirectories(directory.resolve(".claude"));
+        Files.writeString(directory.resolve(".claude/settings.json"), agentSettings(guide.manager()));
+    }
+
+    private static String agentSettings(String manager) {
+        List<String> allowed = List.of(
+            "Bash(./gradlew:*)",
+            "Bash(gradlew.bat:*)",
+            "Bash(" + manager + " install)",
+            "Bash(" + manager + " run:*)",
+            "Bash(git status)",
+            "Bash(git diff:*)",
+            "Bash(git log:*)");
+        return "{\n"
+            + "  \"$schema\": \"https://json.schemastore.org/claude-code-settings.json\",\n"
+            + "  \"permissions\": {\n"
+            + "    \"allow\": [\n"
+            + allowed.stream().map(rule -> "      \"" + rule + "\"").collect(Collectors.joining(",\n")) + "\n"
+            + "    ],\n"
+            + "    \"deny\": [\n"
+            + "      \"Read(./.env)\"\n"
+            + "    ]\n"
+            + "  }\n"
+            + "}\n";
+    }
+
+    private static String agentGuide(AgentGuide guide) {
+        String source = guide.flatPackages() ? "src/main/kotlin" : "src/main/kotlin/" + guide.packageName().replace('.', '/');
+        StringBuilder text = new StringBuilder("# ").append(guide.name()).append("\n\n");
+        text.append("A Ktor backend and a SvelteKit frontend, served from one JAR on one port by [ktor-svelte](https://nijasc.github.io/ktor-svelte). ");
+        text.append("The Kotlin package is `").append(guide.packageName()).append("`, and the frontend uses ").append(guide.manager()).append(".\n\n");
+        if (guide.libraryGuide()) {
+            text.append("Read `frontend/src/lib/ktor-svelte/AGENTS.md` before frontend work. It is generated, always current, and lists the helpers and components this project has.\n\n");
+        }
+
+        text.append("## Commands\n\n");
+        text.append("Run them from the project root. On Windows, use `gradlew.bat` instead of `./gradlew`.\n\n");
+        text.append("| Task | Command |\n|---|---|\n");
+        text.append("| Run everything for development, then open http://localhost:8080 | `./gradlew svelteDevAll` |\n");
+        if (guide.database()) text.append("| Start Postgres first | `docker compose up -d` |\n");
+        text.append("| Kotlin tests and ktlint | `./gradlew check` |\n");
+        text.append("| Frontend type check | `./gradlew svelteCheck` |\n");
+        text.append("| Frontend lint | `./gradlew svelteRun --script=lint` |\n");
+        text.append("| Format everything | `./gradlew ktlintFormat` and `./gradlew svelteRun --script=format` |\n");
+        if (guide.generateTs()) text.append("| Regenerate the TypeScript client after changing a route or a DTO | `./gradlew svelteGenerateTs` |\n");
+        text.append("| Regenerate frontend files after changing `svelte { }` in `build.gradle.kts` | `./gradlew svelteSync` |\n");
+        if (guide.flyway()) text.append("| Write the next migration after changing a table | `./gradlew generateMigrations` |\n");
+        text.append("| Build the JAR | `./gradlew buildFatJar` |\n");
+        if (guide.docker()) text.append("| Build the container image | `docker build -t ").append(guide.name()).append(" .` |\n");
+        text.append("| Find out why something does not work | `./gradlew svelteDoctor` |\n\n");
+        text.append("Add frontend packages with `").append(guide.manager()).append("` in `frontend/`. Gradle runs the package manager for every other task.\n\n");
+
+        text.append("## Where things are\n\n");
+        text.append("- `").append(source).append("/Application.kt`: starts Ktor, installs ktor-svelte and registers the routes.\n");
+        text.append("- `").append(source).append("/Env.kt`: `env()` and `requireEnv()` read the environment, then `.env`.\n");
+        text.append("- `").append(source).append("/Errors.kt`: turns exceptions into JSON problems. Throw `ApiException(status, message)` for an error the user should see.\n");
+        if (guide.auth()) text.append("- `").append(source).append("/Auth.kt`: sessions, register, login and logout. Wrap protected routes in `authenticate(\"session\")`.\n");
+        if (guide.database()) text.append("- `").append(source).append("/Database.kt`: the connection pool and Exposed").append(guide.flyway() ? ", with Flyway migrations in `src/main/resources/db/migration`" : "").append(".\n");
+        if (guide.hexagon() != null) {
+            String contexts = guide.hexagon().contexts().stream().map(context -> "`" + context.name() + "`").collect(Collectors.joining(", "));
+            text.append("- Bounded contexts: ").append(contexts).append(", each in its own folder. See Architecture below.\n");
+        }
+        text.append("- `frontend/src/routes`: the pages. `frontend/src/lib`: your own frontend code.\n");
+        if (guide.i18n()) text.append("- `frontend/messages/<locale>.json`: the texts. Use `m.key()` in Svelte and `call.messages` in Kotlin.\n");
+        text.append("- `build.gradle.kts`: dependencies and the `svelte { }` block, which configures frontend libraries. `gradle/libs.versions.toml`: every version.\n");
+        text.append("- `.env.example`: every setting the app reads. `.env` holds local secrets and is never committed or printed.\n\n");
+
+        text.append("## How the backend and frontend fit together\n\n");
+        text.append("- API routes live under `/api`. Every other path is the SvelteKit app, built as static files.\n");
+        if (guide.generateTs()) {
+            text.append("- The frontend calls the API only through the generated client: `import { api } from '#api'`, then `await api.notes.list()`. Do not call `fetch` for `/api` by hand.\n");
+            text.append("- Request and response bodies are `@Serializable` Kotlin classes. Their types, `empty()`, `bounds` and `validate()` appear in `#api` after `svelteGenerateTs`, which also runs when the app restarts in development. Commit the generated files.\n");
+            text.append("- Put limits on DTO properties with `@JsonSchema` annotations such as `@JsonSchema.MaxLength(200)`, and extra rules with `Validated`. The server and the browser then check the same rules.\n");
+        } else {
+            text.append("- Request and response bodies are `@Serializable` Kotlin classes. The frontend calls them with `fetch('/api/...')`.\n");
+        }
+        text.append("- Keep business rules in Kotlin. Svelte components show data and collect input.\n\n");
+
+        if (guide.hexagon() != null) {
+            text.append("## Architecture\n\n");
+            text.append("The backend is split into bounded contexts, each a hexagon:\n\n");
+            text.append("- `domain`: aggregates and their rules. No Ktor, no Exposed, no serialization.\n");
+            text.append("- `application`: use cases and the ports they need, such as repository interfaces.\n");
+            text.append("- `adapters`: `web` for Ktor routes and DTOs, `persistence` for repositories.\n");
+            text.append("- The root project only wires adapters into use cases in `Application.kt`.\n\n");
+            text.append(guide.hexagon().layered()
+                ? "Each layer is its own Gradle module, so a wrong import does not compile. "
+                : "Each context is one module with a package per layer, so keep to these rules by hand. ");
+            text.append("Never let a context use another context's adapters or tables. Route modules apply `ktor-routes-conventions`, so their DTOs reach the TypeScript client. ");
+            text.append("To add a context, copy an existing one and register it in `settings.gradle.kts` and the root `build.gradle.kts`.\n\n");
+        }
+
+        if (guide.database()) {
+            text.append("## Database\n\n");
+            text.append(guide.flyway()
+                ? "Tables change only through migrations. Never edit a migration that has run. After changing an Exposed table, run `./gradlew generateMigrations` and review the new file.\n\n"
+                : "Missing tables are created when the app starts, but existing ones are never changed. Add Flyway before you need to change a table that holds data.\n\n");
+        }
+
+        text.append("## Files you must not edit\n\n");
+        if (guide.generateTs()) text.append("- `frontend/src/lib/api/`: the generated client. Change the Kotlin side and regenerate.\n");
+        text.append("- `frontend/src/lib/ktor-svelte/`, `frontend/vite.config.ts` and any file that starts with \"Generated by ktor-svelte\". Change `build.gradle.kts` and run `./gradlew svelteSync`. Your own Vite settings go in `frontend/vite.user.ts`.\n");
+        if (guide.releasePlease()) text.append("- `version.txt`, `.release-please-manifest.json` and `CHANGELOG.md`: release-please owns them.\n");
+        text.append("\n");
+
+        text.append("## Conventions\n\n");
+        text.append("- Kotlin follows ktlint's official style with lines up to 140 characters. The frontend uses Prettier and ESLint.\n");
+        text.append("- Keep versions in `gradle/libs.versions.toml` and reference them as `libs.*`.\n");
+        text.append("- Read a new setting with `env()` or `requireEnv()`, and list it in `.env.example` and the README in the same change.\n");
+        if (guide.commitCheck() || guide.releasePlease()) {
+            text.append("- Commit messages follow Conventional Commits: `type(scope): summary` with `feat`, `fix`, `docs`, `test`, `build`, `ci`, `refactor` or `chore`");
+            text.append(guide.releasePlease() ? ". `feat` and `fix` become release notes, so describe what users notice.\n" : ".\n");
+        }
+        if (guide.dependabot()) text.append("- Dependabot pull requests that change a library ktor-svelte configures need `./gradlew svelteSync` and a commit of the generated files.\n");
+        if (guide.actions()) text.append("- CI runs `./gradlew check buildFatJar svelteCheck` and the frontend lint on every push, so run them before you finish.\n");
+        text.append("\n");
+
+        text.append("## Before you finish\n\n");
+        text.append("1. `./gradlew check svelteCheck` passes.\n");
+        text.append("2. `./gradlew svelteRun --script=lint` passes. If it does not, run the format commands first.\n");
+        if (guide.generateTs()) text.append("3. If a route or DTO changed, `./gradlew svelteGenerateTs` ran and its output is part of the change.\n");
+        else text.append("3. If frontend settings changed, `./gradlew svelteSync` ran and its output is part of the change.\n");
+        text.append("4. The README and `.env.example` describe any new command or setting.\n\n");
+
+        text.append("## Learn more\n\n");
+        text.append("The ktor-svelte docs are at https://nijasc.github.io/ktor-svelte. `./gradlew svelteDoctor` checks the setup and links to the right page.\n");
+        return text.toString();
     }
 
     private static void writeDependabot(Path directory, String manager, boolean actions) throws IOException {
@@ -1692,6 +1830,27 @@ public class Setup {
         private static final long serialVersionUID = 1L;
     }
 
+    private record Extras(boolean agents) {}
+
+    private record AgentGuide(
+        String name,
+        String packageName,
+        String manager,
+        boolean flatPackages,
+        boolean generateTs,
+        boolean libraryGuide,
+        boolean i18n,
+        boolean auth,
+        boolean database,
+        boolean flyway,
+        Hexagon hexagon,
+        boolean docker,
+        boolean actions,
+        boolean releasePlease,
+        boolean commitCheck,
+        boolean dependabot
+    ) {}
+
     private record BoundedContext(String name, String aggregate) {}
 
     private record Hexagon(List<BoundedContext> contexts, boolean layered, boolean kernel) {}
@@ -2506,13 +2665,6 @@ public class Setup {
           "plugins": ["prettier-plugin-svelte"],
           "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
         }
-        """;
-
-    private static final String ASSISTANT_NOTES = """
-        # Notes for coding assistants
-
-        Read `frontend/src/lib/ktor-svelte/AGENTS.md` before changing anything. It is generated and always current. It says how the
-        frontend calls the backend, which files are generated and must not be edited, and which commands to run.
         """;
 
     private static final String PRETTIER_IGNORE = """
