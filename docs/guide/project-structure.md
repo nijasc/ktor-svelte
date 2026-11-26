@@ -52,6 +52,7 @@ my-app/
     adapters/                 HTTP routes and the repository
   shared-kernel/              if you chose a shared kernel
   README.md
+  LICENSE                     if you chose a license
 ```
 
 With `--no-idea-ext`, the Kotlin files sit in package folders, such as `src/main/kotlin/com/example/app/`, instead of directly in `src/main/kotlin`. The modules of a bounded context always use package folders, such as `orders/domain/src/main/kotlin/com/example/app/orders/domain/`. With `--module-layout=single`, each context is one folder with those three packages instead of three modules.

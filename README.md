@@ -76,6 +76,7 @@ It asks a few questions, and you can press Enter for the defaults. Then start it
 | Question | Flag | Default | What you get |
 |---|---|---|---|
 | Project name, Kotlin package, package manager | `--name`, `--package`, `--package-manager` | `my-app`, `com.example.app`, first one found | |
+| License, then the copyright holder | `--license`, `--license-holder` | none, then your git user name | A `LICENSE` with the year and holder filled in, and a License section in the README. MIT, Apache-2.0, BSD-3-Clause, MPL-2.0, GPL-3.0 or AGPL-3.0, with texts from choosealicense.com |
 | TypeScript client | `--generate-ts` | yes | `generateTs` turned on |
 | DaisyUI, Tailwind, Lucide | `--daisy`, `--tailwind`, `--lucide` | yes | Configured in `build.gradle.kts` |
 | i18n | `--i18n`, `--locales`, `--locale-strategy` | no | Message files and the chosen strategy |

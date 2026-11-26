@@ -34,6 +34,10 @@ public class Setup {
     private static final Pattern LOCALES = Pattern.compile("[a-z]{2,3}(-[A-Za-z0-9]{2,8})*(,[a-z]{2,3}(-[A-Za-z0-9]{2,8})*)*");
     private static final Pattern CONTEXTS = Pattern.compile("[a-z][a-z0-9]*(,[a-z][a-z0-9]*)*");
     private static final Pattern AGGREGATE = Pattern.compile("[A-Z][A-Za-z0-9]*");
+    private static final String LICENSE_TEXTS =
+        "https://raw.githubusercontent.com/github/choosealicense.com/b851d0a602dc4db48a913cccd3a670b9183eeb09/_licenses/";
+    private static final List<String> LICENSES = List.of("none", "MIT", "Apache-2.0", "BSD-3-Clause", "MPL-2.0", "GPL-3.0", "AGPL-3.0");
+    private static final Pattern LICENSE_HOLDER = Pattern.compile("[^\\r\\n\\[\\]]+");
     private static final Pattern BRANCH_NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]*");
     private static final List<String> RESERVED_CONTEXTS = List.of("build", "frontend", "gradle", "src", "shared", "kernel");
     private static final List<String> LAYERS = List.of("domain", "application", "adapters");
@@ -98,6 +102,8 @@ public class Setup {
         }
         String packageName = ask("package", "Kotlin package", "com.example.app", PACKAGE_NAME, "Use a package such as com.example.app.");
         String manager = choose("package-manager", "Package manager", installed);
+        String license = choose("license", "License (none keeps all rights reserved)", LICENSES);
+        String licenseHolder = license.equals("none") ? "" : ask("license-holder", "Copyright holder", gitUserName().orElse(name), LICENSE_HOLDER, "Enter a name for the copyright line.");
         UI.section("Frontend");
         boolean generateTs = confirm("generate-ts", "Generate a TypeScript client from your Ktor routes?", true);
         boolean daisy = confirm("daisy", "Add DaisyUI (includes Tailwind)?", true);
@@ -126,7 +132,7 @@ public class Setup {
         boolean docker = railway != null || confirm("docker", "Add a Dockerfile?", true);
         if (railway != null && flags.containsKey("no-docker")) UI.note("Railway builds the Dockerfile, so it is added anyway.");
         boolean agents = confirm("agents", "Prepare the project for agentic usage (AGENTS.md, CLAUDE.md and agent permissions)?", true);
-        Extras extras = new Extras(agents, railway, exposedTime);
+        Extras extras = new Extras(agents, railway, exposedTime, license, licenseHolder);
         boolean liveTemplates = confirm("live-templates", "Install the ktor-svelte live templates into IntelliJ and WebStorm?", true);
         boolean git = isOnPath("git") && confirm("git", "Create a git repository?", true);
         Optional<List<String>> idea = findIntellij();
@@ -237,6 +243,7 @@ public class Setup {
         if (releasePlease) writeReleasePlease(directory, name, extras.railway());
         if (extras.railway() != null) writeRailway(directory, name, auth, database, extras.railway());
         if (commitCheck) writeCommitHook(directory);
+        if (!extras.license().equals("none")) writeLicense(directory, extras.license(), extras.licenseHolder());
     }
 
     private static void deleteRecursively(Path root) throws IOException {
@@ -951,6 +958,33 @@ public class Setup {
             + "      " + group + ":\n"
             + "        patterns:\n"
             + "          - \"*\"\n";
+    }
+
+    private void writeLicense(Path directory, String license, String holder) throws Exception {
+        String source = download(LICENSE_TEXTS + license.toLowerCase(Locale.ROOT) + ".txt");
+        List<String> lines = source.lines().collect(Collectors.toList());
+        int start = lines.indexOf("---");
+        int end = start < 0 ? -1 : lines.subList(start + 1, lines.size()).indexOf("---") + start + 1;
+        if (start != 0 || end <= start) throw new SetupException("Could not read the " + license + " license text.");
+        String text = String.join("\n", lines.subList(end + 1, lines.size())).strip()
+            .replace("[year]", String.valueOf(java.time.Year.now().getValue()))
+            .replace("[fullname]", holder);
+        Files.writeString(directory.resolve("LICENSE"), text + "\n");
+        Files.writeString(
+            directory.resolve("README.md"),
+            "## License\n\n" + license + ", see [LICENSE](LICENSE).\n",
+            java.nio.file.StandardOpenOption.APPEND);
+    }
+
+    private static Optional<String> gitUserName() {
+        if (!isOnPath("git")) return Optional.empty();
+        try {
+            Process process = new ProcessBuilder("git", "config", "user.name").redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            String output = new String(process.getInputStream().readAllBytes()).trim();
+            return process.waitFor() == 0 && LICENSE_HOLDER.matcher(output).matches() ? Optional.of(output) : Optional.empty();
+        } catch (IOException | InterruptedException failure) {
+            return Optional.empty();
+        }
     }
 
     private static void writeCommitHook(Path directory) throws IOException {
@@ -1941,7 +1975,7 @@ public class Setup {
         private static final long serialVersionUID = 1L;
     }
 
-    private record Extras(boolean agents, Railway railway, boolean exposedTime) {}
+    private record Extras(boolean agents, Railway railway, boolean exposedTime, String license, String licenseHolder) {}
 
     private record Railway(String deployOn, String branch, boolean releasePlease) {
         boolean fromReleasePlease() {

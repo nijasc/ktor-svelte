@@ -349,6 +349,8 @@ curl -fsSLO https://raw.githubusercontent.com/nijasc/ktor-svelte/v<version>/scri
 java Setup.java --version=<version>
 ```
 
+`Setup.java` downloads only the release's version catalog and Gradle wrapper from this repository and, when you choose a license, its text from the [choosealicense.com repository](https://github.com/github/choosealicense.com) at a pinned commit.
+
 **Your package manager.** `svelteInstall` runs `bun install --frozen-lockfile`, `npm ci`, `pnpm install --frozen-lockfile` or `yarn install --frozen-lockfile`, so a build only installs what your lockfile names. Install scripts of dependencies run as your package manager allows: Bun and pnpm only run them for packages you trust explicitly, npm and Yarn run them for every package unless you set `ignore-scripts`. ktor-svelte does not change that setting for you. Only `svelteSync`, `svelteInit` and `svelteUpdateDependencies` change `package.json` or the lockfile, and never as part of a build.
 
 **The pinned Bun.** With `bunVersion` set, the plugin downloads that exact Bun release from GitHub and checks it against the release's `SHASUMS256.txt` before unpacking it. See [Pin Bun](reference/gradle.md#pin-bun).
