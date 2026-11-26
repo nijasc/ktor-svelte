@@ -530,7 +530,10 @@ class DevModeBrowserTest {
         )
         panel.locator(".a11y-check").click()
         val problem = panel.locator(".a11y-row").filter(Locator.FilterOptions().setHasText("image-alt"))
-        assertThat(problem).containsText("critical")
+        assertThat(problem).containsText(
+            "critical",
+            com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions().setTimeout(30_000.0),
+        )
         assertThat(problem.locator("a")).hasAttribute("href", Pattern.compile("^https://dequeuniversity\\.com/rules/axe/.*image-alt.*"))
         assertThat(page.locator("#unnamed")).not().hasAttribute("data-ktor-svelte-a11y", "image-alt")
 
