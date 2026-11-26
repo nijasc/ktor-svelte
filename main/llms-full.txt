@@ -5722,6 +5722,7 @@ The real block lists all twelve colors, and says `colorScheme = "dark"` when you
 |---|---|
 | `themes` | Every theme name, in order, as a readonly tuple |
 | `ThemeName` | The union of those names, such as `'shadcn-light' \| 'shadcn-dark'` |
+| `themeMinLength`, `themeMaxLength` | The length of the shortest and the longest theme name, such as `11` and `12` for the two above |
 | `defaultTheme` | The default theme |
 | `getTheme()` | The visitor's saved theme, or the default. On the server it is always the default |
 | `setTheme(theme)` | Applies the theme at once and saves it in a cookie for a year |
@@ -6504,6 +6505,7 @@ Keep one JSON file per language in `frontend/messages`, such as `en.json` and `d
 | `m` | One function per message, typed with its parameters |
 | `locales` | The configured locales, in order |
 | `Locale` | The union of those locales, such as `'en' \| 'de'` |
+| `localeMinLength`, `localeMaxLength` | The length of the shortest and the longest locale tag, such as `2` and `5` for `en` and `pt-BR` |
 | `defaultLocale` | The default locale |
 | `getLocale()` | The current visitor's locale |
 | `setLocale(locale)` | Saves the locale and shows the page in it. With cookies the page reloads, with URL prefixes it goes to the same page under the new prefix |
