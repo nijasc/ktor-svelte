@@ -16,7 +16,8 @@ export default {
     Layout: () =>
         h(DefaultTheme.Layout, null, {
             'layout-top': () => h(VersionBanner),
-            'nav-bar-content-after': () => [h(ThemeSwitcher), h(VersionSwitcher)]
+            'nav-bar-content-after': () => h('div', { class: 'nav-switchers' }, [h(ThemeSwitcher), h(VersionSwitcher)]),
+            'nav-screen-content-after': () => h('div', { class: 'nav-screen-switchers' }, [h(ThemeSwitcher), h(VersionSwitcher)])
         }),
     enhanceApp({ app }) {
         app.component('ArchitectureDiagram', ArchitectureDiagram);
