@@ -29,6 +29,8 @@
         clearLabel?: string;
         showLabel?: string;
         hideLabel?: string;
+        busy?: boolean;
+        busyLabel?: string;
         bounds?: FieldBounds;
         errors?: string[];
         hint?: string;
@@ -45,6 +47,8 @@
         clearLabel = 'Clear',
         showLabel = 'Show password',
         hideLabel = 'Hide password',
+        busy = false,
+        busyLabel = 'Checking',
         bounds,
         errors,
         hint,
@@ -89,9 +93,14 @@
                 type={shownType}
                 bind:value
                 onkeydown={clearOnEscape}
+                aria-busy={busy || undefined}
                 use:field={options}
                 {...rest}
             />
+            {#if busy}
+                <span class="loading loading-spinner loading-xs shrink-0 opacity-70" aria-hidden="true"></span>
+            {/if}
+            <span class="ktor-svelte-icon-input-status" role="status">{busy ? busyLabel : ''}</span>
             {#if canClear}
                 <button type="button" class="btn btn-ghost btn-xs btn-square -me-1" aria-label={clearLabel} title={clearLabel} onclick={clear}>
                     <svg {...glyph}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
@@ -122,7 +131,7 @@
                         </svg>
                     {/if}
                 </button>
-            {:else if trailingIcon}
+            {:else if trailingIcon && !busy}
                 <span class="shrink-0 opacity-60" aria-hidden="true"><Icon name={trailingIcon} size={18} /></span>
             {/if}
         </div>
@@ -137,5 +146,14 @@
     .ktor-svelte-icon-input-control::-ms-reveal,
     .ktor-svelte-icon-input-control::-ms-clear {
         display: none;
+    }
+
+    .ktor-svelte-icon-input-status {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
 </style>
