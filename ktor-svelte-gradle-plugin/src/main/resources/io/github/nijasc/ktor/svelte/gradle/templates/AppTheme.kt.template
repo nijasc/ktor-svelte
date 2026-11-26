@@ -5,6 +5,8 @@ public enum class AppTheme(
     ;
 
     public companion object {
+        public const val MIN_LENGTH: Int = {{minLength}}
+
         public const val MAX_LENGTH: Int = {{maxLength}}
 
         public val default: AppTheme = {{defaultTheme}}
