@@ -1,11 +1,14 @@
 import java.io.BufferedReader;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -28,8 +32,13 @@ public class Setup {
     private static final Pattern PROJECT_NAME = Pattern.compile("[a-zA-Z][a-zA-Z0-9_-]*");
     private static final Pattern PACKAGE_NAME = Pattern.compile("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*");
     private static final Pattern LOCALES = Pattern.compile("[a-z]{2,3}(-[A-Za-z0-9]{2,8})*(,[a-z]{2,3}(-[A-Za-z0-9]{2,8})*)*");
+    private static final Pattern CONTEXTS = Pattern.compile("[a-z][a-z0-9]*(,[a-z][a-z0-9]*)*");
+    private static final Pattern AGGREGATE = Pattern.compile("[A-Z][A-Za-z0-9]*");
+    private static final List<String> RESERVED_CONTEXTS = List.of("build", "frontend", "gradle", "src", "shared", "kernel");
+    private static final List<String> LAYERS = List.of("domain", "application", "adapters");
     private static final List<String> MANAGERS = List.of("bun", "pnpm", "npm", "yarn");
     private static final boolean WINDOWS = System.getProperty("os.name", "").startsWith("Windows");
+    private static final Ui UI = new Ui();
 
     private final Map<String, String> flags;
     private final boolean acceptDefaults;
@@ -45,12 +54,10 @@ public class Setup {
         try {
             new Setup(parseFlags(arguments)).run();
         } catch (SetupException failure) {
-            System.err.println();
-            System.err.println("ktor-svelte setup: " + failure.getMessage());
+            UI.failure(failure.getMessage());
             System.exit(1);
         } catch (Exception failure) {
-            System.err.println();
-            System.err.println("ktor-svelte setup failed: " + failure);
+            UI.failure("Setup failed: " + failure);
             System.exit(1);
         }
     }
@@ -71,15 +78,15 @@ public class Setup {
     }
 
     private void run() throws Exception {
-        System.out.println();
-        System.out.println("  ktor-svelte: one app, one JAR, one port");
-        System.out.println();
+        long started = System.nanoTime();
+        UI.banner();
 
         List<String> installed = MANAGERS.stream().filter(Setup::isOnPath).collect(Collectors.toList());
         if (installed.isEmpty()) {
             throw new SetupException("No package manager found. Install bun, pnpm, npm or yarn, then run this again.");
         }
 
+        UI.section("Project");
         String name = ask("name", "Project name", "my-app", PROJECT_NAME, "Use letters, digits, dashes and underscores.");
         Path directory = Path.of(name).toAbsolutePath();
         if (Files.exists(directory)) {
@@ -89,86 +96,130 @@ public class Setup {
         }
         String packageName = ask("package", "Kotlin package", "com.example.app", PACKAGE_NAME, "Use a package such as com.example.app.");
         String manager = choose("package-manager", "Package manager", installed);
+        UI.section("Frontend");
         boolean generateTs = confirm("generate-ts", "Generate a TypeScript client from your Ktor routes?", true);
         boolean daisy = confirm("daisy", "Add DaisyUI (includes Tailwind)?", true);
         boolean tailwind = daisy || confirm("tailwind", "Add Tailwind?", true);
         boolean lucide = confirm("lucide", "Add Lucide icons?", true);
         boolean i18n = confirm("i18n", "Add i18n?", false);
-        List<String> locales = List.of();
-        String strategy = "Cookie";
-        if (i18n) {
-            locales = Arrays.asList(ask("locales", "Languages, default first", "en,de", LOCALES, "Use tags such as en,de,pt-BR.").split(","));
-            strategy = choose("locale-strategy", "How is the language chosen?", List.of("Cookie", "UrlPrefix"));
-        }
+        List<String> locales = i18n
+            ? Arrays.asList(ask("locales", "Languages, default first", "en,de", LOCALES, "Use tags such as en,de,pt-BR.").split(","))
+            : List.of();
+        String strategy = i18n ? choose("locale-strategy", "How is the language chosen?", List.of("Cookie", "UrlPrefix")) : "Cookie";
+        UI.section("Backend");
         boolean auth = confirm("auth", "Add sign in with cookie sessions?", false);
         boolean database = confirm("database", "Add a Postgres database with Exposed?", false);
         boolean flyway = database && confirm("flyway", "Add Flyway migrations?", true);
+        UI.section("Architecture");
+        Hexagon hexagon = confirm("hexagonal", "Split the backend into domain driven, hexagonal modules?", false) ? askHexagon() : null;
+        boolean conventions = hexagon != null || confirm("conventions", "Add a convention plugin in build-logic, for multi-module projects?", false);
+        UI.section("Workflow");
         boolean flatPackages = confirm("idea-ext", "Skip package folders, so IntelliJ treats src/main/kotlin as " + packageName + " (uses the idea-ext plugin)?", true);
-        boolean conventions = confirm("conventions", "Add a convention plugin in build-logic, for multi-module projects?", false);
         boolean docker = confirm("docker", "Add a Dockerfile?", true);
         boolean actions = confirm("github-actions", "Add a GitHub Actions workflow?", true);
+        boolean releasePlease = actions && confirm("release-please", "Add release-please, which sets the version and writes releases from your commit messages?", false);
+        boolean commitCheck = confirm("conventional-commits", "Check commit messages for Conventional Commits in a local git hook?", releasePlease);
         boolean liveTemplates = confirm("live-templates", "Install the ktor-svelte live templates into IntelliJ and WebStorm?", true);
         boolean git = isOnPath("git") && confirm("git", "Create a git repository?", true);
         Optional<List<String>> idea = findIntellij();
         boolean openIdea = flags.containsKey("open-idea") || (!acceptDefaults && idea.isPresent() && confirm("open-idea", "Open the project in IntelliJ when it is ready?", true));
 
-        Versions versions = resolveVersions();
-        System.out.println();
-        System.out.println("Creating " + name + " with ktor-svelte " + versions.release + "...");
+        UI.section("Creating " + name);
+        Versions versions = UI.step(flags.containsKey("local-build") ? "Reading the local build" : "Finding the latest release", this::resolveVersions);
+        UI.note("ktor-svelte " + versions.release);
 
+        UI.step("Writing the project files", () -> {
+            writeProjectFiles(directory, name, packageName, manager, versions, generateTs, daisy, tailwind, lucide, i18n, locales, strategy,
+                auth, database, flyway, flatPackages, hexagon, conventions, docker, actions, releasePlease, commitCheck);
+            return null;
+        });
+
+        gradle(directory, "Creating the SvelteKit app", "svelteInit", "--package-manager=" + manager, "svelteGenerateRunConfigurations");
+        if (liveTemplates) gradle(directory, "Installing the live templates", "svelteLiveTemplates", "--install");
+        writeFrontendLinting(directory, tailwind || lucide || i18n);
+        Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth, generateTs, database, hexagon));
+        if (auth) writeAuthPages(directory, daisy, tailwind, i18n);
+        installPackages(directory, manager);
+        gradle(directory, "Formatting the frontend", "svelteRun", "--script=format");
+        gradle(directory, "Syncing the frontend libraries", "svelteSync");
+        if (generateTs) gradle(directory, "Generating the TypeScript client", "svelteGenerateTs");
+        if (git) UI.step("Creating the git repository", () -> {
+            initGit(directory, commitCheck);
+            return null;
+        });
+
+        List<String> next = new ArrayList<>();
+        next.add("cd " + name);
+        if (database) next.add("docker compose up -d");
+        next.add((WINDOWS ? "gradlew.bat" : "./gradlew") + " svelteDevAll");
+        UI.done(name, System.nanoTime() - started, next, "Then open http://localhost:8080. In IntelliJ, open the folder and run the Dev configuration.");
+        if (openIdea) openInIntellij(idea, directory);
+    }
+
+    private void writeProjectFiles(
+        Path directory, String name, String packageName, String manager, Versions versions, boolean generateTs, boolean daisy, boolean tailwind,
+        boolean lucide, boolean i18n, List<String> locales, String strategy, boolean auth, boolean database, boolean flyway, boolean flatPackages,
+        Hexagon hexagon, boolean conventions, boolean docker, boolean actions, boolean releasePlease, boolean commitCheck
+    ) throws Exception {
         Files.createDirectories(directory);
         writeWrapper(directory, versions);
-        Files.writeString(directory.resolve("settings.gradle.kts"), settings(name, conventions));
+        Files.writeString(directory.resolve("settings.gradle.kts"), settings(name, conventions, hexagon));
         Files.writeString(directory.resolve("gradle.properties"), "org.gradle.configuration-cache=true\nkotlin.code.style=official\n");
         Files.writeString(directory.resolve(".gitignore"), GITIGNORE);
         Files.writeString(directory.resolve(".editorconfig"), EDITORCONFIG);
-        Files.writeString(directory.resolve("gradle/libs.versions.toml"), versionCatalog(versions, auth, database, flyway, flatPackages, conventions));
-        Files.writeString(directory.resolve("build.gradle.kts"), buildScript(packageName, auth, database, flyway, flatPackages, conventions, tailwind, daisy, lucide, i18n, locales, strategy));
-        if (conventions) writeBuildLogic(directory);
+        Files.writeString(directory.resolve("gradle/libs.versions.toml"), versionCatalog(versions, auth, database, flyway, flatPackages, conventions, hexagon));
+        Files.writeString(directory.resolve("build.gradle.kts"), buildScript(packageName, auth, database, flyway, flatPackages, conventions, tailwind, daisy, lucide, i18n, locales, strategy, hexagon, releasePlease));
+        if (conventions) writeBuildLogic(directory, hexagon != null);
+        if (hexagon != null) writeHexagon(directory, packageName, hexagon, database);
         Files.writeString(directory.resolve(".env.example"), envExample(name, auth, database));
         if (auth || database) Files.writeString(directory.resolve(".env"), localEnv(name, auth, database));
-        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker));
+        Files.writeString(directory.resolve("README.md"), projectReadme(name, auth, database, flyway, flatPackages, conventions, docker, hexagon, releasePlease, commitCheck));
         if (tailwind || lucide || i18n) Files.writeString(directory.resolve("AGENTS.md"), ASSISTANT_NOTES);
         Path source = flatPackages ? directory.resolve("src/main/kotlin") : directory.resolve("src/main/kotlin").resolve(packageName.replace('.', '/'));
         Files.createDirectories(source);
-        Files.writeString(source.resolve("Application.kt"), application(packageName, generateTs, auth, database));
+        Files.writeString(source.resolve("Application.kt"), application(packageName, generateTs, auth, database, hexagon));
         Files.writeString(source.resolve("Env.kt"), fill(ENV_KT, packageName));
-        Files.writeString(source.resolve("Errors.kt"), fill(ERRORS_KT, packageName));
+        Files.writeString(source.resolve("Errors.kt"), errorsSource(packageName, hexagon));
         if (auth) Files.writeString(source.resolve("Auth.kt"), fill(AUTH_KT, packageName));
         if (auth) Files.writeString(source.resolve(database ? "DatabaseUserStore.kt" : "MemoryUserStore.kt"), fill(database ? DATABASE_USER_STORE_KT : MEMORY_USER_STORE_KT, packageName));
-        if (database) Files.writeString(source.resolve("Database.kt"), fill(databaseSource(auth, flyway), packageName));
+        if (database) Files.writeString(source.resolve("Database.kt"), fill(databaseSource(packageName, auth, flyway, hexagon), packageName));
         Files.createDirectories(directory.resolve("src/main/resources"));
         Files.writeString(directory.resolve("src/main/resources/logback.xml"), LOGBACK);
-        if (flyway) writeMigration(directory, auth);
+        if (flyway) writeMigration(directory, auth, hexagon);
         if (i18n) writeMessages(directory, locales);
         if (database) Files.writeString(directory.resolve("compose.yaml"), COMPOSE);
         if (docker) writeDocker(directory, manager);
         if (actions) writeWorkflow(directory, manager);
-
-        gradle(directory, "svelteInit", "--package-manager=" + manager, "svelteGenerateRunConfigurations");
-        if (liveTemplates) gradle(directory, "svelteLiveTemplates", "--install");
-        writeFrontendLinting(directory, tailwind || lucide || i18n);
-        Files.writeString(directory.resolve("frontend/src/routes/+page.svelte"), startPage(daisy, tailwind, lucide, i18n, auth, generateTs, database));
-        if (auth) writeAuthPages(directory, daisy, tailwind, i18n);
-        installPackages(directory, manager);
-        gradle(directory, "svelteRun", "--script=format");
-        gradle(directory, "svelteSync");
-        if (generateTs) gradle(directory, "svelteGenerateTs");
-        if (git) initGit(directory);
-
-        System.out.println();
-        System.out.println("Done! Next:");
-        System.out.println();
-        System.out.println("  cd " + name);
-        if (database) System.out.println("  docker compose up -d");
-        System.out.println("  " + (WINDOWS ? "gradlew.bat" : "./gradlew") + " svelteDevAll");
-        System.out.println();
-        System.out.println("Then open http://localhost:8080. In IntelliJ, open the folder and run the Dev configuration.");
-        if (openIdea) openInIntellij(idea, directory);
+        if (releasePlease) writeReleasePlease(directory, name);
+        if (commitCheck) writeCommitHook(directory);
     }
 
     private static String fill(String template, String packageName) {
         return template.replace("__PACKAGE__", packageName);
+    }
+
+    private Hexagon askHexagon() throws IOException {
+        List<String> names = Arrays.asList(ask("contexts", "Bounded contexts, comma separated", "orders", CONTEXTS, "Use lowercase names such as catalog,orders.").split(","));
+        if (names.stream().distinct().count() != names.size()) throw new SetupException("Each bounded context needs its own name.");
+        for (String context : names) {
+            if (RESERVED_CONTEXTS.contains(context)) throw new SetupException("A bounded context cannot be called " + context + ". Pick another name.");
+        }
+        List<BoundedContext> contexts = new ArrayList<>();
+        for (String context : names) {
+            String aggregate = ask("aggregate-" + context, "Main aggregate of " + context, defaultAggregate(context), AGGREGATE, "Use a class name such as Order.");
+            if (contexts.stream().anyMatch(other -> other.aggregate().equals(aggregate))) {
+                throw new SetupException("Two contexts cannot both have an aggregate called " + aggregate + ".");
+            }
+            contexts.add(new BoundedContext(context, aggregate));
+        }
+        boolean layered = choose("module-layout", "Modules per context (layers: domain, application and adapters modules, single: one module with a package per layer)", List.of("layers", "single")).equals("layers");
+        boolean kernel = confirm("shared-kernel", "Add a shared kernel module for code every context uses?", false);
+        return new Hexagon(contexts, layered, kernel);
+    }
+
+    private static String defaultAggregate(String context) {
+        String singular = context.length() > 3 && context.endsWith("s") && !context.endsWith("ss") ? context.substring(0, context.length() - 1) : context;
+        return Character.toUpperCase(singular.charAt(0)) + singular.substring(1);
     }
 
     private Optional<List<String>> findIntellij() {
@@ -205,7 +256,7 @@ public class Setup {
 
     private static void openInIntellij(Optional<List<String>> idea, Path directory) throws IOException {
         if (idea.isEmpty()) {
-            System.out.println("IntelliJ was not found, so open the folder yourself.");
+            UI.note("IntelliJ was not found, so open the folder yourself.");
             return;
         }
         List<String> command = new ArrayList<>(idea.get());
@@ -220,14 +271,24 @@ public class Setup {
         if (flags.containsKey(flag)) {
             String value = flags.get(flag);
             if (!valid.matcher(value).matches()) throw new SetupException("--" + flag + "=" + value + " is not valid. " + hint);
+            UI.answered(question, value, 0);
             return value;
         }
-        if (acceptDefaults) return fallback;
+        if (acceptDefaults) {
+            UI.answered(question, fallback, 0);
+            return fallback;
+        }
+        int lines = 0;
         while (true) {
-            String answer = prompt(question + " (" + fallback + "): ");
+            String answer = prompt(UI.question(question, fallback));
+            lines++;
             String value = answer.isEmpty() ? fallback : answer;
-            if (valid.matcher(value).matches()) return value;
-            System.out.println("  " + hint);
+            if (valid.matcher(value).matches()) {
+                UI.answered(question, value, lines);
+                return value;
+            }
+            UI.hint(hint);
+            lines++;
         }
     }
 
@@ -235,35 +296,59 @@ public class Setup {
         if (flags.containsKey(flag)) {
             String value = flags.get(flag);
             if (!options.contains(value)) throw new SetupException("--" + flag + " must be one of " + options + ".");
+            UI.answered(question, value, 0);
             return value;
         }
-        if (acceptDefaults || options.size() == 1) return options.get(0);
-        System.out.println(question + ":");
-        for (int index = 0; index < options.size(); index++) {
-            System.out.println("  " + (index + 1) + ") " + options.get(index));
+        if (acceptDefaults || options.size() == 1) {
+            UI.answered(question, options.get(0), 0);
+            return options.get(0);
         }
+        UI.choices(question, options);
+        int lines = options.size() + 1;
         while (true) {
-            String answer = prompt("Choose (1): ");
-            if (answer.isEmpty()) return options.get(0);
-            if (options.contains(answer)) return answer;
-            try {
-                return options.get(Integer.parseInt(answer) - 1);
-            } catch (NumberFormatException | IndexOutOfBoundsException failure) {
-                System.out.println("  Enter a number from 1 to " + options.size() + ".");
+            String answer = prompt(UI.question("Choose a number", "1"));
+            lines++;
+            String value = null;
+            if (answer.isEmpty()) value = options.get(0);
+            else if (options.contains(answer)) value = answer;
+            else {
+                try {
+                    value = options.get(Integer.parseInt(answer) - 1);
+                } catch (NumberFormatException | IndexOutOfBoundsException failure) {
+                    UI.hint("Enter a number from 1 to " + options.size() + ".");
+                    lines++;
+                }
+            }
+            if (value != null) {
+                UI.answered(question, value, lines);
+                return value;
             }
         }
     }
 
     private boolean confirm(String flag, String question, boolean fallback) throws IOException {
-        if (flags.containsKey(flag)) return !flags.get(flag).equals("false");
-        if (flags.containsKey("no-" + flag)) return false;
-        if (acceptDefaults) return fallback;
+        Boolean preset = null;
+        if (flags.containsKey(flag)) preset = !flags.get(flag).equals("false");
+        else if (flags.containsKey("no-" + flag)) preset = false;
+        else if (acceptDefaults) preset = fallback;
+        if (preset != null) {
+            UI.answered(question, preset ? "Yes" : "No", 0);
+            return preset;
+        }
+        int lines = 0;
         while (true) {
-            String answer = prompt(question + (fallback ? " (Y/n): " : " (y/N): ")).toLowerCase(Locale.ROOT);
-            if (answer.isEmpty()) return fallback;
-            if (answer.equals("y") || answer.equals("yes")) return true;
-            if (answer.equals("n") || answer.equals("no")) return false;
-            System.out.println("  Answer y or n.");
+            String answer = prompt(UI.question(question, fallback ? "Y/n" : "y/N")).toLowerCase(Locale.ROOT);
+            lines++;
+            Boolean value = null;
+            if (answer.isEmpty()) value = fallback;
+            else if (answer.equals("y") || answer.equals("yes")) value = true;
+            else if (answer.equals("n") || answer.equals("no")) value = false;
+            if (value != null) {
+                UI.answered(question, value ? "Yes" : "No", lines);
+                return value;
+            }
+            UI.hint("Answer y or n.");
+            lines++;
         }
     }
 
@@ -335,7 +420,29 @@ public class Setup {
         directory.resolve("gradlew").toFile().setExecutable(true);
     }
 
-    private String settings(String name, boolean conventions) {
+    private String settings(String name, boolean conventions, Hexagon hexagon) {
+        String base = baseSettings(name, conventions);
+        if (hexagon == null) return base;
+        StringBuilder text = new StringBuilder(base).append("\n");
+        text.append("enableFeaturePreview(\"TYPESAFE_PROJECT_ACCESSORS\")\n\n");
+        if (hexagon.layered()) {
+            text.append("fun boundedContext(name: String) {\n");
+            text.append("    listOf(\"domain\", \"application\", \"adapters\").forEach { layer ->\n");
+            text.append("        include(\"$name-$layer\")\n");
+            text.append("        project(\":$name-$layer\").projectDir = file(\"$name/$layer\")\n");
+            text.append("    }\n}\n\n");
+            if (hexagon.kernel()) text.append("include(\"shared-kernel\")\n");
+            for (BoundedContext context : hexagon.contexts()) text.append("boundedContext(\"").append(context.name()).append("\")\n");
+        } else {
+            List<String> modules = new ArrayList<>();
+            if (hexagon.kernel()) modules.add("\"shared-kernel\"");
+            hexagon.contexts().forEach(context -> modules.add("\"" + context.name() + "\""));
+            text.append("include(").append(String.join(", ", modules)).append(")\n");
+        }
+        return text.toString();
+    }
+
+    private String baseSettings(String name, boolean conventions) {
         String local = flags.get("local-build");
         String gradlePath = local == null ? null : Path.of(local).toAbsolutePath().toString().replace('\\', '/');
         StringBuilder text = new StringBuilder("pluginManagement {\n");
@@ -348,30 +455,246 @@ public class Setup {
         return text.toString();
     }
 
-    private static void writeBuildLogic(Path directory) throws IOException {
+    private static void writeHexagon(Path directory, String packageName, Hexagon hexagon, boolean database) throws IOException {
+        if (hexagon.kernel()) {
+            Path kernel = directory.resolve("shared-kernel");
+            writeModuleBuild(kernel, false, List.of());
+            Path source = packageFolder(kernel, packageName + ".kernel");
+            Files.writeString(source.resolve("DomainException.kt"), kotlinFile(packageName + ".kernel", List.of(), DOMAIN_EXCEPTION_KT));
+        }
+        for (BoundedContext context : hexagon.contexts()) {
+            String base = packageName + "." + context.name();
+            Path domain = hexagon.layered() ? directory.resolve(context.name()).resolve("domain") : directory.resolve(context.name());
+            Path application = hexagon.layered() ? directory.resolve(context.name()).resolve("application") : domain;
+            Path adapters = hexagon.layered() ? directory.resolve(context.name()).resolve("adapters") : domain;
+            List<String> adapterLibraries = new ArrayList<>(List.of("implementation(libs.ktor.server.core)", "implementation(libs.ktor.svelte.server)"));
+            if (database) adapterLibraries.add("implementation(libs.exposed.jdbc)");
+            if (hexagon.layered()) {
+                writeModuleBuild(domain, false, hexagon.kernel() ? List.of("api(projects.sharedKernel)") : List.of());
+                writeModuleBuild(application, false, List.of("api(projects." + accessor(context.name() + "-domain") + ")"));
+                List<String> adapterDependencies = new ArrayList<>();
+                adapterDependencies.add("api(projects." + accessor(context.name() + "-application") + ")");
+                adapterDependencies.addAll(adapterLibraries);
+                writeModuleBuild(adapters, true, adapterDependencies);
+            } else {
+                List<String> dependencies = new ArrayList<>();
+                if (hexagon.kernel()) dependencies.add("api(projects.sharedKernel)");
+                dependencies.addAll(adapterLibraries);
+                writeModuleBuild(domain, true, dependencies);
+            }
+            String aggregate = context.aggregate();
+            String variable = Character.toLowerCase(aggregate.charAt(0)) + aggregate.substring(1);
+            String names = "__AGGREGATE__";
+            Path domainSource = packageFolder(domain, base + ".domain");
+            String invariant = hexagon.kernel()
+                ? "        if (name.isBlank()) throw DomainException(\"" + aggregate + " needs a name.\")\n"
+                : "        require(name.isNotBlank()) { \"" + aggregate + " needs a name.\" }\n";
+            Files.writeString(
+                domainSource.resolve(aggregate + ".kt"),
+                kotlinFile(base + ".domain", hexagon.kernel() ? List.of(packageName + ".kernel.DomainException") : List.of(), AGGREGATE_KT.replace("__INVARIANT__\n", invariant).replace(names, aggregate)));
+            Path applicationSource = packageFolder(application, base + ".application");
+            Files.writeString(
+                applicationSource.resolve(aggregate + "Repository.kt"),
+                kotlinFile(base + ".application", List.of(base + ".domain." + aggregate), REPOSITORY_KT.replace(names, aggregate).replace("__VARIABLE__", variable)));
+            Files.writeString(
+                applicationSource.resolve(aggregate + "Service.kt"),
+                kotlinFile(
+                    base + ".application",
+                    List.of(base + ".domain." + aggregate, base + ".domain." + aggregate + "Id", "java.util.UUID"),
+                    SERVICE_KT.replace(names, aggregate).replace("__VARIABLE__", variable)));
+            Path web = packageFolder(adapters, base + ".adapters.web");
+            Files.writeString(
+                web.resolve(aggregate + "Routes.kt"),
+                kotlinFile(
+                    base + ".adapters.web",
+                    List.of(
+                        "io.github.nijasc.ktor.svelte.Validated",
+                        "io.github.nijasc.ktor.svelte.Validator",
+                        "io.ktor.http.HttpStatusCode",
+                        "io.ktor.openapi.JsonSchema",
+                        "io.ktor.server.request.receive",
+                        "io.ktor.server.response.respond",
+                        "io.ktor.server.routing.Route",
+                        "io.ktor.server.routing.get",
+                        "io.ktor.server.routing.post",
+                        "io.ktor.server.routing.route",
+                        "kotlinx.serialization.Serializable",
+                        base + ".application." + aggregate + "Service",
+                        base + ".domain." + aggregate),
+                    ROUTES_KT.replace(names, aggregate).replace("__CONTEXT__", context.name())));
+            Path persistence = packageFolder(adapters, base + ".adapters.persistence");
+            List<String> repositoryImports = List.of(base + ".application." + aggregate + "Repository", base + ".domain." + aggregate);
+            if (database) {
+                List<String> imports = new ArrayList<>(repositoryImports);
+                imports.addAll(List.of(
+                    base + ".domain." + aggregate + "Id",
+                    "kotlinx.coroutines.Dispatchers",
+                    "kotlinx.coroutines.withContext",
+                    "org.jetbrains.exposed.v1.core.Table",
+                    "org.jetbrains.exposed.v1.jdbc.selectAll",
+                    "org.jetbrains.exposed.v1.jdbc.transactions.transaction",
+                    "org.jetbrains.exposed.v1.jdbc.upsert"));
+                Files.writeString(
+                    persistence.resolve("Exposed" + aggregate + "Repository.kt"),
+                    kotlinFile(base + ".adapters.persistence", imports, EXPOSED_REPOSITORY_KT.replace(names, aggregate).replace("__VARIABLE__", variable).replace("__TABLE__", tableName(context))));
+            } else {
+                List<String> imports = new ArrayList<>(repositoryImports);
+                imports.add(base + ".domain." + aggregate + "Id");
+                imports.add("java.util.concurrent.ConcurrentHashMap");
+                Files.writeString(
+                    persistence.resolve("InMemory" + aggregate + "Repository.kt"),
+                    kotlinFile(base + ".adapters.persistence", imports, MEMORY_REPOSITORY_KT.replace(names, aggregate).replace("__VARIABLE__", variable)));
+            }
+        }
+    }
+
+    private static String tableName(BoundedContext context) {
+        return context.name() + "_" + context.aggregate().replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(Locale.ROOT);
+    }
+
+    private static String accessor(String projectName) {
+        StringBuilder text = new StringBuilder();
+        boolean upper = false;
+        for (char character : projectName.toCharArray()) {
+            if (character == '-') {
+                upper = true;
+            } else {
+                text.append(upper ? Character.toUpperCase(character) : character);
+                upper = false;
+            }
+        }
+        return text.toString();
+    }
+
+    private static List<String> rootModules(Hexagon hexagon) {
+        return hexagon.contexts().stream()
+            .map(context -> "implementation(projects." + accessor(hexagon.layered() ? context.name() + "-adapters" : context.name()) + ")")
+            .collect(Collectors.toList());
+    }
+
+    private static Path packageFolder(Path module, String packageName) throws IOException {
+        Path folder = module.resolve("src/main/kotlin").resolve(packageName.replace('.', '/'));
+        Files.createDirectories(folder);
+        return folder;
+    }
+
+    private static void writeModuleBuild(Path module, boolean ktor, List<String> dependencies) throws IOException {
+        Files.createDirectories(module);
+        StringBuilder text = new StringBuilder("plugins {\n    id(\"").append(ktor ? "ktor-routes-conventions" : "kotlin-conventions").append("\")\n}\n");
+        if (!dependencies.isEmpty()) {
+            text.append("\ndependencies {\n");
+            dependencies.forEach(dependency -> text.append("    ").append(dependency).append("\n"));
+            text.append("}\n");
+        }
+        Files.writeString(module.resolve("build.gradle.kts"), text.toString());
+    }
+
+    private static String kotlinFile(String packageName, List<String> imports, String body) {
+        StringBuilder text = new StringBuilder("package ").append(packageName).append("\n\n");
+        List<String> sorted = sortImports(imports);
+        if (!sorted.isEmpty()) {
+            sorted.forEach(name -> text.append("import ").append(name).append("\n"));
+            text.append("\n");
+        }
+        return text.append(body).toString();
+    }
+
+    private static List<String> sortImports(List<String> imports) {
+        List<String> others = new ArrayList<>();
+        List<String> java = new ArrayList<>();
+        List<String> javax = new ArrayList<>();
+        List<String> kotlin = new ArrayList<>();
+        for (String name : imports.stream().distinct().sorted().collect(Collectors.toList())) {
+            if (name.startsWith("java.")) java.add(name);
+            else if (name.startsWith("javax.")) javax.add(name);
+            else if (name.startsWith("kotlin.")) kotlin.add(name);
+            else others.add(name);
+        }
+        List<String> result = new ArrayList<>(others);
+        result.addAll(java);
+        result.addAll(javax);
+        result.addAll(kotlin);
+        return result;
+    }
+
+    private static String mergeImports(String source, List<String> extra) {
+        List<String> lines = source.lines().collect(Collectors.toList());
+        List<String> imports = new ArrayList<>(extra);
+        int first = -1;
+        int last = -1;
+        for (int index = 0; index < lines.size(); index++) {
+            if (lines.get(index).startsWith("import ")) {
+                if (first < 0) first = index;
+                last = index;
+                imports.add(lines.get(index).substring("import ".length()));
+            }
+        }
+        List<String> result = new ArrayList<>(lines.subList(0, first));
+        sortImports(imports).forEach(name -> result.add("import " + name));
+        result.addAll(lines.subList(last + 1, lines.size()));
+        return String.join("\n", result) + "\n";
+    }
+
+    private static void writeReleasePlease(Path directory, String name) throws IOException {
+        Files.writeString(directory.resolve("version.txt"), "0.1.0\n");
+        Files.writeString(directory.resolve(".release-please-manifest.json"), "{\n  \".\": \"0.1.0\"\n}\n");
+        Files.writeString(directory.resolve("release-please-config.json"), RELEASE_PLEASE_CONFIG.replace("__NAME__", name));
+        Files.createDirectories(directory.resolve(".github/workflows"));
+        Files.writeString(directory.resolve(".github/workflows/release.yml"), RELEASE_WORKFLOW);
+    }
+
+    private static void writeCommitHook(Path directory) throws IOException {
+        Path hooks = directory.resolve(".githooks");
+        Files.createDirectories(hooks);
+        Path hook = hooks.resolve("commit-msg");
+        Files.writeString(hook, COMMIT_MSG_HOOK);
+        hook.toFile().setExecutable(true);
+        Files.writeString(directory.resolve(".gitattributes"), "/.githooks/** text eol=lf\n");
+    }
+
+    private static void writeBuildLogic(Path directory, boolean routeModules) throws IOException {
         Path logic = directory.resolve("build-logic");
         Files.createDirectories(logic.resolve("src/main/kotlin"));
         Files.writeString(logic.resolve("settings.gradle.kts"), BUILD_LOGIC_SETTINGS);
         Files.writeString(logic.resolve("build.gradle.kts"), BUILD_LOGIC_BUILD);
         Files.writeString(logic.resolve("src/main/kotlin/kotlin-conventions.gradle.kts"), KOTLIN_CONVENTIONS);
+        if (routeModules) Files.writeString(logic.resolve("src/main/kotlin/ktor-routes-conventions.gradle.kts"), KTOR_ROUTES_CONVENTIONS);
     }
 
-    private static void writeMigration(Path directory, boolean auth) throws IOException {
+    private static void writeMigration(Path directory, boolean auth, Hexagon hexagon) throws IOException {
         Path migrations = directory.resolve("src/main/resources/db/migration");
         Files.createDirectories(migrations);
-        String users = auth ? "\nCREATE TABLE users (\n    username VARCHAR(64) PRIMARY KEY,\n    password_hash VARCHAR(255) NOT NULL\n);\n" : "";
-        Files.writeString(migrations.resolve("V1__create_tables.sql"), "CREATE TABLE visits (\n    id SERIAL PRIMARY KEY\n);\n" + users);
+        StringBuilder tables = new StringBuilder("CREATE TABLE visits (\n    id SERIAL PRIMARY KEY\n);\n");
+        if (auth) tables.append("\nCREATE TABLE users (\n    username VARCHAR(64) PRIMARY KEY,\n    password_hash VARCHAR(255) NOT NULL\n);\n");
+        if (hexagon != null) {
+            for (BoundedContext context : hexagon.contexts()) {
+                tables.append("\nCREATE TABLE ").append(tableName(context)).append(" (\n    id VARCHAR(36) PRIMARY KEY,\n    name VARCHAR(200) NOT NULL\n);\n");
+            }
+        }
+        Files.writeString(migrations.resolve("V1__create_tables.sql"), tables.toString());
     }
 
-    private static String databaseSource(boolean auth, boolean flyway) {
-        if (!flyway) return DATABASE_KT.replace("__TABLES__", auth ? "Visits, Users" : "Visits");
+    private static String databaseSource(String packageName, boolean auth, boolean flyway, Hexagon hexagon) {
+        if (!flyway) {
+            List<String> tables = new ArrayList<>(List.of("Visits"));
+            if (auth) tables.add("Users");
+            List<String> imports = new ArrayList<>();
+            if (hexagon != null) {
+                for (BoundedContext context : hexagon.contexts()) {
+                    tables.add(context.aggregate() + "Table");
+                    imports.add(packageName + "." + context.name() + ".adapters.persistence." + context.aggregate() + "Table");
+                }
+            }
+            String source = DATABASE_KT.replace("__TABLES__", String.join(", ", tables));
+            return imports.isEmpty() ? source : mergeImports(source, imports);
+        }
         return DATABASE_KT
             .replace("import org.jetbrains.exposed.v1.jdbc.SchemaUtils\n", "")
             .replace("import org.jetbrains.exposed.v1.core.Table\n", "import org.flywaydb.core.Flyway\nimport org.jetbrains.exposed.v1.core.Table\n")
             .replace("transaction { SchemaUtils.create(__TABLES__) }", "Flyway\n            .configure()\n            .dataSource(dataSource)\n            .load()\n            .migrate()");
     }
 
-    private static String versionCatalog(Versions versions, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions) {
+    private static String versionCatalog(Versions versions, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, Hexagon hexagon) {
         StringBuilder text = new StringBuilder("[versions]\n");
         text.append("kotlin = \"").append(versions.kotlin).append("\"\n");
         text.append("ktor = \"").append(versions.ktor).append("\"\n");
@@ -390,6 +713,12 @@ public class Setup {
             text.append("kotlin-gradle-plugin = { module = \"org.jetbrains.kotlin:kotlin-gradle-plugin\", version.ref = \"kotlin\" }\n");
             text.append("kotlin-serialization-plugin = { module = \"org.jetbrains.kotlin:kotlin-serialization\", version.ref = \"kotlin\" }\n");
             text.append("ktlint-gradle-plugin = { module = \"org.jlleitschuh.gradle:ktlint-gradle\", version.ref = \"ktlint\" }\n");
+        }
+        if (hexagon != null) {
+            text.append("ktor-compiler-plugin = { module = \"io.ktor:ktor-compiler-plugin\", version.ref = \"ktor\" }\n");
+            text.append("ktor-server-core = { module = \"io.ktor:ktor-server-core\", version.ref = \"ktor\" }\n");
+            text.append("ktor-server-routing-openapi = { module = \"io.ktor:ktor-server-routing-openapi\", version.ref = \"ktor\" }\n");
+            text.append("ktor-svelte-server = { module = \"io.github.nijasc:ktor-svelte-server\", version.ref = \"ktor-svelte\" }\n");
         }
         text.append("ktor-server-netty = { module = \"io.ktor:ktor-server-netty\", version.ref = \"ktor\" }\n");
         text.append("ktor-server-status-pages = { module = \"io.ktor:ktor-server-status-pages\", version.ref = \"ktor\" }\n");
@@ -446,7 +775,9 @@ public class Setup {
         return HexFormat.of().formatHex(bytes);
     }
 
-    private static String projectReadme(String name, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, boolean docker) {
+    private static String projectReadme(
+        String name, boolean auth, boolean database, boolean flyway, boolean flatPackages, boolean conventions, boolean docker,
+        Hexagon hexagon, boolean releasePlease, boolean commitCheck) {
         StringBuilder text = new StringBuilder("# ").append(name).append("\n\n");
         text.append("A Ktor app with a SvelteKit frontend, served from one JAR on one port by [ktor-svelte](https://github.com/nijasc/ktor-svelte).\n\n");
         text.append("## Develop\n\n```bash\n");
@@ -487,6 +818,38 @@ public class Setup {
             text.append("## Project layout\n\n");
             if (flatPackages) text.append("Kotlin files sit directly in `src/main/kotlin`, without package folders. The `idea-ext` plugin in `build.gradle.kts` sets a package prefix, so IntelliJ creates new files in the right package. Reload the Gradle project if IntelliJ does not pick it up.\n\n");
             if (conventions) text.append("`build-logic` holds the `kotlin-conventions` plugin with the Kotlin and ktlint setup. To add a module, add it to `settings.gradle.kts` and apply `id(\"kotlin-conventions\")` in its build file.\n\n");
+        }
+        if (hexagon != null) {
+            text.append("## Architecture\n\n");
+            text.append("The backend is split into bounded contexts, each built as a hexagon. The root project only starts the app and wires the contexts together in `Application.kt`.\n\n");
+            text.append("| Context | Aggregate | API |\n|---|---|---|\n");
+            for (BoundedContext context : hexagon.contexts()) {
+                text.append("| `").append(context.name()).append("` | `").append(context.aggregate()).append("` | `/api/").append(context.name()).append("` |\n");
+            }
+            text.append("\n");
+            if (hexagon.layered()) {
+                text.append("Each context has three modules, and Gradle only lets each one see the layer below it:\n\n");
+                text.append("- `<context>/domain`: the aggregate and its rules. No framework code.\n");
+                text.append("- `<context>/application`: use cases, and the ports they need, such as the repository interface.\n");
+                text.append("- `<context>/adapters`: the HTTP routes in `web` and the repository in `persistence`, which plug Ktor").append(database ? " and Exposed" : "").append(" into the ports.\n\n");
+                text.append("To add a context, add `boundedContext(\"name\")` to `settings.gradle.kts`, create the three folders with a `build.gradle.kts` like the existing ones, and depend on its adapters in the root `build.gradle.kts`.\n\n");
+            } else {
+                text.append("Each context is one module with a package per layer: `domain` for the aggregate and its rules, `application` for use cases and ports, and `adapters` for the HTTP routes and the repository. Keep the domain free of framework code, so it can move into its own module later.\n\n");
+                text.append("To add a context, add it to `include(...)` in `settings.gradle.kts`, give it a `build.gradle.kts` like the existing ones, and depend on it in the root `build.gradle.kts`.\n\n");
+            }
+            if (hexagon.kernel()) text.append("`shared-kernel` holds code every context may use, such as `DomainException`, which the app answers with 422. Keep it small: everything in it couples the contexts.\n\n");
+            text.append("Modules depend on each other through type-safe accessors such as `projects.").append(accessor(hexagon.layered() ? hexagon.contexts().get(0).name() + "-domain" : hexagon.contexts().get(0).name())).append("`, and on libraries through `gradle/libs.versions.toml`.\n\n");
+        }
+        if (releasePlease) {
+            text.append("## Releases\n\n");
+            text.append("[release-please](https://github.com/googleapis/release-please) reads the commit messages on `main` and keeps a release pull request open. Merging it raises the version in `version.txt`, which `build.gradle.kts` uses, writes `CHANGELOG.md` and creates the GitHub release. ");
+            text.append("`feat` raises the minor version, `fix` the patch version, and a `!` after the type marks a breaking change. ");
+            text.append("In the repository settings, under Actions, allow GitHub Actions to create pull requests. Never edit `version.txt` or `.release-please-manifest.json` by hand.\n\n");
+        }
+        if (commitCheck) {
+            text.append("## Commit messages\n\n");
+            text.append("Commit messages follow [Conventional Commits](https://www.conventionalcommits.org), such as `feat(orders): show the total`. `.githooks/commit-msg` rejects any other message. After cloning, turn it on once:\n\n");
+            text.append("```bash\ngit config core.hooksPath .githooks\n```\n\n");
         }
         return text.toString();
     }
@@ -560,7 +923,9 @@ public class Setup {
         boolean lucide,
         boolean i18n,
         List<String> locales,
-        String strategy
+        String strategy,
+        Hexagon hexagon,
+        boolean releasePlease
     ) {
         StringBuilder libraries = new StringBuilder();
         if (tailwind && !daisy) libraries.append("        tailwind {\n            typography()\n        }\n");
@@ -586,6 +951,7 @@ public class Setup {
         if (flyway) svelte.append("    utils {\n        flyway()\n    }\n");
         String librariesBlock = svelte.length() == 0 ? "" : "svelte {\n" + svelte + "}\n\n";
         StringBuilder dependencies = new StringBuilder();
+        if (hexagon != null) rootModules(hexagon).forEach(module -> dependencies.append("    ").append(module).append("\n"));
         dependencies.append("    implementation(libs.ktor.server.netty)\n    implementation(libs.ktor.server.status.pages)\n");
         if (auth) dependencies.append("    implementation(libs.ktor.server.auth)\n    implementation(libs.ktor.server.sessions)\n");
         if (database) dependencies.append("    implementation(libs.exposed.jdbc)\n    implementation(libs.hikari)\n    implementation(libs.postgresql)\n");
@@ -602,9 +968,11 @@ public class Setup {
             + "    alias(libs.plugins.ktor.svelte)\n"
             + "}\n\n"
             + "group = \"" + packageName + "\"\n"
-            + "version = \"0.1.0\"\n\n"
+            + (releasePlease
+                ? "version = file(\"version.txt\").readText().trim()\n\n"
+                : "version = \"0.1.0\"\n\n")
             + "application {\n    mainClass = \"" + packageName + ".ApplicationKt\"\n}\n\n"
-            + "ktor {\n    openApi {\n        enabled = true\n        codeInferenceEnabled = true\n        onlyCommented = false\n    }\n}\n\n"
+            + OPEN_API_BLOCK + "\n"
             + (conventions ? "" : "ktlint {\n    filter {\n        exclude { it.file.invariantSeparatorsPath.contains(\"/build/\") }\n    }\n}\n\n")
             + (flatPackages ? "idea {\n    module {\n        settings {\n            packagePrefix[\"src/main/kotlin\"] = \"" + packageName + "\"\n        }\n    }\n}\n\n" : "")
             + (flyway ? "tasks.shadowJar {\n    mergeServiceFiles()\n}\n\n" : "")
@@ -614,18 +982,31 @@ public class Setup {
             + "}\n";
     }
 
-    private static String application(String packageName, boolean generateTs, boolean auth, boolean database) {
+    private static String application(String packageName, boolean generateTs, boolean auth, boolean database, Hexagon hexagon) {
         String generate = generateTs ? "        generateTs = true\n" : "";
-        return "package " + packageName + "\n\n"
-            + "import io.github.nijasc.ktor.svelte.Svelte\n"
-            + "import io.ktor.server.application.Application\n"
-            + "import io.ktor.server.application.install\n"
-            + "import io.ktor.server.engine.embeddedServer\n"
-            + "import io.ktor.server.netty.Netty\n"
-            + "import io.ktor.server.response.respond\n"
-            + "import io.ktor.server.routing.get\n"
-            + "import io.ktor.server.routing.routing\n"
-            + "import kotlinx.serialization.Serializable\n\n"
+        List<String> imports = new ArrayList<>(List.of(
+            "io.github.nijasc.ktor.svelte.Svelte",
+            "io.ktor.server.application.Application",
+            "io.ktor.server.application.install",
+            "io.ktor.server.engine.embeddedServer",
+            "io.ktor.server.netty.Netty",
+            "io.ktor.server.response.respond",
+            "io.ktor.server.routing.get",
+            "io.ktor.server.routing.routing",
+            "kotlinx.serialization.Serializable"));
+        StringBuilder contextRoutes = new StringBuilder();
+        if (hexagon != null) {
+            for (BoundedContext context : hexagon.contexts()) {
+                String base = packageName + "." + context.name();
+                String repository = (database ? "Exposed" : "InMemory") + context.aggregate() + "Repository";
+                imports.add(base + ".adapters.persistence." + repository);
+                imports.add(base + ".adapters.web." + context.name() + "Routes");
+                imports.add(base + ".application." + context.aggregate() + "Service");
+                contextRoutes.append("        ").append(context.name()).append("Routes(")
+                    .append(context.aggregate()).append("Service(").append(repository).append("()))\n");
+            }
+        }
+        return kotlinFile(packageName, imports, "")
             + "@Serializable\ndata class Greeting(\n    val message: String,\n)\n\n"
             + "fun main() {\n"
             + "    val port = env(\"PORT\")?.toInt() ?: 8080\n"
@@ -646,8 +1027,20 @@ public class Setup {
             + "        }\n"
             + (database ? "        databaseRoutes()\n" : "")
             + (auth ? "        authRoutes(" + (database ? "DatabaseUserStore()" : "MemoryUserStore()") + ")\n" : "")
+            + contextRoutes
             + "    }\n"
             + "}\n";
+    }
+
+    private static String errorsSource(String packageName, Hexagon hexagon) {
+        String source = fill(ERRORS_KT, packageName);
+        if (hexagon == null || !hexagon.kernel()) return source;
+        String handler = "        exception<DomainException> { call, cause ->\n"
+            + "            call.respond(HttpStatusCode.UnprocessableEntity, Problem(cause.message))\n"
+            + "        }\n";
+        return mergeImports(
+            source.replace("        exception<BadRequestException>", handler + "        exception<BadRequestException>"),
+            List.of(packageName + ".kernel.DomainException"));
     }
 
     private static void writeMessages(Path directory, List<String> locales) throws IOException {
@@ -659,7 +1052,7 @@ public class Setup {
     }
 
     private static String startPage(
-        boolean daisy, boolean tailwind, boolean lucide, boolean i18n, boolean auth, boolean generateTs, boolean database) {
+        boolean daisy, boolean tailwind, boolean lucide, boolean i18n, boolean auth, boolean generateTs, boolean database, Hexagon hexagon) {
         StringBuilder script = new StringBuilder();
         if (lucide) script.append("    import Icon from '#icon';\n");
         if (i18n) script.append(auth ? "    import { getLocale, localizeHref, m } from '#i18n';\n" : "    import { getLocale, m } from '#i18n';\n");
@@ -683,6 +1076,11 @@ public class Setup {
         if (i18n) setUp.add(docsLink(link, "features/frontend-libraries#i18n", "Messages") + " in <code>messages</code>");
         if (auth) setUp.add(docsLink(link, "features/auth", "Sign in") + " with sessions and hashed passwords");
         if (database) setUp.add("Postgres with Exposed. Start it with <code>docker compose up -d</code>");
+        if (hexagon != null) {
+            for (BoundedContext context : hexagon.contexts()) {
+                setUp.add("The <code>" + context.name() + "</code> context, with <code>" + context.aggregate() + "</code> at <code>/api/" + context.name() + "</code>, split into domain, application and adapters");
+            }
+        }
         List<String> next = new ArrayList<>();
         next.add("Add a route in Kotlin and save: the app restarts" + (generateTs ? " and the typed client follows" : ""));
         next.add("Click the API button in the corner of this page to see every call the app answers");
@@ -711,7 +1109,7 @@ public class Setup {
             + "    </ul>\n";
     }
 
-    private void gradle(Path directory, String... tasks) throws Exception {
+    private void gradle(Path directory, String label, String... tasks) throws Exception {
         List<String> command = new ArrayList<>();
         if (WINDOWS) {
             command.add(directory.resolve("gradlew.bat").toString());
@@ -720,25 +1118,41 @@ public class Setup {
         }
         command.addAll(Arrays.asList(tasks));
         command.add("--console=plain");
-        ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile()).inheritIO();
+        ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile());
         builder.environment().put("PORT", "0");
-        int exit = builder.start().waitFor();
-        if (exit != 0) {
-            throw new SetupException(
-                "Gradle failed while running " + String.join(" ", tasks) + ". The project is in " + directory + "."
-                    + " If the ktor-svelte plugin was not found, its release may still be waiting for approval on the Gradle Plugin Portal."
-            );
-        }
+        UI.process(
+            label,
+            builder,
+            "Gradle failed while running " + String.join(" ", tasks) + ". The project is in " + directory + "."
+                + " If the ktor-svelte plugin was not found, its release may still be waiting for approval on the Gradle Plugin Portal."
+        );
     }
 
     private static void installPackages(Path directory, String manager) throws Exception {
         List<String> command = WINDOWS ? List.of("cmd", "/c", manager, "install") : List.of(manager, "install");
-        int exit = new ProcessBuilder(command).directory(directory.resolve("frontend").toFile()).inheritIO().start().waitFor();
-        if (exit != 0) throw new SetupException(manager + " install failed. The project is in " + directory + ".");
+        UI.process(
+            "Installing the frontend packages with " + manager,
+            new ProcessBuilder(command).directory(directory.resolve("frontend").toFile()),
+            manager + " install failed. The project is in " + directory + ".");
     }
 
-    private static void initGit(Path directory) throws Exception {
-        new ProcessBuilder("git", "init", "--quiet").directory(directory.toFile()).inheritIO().start().waitFor();
+    private static void initGit(Path directory, boolean commitCheck) throws Exception {
+        git(directory, "init", "--quiet");
+        if (commitCheck) {
+            git(directory, "config", "core.hooksPath", ".githooks");
+            git(directory, "add", "--chmod=+x", ".githooks/commit-msg");
+        }
+    }
+
+    private static void git(Path directory, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git"));
+        command.addAll(Arrays.asList(arguments));
+        new ProcessBuilder(command)
+            .directory(directory.toFile())
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
+            .waitFor();
     }
 
     private String download(String url) throws Exception {
@@ -786,6 +1200,221 @@ public class Setup {
         String ideaExt;
         Path localBuild;
     }
+
+    private static final class Ui {
+        private final PrintStream out = System.out;
+        private final boolean live;
+        private final boolean ansi;
+        private final boolean color;
+        private final boolean unicode;
+        private final String mark;
+        private final String check;
+        private final String cross;
+        private final String pending;
+        private final String[] frames;
+
+        Ui() {
+            boolean forced = System.getenv("FORCE_COLOR") != null;
+            live = interactive();
+            ansi = forced || (live && ansiTerminal());
+            color = forced || (ansi && System.getenv("NO_COLOR") == null);
+            String encoding = System.getProperty("stdout.encoding", System.getProperty("sun.stdout.encoding", Charset.defaultCharset().name()));
+            unicode = encoding.equalsIgnoreCase("UTF-8") || encoding.equalsIgnoreCase("UTF8");
+            mark = unicode ? "◆" : "?";
+            check = unicode ? "✔" : "+";
+            cross = unicode ? "✖" : "x";
+            pending = unicode ? "◇" : "-";
+            frames = unicode
+                ? new String[] {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+                : new String[] {"|", "/", "-", "\\"};
+        }
+
+        private static boolean interactive() {
+            Console console = System.console();
+            if (console == null) return false;
+            try {
+                return (Boolean) Console.class.getMethod("isTerminal").invoke(console);
+            } catch (ReflectiveOperationException failure) {
+                return true;
+            }
+        }
+
+        private static boolean ansiTerminal() {
+            String term = System.getenv("TERM");
+            if ("dumb".equals(term)) return false;
+            if (!WINDOWS) return true;
+            return term != null
+                || System.getenv("WT_SESSION") != null
+                || System.getenv("TERM_PROGRAM") != null
+                || System.getenv("ANSICON") != null
+                || "ON".equalsIgnoreCase(System.getenv("ConEmuANSI"));
+        }
+
+        private String paint(String codes, String text) {
+            return color ? "\033[" + codes + "m" + text + "\033[0m" : text;
+        }
+
+        String bold(String text) {
+            return paint("1", text);
+        }
+
+        String dim(String text) {
+            return paint("2", text);
+        }
+
+        String accent(String text) {
+            return paint("38;5;99", text);
+        }
+
+        String cyan(String text) {
+            return paint("36", text);
+        }
+
+        String green(String text) {
+            return paint("32", text);
+        }
+
+        String yellow(String text) {
+            return paint("33", text);
+        }
+
+        String red(String text) {
+            return paint("31", text);
+        }
+
+        void banner() {
+            out.println();
+            String badge = color ? "\033[48;5;99;97;1m ktor-svelte \033[0m" : "ktor-svelte";
+            out.println("  " + badge + "  " + dim("one app, one JAR, one port"));
+        }
+
+        void section(String title) {
+            out.println();
+            out.println("  " + bold(accent(title)));
+        }
+
+        String question(String question, String fallback) {
+            return "  " + cyan(mark) + " " + bold(question) + " " + dim("(" + fallback + ")") + " ";
+        }
+
+        void choices(String question, List<String> options) {
+            out.println("  " + cyan(mark) + " " + bold(question));
+            for (int index = 0; index < options.size(); index++) {
+                out.println("      " + dim(String.valueOf(index + 1)) + "  " + options.get(index) + (index == 0 ? dim("  default") : ""));
+            }
+        }
+
+        void hint(String text) {
+            out.println("    " + yellow(text));
+        }
+
+        void answered(String question, String value, int linesToReplace) {
+            if (ansi && linesToReplace > 0) out.print("\033[" + linesToReplace + "A\r\033[J");
+            String label = question.endsWith("?") ? question.substring(0, question.length() - 1) : question;
+            out.println("  " + green(check) + " " + label + dim(" : ") + cyan(value));
+        }
+
+        void note(String text) {
+            out.println("    " + dim(text));
+        }
+
+        <T> T step(String label, Callable<T> work) throws Exception {
+            long started = System.nanoTime();
+            Thread spinner = null;
+            if (ansi) {
+                spinner = new Thread(() -> {
+                    int frame = 0;
+                    while (!Thread.currentThread().isInterrupted()) {
+                        out.print("\r\033[2K  " + accent(frames[frame++ % frames.length]) + " " + label + "  " + dim(elapsed(System.nanoTime() - started)));
+                        out.flush();
+                        try {
+                            Thread.sleep(80);
+                        } catch (InterruptedException stop) {
+                            return;
+                        }
+                    }
+                });
+                spinner.setDaemon(true);
+                spinner.start();
+            } else {
+                out.println("  " + pending + " " + label + "...");
+            }
+            try {
+                T result = work.call();
+                stop(spinner);
+                finish(green(check), label, started);
+                return result;
+            } catch (Exception failure) {
+                stop(spinner);
+                finish(red(cross), label, started);
+                throw failure;
+            }
+        }
+
+        void process(String label, ProcessBuilder builder, String failureMessage) throws Exception {
+            Path log = Files.createTempFile("ktor-svelte-setup", ".log");
+            builder.redirectErrorStream(true).redirectOutput(log.toFile());
+            try {
+                step(label, () -> {
+                    Process process = builder.start();
+                    process.getOutputStream().close();
+                    if (process.waitFor() != 0) throw new ProcessFailed();
+                    return null;
+                });
+            } catch (ProcessFailed failure) {
+                List<String> lines = new String(Files.readAllBytes(log), Charset.defaultCharset()).lines().collect(Collectors.toList());
+                out.println();
+                lines.subList(Math.max(0, lines.size() - 30), lines.size()).forEach(line -> out.println("    " + dim(line)));
+                out.println();
+                out.println("    " + dim("Full output: " + log));
+                throw new SetupException(failureMessage);
+            }
+            Files.deleteIfExists(log);
+        }
+
+        private void stop(Thread spinner) throws InterruptedException {
+            if (spinner == null) return;
+            spinner.interrupt();
+            spinner.join();
+            out.print("\r\033[2K");
+        }
+
+        private void finish(String symbol, String label, long started) {
+            out.println("  " + symbol + " " + label + "  " + dim(elapsed(System.nanoTime() - started)));
+        }
+
+        void done(String name, long nanos, List<String> commands, String after) {
+            out.println();
+            out.println("  " + green(check) + " " + bold("Created " + name) + " " + dim("in " + elapsed(nanos)));
+            out.println();
+            out.println("  " + bold(accent("Next")));
+            commands.forEach(command -> out.println("    " + dim("$") + " " + cyan(command)));
+            out.println();
+            out.println("  " + dim(after));
+            out.println();
+        }
+
+        void failure(String message) {
+            System.err.println();
+            System.err.println("  " + red(cross + " " + message));
+            System.err.println();
+        }
+
+        private static String elapsed(long nanos) {
+            long tenths = nanos / 100_000_000L;
+            if (tenths < 600) return (tenths / 10) + "." + (tenths % 10) + "s";
+            long seconds = tenths / 10;
+            return (seconds / 60) + "m " + (seconds % 60) + "s";
+        }
+    }
+
+    private static final class ProcessFailed extends Exception {
+        private static final long serialVersionUID = 1L;
+    }
+
+    private record BoundedContext(String name, String aggregate) {}
+
+    private record Hexagon(List<BoundedContext> contexts, boolean layered, boolean kernel) {}
 
     private static final class SetupException extends RuntimeException {
         private static final long serialVersionUID = 1L;
@@ -844,6 +1473,224 @@ public class Setup {
         ktlint {
             filter {
                 exclude { it.file.invariantSeparatorsPath.contains("/build/") }
+            }
+        }
+        """;
+
+    private static final String OPEN_API_BLOCK = """
+        ktor {
+            openApi {
+                enabled = true
+                codeInferenceEnabled = true
+                onlyCommented = false
+            }
+        }
+        """;
+
+    private static final String DOMAIN_EXCEPTION_KT = """
+        class DomainException(
+            override val message: String,
+        ) : RuntimeException(message)
+        """;
+
+    private static final String AGGREGATE_KT = """
+        @JvmInline
+        value class __AGGREGATE__Id(
+            val value: String,
+        )
+
+        data class __AGGREGATE__(
+            val id: __AGGREGATE__Id,
+            val name: String,
+        ) {
+            init {
+        __INVARIANT__
+            }
+        }
+        """;
+
+    private static final String REPOSITORY_KT = """
+        interface __AGGREGATE__Repository {
+            suspend fun save(__VARIABLE__: __AGGREGATE__)
+
+            suspend fun all(): List<__AGGREGATE__>
+        }
+        """;
+
+    private static final String SERVICE_KT = """
+        class __AGGREGATE__Service(
+            private val repository: __AGGREGATE__Repository,
+        ) {
+            suspend fun create(name: String): __AGGREGATE__ {
+                val __VARIABLE__ = __AGGREGATE__(__AGGREGATE__Id(UUID.randomUUID().toString()), name.trim())
+                repository.save(__VARIABLE__)
+                return __VARIABLE__
+            }
+
+            suspend fun list(): List<__AGGREGATE__> = repository.all()
+        }
+        """;
+
+    private static final String ROUTES_KT = """
+        private const val MAX_NAME_LENGTH = 200
+
+        @Serializable
+        data class New__AGGREGATE__(
+            @JsonSchema.MaxLength(MAX_NAME_LENGTH)
+            val name: String,
+        ) : Validated {
+            override fun Validator.rules() {
+                check(::name, name.isNotBlank()) { "Enter a name." }
+            }
+        }
+
+        @Serializable
+        data class __AGGREGATE__View(
+            val id: String,
+            val name: String,
+        )
+
+        fun Route.__CONTEXT__Routes(service: __AGGREGATE__Service) {
+            route("/api/__CONTEXT__") {
+                get {
+                    call.respond(service.list().map { it.toView() })
+                }
+                post {
+                    val request = call.receive<New__AGGREGATE__>()
+                    call.respond(HttpStatusCode.Created, service.create(request.name).toView())
+                }
+            }
+        }
+
+        private fun __AGGREGATE__.toView() = __AGGREGATE__View(id.value, name)
+        """;
+
+    private static final String MEMORY_REPOSITORY_KT = """
+        class InMemory__AGGREGATE__Repository : __AGGREGATE__Repository {
+            private val items = ConcurrentHashMap<__AGGREGATE__Id, __AGGREGATE__>()
+
+            override suspend fun save(__VARIABLE__: __AGGREGATE__) {
+                items[__VARIABLE__.id] = __VARIABLE__
+            }
+
+            override suspend fun all(): List<__AGGREGATE__> = items.values.sortedBy { it.name }
+        }
+        """;
+
+    private static final String EXPOSED_REPOSITORY_KT = """
+        private const val ID_LENGTH = 36
+        private const val NAME_LENGTH = 200
+
+        object __AGGREGATE__Table : Table("__TABLE__") {
+            val id = varchar("id", ID_LENGTH)
+            val name = varchar("name", NAME_LENGTH)
+
+            override val primaryKey = PrimaryKey(id)
+        }
+
+        class Exposed__AGGREGATE__Repository : __AGGREGATE__Repository {
+            override suspend fun save(__VARIABLE__: __AGGREGATE__) {
+                withContext(Dispatchers.IO) {
+                    transaction {
+                        __AGGREGATE__Table.upsert {
+                            it[__AGGREGATE__Table.id] = __VARIABLE__.id.value
+                            it[__AGGREGATE__Table.name] = __VARIABLE__.name
+                        }
+                    }
+                }
+            }
+
+            override suspend fun all(): List<__AGGREGATE__> =
+                withContext(Dispatchers.IO) {
+                    transaction {
+                        __AGGREGATE__Table
+                            .selectAll()
+                            .orderBy(__AGGREGATE__Table.name)
+                            .map { __AGGREGATE__(__AGGREGATE__Id(it[__AGGREGATE__Table.id]), it[__AGGREGATE__Table.name]) }
+                    }
+                }
+        }
+        """;
+
+    private static final String RELEASE_PLEASE_CONFIG = """
+        {
+          "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+          "release-type": "simple",
+          "include-component-in-tag": false,
+          "bump-minor-pre-major": true,
+          "packages": {
+            ".": {
+              "package-name": "__NAME__"
+            }
+          }
+        }
+        """;
+
+    private static final String RELEASE_WORKFLOW = """
+        name: Release
+
+        on:
+          push:
+            branches: [main]
+
+        permissions: {}
+
+        jobs:
+          release-please:
+            runs-on: ubuntu-latest
+            permissions:
+              contents: write
+              pull-requests: write
+            steps:
+              - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
+                with:
+                  config-file: release-please-config.json
+                  manifest-file: .release-please-manifest.json
+        """;
+
+    private static final String COMMIT_MSG_HOOK = """
+        #!/bin/sh
+        subject=$(head -n 1 "$1")
+        case "$subject" in
+          "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+        esac
+        if printf '%s\\n' "$subject" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\\([a-z0-9._/-]+\\))?!?: [^ ].*'; then
+          exit 0
+        fi
+        echo "The commit message does not follow Conventional Commits:" >&2
+        echo "  $subject" >&2
+        echo "Write it as type(scope): summary, such as feat(orders): show the total." >&2
+        echo "Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test." >&2
+        exit 1
+        """;
+
+    private static final String KTOR_ROUTES_CONVENTIONS = """
+        plugins {
+            id("kotlin-conventions")
+            id("org.jetbrains.kotlin.jvm")
+        }
+
+        val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
+        val ktorCompilerPlugin = "plugin:io.ktor.ktor-compiler-plugin"
+
+        dependencies {
+            kotlinCompilerPluginClasspathMain(libs.findLibrary("ktor-compiler-plugin").get())
+            implementation(libs.findLibrary("ktor-server-routing-openapi").get())
+        }
+
+        kotlin {
+            compilerOptions {
+                freeCompilerArgs.addAll(
+                    "-P",
+                    "$ktorCompilerPlugin:openApiEnabled=true",
+                    "-P",
+                    "$ktorCompilerPlugin:openApiCodeInference=true",
+                    "-P",
+                    "$ktorCompilerPlugin:openApiOnlyCommented=false",
+                )
+                freeCompilerArgs.addAll(
+                    layout.buildDirectory.map { listOf("-P", "$ktorCompilerPlugin:openApiLogDir=${it.asFile.absolutePath}") },
+                )
             }
         }
         """;

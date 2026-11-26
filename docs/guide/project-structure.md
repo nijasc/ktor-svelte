@@ -38,11 +38,19 @@ my-app/
   compose.yaml                if you chose Postgres
   Dockerfile                  if you chose Docker
   .github/workflows/ci.yml    if you chose GitHub Actions
-  build-logic/                if you chose the convention plugin
+  .github/workflows/release.yml, release-please-config.json, version.txt
+                              if you chose release-please
+  .githooks/commit-msg        if you chose Conventional Commits
+  build-logic/                if you chose the convention plugin or hexagonal modules
+  orders/                     a bounded context, if you chose hexagonal modules
+    domain/                   the aggregate and its rules
+    application/              use cases and ports
+    adapters/                 HTTP routes and the repository
+  shared-kernel/              if you chose a shared kernel
   README.md
 ```
 
-With `--no-idea-ext`, the Kotlin files sit in package folders, such as `src/main/kotlin/com/example/app/`, instead of directly in `src/main/kotlin`.
+With `--no-idea-ext`, the Kotlin files sit in package folders, such as `src/main/kotlin/com/example/app/`, instead of directly in `src/main/kotlin`. The modules of a bounded context always use package folders, such as `orders/domain/src/main/kotlin/com/example/app/orders/domain/`. With `--module-layout=single`, each context is one folder with those three packages instead of three modules.
 
 ## Files you own and files ktor-svelte owns
 
