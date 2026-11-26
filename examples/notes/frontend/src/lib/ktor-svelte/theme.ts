@@ -4,6 +4,10 @@ export const themes = ['shadcn-light','shadcn-dark','cupcake','ktor'] as const;
 
 export type ThemeName = (typeof themes)[number];
 
+export const themeMinLength = 4;
+
+export const themeMaxLength = 12;
+
 export const defaultTheme: ThemeName = 'shadcn-light';
 
 function readCookie(): string | undefined {

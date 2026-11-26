@@ -2,6 +2,10 @@ export const themes = {{themes}} as const;
 
 export type ThemeName = (typeof themes)[number];
 
+export const themeMinLength = {{minLength}};
+
+export const themeMaxLength = {{maxLength}};
+
 export const defaultTheme: ThemeName = '{{defaultTheme}}';
 
 function readCookie(): string | undefined {
