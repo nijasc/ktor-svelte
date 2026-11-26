@@ -874,7 +874,7 @@ The next sync or start overwrites your changes.
 | `frontend/vite.config.ts` | `svelteSync` | library settings change |
 | `frontend/src/lib/ktor-svelte/*` | `svelteSync` | themes, icons or locales change |
 | `frontend/src/hooks*.ts` | `svelteSync` | i18n or theme settings change |
-| Kotlin `AppTheme` and `Messages` classes | the Gradle build, in `build/generated`, never committed | themes or messages change |
+| Kotlin `AppTheme`, `AppLanguage` and `Messages` classes | the Gradle build, in `build/generated`, never committed | themes, locales or messages change |
 
 Everything else is yours. ktor-svelte never overwrites a file without the header. If it needs to own a file you already have, such as your own `vite.config.ts`, the build stops and tells you what to move. Put custom Vite settings in `vite.user.ts`.
 
@@ -6485,6 +6485,7 @@ Keep one JSON file per language in `frontend/messages`, such as `en.json` and `d
 ## In Kotlin
 
 ```kotlin
+import io.github.nijasc.ktorsvelte.AppLanguage
 import io.github.nijasc.ktorsvelte.Messages
 import io.github.nijasc.ktorsvelte.messages
 
@@ -6492,7 +6493,7 @@ get("/api/hello") {
     call.respondText(call.messages.serverGreeting("Ada"))
 }
 
-val german = Messages.forLocale("de").appTitle()
+val german = Messages.forLocale(AppLanguage.De.tag).appTitle()
 ```
 
 | Name | What it is |
@@ -6500,6 +6501,8 @@ val german = Messages.forLocale("de").appTitle()
 | `call.messages` | The messages in the visitor's language |
 | `Messages.forLocale(locale)` | The messages in another language, for an email to someone else. An unknown locale gives the default one |
 | `Messages.locales`, `Messages.defaultLocale` | The configured locales |
+| `call.language` | The visitor's locale as an `AppLanguage` constant |
+| `AppLanguage` | One constant per configured locale in PascalCase, such as `AppLanguage.En` and `AppLanguage.PtBr` for `pt-BR`. `tag` is the locale, `AppLanguage.default` the default one, and `AppLanguage.fromTag(tag)` turns a locale back into a constant, or `null` |
 | `call.svelteLocale` | The visitor's locale as text, from `io.github.nijasc.ktor.svelte` |
 | `call.localizeHref(path)` | Like `localizeHref`, for redirects from Ktor |
 | `call.formats` | [Formats](#numbers-money-and-dates) in the visitor's language |
